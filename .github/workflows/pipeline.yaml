@@ -1,0 +1,177 @@
+name: Deployment Pipeline
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+    types: [opened, synchronize]
+
+jobs:
+  avoid_redundancy:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.12.1
+
+
+  secret_scanning:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+        
+      - name: Secret scanning
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --results=verified,unknown
+  
+
+  set_env_vars:
+    name: Set environment variables
+    runs-on: ubuntu-latest
+    outputs: 
+      SCRIPTS_PROJECT_ID: ${{ steps.env_vars.outputs.SCRIPTS_PROJECT_ID }}
+      SCRIPTS_GCS: ${{ steps.env_vars.outputs.SCRIPTS_GCS }}
+      DAG_PROJECT_ID: ${{ steps.env_vars.outputs.DAG_PROJECT_ID }}
+      DAG_GCS: ${{ steps.env_vars.outputs.DAG_GCS }}
+    steps:
+      - id: 'env_vars'
+        name: "Setup enviroment"
+        shell: bash
+        run: |-
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            branch=$(echo ${{ github.base_ref }}  | tr / -)
+          else
+            branch=$(echo ${GITHUB_REF#refs/heads/} | tr / -)
+          fi
+
+          if [ $branch = "main" ]; then 
+            scripts_project_id="cl-bigdata-analytics-prod";
+            scripts_gcs="cl-bigdata-analytics-prod-us-dataproc-scripts";
+            dag_project_id="";
+            dag_gcs="";
+          elif [ $branch = "dev" ]; then 
+            scripts_project_id="cl-bigdata-analytics";
+            scripts_gcs="cl-bigdata-analytics-dev-us-dataproc-scripts";
+            dag_project_id="cl-orquestador-preprod";
+            dag_gcs="cl-orquestador-preprod-us-east1-composer";
+          else 
+            echo "invalid environment"; exit -1
+          fi
+          echo "SCRIPTS_PROJECT_ID=$(echo $scripts_project_id)" >> $GITHUB_OUTPUT;
+          echo "SCRIPTS_GCS=$(echo $scripts_gcs)" >> $GITHUB_OUTPUT;
+          echo "DAG_PROJECT_ID=$(echo $dag_project_id)" >> $GITHUB_OUTPUT;
+          echo "DAG_GCS=$(echo $dag_gcs)" >> $GITHUB_OUTPUT;
+    
+
+  #check_lint:
+  #  runs-on: ubuntu-latest
+  #  steps:
+  #    - name: Checkout code
+  #      uses: actions/checkout@v4
+  #      with:
+  #        fetch-depth: 0
+
+  #    - name: Ruff Lint
+  #      uses: astral-sh/ruff-action@v3
+  #      with:
+  #        args: "check -q --config ruff.toml"
+  #        version: "latest"
+
+
+  gcs_upload_scripts:
+    needs: [secret_scanning, set_env_vars]
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - id: 'checkout'
+        name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: auth
+        name: Auth with GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Upload commons dir to GCS
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
+          destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
+          path: src
+          glob: 'common/**'
+          process_gcloudignore: false
+
+      - name: Upload project scripts to GCS
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
+          destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
+          path: src
+          glob: '*/scripts/*.py'
+          process_gcloudignore: false
+
+      - name: Upload consulting scripts to GCS
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
+          destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
+          path: src
+          glob: 'consulting/*/scripts/*.py'
+          process_gcloudignore: false
+
+
+  gcs_upload_dags:
+    needs: [secret_scanning, set_env_vars]
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - id: 'checkout'
+        name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: auth
+        name: Auth with GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      # Removes commons as do not contain any DAG
+      - name: Remove common dir
+        run: rm -rf src/common
+
+      - name: Upload project DAGs to GCS
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          project_id: ${{ needs.set_env_vars.outputs.DAG_PROJECT_ID }}
+          destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.repository }}
+          path: src
+          glob: '*/*.py'
+          process_gcloudignore: false
+
+      - name: Upload consulting DAGs to GCS
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          project_id: ${{ needs.set_env_vars.outputs.DAG_PROJECT_ID }}
+          destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.repository }}
+          path: src
+          glob: 'consulting/*/*.py'
+          process_gcloudignore: false
