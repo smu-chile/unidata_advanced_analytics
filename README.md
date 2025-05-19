@@ -1,6 +1,6 @@
-[![Production Deployment](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml/badge.svg?branch=main)](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml)
+[![prod](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml/badge.svg?branch=main)](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml)
 
-[![Development Deployment](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml/badge.svg?branch=main)](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml)
+[![dev](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml/badge.svg?branch=dev)](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml)
 
 
 # Advanced Analytics Projects.
