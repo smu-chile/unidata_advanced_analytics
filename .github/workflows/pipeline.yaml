@@ -106,7 +106,7 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Remove examples dir
-        if: ${{ github.base_ref != 'main' }}
+        if: ${{ github.base_ref == 'main' }}
         run: rm -rf src/examples
 
       - name: Upload commons dir to GCS
@@ -159,7 +159,7 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Remove examples dir
-        if: ${{ github.base_ref != 'main' }}
+        if: ${{ github.base_ref == 'main' }}
         run: rm -rf src/examples
 
       # Removes commons as do not contain any DAG
