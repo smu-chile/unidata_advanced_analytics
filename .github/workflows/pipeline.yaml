@@ -61,7 +61,7 @@ jobs:
             scripts_project_id="cl-bigdata-analytics";
             scripts_gcs="cl-bigdata-analytics-dev-us-dataproc-scripts";
             dag_project_id="cl-orquestador-preprod";
-            dag_gcs="cl-orquestador-preprod-us-east1-composer";
+            dag_gcs="us-east1-cl-orquestador-pre-57dc49ea-bucket ";
           else 
             echo "invalid environment"; exit -1
           fi
