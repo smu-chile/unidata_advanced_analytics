@@ -9,6 +9,7 @@ on:
 
 jobs:
   avoid_redundancy:
+    name: Avoid redundancy
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -18,6 +19,7 @@ jobs:
 
 
   secret_scanning:
+    name: Secret scanning
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -67,9 +69,10 @@ jobs:
           echo "SCRIPTS_GCS=$(echo $scripts_gcs)" >> $GITHUB_OUTPUT;
           echo "DAG_PROJECT_ID=$(echo $dag_project_id)" >> $GITHUB_OUTPUT;
           echo "DAG_GCS=$(echo $dag_gcs)" >> $GITHUB_OUTPUT;
-    
+
 
   #check_lint:
+  #  name: Lint code
   #  runs-on: ubuntu-latest
   #  steps:
   #    - name: Checkout code
@@ -87,6 +90,7 @@ jobs:
   gcs_upload_scripts:
     needs: [secret_scanning, set_env_vars]
     if: ${{ github.event_name == 'push' }}
+    name: Upload scripts
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
@@ -140,6 +144,7 @@ jobs:
   gcs_upload_dags:
     needs: [secret_scanning, set_env_vars]
     if: ${{ github.event_name == 'push' }}
+    name: Upload DAGs
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
