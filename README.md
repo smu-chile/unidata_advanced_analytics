@@ -1,4 +1,4 @@
-[![Production Deployment](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml/badge.svg?branch=main)](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml)
+[![Production Deployment](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/smu-chile/unidata_advanced_analytics/actions/workflows/pipeline.yaml)
 
 # Advanced Analytics Projects.
 This repository contains all the projects developed by SMU Advanced Analytics. The projects inside the repo are organized in a monorepo standard, this is: 
