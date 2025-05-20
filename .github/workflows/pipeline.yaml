@@ -129,8 +129,8 @@ jobs:
           project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
           destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
           path: src
-          gzip: false
           glob: '*/scripts/*.py'
+          gzip: false
           process_gcloudignore: false
           headers: |-
             content-type: text/x-python
@@ -141,8 +141,8 @@ jobs:
           project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
           destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
           path: src
-          gzip: false
           glob: 'consulting/*/scripts/*.py'
+          gzip: false
           process_gcloudignore: false
           headers: |-
             content-type: text/x-python
@@ -185,6 +185,7 @@ jobs:
           destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.head_ref || github.ref_name }}/${{ github.repository }}
           path: src
           glob: '*/*.py'
+          gzip: false
           process_gcloudignore: false
           headers: |-
             content-type: text/x-python
@@ -196,6 +197,7 @@ jobs:
           destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.head_ref || github.ref_name }}/${{ github.repository }}
           path: src
           glob: 'consulting/*/*.py'
+          gzip: false
           process_gcloudignore: false
           headers: |-
             content-type: text/x-python
