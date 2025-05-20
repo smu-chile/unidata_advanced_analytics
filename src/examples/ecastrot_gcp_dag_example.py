@@ -46,19 +46,15 @@ with DAG(**dag_args) as dag:
                 # Main file to run in the dataproc pod
                 'main_python_file_uri': (
                     'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
-                    'scripts/'
-                    'smu-chile/'
-                    'smu-bigdata-analytics-unidata/'
+                    'src/'
+                    'examples/'
                     'scripts/'
                     'gcp_dag_example.py'
                 ),
                 # Common library
                 'python_file_uris': [(
                     'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
-                    'scripts-common/'
-                    'smu-chile/'
-                    'smu-bigdata-analytics-unidata/'
-                    'scripts-common/'
+                    'src/'
                     'common/'
                 )],
                 # For Google Big Query read/write
