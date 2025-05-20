@@ -130,6 +130,8 @@ jobs:
           path: src
           glob: '*/scripts/*.py'
           process_gcloudignore: false
+          headers: |-
+            content-type: 'text/x-python'
 
       - name: Upload consulting scripts to GCS
         uses: google-github-actions/upload-cloud-storage@v2
@@ -139,6 +141,8 @@ jobs:
           path: src
           glob: 'consulting/*/scripts/*.py'
           process_gcloudignore: false
+          headers: |-
+            content-type: 'text/x-python'
 
 
   gcs_upload_dags:
@@ -179,6 +183,8 @@ jobs:
           path: src
           glob: '*/*.py'
           process_gcloudignore: false
+          headers: |-
+            content-type: 'text/x-python'
 
       - name: Upload consulting DAGs to GCS
         uses: google-github-actions/upload-cloud-storage@v2
@@ -188,3 +194,5 @@ jobs:
           path: src
           glob: 'consulting/*/*.py'
           process_gcloudignore: false
+          headers: |-
+            content-type: 'text/x-python'
