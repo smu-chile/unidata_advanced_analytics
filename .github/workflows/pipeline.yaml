@@ -121,6 +121,7 @@ jobs:
           path: src
           glob: 'common/**'
           gzip: false
+          parent: false
           process_gcloudignore: false
 
       - name: Upload project scripts to GCS
@@ -131,6 +132,7 @@ jobs:
           path: src
           glob: '*/scripts/*.py'
           gzip: false
+          parent: false
           process_gcloudignore: false
           headers: |-
             content-type: text/x-python
@@ -143,6 +145,7 @@ jobs:
           path: src
           glob: 'consulting/*/scripts/*.py'
           gzip: false
+          parent: false
           process_gcloudignore: false
           headers: |-
             content-type: text/x-python
