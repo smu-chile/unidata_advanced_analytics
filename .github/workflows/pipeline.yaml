@@ -119,8 +119,10 @@ jobs:
           project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
           destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
           path: src
-          glob: 'common/**'
+          glob: 'common/**.py'
           process_gcloudignore: false
+          headers: |-
+            content-type: 'text/x-python'
 
       - name: Upload project scripts to GCS
         uses: google-github-actions/upload-cloud-storage@v2
