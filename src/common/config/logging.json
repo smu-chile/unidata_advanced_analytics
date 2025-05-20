@@ -1,0 +1,28 @@
+{
+    "version": 1,
+
+    "formatters": {
+        "default_format": {
+            "format": "[%(asctime)s|%(module)s@%(lineno)d|%(levelname)s] %(message)s",
+            "datefmt": "%Y-%m-%dT%H:%M:%S%z"
+        }
+    },
+
+    "handlers": {
+        "default_handler": {
+            "level": "DEBUG",
+            "formatter": "default_format",
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout"
+        }
+    },
+
+    "loggers": {
+        "": {
+            "level": "DEBUG",
+            "handlers": [
+                "default_handler"
+            ]
+        }
+    }
+}

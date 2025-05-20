@@ -6,7 +6,7 @@ import subprocess
 from logging import config
 
 
-with open(os.path.join('common', 'constants', 'logging_config.json')) as f:
+with open(os.path.join('common', 'config', 'logging.json')) as f:
     config.dictConfig(json.load(f))
 
 def main():
