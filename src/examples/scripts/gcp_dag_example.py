@@ -1,36 +1,5 @@
-import os
-import sys
-import json
-import logging
-import subprocess
-from logging import config
-
-
 def main():
-    python_version = subprocess.run(
-        ['python', '--version'],
-        capture_output=True
-    ).stdout.decode()
-    logging.info(python_version)
-
-    pip_version = subprocess.run(
-        ['pip', '--version'],
-        capture_output=True
-    ).stdout.decode()
-    logging.info(pip_version)
-
-    pip_freeze = subprocess.run(
-        ['pip', 'freeze'],
-        capture_output=True
-    ).stdout.decode()
-    for lib in pip_freeze.split('\n'):
-        logging.warning(lib)
-
-    for p in sys.path:
-        logging.error(p)
-
+    print('OK!')
 
 if __name__ == '__main__':
-    print('The main file was finded!')
-
     main()
