@@ -20,7 +20,7 @@ with open(os.path.join('common', 'constants', 'logging_config.json')) as f:
 # -------------------------------------------------------------------------
 # Constants
 # -------------------------------------------------------------------------
-with open(os.path.join('common', 'constants', 'banner_convention.json')) as f:
+with open(os.path.join('common', 'constants', 'short_banners.json')) as f:
     STORE_BANNERS: dict = json.load(f)
 
 

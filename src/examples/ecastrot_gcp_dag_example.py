@@ -51,6 +51,7 @@ with DAG(**dag_args) as dag:
                     'scripts/'
                     'gcp_dag_example.py'
                 ),
+                # Common files
                 'python_file_uris': [(
                     'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
                     'src/'
