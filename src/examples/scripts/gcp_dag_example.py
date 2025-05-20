@@ -6,9 +6,6 @@ import subprocess
 from logging import config
 
 
-with open(os.path.join('common', 'config', 'logging.json')) as f:
-    config.dictConfig(json.load(f))
-
 def main():
     python_version = subprocess.run(
         ['python', '--version'],
@@ -35,4 +32,5 @@ def main():
 
 if __name__ == '__main__':
     print('The main file was finded!')
+
     main()
