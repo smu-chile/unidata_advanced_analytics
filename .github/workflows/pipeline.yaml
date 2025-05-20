@@ -175,7 +175,7 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@v2
         with:
           project_id: ${{ needs.set_env_vars.outputs.DAG_PROJECT_ID }}
-          destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.repository }}
+          destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.head_ref || github.ref_name }}/${{ github.repository }}
           path: src
           glob: '*/*.py'
           process_gcloudignore: false
@@ -184,7 +184,7 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@v2
         with:
           project_id: ${{ needs.set_env_vars.outputs.DAG_PROJECT_ID }}
-          destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.repository }}
+          destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.head_ref || github.ref_name }}/${{ github.repository }}
           path: src
           glob: 'consulting/*/*.py'
           process_gcloudignore: false
