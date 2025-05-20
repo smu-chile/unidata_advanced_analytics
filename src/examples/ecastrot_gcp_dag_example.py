@@ -52,7 +52,7 @@ with DAG(**dag_args) as dag:
                     'gcp_dag_example.py'
                 ),
                 # For Google Big Query read/write
-                'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.41.0.jar'],
+                'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
                 # Main file arguments
                 'args': [
                     '--project_id', PROJECT_ID,
