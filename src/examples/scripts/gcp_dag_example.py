@@ -34,4 +34,5 @@ def main():
 
 
 if __name__ == '__main__':
+    print('The main file was finded!')
     main()
