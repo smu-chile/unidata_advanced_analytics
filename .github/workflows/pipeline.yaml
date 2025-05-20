@@ -120,20 +120,8 @@ jobs:
           destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
           path: src
           glob: 'common/**'
+          gzip: false
           process_gcloudignore: false
-          headers: |-
-            content-type: 'text/x-python'
-
-      - name: Upload config commons to GCS
-        uses: google-github-actions/upload-cloud-storage@v2
-        with:
-          project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
-          destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
-          path: src
-          glob: 'common/config/**'
-          process_gcloudignore: false
-          headers: |-
-            content-type: 'application/json'
 
       - name: Upload project scripts to GCS
         uses: google-github-actions/upload-cloud-storage@v2
@@ -141,10 +129,11 @@ jobs:
           project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
           destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
           path: src
+          gzip: false
           glob: '*/scripts/*.py'
           process_gcloudignore: false
           headers: |-
-            content-type: 'text/x-python'
+            content-type: text/x-python
 
       - name: Upload consulting scripts to GCS
         uses: google-github-actions/upload-cloud-storage@v2
@@ -152,10 +141,11 @@ jobs:
           project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
           destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
           path: src
+          gzip: false
           glob: 'consulting/*/scripts/*.py'
           process_gcloudignore: false
           headers: |-
-            content-type: 'text/x-python'
+            content-type: text/x-python
 
 
   gcs_upload_dags:
@@ -197,7 +187,7 @@ jobs:
           glob: '*/*.py'
           process_gcloudignore: false
           headers: |-
-            content-type: 'text/x-python'
+            content-type: text/x-python
 
       - name: Upload consulting DAGs to GCS
         uses: google-github-actions/upload-cloud-storage@v2
@@ -208,4 +198,4 @@ jobs:
           glob: 'consulting/*/*.py'
           process_gcloudignore: false
           headers: |-
-            content-type: 'text/x-python'
+            content-type: text/x-python
