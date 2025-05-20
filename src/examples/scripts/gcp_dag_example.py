@@ -1,3 +1,4 @@
+"""Execute example processes to test the function of Composer pipelines."""
 # default
 import os
 import sys

@@ -1,3 +1,4 @@
+"""Example DAG."""
 # Default
 from datetime import timedelta
 
@@ -36,7 +37,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
 
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"
+    EXECUTION_DATE = "{{ dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d') }}"
 
     create_batch = DataprocCreateBatchOperator(
         task_id = 'create_batch',
@@ -46,7 +47,6 @@ with DAG(**dag_args) as dag:
                 # Main file to run in the dataproc pod
                 'main_python_file_uri': (
                     'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
-                    'src/'
                     'examples/'
                     'scripts/'
                     'gcp_dag_example.py'
@@ -54,7 +54,6 @@ with DAG(**dag_args) as dag:
                 # Common files
                 'python_file_uris': [(
                     'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
-                    'src/'
                     'common/'
                 )],
                 # For Google Big Query read/write
