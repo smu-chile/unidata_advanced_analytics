@@ -1,3 +1,4 @@
+"""Queries utilities."""
 from __future__ import annotations
 
 from string import Template
