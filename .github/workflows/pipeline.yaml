@@ -71,24 +71,24 @@ jobs:
           echo "DAG_GCS=$(echo $dag_gcs)" >> $GITHUB_OUTPUT;
 
 
-  #check_lint:
-  #  name: Lint code
-  #  runs-on: ubuntu-latest
-  #  steps:
-  #    - name: Checkout code
-  #      uses: actions/checkout@v4
-  #      with:
-  #        fetch-depth: 0
+  check_lint:
+    name: Lint code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-  #    - name: Ruff Lint
-  #      uses: astral-sh/ruff-action@v3
-  #      with:
-  #        args: "check -q --config ruff.toml"
-  #        version: "latest"
+      - name: Ruff Lint
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check -q --config ruff.toml"
+          version: "latest"
 
 
   gcs_upload_scripts:
-    needs: [secret_scanning, set_env_vars]
+    needs: [secret_scanning, check_lint, set_env_vars]
     if: ${{ github.event_name == 'push' }}
     name: Upload scripts
     runs-on: ubuntu-latest
@@ -152,7 +152,7 @@ jobs:
 
 
   gcs_upload_dags:
-    needs: [secret_scanning, set_env_vars]
+    needs: [secret_scanning, check_lint, set_env_vars]
     if: ${{ github.event_name == 'push' }}
     name: Upload DAGs
     runs-on: ubuntu-latest
