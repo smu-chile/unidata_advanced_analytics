@@ -83,7 +83,7 @@ jobs:
       - name: Ruff Lint
         uses: astral-sh/ruff-action@v3
         with:
-          args: "check -q --config lint/${{ github.base_ref || github.ref_name }}/ruff.toml"
+          args: "check -q --config lint/${{ github.base_ref || github.ref_name }}_ruff.toml"
           version: "latest"
 
 
