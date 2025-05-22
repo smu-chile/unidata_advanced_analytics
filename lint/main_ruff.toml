@@ -16,14 +16,19 @@ src = ['src']
 # Last reviewed: 2024/11/20
 # ------------------------------------------------------------------------------
 [lint]
+# Complete sets
 select = [
-    # Complete sets
-    "F", "W", "I", "N", "D", "UP", "YTT", "ASYNC", "BLE", "B", "A", "C4", "DTZ",
-    "T10", "EM", "EXE", "FA", "ISC", "ICN", "LOG", "G", "INP", "PIE", "T20",
-    "PYI", "PT", "Q", "RSE", "RET", "SLF", "SLOT", "SIM", "ARG", "TCH", "TD",
-    "FIX", "ERA", "PD", "PGH", "TRY", "FLY", "NPY", "AIR", "PERF", "RUF",
-    
-    # Specific rules
+    "S",  "F",  "W",  "I",  "N", "D", "B", "G", "A", "Q",
+    "UP", "C4", "EM", "FA", "PT", "TD", "PD",
+    "YTT", "BLE", "DTZ", "T10", "EXE", "ISC", "ICN", "LOG", "T20", "PYI", "RSE",
+    "RET", "SLF", "SIM", "ARG", "TCH", "FIX", "ERA", "PGH", "TRY", "FLY", "NPY",
+    "AIR", "RUF", "INP", "PIE",
+    "ASYNC", "SLOT", "PERF",
+]
+
+# Extension rules
+extend-select = [
+    "D212", "D417",
     "E101", "E401", "E402", "E501", "E702", "E703", "E711", "E712", "E713",
     "E714", "E721", "E722", "E731", "E902",
     "ANN001", "ANN201", "ANN202", "ANN205", "ANN206",
@@ -34,11 +39,6 @@ select = [
     "FURB136", "FURB142", "FURB148", "FURB152", "FURB154", "FURB156", "FURB157",
     "FURB163", "FURB164", "FURB167", "FURB168", "FURB169", "FURB171", "FURB180",
     "FURB188", "FURB192"
-]
-
-# Extension rules
-extend-select = [
-    "D212", "D417",
 ]
 
 # Remove rules

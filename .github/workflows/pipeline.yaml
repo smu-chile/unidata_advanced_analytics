@@ -47,9 +47,9 @@ jobs:
         shell: bash
         run: |-
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            branch=$(echo ${{ github.base_ref }}  | tr / -)
+            branch=$(echo ${{ github.base_ref }} | tr / -)
           else
-            branch=$(echo ${GITHUB_REF#refs/heads/} | tr / -)
+            branch=$(echo ${{ github.ref_name }} | tr / -)
           fi
 
           if [ $branch = "main" ]; then 
@@ -83,7 +83,7 @@ jobs:
       - name: Ruff Lint
         uses: astral-sh/ruff-action@v3
         with:
-          args: "check -q --config lint/${{ github.head_ref || github.ref_name }}_ruff.toml"
+          args: "check -q --config lint/${{ github.base_ref || github.ref_name }}/ruff.toml --preview --statistics"
           version: "latest"
 
 
@@ -110,7 +110,7 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Remove examples dir
-        if: ${{ github.base_ref == 'main' }}
+        if: ${{ github.ref_name == 'main' }}
         run: rm -rf src/examples
 
       - name: Upload python commons to GCS
@@ -174,7 +174,7 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Remove examples dir
-        if: ${{ github.base_ref == 'main' }}
+        if: ${{ github.ref_name == 'main' }}
         run: rm -rf src/examples
 
       # Removes commons as do not contain any DAG
@@ -185,7 +185,7 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@v2
         with:
           project_id: ${{ needs.set_env_vars.outputs.DAG_PROJECT_ID }}
-          destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.head_ref || github.ref_name }}/${{ github.repository }}
+          destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.ref_name }}/${{ github.repository }}
           path: src
           glob: '*/*.py'
           gzip: false
@@ -197,7 +197,7 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@v2
         with:
           project_id: ${{ needs.set_env_vars.outputs.DAG_PROJECT_ID }}
-          destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.head_ref || github.ref_name }}/${{ github.repository }}
+          destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.ref_name }}/${{ github.repository }}
           path: src
           glob: 'consulting/*/*.py'
           gzip: false
