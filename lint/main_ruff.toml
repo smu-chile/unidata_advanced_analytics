@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------
 # Python version of the project
 extend-include = ["*.ipynb"]
+extend-exclude = [".githooks"]
 target-version = "py37"
 src = ['src']
 
@@ -54,7 +55,8 @@ ignore = [
     "G004",
     "TD003",
     "LOG015",
-    "INP001"
+    "INP001",
+    "S603", "S404", "S607"
 ]
 
 

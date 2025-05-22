@@ -4,7 +4,9 @@ import sys
 import json
 import subprocess
 
-def main():
+
+def main() -> None:
+    """Assign Ruffs config depending on the branch in VSC Workspace."""
     configfile_path = os.path.join(
         '.vscode/', 'unidata_advanced_analytics.code-workspace'
     )
@@ -12,13 +14,12 @@ def main():
     # File checkout instead of branch checkout
     if not sys.argv[3]:
         return
-    
+
     # Branch checkout
     new_branch = subprocess.run(
         ['git', 'symbolic-ref', '--short', 'HEAD'],
         stdout=subprocess.PIPE
     ).stdout.decode().strip()
-    print(new_branch)
     with open(configfile_path, 'r+') as configfile:
         # Read file
         txt = json.load(configfile)
@@ -30,7 +31,6 @@ def main():
     with open(configfile_path, 'w') as configfile:
         json.dump(txt, configfile)
 
-    print(f'Setting {new_branch}_ruff.toml as Ruff config')
 
 if __name__ == '__main__':
     main()
