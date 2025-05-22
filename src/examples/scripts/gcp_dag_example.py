@@ -1,5 +1,8 @@
-"""Execute example processes to test the function of Composer pipelines."""
-# default
+"""Example GCP script.
+
+Example on how to import modules from commons.
+"""
+# Default
 import os
 import sys
 import json
