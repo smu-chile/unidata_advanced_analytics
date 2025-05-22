@@ -83,58 +83,12 @@ jobs:
       - name: Ruff Lint
         uses: astral-sh/ruff-action@v3
         with:
-          args: "check -q --config ${{ github.head_ref || github.ref_name }}/ruff.toml"
+          args: "check -q --config lint/${{ github.head_ref || github.ref_name }}_ruff.toml"
           version: "latest"
 
 
-  clean_scripts_bucket:
-    needs: [secret_scanning, check_lint, set_env_vars]
-    if: ${{ github.event_name == 'push' }}
-    name: Remove loose scripts from GCS
-    runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    steps:
-      - id: 'auth'
-        name: Auth with GCP
-        uses: 'google-github-actions/auth@v2'
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-
-      - name: 'Remove scripts'
-        run: 'gcloud storage rm gs://${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}/**'
-
-
-  clean_dags_bucket:
-    needs: [secret_scanning, check_lint, set_env_vars]
-    if: ${{ github.event_name == 'push' }}
-    name: Remove loose DAGs from GCS
-    runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    steps:
-      - id: 'auth'
-        name: Auth with GCP
-        uses: 'google-github-actions/auth@v2'
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-
-      - name: 'Remove DAGs'
-        run: 'gcloud storage rm gs://${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.head_ref || github.ref_name }}/${{ github.repository }}/**'
-
-
   gcs_upload_scripts:
-    needs: [clean_scripts_bucket, clean_dags_bucket, secret_scanning, check_lint, set_env_vars]
+    needs: [secret_scanning, check_lint, set_env_vars]
     if: ${{ github.event_name == 'push' }}
     name: Upload scripts
     runs-on: ubuntu-latest
@@ -198,7 +152,7 @@ jobs:
 
 
   gcs_upload_dags:
-    needs: [clean_scripts_bucket, clean_dags_bucket, secret_scanning, check_lint, set_env_vars]
+    needs: [secret_scanning, check_lint, set_env_vars]
     if: ${{ github.event_name == 'push' }}
     name: Upload DAGs
     runs-on: ubuntu-latest
