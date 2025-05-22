@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+import os
+import sys
+import json
+import subprocess
+
+def main():
+    configfile_path = os.path.join(
+        '.vscode/', 'unidata_advanced_analytics.code-workspace'
+    )
+
+    # File checkout instead of branch checkout
+    if not sys.argv[3]:
+        return
+    
+    # Branch checkout
+    new_branch = subprocess.run(
+        ['git', 'symbolic-ref', '--short', 'HEAD'],
+        stdout=subprocess.PIPE
+    ).stdout.decode().strip()
+    print(new_branch)
+    with open(configfile_path, 'r+') as configfile:
+        # Read file
+        txt = json.load(configfile)
+
+    # Replace text
+    new_branch = new_branch if new_branch in ['dev', 'main'] else 'dev'
+    txt['settings']['ruff.configuration'] = f'lint/{new_branch}_ruff.toml'
+
+    with open(configfile_path, 'w') as configfile:
+        json.dump(txt, configfile)
+
+    print(f'Setting {new_branch}_ruff.toml as Ruff config')
+
+if __name__ == '__main__':
+    main()
