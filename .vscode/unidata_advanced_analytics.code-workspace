@@ -1,1 +1,1 @@
-{"folders": [{"path": ".."}], "settings": {"ruff.configuration": "lint/main_ruff.toml"}}
+{"folders": [{"path": ".."}], "settings": {"ruff.configuration": "lint/dev_ruff.toml"}}

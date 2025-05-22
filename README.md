@@ -24,7 +24,6 @@ src
 │   ├── post-checkout
 │   └── ...
 ├── .gitignore
-├── Advanced Analytics.code-profile
 └── README.md
 ```
 
