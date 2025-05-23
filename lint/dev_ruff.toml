@@ -44,6 +44,7 @@ extend-select = [
 
 # Remove rules
 ignore = [
+    "RUF100",
     "N802", "N804",
     "UP040",
     "B905",
