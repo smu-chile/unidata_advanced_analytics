@@ -3,29 +3,20 @@
 Example on how to import modules from commons.
 """
 # Default
-import os
 import sys
-import json
 import logging
 import subprocess
 from logging import config
 
 # Own
+from common.constants import LOGGING_CONFIG, SHORT_STORE_BANNERS
 from common.utils.queries import QueryDict
 
 
 # -------------------------------------------------------------------------
 # Logging config
 # -------------------------------------------------------------------------
-with open(os.path.join('common', 'constants', 'logging_config.json')) as f:
-    config.dictConfig(json.load(f))
-
-
-# -------------------------------------------------------------------------
-# Constants
-# -------------------------------------------------------------------------
-with open(os.path.join('common', 'constants', 'short_banners.json')) as f:
-    STORE_BANNERS: dict = json.load(f)
+config.dictConfig(LOGGING_CONFIG)
 
 
 # -------------------------------------------------------------------------
@@ -40,7 +31,7 @@ _SQL_QUERIES = QueryDict({
 
 def main() -> None:  # noqa: D103
     logging.info('Store banner mapping:')
-    for og_store_banner, short_store_banner in STORE_BANNERS.items():
+    for og_store_banner, short_store_banner in SHORT_STORE_BANNERS.items():
         logging.info(f'{og_store_banner} -> {short_store_banner}')
 
     logging.info(
