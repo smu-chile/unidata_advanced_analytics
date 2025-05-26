@@ -24,7 +24,7 @@ dag_args = {
         'project_id': PROJECT_ID,
         'region': '{{ var.value.develop_smu_unidata_default_region }}',
         'owner': 'BIGDATA_ANALYTICS',
-        'email': '{{ var.json.develop_smu_unidata_default_email }}',
+        'email': ['ecastrot@unidata.cl'],
         'start_date': None,
         'depends_on_past': False,
         'catchup': False,
