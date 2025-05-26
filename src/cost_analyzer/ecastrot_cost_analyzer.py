@@ -46,9 +46,9 @@ with DAG(**dag_args) as dag:
                 # Main file to run in the dataproc pod
                 'main_python_file_uri': (
                     'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
-                    'examples/'
+                    'cost_analyzer/'
                     'scripts/'
-                    'gcp_dag_example.py'
+                    'cost_analyzer.py'
                 ),
                 # Common files
                 'python_file_uris': [
