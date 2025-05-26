@@ -59,7 +59,7 @@ with DAG(**dag_args) as dag:
                     ),
                     (
                         'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
-                        'cost_analyzer/'
+                        'examples/'
                         'gbq_objects/'
                     )
                 ],
