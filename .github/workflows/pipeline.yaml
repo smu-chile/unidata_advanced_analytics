@@ -137,7 +137,7 @@ jobs:
           headers: |-
             content-type: text/x-python
 
-      - name: Upload project scripts to GCS
+      - name: Upload project GBQ objects to GCS
         uses: google-github-actions/upload-cloud-storage@v2
         with:
           project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
@@ -161,7 +161,7 @@ jobs:
           headers: |-
             content-type: text/x-python
 
-      - name: Upload project scripts to GCS
+      - name: Upload consulting GBQ objects to GCS
         uses: google-github-actions/upload-cloud-storage@v2
         with:
           project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
