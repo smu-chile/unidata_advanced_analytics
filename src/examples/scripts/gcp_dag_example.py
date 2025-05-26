@@ -46,7 +46,6 @@ _SQL_QUERIES = QueryDict({
 def main() -> None:  # noqa: D103
     # Parse input variables
     args = vars(parser.parse_args())
-    execution_date: str = args['execution_date']
     gcp_project: str = args['project_id']
 
     logging.info('Store banner mapping:')
