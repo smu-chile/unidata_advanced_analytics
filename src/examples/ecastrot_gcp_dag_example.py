@@ -52,10 +52,17 @@ with DAG(**dag_args) as dag:
                     'gcp_dag_example.py'
                 ),
                 # Common files
-                'python_file_uris': [(
-                    'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
-                    'common/'
-                )],
+                'python_file_uris': [
+                    (
+                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                        'common/'
+                    ),
+                    (
+                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                        'cost_analyzer/'
+                        'gbq_objects/'
+                    )
+                ],
                 # For Google Big Query read/write
                 'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
                 # Main file arguments
