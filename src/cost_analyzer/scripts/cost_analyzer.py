@@ -81,7 +81,7 @@ def main() -> None:  # noqa: D103
     )
 
     # Save job info into dict[str, list]
-    logging.debug('Parsing jobs...')
+    logging.debug('Start parsing jobs')
     jobs_info = defaultdict(list)
     for job in all_jobs:
         jobs_info['job_id'].append(job.job_id)
@@ -104,7 +104,7 @@ def main() -> None:  # noqa: D103
 
     # dict[str, list] into DataFrame
     jobs_info = pd.DataFrame(jobs_info)
-    logging.debug('Done!')
+    logging.debug('Ended parsing jobs')
     # Break execution when no job was executed
     if jobs_info.empty:
         logging.info(f'No jobs founded for {execution_date}. Breaking execution')
@@ -142,10 +142,10 @@ def main() -> None:  # noqa: D103
             'job_id', 'job_type', 'state', 'statement_type', 'started_date', 'duration',
             'user', 'user_email', 'total_mb_billed', 'total_mb_processed'
         ]],
-        f'{gcp_project}.SANDBOX_ECASTROT.gbq_job_consumption',
+        f'{gcp_project}.ML_LAB.gbq_job_consumption',
         if_exists='append',
     )
-    logging.info('Done!')
+    logging.info('Process ended! :)')
 
 
 if __name__ == '__main__':

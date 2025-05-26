@@ -1,5 +1,5 @@
 {
-    "schema": "SANDBOX_ECASTROT",
+    "schema": "ML_LAB",
     "table": "gbq_job_consumption",
 
     "columns": [
