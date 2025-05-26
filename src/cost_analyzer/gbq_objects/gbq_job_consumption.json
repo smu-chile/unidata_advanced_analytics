@@ -1,0 +1,72 @@
+{
+    "schema": "SANDBOX_ECASTROT",
+    "table": "gbq_job_consumption",
+
+    "columns": [
+        {
+            "name": "job_id",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Job ID assigned when query is executed"
+        },
+        {
+            "name": "job_type",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "The type of the job. Can be query, load, extract, copy or unknown"
+        },
+        {
+            "name": "state",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "State of the job. Should allways be DONE"
+        },
+        {
+            "name": "statement_type",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Statement executed by the job, e.g. SELECT"
+        },
+        {
+            "name": "started_date",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Date in which the job started"
+        },
+        {
+            "name": "duration",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Duration of the job"
+        },
+        {
+            "name": "user",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "User that executed the job"
+        },
+        {
+            "name": "user_email",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Email of the user that executed the job"
+        },
+        {
+            "name": "total_mb_billed",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Number of Mb because of the job execution"
+        },
+        {
+            "name": "total_mb_processed",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Number of Mb processed by the job execution"
+        }
+    ],
+
+    "time_partitioning": {
+        "field": "started_date",
+        "type_": "DAY"
+    }
+}

@@ -58,7 +58,8 @@ def readBigQuery(query: str, user: str, **kwargs) -> pd.DataFrame | None:
 
 def createTableFromJSON(
         ddl_json_config_path: str,
-        if_exists: Literal['raise', 'rebuild'] = 'raise'
+        project: str,
+        if_exists: Literal['raise', 'ignore', 'rebuild'] = 'raise'
     ) -> dict:
     """Create a BigQuery table using a JSON config file.
 
@@ -66,9 +67,12 @@ def createTableFromJSON(
     ----------
     ddl_json_config_path : str,
         Path to the JSON file with the DDL configuration for the table.
-    if_exists : {'raise', 'rebuild'}, optional
+    project : str
+        Google BigQuery project in which the table will be created.
+    if_exists : {'raise', 'ignore', 'rebuild'}, optional
         Behavior to take if the table allready exists.
         -  `raise` raises an `Already Exists` error
+        -  `ignore` ignores `Already Exists` errors
         -  `rebuild` deletes the table with all its data and build it again
 
        .. warning:: All the data in the table will be lost if `rebuild` is
@@ -84,13 +88,17 @@ def createTableFromJSON(
     google.cloud.exceptions.BadRequest
         If time and range partitioning are used at the same time.
     """
+    # Args verification
+    if if_exists not in ['raise', 'ignore', 'rebuild']:
+        err_msg = "if_exists must be one of 'raise', 'ignore' or 'rebuild'"
+        raise ValueError(err_msg)
     # Read config JSON
     with open(ddl_json_config_path) as f:
         ddl_config = json.load(f)
 
     # Build table location
     table_ref = '.'.join([
-            ddl_config['project'],
+            project,
             ddl_config['schema'],
             ddl_config['table']
     ])
@@ -146,8 +154,10 @@ def createTableFromJSON(
     if if_exists == 'rebuild':
         gbq_client.delete_table(table_ref, not_found_ok=True)
         gbq_client.create_table(table)
-    else:
+    elif if_exists == 'raise':
         gbq_client.create_table(table, exists_ok=False)
+    else:
+        gbq_client.create_table(table, exists_ok=True)
 
     # Return the DDL config dict
     return ddl_config
