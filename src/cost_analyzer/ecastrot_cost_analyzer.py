@@ -2,6 +2,7 @@
 from datetime import timedelta
 
 # pip
+import pendulum
 from airflow.models import DAG
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
@@ -15,7 +16,7 @@ dag_args = {
     'dag_id': 'ecastrot_cost_analyzer',
     'schedule_interval': '0 3 * * *',
     'dagrun_timeout': None,
-    'catchup': False,
+    'catchup': True,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': ['example'],
@@ -24,7 +25,10 @@ dag_args = {
         'region': '{{ var.value.develop_smu_unidata_default_region }}',
         'owner': 'BIGDATA_ANALYTICS',
         'email': '{{ var.json.develop_smu_unidata_default_email }}',
-        'start_date': None,
+        'start_date': pendulum.datetime(
+            2025, 5, 22,
+            tz=pendulum.timezone('America/Santiago')
+        ),
         'depends_on_past': False,
         'catchup': False,
         'email_on_failure': False,
