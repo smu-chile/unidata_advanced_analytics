@@ -40,7 +40,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
 
-    EXECUTION_DATE = "{{ dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d') }}"
+    EXECUTION_DATE = "{{ dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d') }}"
 
     get_costs = DataprocCreateBatchOperator(
         task_id = 'get_costs',
