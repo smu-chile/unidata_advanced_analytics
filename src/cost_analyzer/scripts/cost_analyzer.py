@@ -1,5 +1,6 @@
 # Default
 import os
+import logging
 import argparse
 from logging import config
 from collections import defaultdict
@@ -62,6 +63,7 @@ def main() -> None:  # noqa: D103
     gcp_project: str = args['project_id']
 
     # Get all jobs in the execution_date
+    logging.info(f'Getting all jobs started on {execution_date}')
     gbq_client = bigquery.Client()
     all_jobs = gbq_client.list_jobs(
         project=gcp_project,
@@ -79,6 +81,7 @@ def main() -> None:  # noqa: D103
     )
 
     # Save job info into dict[str, list]
+    logging.debug('Parsing jobs...')
     jobs_info = defaultdict(list)
     for job in all_jobs:
         jobs_info['job_id'].append(job.job_id)
@@ -101,9 +104,12 @@ def main() -> None:  # noqa: D103
 
     # dict[str, list] into DataFrame
     jobs_info = pd.DataFrame(jobs_info)
+    logging.debug('Done!')
     # Break execution when no job was executed
     if jobs_info.empty:
+        logging.info(f'No jobs founded for {execution_date}. Breaking execution')
         return
+    logging.info(f'{jobs_info.shape[0]:,} jobs founded')
 
     # Assign start date
     jobs_info['started_date'] = execution_date
@@ -122,6 +128,7 @@ def main() -> None:  # noqa: D103
     jobs_info['user'] = jobs_info[['user', 'user_email']].apply(replaceUserLabel, axis=1)
 
     # Create GBQ table if does not exist
+    logging.info('Creating GBQ table using JSON')
     gbq_extended.createTableFromJSON(
         ddl_json_config_path=os.path.join('gbq_objects', 'gbq_job_consumption.json'),
         project=gcp_project,
@@ -129,6 +136,7 @@ def main() -> None:  # noqa: D103
     )
 
     # Upload data
+    logging.info(f'Uploading data for {execution_date}')
     gbq_extended.uploadFrame(
         jobs_info[[
             'job_id', 'job_type', 'state', 'statement_type', 'started_date', 'duration',
@@ -137,6 +145,7 @@ def main() -> None:  # noqa: D103
         f'{gcp_project}.SANDBOX_ECASTROT.gbq_job_consumption',
         if_exists='append',
     )
+    logging.info('Done!')
 
 
 if __name__ == '__main__':
