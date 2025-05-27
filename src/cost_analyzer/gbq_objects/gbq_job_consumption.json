@@ -1,6 +1,6 @@
 {
     "schema": "ML_LAB",
-    "table": "gbq_job_consumption",
+    "table": "GBQ_JOB_CONSUMPTION",
 
     "columns": [
         {
@@ -53,13 +53,13 @@
         },
         {
             "name": "total_mb_billed",
-            "field_type": "STRING",
+            "field_type": "DECIMAL",
             "mode": "REQUIRED",
             "description": "Number of Mb because of the job execution"
         },
         {
             "name": "total_mb_processed",
-            "field_type": "STRING",
+            "field_type": "DECIMAL",
             "mode": "REQUIRED",
             "description": "Number of Mb processed by the job execution"
         }

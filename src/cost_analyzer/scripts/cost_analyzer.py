@@ -135,6 +135,14 @@ def main() -> None:  # noqa: D103
         if_exists='ignore'
     )
 
+    # Delete data from the execution_date if reprocessing
+    gbq_extended.deleteFromTable(
+        table_ref=f'{gcp_project}.ML_LAB.GBQ_JOB_CONSUMPTION',
+        column_name='started_date',
+        column_type='date',
+        column_value=execution_date,
+    )
+
     # Upload data
     logging.info(f'Uploading data for {execution_date}')
     gbq_extended.uploadFrame(
@@ -142,7 +150,8 @@ def main() -> None:  # noqa: D103
             'job_id', 'job_type', 'state', 'statement_type', 'started_date', 'duration',
             'user', 'user_email', 'total_mb_billed', 'total_mb_processed'
         ]],
-        f'{gcp_project}.ML_LAB.gbq_job_consumption',
+        table_ref=f'{gcp_project}.ML_LAB.GBQ_JOB_CONSUMPTION',
+        table_ddl_json_path=os.path.join('gbq_objects', 'gbq_job_consumption.json'),
         if_exists='append',
     )
     logging.info('Process ended! :)')
