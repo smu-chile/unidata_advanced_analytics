@@ -10,6 +10,9 @@ import pandas_gbq
 from google.cloud import bigquery
 from google.cloud.exceptions import BadRequest
 
+# Own
+from ..utils.queries import QueryDict  # noqa: TID252
+
 
 # Type checking imports
 if TYPE_CHECKING:
@@ -238,7 +241,7 @@ def createTableAsSelect(
 
 
 def uploadFrame(
-        df: pd.DataFrame, table_ref: str,
+        df: pd.DataFrame, table_ref: str, table_ddl_json_path: str,
         if_exists: Literal['fail', 'replace', 'append'] = 'fail',
         progress_bar: bool = False,
         **kwargs
@@ -252,6 +255,8 @@ def uploadFrame(
     table_ref : str
         Path to the table in the form `project.schema.table` (Case
         sensitive)
+    table_ddl_json_path : str
+        Path to a json with the DDL of the table
     if_exists : {'fail', 'replace', 'append'}
         Behavior to take if the table allready exists.
         -  `fail` throws an error
@@ -266,12 +271,57 @@ def uploadFrame(
     **kwargs : pd.DataFrame
         Arguments passed on to `pandas_gbq.to_bgq`
     """
+    with open(table_ddl_json_path) as table_ddl:
+        table_schema = [{
+            'name': x['name'],
+            'type': x['field_type']
+        }
+        for x in json.load(table_ddl)['columns']
+    ]
+
     return pandas_gbq.to_gbq(
-        dataframe=df,
+        dataframe=df.astype(str),
         destination_table=table_ref,
         if_exists=if_exists,
         progress_bar=progress_bar,
+        table_schema=table_schema,
         **kwargs
+    )
+
+
+def deleteFromTable(table_ref: str, column_name: str, column_value: str, column_type: str) -> None:
+    """Delete data from a table filtering by a specific column value.
+
+    Parameters
+    ----------
+    table_ref : str
+        Table from which the data will be deleted. The value must included
+        a project ID, dataset ID, and table ID, each separated by ``.``.
+        For example: `your-project.your_dataset.your_table`
+    column_name : str
+        Name of the column that will be used to filter the data to be
+        deleted
+    column_value : str
+        Value of col_name in the rows to be deleted
+    column_type : str
+        BigQuery column type (same as DDL)
+    """
+    sql_query = QueryDict({
+        'delete_query':
+        """
+        DELETE FROM `${table_ref}`
+        WHERE ${column_name} = CAST('${column_value}' AS ${column_type})
+        """
+    })
+
+    gbq_client = bigquery.Client(project=table_ref.split('.')[0])
+    gbq_client.query_and_wait(
+        query=sql_query['delete_query'].substitute(
+            table_ref=table_ref,
+            column_name=column_name,
+            column_value=column_value,
+            column_type=column_type,
+        ),
     )
 
 
