@@ -110,6 +110,7 @@ def main() -> None:  # noqa: D103
 
     for gcp_project in gcp_projects:
         # Read INFORMATION_SCHEMA.JOBS view
+        logging.info(f'Searching jobs in the {gcp_project} project')
         project_jobs = gbq_extended.readBigQuery(
             query=SQL_QUERIES['project_jobs'].substitute(
                 gcp_project=gcp_project,
