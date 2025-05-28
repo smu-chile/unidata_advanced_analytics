@@ -4,6 +4,24 @@
 
     "columns": [
         {
+            "name": "project_id",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "[CUSTERED] Name of the project from which the query was made"
+        },
+        {
+            "name": "user_or_project",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "[CUSTERED] Name of the user or project responsible for the query"
+        },
+        {
+            "name": "user_email",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Email of the user that executed the job"
+        },
+        {
             "name": "job_id",
             "field_type": "STRING",
             "mode": "REQUIRED",
@@ -16,22 +34,16 @@
             "description": "The type of the job. Can be query, load, extract, copy or unknown"
         },
         {
-            "name": "state",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "State of the job. Should allways be DONE"
+            "name": "cache_hit",
+            "field_type": "BOOLEAN",
+            "mode": "NULLABLE",
+            "description": "Whether the query results of this job were from a cache"
         },
         {
-            "name": "statement_type",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "Statement executed by the job, e.g. SELECT"
-        },
-        {
-            "name": "started_date",
+            "name": "creation_date",
             "field_type": "DATE",
             "mode": "REQUIRED",
-            "description": "Date in which the job started"
+            "description": "[PARTITIONED] Date in which the job was created"
         },
         {
             "name": "duration",
@@ -40,33 +52,42 @@
             "description": "Duration of the job"
         },
         {
-            "name": "user",
+            "name": "statement_type",
             "field_type": "STRING",
-            "mode": "NULLABLE",
-            "description": "User that executed the job"
+            "mode": "REQUIRED",
+            "description": "The type of query statement. For example, DELETE, INSERT, SELECT or UPDATE"
         },
         {
-            "name": "user_email",
+            "name": "state",
             "field_type": "STRING",
-            "mode": "NULLABLE",
-            "description": "Email of the user that executed the job"
+            "mode": "REQUIRED",
+            "description": "Running state of the job. Valid states include PENDING, RUNNING, and DONE"
         },
         {
             "name": "total_mb_billed",
             "field_type": "DECIMAL",
             "mode": "REQUIRED",
-            "description": "Number of Mb because of the job execution"
+            "description": "Number of Mb billed by of the job execution"
         },
         {
             "name": "total_mb_processed",
             "field_type": "DECIMAL",
             "mode": "REQUIRED",
             "description": "Number of Mb processed by the job execution"
+        },
+        {
+            "name": "total_s_slot_usage",
+            "field_type": "DECIMAL",
+            "mode": "REQUIRED",
+            "description": "Slot seconds for the job over its entire duration in the RUNNING state, including retries"
         }
+
     ],
 
     "time_partitioning": {
-        "field": "started_date",
+        "field": "creation_date",
         "type_": "DAY"
-    }
+    },
+
+    "clustering_fields": ["project_id", "user_or_project"]
 }
