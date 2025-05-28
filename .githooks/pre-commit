@@ -1,3 +1,2 @@
 #!/usr/bin/env bash
 ruff check --config lint/dev_ruff.toml --quiet
-ruff clean
