@@ -1,6 +1,6 @@
 # How to upload Docker images to GCP
 
-**NOTE:** For all the commands below, `PROJECT_NAME` is the name of the project in which you are working with hyphens instead of underscores
+**NOTE:** For all the commands below, `PROJECT_NAME` is the name of the project in which you are working with hyphens instead of underscores. After you build the image you must **disable** `containerd` from the configurations page in Docker Desktop for the images to be built in `application/vnd.docker.distribution.manifest.v2+json` format.
 
 ## Building and testing the image
 First of all, its necessary to build the image using:
