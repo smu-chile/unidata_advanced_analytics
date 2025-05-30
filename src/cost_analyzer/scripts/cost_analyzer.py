@@ -199,7 +199,7 @@ def main() -> None:  # noqa: D103
     # Delete data from the execution_date if reprocessing
     gbq_extended.deleteFromTable(
         table_ref=f'{gcp_project_id}.ML_LAB.GBQ_JOB_CONSUMPTION',
-        column_name='started_date',
+        column_name='creation_date',
         column_type='date',
         column_value=execution_date,
         gbq_client=gbq_client,
