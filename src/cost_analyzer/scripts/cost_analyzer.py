@@ -184,6 +184,9 @@ def main() -> None:  # noqa: D103
             ignore_index=True,
         )
 
+    if jobs.empty:
+        return
+
     # Create GBQ table if does not exist
     logging.info('Creating GBQ table using JSON')
     gbq_extended.createTableFromJSON(
