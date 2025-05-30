@@ -293,7 +293,7 @@ def uploadFrame(
     ]
 
     return pandas_gbq.to_gbq(**{
-        'dataframe': df.astype(str),
+        'dataframe': df,
         'destination_table': table_ref,
         'if_exists': if_exists,
         'progress_bar': progress_bar,

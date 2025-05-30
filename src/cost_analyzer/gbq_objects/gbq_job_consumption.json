@@ -65,19 +65,19 @@
         },
         {
             "name": "total_mb_billed",
-            "field_type": "DECIMAL",
+            "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": "Number of Mb billed by of the job execution"
         },
         {
             "name": "total_mb_processed",
-            "field_type": "DECIMAL",
+            "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": "Number of Mb processed by the job execution"
         },
         {
             "name": "total_s_slot_usage",
-            "field_type": "DECIMAL",
+            "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": "Slot seconds for the job over its entire duration in the RUNNING state, including retries"
         }
