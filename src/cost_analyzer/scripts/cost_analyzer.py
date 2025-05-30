@@ -154,7 +154,11 @@ def main() -> None:  # noqa: D103
         project_jobs['total_s_slot_usage'] = project_jobs['total_slot_ms'] / 1000 / 60
 
         # Construct user
-        project_jobs['user_or_project'] = project_jobs['labels'].str[0].str.get('value')
+        # TODO(ecastrot): Fix this shit later. Im so fucking done right now
+        if gcp_project not in ['cl-cda-unidata-dev', 'cl-cda-unidata-prod']:
+            project_jobs['user_or_project'] = project_jobs['labels'].str[0].str.get('value')
+        else:
+            project_jobs['user_or_project'] = pd.NA
         project_jobs['user_or_project'] = project_jobs[[
             'user_email', 'user_or_project'
         ]].apply(
