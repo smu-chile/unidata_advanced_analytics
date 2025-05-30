@@ -189,7 +189,8 @@ def main() -> None:  # noqa: D103
     gbq_extended.createTableFromJSON(
         ddl_json_config_path=os.path.join('gbq_objects', 'gbq_job_consumption.json'),
         project=gcp_project_id,
-        if_exists='ignore'
+        gbq_client=gbq_client,
+        if_exists='ignore',
     )
 
     # Delete data from the execution_date if reprocessing
@@ -198,6 +199,7 @@ def main() -> None:  # noqa: D103
         column_name='started_date',
         column_type='date',
         column_value=execution_date,
+        gbq_client=gbq_client,
     )
 
     # Upload data
@@ -206,6 +208,7 @@ def main() -> None:  # noqa: D103
         jobs,
         table_ref=f'{gcp_project_id}.ML_LAB.GBQ_JOB_CONSUMPTION',
         table_ddl_json_path=os.path.join('gbq_objects', 'gbq_job_consumption.json'),
+        gbq_client=gbq_client,
         if_exists='append',
     )
     logging.info('Process ended! :)')

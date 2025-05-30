@@ -82,7 +82,7 @@ with DAG(**dag_args) as dag:
                     'us-east1-docker.pkg.dev/'
                     'cl-bigdata-analytics/'
                     'dataproc-worker-images/'
-                    'cost-analyzer'
+                    'cost-analyzer:latest'
                 ),
             },
 
