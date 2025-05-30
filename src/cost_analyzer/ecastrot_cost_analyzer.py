@@ -78,7 +78,12 @@ with DAG(**dag_args) as dag:
             # Docker image to be used in the dataproc pod
             'runtime_config': {
                 'version': '2.2',
-                'container_image': '{{ var.value.develop_smu_unidata_docker_image }}',
+                'container_image': (
+                    'us-east1-docker.pkg.dev/'
+                    'cl-bigdata-analytics/'
+                    'dataproc-worker-images/'
+                    'cost-analyzer:latest'
+                ),
             },
 
             # Privileges config
