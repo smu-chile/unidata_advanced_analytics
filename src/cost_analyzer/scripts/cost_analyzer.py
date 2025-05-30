@@ -98,8 +98,8 @@ def main() -> None:  # noqa: D103
         'cl-bigdata-analytics',
         #'cl-bigdata-analytics-preprod',
         #'cl-bigdata-analytics-prod',
-        #'cl-cda-unidata-dev',
-        #'cl-cda-unidata-prod',
+        'cl-cda-unidata-dev',
+        'cl-cda-unidata-prod',
     ]
 
     # Set gbq client for all subsequent queries
@@ -214,7 +214,7 @@ def main() -> None:  # noqa: D103
         gbq_client=gbq_client,
         if_exists='append',
     )
-    logging.info('Process ended! :)')
+    logging.info('Process ended!')
 
 
 if __name__ == '__main__':
