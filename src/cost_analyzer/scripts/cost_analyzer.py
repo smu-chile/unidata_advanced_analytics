@@ -168,7 +168,7 @@ def main() -> None:  # noqa: D103
             ].str[
                 0
             # Change into object if the row only contains pd.NAs
-            ].asytpe(
+            ].astype(
                 object
             # Extract the value of the label
             ).str.get(
