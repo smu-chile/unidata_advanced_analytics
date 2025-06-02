@@ -154,9 +154,15 @@ def main() -> None:  # noqa: D103
         project_jobs['total_s_slot_usage'] = project_jobs['total_slot_ms'] / 1000 / 60
 
         # Construct user
-        # TODO(ecastrot): Fix this shit later. Im so fucking done right now
-        if gcp_project not in ['cl-cda-unidata-dev', 'cl-cda-unidata-prod']:
+        # For Advanced Analytics projects, search for the project name in
+        # labels
+        if gcp_project in [
+            'cl-bigdata-analytics',
+            'cl-bigdata-analytics-preprod',
+            'cl-bigdata-analytics-prod',
+        ]:
             project_jobs['user_or_project'] = project_jobs['labels'].str[0].str.get('value')
+        # For other projects, simply extract the user that made the query
         else:
             project_jobs['user_or_project'] = pd.NA
         project_jobs['user_or_project'] = project_jobs[[
@@ -166,6 +172,7 @@ def main() -> None:  # noqa: D103
             axis=1
         )
 
+        # Save jobs of the project
         jobs = pd.concat([
                 jobs,
                 project_jobs[[
