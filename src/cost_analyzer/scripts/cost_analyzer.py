@@ -5,6 +5,7 @@ import argparse
 from logging import config
 
 # pip
+import numpy as np
 import pandas as pd
 import pendulum
 from google.cloud import bigquery
@@ -93,6 +94,7 @@ def main() -> None:  # noqa: D103
     args = vars(parser.parse_args())
     execution_date: str = args['execution_date']
     gcp_project_id: str = args['project_id']
+    logging.info(f'execution_date: {execution_date}')
 
     gcp_projects = [
         'cl-bigdata-analytics',
@@ -128,7 +130,7 @@ def main() -> None:  # noqa: D103
 
         # Break execution when no job was executed
         if project_jobs.empty:
-            logging.info(f'No jobs founded for {execution_date}. Going to the next project')
+            logging.info(f'No jobs founded for {gcp_project}. Going to the next project')
             continue
         logging.info(f'{project_jobs.shape[0]:,} jobs founded in {gcp_project} project')
 
@@ -157,7 +159,7 @@ def main() -> None:  # noqa: D103
         # For Advanced Analytics projects, search for the project name in
         # labels
         if (
-            isinstance(project_jobs['user_or_project'].iloc[0], list)
+            isinstance(project_jobs['labels'].iloc[0], np.ndarray)
             and gcp_project in [
                 'cl-bigdata-analytics',
                 'cl-bigdata-analytics-preprod',
