@@ -156,11 +156,14 @@ def main() -> None:  # noqa: D103
         # Construct user
         # For Advanced Analytics projects, search for the project name in
         # labels
-        if gcp_project in [
-            'cl-bigdata-analytics',
-            'cl-bigdata-analytics-preprod',
-            'cl-bigdata-analytics-prod',
-        ]:
+        if (
+            isinstance(project_jobs['user_or_project'].iloc[0], list)
+            and gcp_project in [
+                'cl-bigdata-analytics',
+                'cl-bigdata-analytics-preprod',
+                'cl-bigdata-analytics-prod',
+            ]
+        ):
             project_jobs['user_or_project'] = project_jobs['labels'].str[0].str.get('value')
         # For other projects, simply extract the user that made the query
         else:
