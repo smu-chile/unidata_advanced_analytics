@@ -5,7 +5,6 @@ import argparse
 from logging import config
 
 # pip
-import numpy as np
 import pandas as pd
 import pendulum
 from google.cloud import bigquery
@@ -132,9 +131,6 @@ def main() -> None:  # noqa: D103
         if project_jobs.empty:
             logging.info(f'No jobs founded for {gcp_project}. Going to the next project')
             continue
-        # TODO(ecastrot): Remove prints below
-        print(project_jobs)
-        print(project_jobs['labels'])
         logging.info(f'{project_jobs.shape[0]:,} jobs founded in {gcp_project} project')
 
 
@@ -161,15 +157,23 @@ def main() -> None:  # noqa: D103
         # Construct user
         # For Advanced Analytics projects, search for the project name in
         # labels
-        if (
-            isinstance(project_jobs['labels'].iloc[0], np.ndarray)
-            and gcp_project in [
-                'cl-bigdata-analytics',
-                'cl-bigdata-analytics-preprod',
-                'cl-bigdata-analytics-prod',
-            ]
-        ):
-            project_jobs['user_or_project'] = project_jobs['labels'].str[0].str.get('value')
+        if gcp_project in [
+            'cl-bigdata-analytics',
+            'cl-bigdata-analytics-preprod',
+            'cl-bigdata-analytics-prod',
+        ]:
+            project_jobs['user_or_project'] = project_jobs[
+                'labels'
+            # Get the first label
+            ].str[
+                0
+            # Change into object if the row only contains pd.NAs
+            ].asytpe(
+                object
+            # Extract the value of the label
+            ).str.get(
+                'value'
+            )
         # For other projects, simply extract the user that made the query
         else:
             project_jobs['user_or_project'] = pd.NA
