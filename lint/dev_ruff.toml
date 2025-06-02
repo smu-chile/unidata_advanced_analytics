@@ -21,7 +21,7 @@ src = ['src']
 select = [
     "S",  "F",  "W",  "I",  "N", "B", "G", "A", "Q",
     "UP", "C4", "EM", "FA", "PT", "TD", "PD",
-    "YTT", "BLE", "DTZ", "T10", "EXE", "ISC", "ICN", "LOG", "T20", "PYI", "RSE",
+    "YTT", "BLE", "DTZ", "T10", "EXE", "ISC", "ICN", "LOG", "PYI", "RSE",
     "RET", "SLF", "SIM", "ARG", "TCH", "ERA", "PGH", "TRY", "FLY", "NPY", "AIR",
     "RUF", "INP", "PIE",
     "ASYNC", "SLOT", "PERF",

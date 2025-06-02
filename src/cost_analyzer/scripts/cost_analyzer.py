@@ -132,6 +132,9 @@ def main() -> None:  # noqa: D103
         if project_jobs.empty:
             logging.info(f'No jobs founded for {gcp_project}. Going to the next project')
             continue
+        # TODO(ecastrot): Remove prints below
+        print(project_jobs)
+        print(project_jobs['labels'])
         logging.info(f'{project_jobs.shape[0]:,} jobs founded in {gcp_project} project')
 
 
