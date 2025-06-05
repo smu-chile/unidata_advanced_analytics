@@ -30,7 +30,7 @@ def main() -> None:
         txt = json.load(configfile)
     txt['ruff.configuration'] = f'lint/{new_branch}_ruff.toml'
     with open(vsc_config_filepath, 'w') as configfile:
-        json.dump(txt, configfile, indent=4)
+        json.dump(txt, configfile, indent=txt['[yaml]']['editor.tabSize'])
 
     # Replace text in pre-commit hook
     with open(pre_commit_filepath, 'r+') as configfile:
