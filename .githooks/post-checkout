@@ -8,7 +8,7 @@ import subprocess
 def main() -> None:
     """Assign Ruffs config depending on the branch in VSC Workspace."""
     vsc_config_filepath = os.path.join(
-        '.vscode/', 'unidata_advanced_analytics.code-workspace'
+        '.vscode/', 'settings.json'
     )
     pre_commit_filepath = os.path.join(
         '.githooks', 'pre-commit'
@@ -26,11 +26,11 @@ def main() -> None:
     new_branch = new_branch if new_branch in ['dev', 'main'] else 'dev'
 
     # Replace text in VSC config
-    with open(vsc_config_filepath, 'r+') as configfile:
+    with open(vsc_config_filepath) as configfile:
         txt = json.load(configfile)
-        txt['settings']['ruff.configuration'] = f'lint/{new_branch}_ruff.toml'
-        configfile.seek(0)
-        json.dump(txt, configfile)
+    txt['ruff.configuration'] = f'lint/{new_branch}_ruff.toml'
+    with open(vsc_config_filepath, 'w') as configfile:
+        json.dump(txt, configfile, indent=4)
 
     # Replace text in pre-commit hook
     with open(pre_commit_filepath, 'r+') as configfile:
