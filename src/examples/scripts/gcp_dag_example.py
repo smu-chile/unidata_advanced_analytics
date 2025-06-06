@@ -80,7 +80,7 @@ def main() -> None:  # noqa: D103
 
     logging.info('Building table')
     gbq_extended.createTableFromJSON(
-        ddl_json_config_path=os.path.join('gbq_objects', 'example_object.json'),
+        ddl_json_config_path=os.path.join('gbq_objects', 'example_time_partition_ddl.json'),
         project=gcp_project,
         if_exists='ignore',
     )

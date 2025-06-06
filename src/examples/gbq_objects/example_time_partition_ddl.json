@@ -1,0 +1,39 @@
+{
+    "schema": "ML_LAB",
+    "table": "EXAMPLE_TIME_PARTITIONING",
+
+    "columns": [
+        {
+            "name": "col1",
+            "field_type": "DATE",
+            "mode": "NULLABLE",
+            "description": "Example date column"
+        },
+        {
+            "name": "col2",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "default_value_expression": "'test'",
+            "description": "Example string column"
+        },
+        {
+            "name": "col3",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Example numeric colum 1"
+        },
+        {
+            "name": "col4",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Example numeric colum 2"
+        }
+    ],
+
+    "time_partitioning": {
+        "field": "col1",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": ["col2", "col3"]
+}

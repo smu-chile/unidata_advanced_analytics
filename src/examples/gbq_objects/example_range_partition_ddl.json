@@ -1,6 +1,6 @@
 {
-    "schema": "ML_LAB",
-    "table": "example_tbl_from_json",
+    "schema": "SANDBOX_ECASTROT",
+    "table": "EXAMPLE_RANGE_PARTITIONING",
 
     "columns": [
         {
@@ -13,27 +13,25 @@
             "name": "col2",
             "field_type": "STRING",
             "mode": "NULLABLE",
-            "default_value_expression": "'test'",
+            "default_value_expression": "'valor_por_defecto'",
             "description": "Example string column"
         },
         {
             "name": "col3",
             "field_type": "INTEGER",
             "mode": "NULLABLE",
-            "description": "Example numeric colum 1"
-        },
-        {
-            "name": "col4",
-            "field_type": "INTEGER",
-            "mode": "NULLABLE",
-            "description": "Example numeric colum 2"
+            "description": "Example numeric colum"
         }
     ],
 
-    "time_partitioning": {
-        "field": "col1",
-        "type_": "DAY"
+    "range_partitioning": {
+        "field": "col3",
+        "range_": {
+            "start": 0,
+            "end": 10,
+            "interval": 1
+        }
     },
 
-    "clustering_fields": ["col2", "col3"]
+    "clustering_fields": ["col2"]
 }
