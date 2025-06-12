@@ -16,6 +16,8 @@ from ..utils.queries import QueryDict  # noqa: TID252
 
 # Type checking imports
 if TYPE_CHECKING:
+    from datetime import datetime
+
     import pandas as pd
 
 
@@ -341,6 +343,28 @@ def deleteFromTable(
             column_type=column_type,
         ),
     )
+
+
+def setTableExpiration(
+        table_ref: str, expiration: datetime,
+        gbq_client: bigquery.Client
+    ) -> None:
+    """Sets an expiration date and time for a BigQuery table.
+
+    Parameters
+    ----------
+    table_ref : str
+        Table from which the data will be deleted. The value must included
+        a project ID, dataset ID, and table ID, each separated by ``.``.
+        For example: `your-project.your_dataset.your_table`
+    expiration : datetime.datetime
+        Date and time of the table expiration
+    gbq_client : bigquery.Client
+        Client used for making the queries
+    """
+    gbq_table = gbq_client.get_table(table_ref)
+    gbq_table.expires = expiration
+    gbq_table = gbq_client.update_table(gbq_table, ['expires'])
 
 
 if __name__ == '__main__':
