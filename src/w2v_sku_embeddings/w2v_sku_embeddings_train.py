@@ -42,19 +42,7 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-
-    # Parameters
-    EPOCHS = "{{ dag_run.conf.get('epochs', 10) }}"
-    BATCH_SIZE = "{{ dag_run.conf.get('batch_size', 5000000) }}"
-    SG = "{{ dag_run.conf.get('sg', 1) }}"
-    HS = "{{ dag_run.conf.get('hs', 0) }}"
-    MIN_COUNT = "{{ dag_run.conf.get('min_count', 100) }}"
-    WINDOW_SIZE = "{{ dag_run.conf.get('window_size', 100) }}"
-    NS_EXPONENT = "{{ dag_run.conf.get('ns_exponent', -0.5) }}"
-    EMBEDDING_DIM = "{{ dag_run.conf.get('embedding_dim', 100) }}"
-    N_NEGATIVE_SAMPLES = "{{ dag_run.conf.get('n_negative_samples', 20) }}"
-    CART_LENGHT = "{{ dag_run.conf.get('cart_lenght', '2 100') }}"
+    RUN_UUID4 = '{{ macros.uuid.uuid4() }}'
 
     # Tasks
     train_tasks = [
@@ -86,19 +74,21 @@ with DAG(**dag_args) as dag:
                     'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
                     # Main file arguments
                     'args': [
-                        '--project_id', GCP_PROJECT_ID,
-                        '--execution_date', EXECUTION_DATE,
+                        '--uuid', RUN_UUID4,
+                        '--project_name', PROJECT_NAME,
+                        '--gcp_project', GCP_PROJECT_ID,
+                        '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}",  # noqa: E501
                         '--store_banner', store_banner,
-                        '--epochs', EPOCHS,
-                        '--batch_size', BATCH_SIZE,
-                        '--sg', SG,
-                        '--hs', HS,
-                        '--min_count', MIN_COUNT,
-                        '--window_size', WINDOW_SIZE,
-                        '--ns_exponent', NS_EXPONENT,
-                        '--embedding_dim', EMBEDDING_DIM,
-                        '--n_negative_samples', N_NEGATIVE_SAMPLES,
-                        '--cart_lenght', CART_LENGHT,
+                        '--epochs', "{{ dag_run.conf.get('epochs', 10) }}",
+                        '--batch_size', "{{ dag_run.conf.get('batch_size', 5000000) }}",
+                        '--sg', "{{ dag_run.conf.get('sg', 1) }}",
+                        '--hs', "{{ dag_run.conf.get('hs', 0) }}",
+                        '--min_count', "{{ dag_run.conf.get('min_count', 100) }}",
+                        '--window_size', "{{ dag_run.conf.get('window_size', 100) }}",
+                        '--ns_exponent', "{{ dag_run.conf.get('ns_exponent', -0.5) }}",
+                        '--embedding_dim', "{{ dag_run.conf.get('embedding_dim', 100) }}",
+                        '--n_negative_samples', "{{ dag_run.conf.get('n_negative_samples', 20) }}",
+                        '--cart_lenght', "{{ dag_run.conf.get('cart_lenght', '2 100') }}",
                     ],
                 },
 
@@ -124,7 +114,7 @@ with DAG(**dag_args) as dag:
             },
 
             # Batch ID
-            batch_id = 'batch-{{ macros.uuid.uuid4() }}',
+            batch_id = f'batch-{RUN_UUID4}',
             project_id = GCP_PROJECT_ID,
         )
 
