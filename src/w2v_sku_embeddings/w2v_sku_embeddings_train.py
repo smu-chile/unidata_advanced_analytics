@@ -83,7 +83,7 @@ with DAG(**dag_args) as dag:
                         '--ns_exponent', "{{ dag_run.conf.get('ns_exponent', -0.5) }}",
                         '--embedding_dim', "{{ dag_run.conf.get('embedding_dim', 100) }}",
                         '--n_negative_samples', "{{ dag_run.conf.get('n_negative_samples', 20) }}",
-                        '--cart_lenght', "{{ dag_run.conf.get('cart_lenght', '2 100') }}",
+                        '--cart_lenght', "{{ dag_run.conf.get('min_cart_lenght', 2) }}", "{{ dag_run.conf.get('max_cart_lenght', 100) }}"  # noqa: E501
                     ],
                 },
 
