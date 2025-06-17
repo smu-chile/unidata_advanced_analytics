@@ -53,7 +53,7 @@ def main() -> None:  # noqa: D103
         logging.info(f'{og_store_banner} -> {short_store_banner}')
 
     logging.info(
-        f'Example query: {_SQL_QUERIES['example_query'].substitute(table='schema.table')}'
+        f"Example query: {_SQL_QUERIES['example_query'].substitute(table='schema.table')}"
     )
 
     python_version = subprocess.run(
