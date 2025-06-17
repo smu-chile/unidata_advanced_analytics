@@ -129,9 +129,9 @@ SQL_QUERIES = QueryDict({
         ON sales_item.market_basket_key = external_ecommerce_filter.market_basket_key
 
         WHERE
-            sales_basket.transaction_date >= DATE('${execution_date}') - INTERVAL 12 MONTH
+            sales_basket.transaction_date >= DATE('${execution_date}') - INTERVAL 1 MONTH
             AND sales_basket.transaction_date < DATE('${execution_date}')
-            AND sales_item.transaction_date >= DATE('${execution_date}') - INTERVAL 12 MONTH
+            AND sales_item.transaction_date >= DATE('${execution_date}') - INTERVAL 1 MONTH
             AND sales_item.transaction_date < DATE('${execution_date}')
             AND channel = 'SALA'
             AND itm_txn_fcn_tp_dsc = 'V'
@@ -275,9 +275,9 @@ class QueryDataLoader:
 #                        Main Function
 # -------------------------------------------------------------------------
 def main() -> None:  # noqa: D103
-    # --------------------
+    # ----------
     # Parameters
-    # --------------------
+    # ----------
     args = vars(parser.parse_args())
     # Environment
     uuid: str = args['uuid'].replace('-', '_')
@@ -336,9 +336,9 @@ def main() -> None:  # noqa: D103
     # ----------
     gbq_client = Client()
 
-    # ---------------------------------
-    # Customer frequency outliers table
-    # ---------------------------------
+    # --------------------------------
+    # Create table with trainning data
+    # --------------------------------
     logging.info('Building table with last year transactions')
     gbq_extended.createTableAsSelect(
         query=SQL_QUERIES['last_year_transactions'].substitute(
