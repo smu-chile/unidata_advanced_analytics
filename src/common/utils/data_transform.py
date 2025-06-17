@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Iterable, Generator
+from typing import TYPE_CHECKING
 
 import numpy as np
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Generator
 
 
 def zeroLevelDict(dictionary: dict, rename: dict | None = None, __prev_k: str='') -> Generator:
