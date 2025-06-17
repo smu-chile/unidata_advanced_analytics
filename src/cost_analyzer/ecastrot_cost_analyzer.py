@@ -82,7 +82,7 @@ with DAG(**dag_args) as dag:
                     'us-east1-docker.pkg.dev/'
                     f'{GCP_PROJECT_ID}/'
                     'dataproc-worker-images/'
-                    f'{PROJECT_NAME}:latest'
+                    f"{PROJECT_NAME.replace('_', '-')}:latest"
                 ),
             },
 

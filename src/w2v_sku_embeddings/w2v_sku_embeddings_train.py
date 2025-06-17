@@ -99,7 +99,7 @@ with DAG(**dag_args) as dag:
                         'us-east1-docker.pkg.dev/'
                         f'{GCP_PROJECT_ID}/'
                         'dataproc-worker-images/'
-                        f'{PROJECT_NAME}:latest'
+                        f"{PROJECT_NAME.replace('_', '-')}:latest"
                     ),
                 },
 
@@ -119,7 +119,7 @@ with DAG(**dag_args) as dag:
         )
 
         for store_banner in [
-            'Unimarc', 'Mayorista', 'Alvi', 'S10'
+            'Unimarc', 'Mayorista', 'Alvi', 'Super 10'
         ]
     ]
 
