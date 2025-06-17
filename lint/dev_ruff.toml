@@ -4,7 +4,7 @@
 # Python version of the project
 extend-include = ["*.ipynb"]
 extend-exclude = [".githooks"]
-target-version = "py37"
+target-version = "py312"
 src = ['src']
 
 # ------------------------------------------------------------------------------
