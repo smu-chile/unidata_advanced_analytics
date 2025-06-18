@@ -8,7 +8,7 @@ import re
 import google.cloud.logging_v2 as gclogging
 
 # Own
-from ..utils.queries import QueryDict  # noqa: TID252
+from ..databases.queries import QueryDict  # noqa: TID252
 
 
 def getDataprocJobLogs(

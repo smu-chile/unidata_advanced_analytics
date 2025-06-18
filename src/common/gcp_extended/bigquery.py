@@ -11,7 +11,7 @@ from google.cloud import bigquery
 from google.cloud.exceptions import BadRequest
 
 # Own
-from ..utils.queries import QueryDict  # noqa: TID252
+from ..databases.queries import QueryDict  # noqa: TID252
 
 
 # Type checking imports

@@ -12,7 +12,7 @@ from google.cloud import bigquery
 # Own
 import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG
-from common.utils.queries import QueryDict
+from common.databases.queries import QueryDict
 
 
 # -------------------------------------------------------------------------
