@@ -10,6 +10,9 @@ import argparse
 import subprocess
 from logging import config
 
+# pip
+from google.cloud import bigquery
+
 # Own
 import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG, SHORT_STORE_BANNERS
@@ -48,6 +51,9 @@ def main() -> None:  # noqa: D103
     args = vars(parser.parse_args())
     gcp_project: str = args['project_id']
 
+    # Set gbq client for all subsequent queries
+    gbq_client = bigquery.Client()
+
     logging.info('Store banner mapping:')
     for og_store_banner, short_store_banner in SHORT_STORE_BANNERS.items():
         logging.info(f'{og_store_banner} -> {short_store_banner}')
@@ -83,6 +89,7 @@ def main() -> None:  # noqa: D103
         ddl_json_config_path=os.path.join('gbq_objects', 'example_time_partition_ddl.json'),
         project=gcp_project,
         if_exists='ignore',
+        gbq_client=gbq_client,
     )
 
     logging.info('Process ended! :)')
