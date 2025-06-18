@@ -13,18 +13,19 @@ from airflow.operators.python import PythonOperator
 
 
 # Globals
-PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
+PROJECT_NAME = 'examples'
+GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
-    'dag_id': 'ecastrot_xcom_example',
+    'dag_id': 'xcom_example',
     'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': ['example'],
+    'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
-        'project_id': PROJECT_ID,
+        'project_id': GCP_PROJECT_ID,
         'region': '{{ var.value.develop_smu_unidata_default_region }}',
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['ecastrot@unidata.cl'],

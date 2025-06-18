@@ -10,18 +10,19 @@ from airflow.providers.google.cloud.operators.dataproc import (
 
 
 # Globals
-PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
+PROJECT_NAME = 'examples'
+GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
-    'dag_id': 'ecastrot_gcp_dag_example',
+    'dag_id': 'gcp_dag_example',
     'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': ['example'],
+    'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
-        'project_id': PROJECT_ID,
+        'project_id': GCP_PROJECT_ID,
         'region': '{{ var.value.develop_smu_unidata_default_region }}',
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['ecastrot@unidata.cl'],
@@ -47,7 +48,7 @@ with DAG(**dag_args) as dag:
                 # Main file to run in the dataproc pod
                 'main_python_file_uri': (
                     'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
-                    'examples/'
+                    f'{PROJECT_NAME}/'
                     'scripts/'
                     'gcp_dag_example.py'
                 ),
@@ -59,7 +60,7 @@ with DAG(**dag_args) as dag:
                     ),
                     (
                         'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
-                        'examples/'
+                        f'{PROJECT_NAME}/'
                         'gbq_objects/'
                     )
                 ],
@@ -67,7 +68,7 @@ with DAG(**dag_args) as dag:
                 'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
                 # Main file arguments
                 'args': [
-                    '--project_id', PROJECT_ID,
+                    '--project_id', GCP_PROJECT_ID,
                     '--execution_date', EXECUTION_DATE,
                 ],
             },
@@ -90,5 +91,5 @@ with DAG(**dag_args) as dag:
 
         # Batch ID
         batch_id = 'batch-{{ macros.uuid.uuid4() }}',
-        project_id = PROJECT_ID,
+        project_id = GCP_PROJECT_ID,
     )

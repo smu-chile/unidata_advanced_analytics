@@ -14,7 +14,7 @@ PROJECT_NAME = 'cost_analyzer'
 GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
-    'dag_id': 'ecastrot_cost_analyzer',
+    'dag_id': 'cost_analyzer',
     'schedule_interval': '0 3 * * *',
     'dagrun_timeout': None,
     'catchup': True,
@@ -27,7 +27,7 @@ dag_args = {
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['ecastrot@unidata.cl'],
         'start_date': pendulum.datetime(
-            2025, 5, 22,
+            2025, 5, 18,
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
