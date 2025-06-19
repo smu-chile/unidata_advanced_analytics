@@ -1,13 +1,7 @@
-# Default
-from typing import TYPE_CHECKING
-
 # pip
+import pandas as pd
 import awswrangler as wr
-
-
-if TYPE_CHECKING:
-    import pandas as pd  # noqa: TC004
-    from boto3 import Session  # noqa: TC004
+from boto3 import Session
 
 
 def readAthenaQuery(query: str, user: str, **kwargs) -> pd.DataFrame:

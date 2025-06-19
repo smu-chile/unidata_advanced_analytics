@@ -1,10 +1,5 @@
-from typing import TYPE_CHECKING
-
+import pandas as pd
 from sqlalchemy import create_engine
-
-
-if TYPE_CHECKING:
-    import pandas as pd  # noqa: TC004
 
 
 def readPostgresQuery(
