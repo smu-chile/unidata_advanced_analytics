@@ -399,6 +399,8 @@ def main() -> None:  # noqa: D103
     # Save the keyed vectors
     model.wv.save(fname_or_handle=output_uri)
 
+    return uuid
+
 
 if __name__ == '__main__':
     main()
