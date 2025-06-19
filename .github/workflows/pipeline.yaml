@@ -55,8 +55,8 @@ jobs:
           if [ $branch = "main" ]; then 
             scripts_project_id="cl-bigdata-analytics-prod";
             scripts_gcs="cl-bigdata-analytics-prod-us-dataproc-scripts";
-            dag_project_id="";
-            dag_gcs="";
+            dag_project_id="cl-orquestador-prod";
+            dag_gcs="us-east1-cl-orquestador-pro-df623903-bucket";
           elif [ $branch = "dev" ]; then 
             scripts_project_id="cl-bigdata-analytics";
             scripts_gcs="cl-bigdata-analytics-dev-us-dataproc-scripts";
