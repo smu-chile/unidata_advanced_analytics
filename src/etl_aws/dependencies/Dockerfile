@@ -79,11 +79,13 @@ RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
       sqlalchemy \
       sympy \
       pendulum \
+      awswrangler \
+      pandas-gbq \
       virtualenv
 
 # (Optional) Install additional requirements
-COPY requirements.txt .
-RUN pip install --no-cache-dir --no-cache -r requirements.txt
+# COPY requirements.txt .
+# RUN pip install --no-cache-dir --no-cache -r requirements.txt
 
 # Set timezone
 ENV TZ="America/Santiago"
