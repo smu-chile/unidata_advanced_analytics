@@ -25,8 +25,7 @@ RUN mkdir -p "${SPARK_EXTRA_JARS_DIR}"
 ENV CONDA_HOME=/opt/miniconda3
 ENV PYSPARK_PYTHON=${CONDA_HOME}/bin/python
 ENV PATH=${CONDA_HOME}/bin:${PATH}
-#RUN wget -O miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py39_4.10.3-Linux-x86_64.sh
-RUN wget -O miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+RUN wget -O miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py312_25.3.1-1-Linux-x86_64.sh
 RUN bash miniconda.sh -b -p /opt/miniconda3 \
   && ${CONDA_HOME}/bin/conda config --system --set always_yes True \
   && ${CONDA_HOME}/bin/conda config --system --set auto_update_conda False \
@@ -84,11 +83,12 @@ RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
       sqlalchemy \
       sympy \
       pendulum \
+      pandas-gbq \
       virtualenv
 
 # (Optional) Install additional requirements
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# COPY requirements.txt .
+# RUN pip install --no-cache-dir -r requirements.txt
 
 # Set timezone
 ENV TZ="America/Santiago"
