@@ -4,7 +4,7 @@ import json
 from google.cloud.secretmanager import SecretManagerServiceClient
 
 
-def getSecret(secret_name: str, project: str = 'cl-bigdata-analytics-dev') -> dict:
+def getSecret(secret_name: str, project: str = 'cl-bigdata-analytics') -> dict:
     """Get secret value as `dict` from GCP Secrets Manager.
 
     Parameters
@@ -20,7 +20,7 @@ def getSecret(secret_name: str, project: str = 'cl-bigdata-analytics-dev') -> di
         Dictionary with the secret.
     """
     # Build project number
-    if project == 'cl-bigdata-analytics-dev':
+    if project == 'cl-bigdata-analytics':
         project_number = 156006129315
     elif project == 'cl-bigdata-analytics-preprod':
         project_number = 0
