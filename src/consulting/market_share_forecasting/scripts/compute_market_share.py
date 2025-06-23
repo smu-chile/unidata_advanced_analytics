@@ -335,7 +335,6 @@ def main():
             'fin_periodo': 'string',
             'p_week': 'string',
         }),
-
         path=(
             's3://smu-datalake-test-athena-query-results/'
             'ecastrot/'
@@ -344,7 +343,9 @@ def main():
         ),
         index=None,
         header=None,
-        sep='|'
+        sep='|',
+        boto3_session=boto3_session,
+        use_threads=True,
     )
 
 
