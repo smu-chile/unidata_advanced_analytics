@@ -9,6 +9,7 @@ from collections import defaultdict
 # pip
 import pandas as pd
 import pendulum
+import awswrangler as wr
 from boto3 import Session
 from prophet import Prophet
 
@@ -314,26 +315,33 @@ def main():
     logging.info('Trainning ended')
 
     logging.info('Updating temporal table')
-    final_pred.sort_values('fin_periodo')[[
-        'departamento', 'cl_xc_categoria', 'negocio',
-        *[
-            x
-            for target_value in target_values
-            for x in (
-                target_value,
-                f'{target_value}_proyectado',
-                f'{target_value}_proyectado_min',
-                f'{target_value}_proyectado_max'
-            )
-        ],
-        'inicio_periodo', 'fin_periodo', 'p_week'
-    ]].astype({
-        'cl_xc_categoria': 'string',
-        'inicio_periodo': 'string',
-        'fin_periodo': 'string',
-        'p_week': 'string',
-    }).to_csv(
-        's3://smu-datalake-test-athena-query-results/ecastrot/tmp_market_share_proyection/proyection.csv',
+    wr.s3.to_csv(
+        df=final_pred.sort_values('fin_periodo')[[
+            'departamento', 'cl_xc_categoria', 'negocio',
+            *[
+                x
+                for target_value in target_values
+                for x in (
+                    target_value,
+                    f'{target_value}_proyectado',
+                    f'{target_value}_proyectado_min',
+                    f'{target_value}_proyectado_max'
+                )
+            ],
+            'inicio_periodo', 'fin_periodo', 'p_week'
+        ]].astype({
+            'cl_xc_categoria': 'string',
+            'inicio_periodo': 'string',
+            'fin_periodo': 'string',
+            'p_week': 'string',
+        }),
+
+        path=(
+            's3://smu-datalake-test-athena-query-results/'
+            'ecastrot/'
+            'tmp_market_share_proyection/'
+            'proyection.csv'
+        ),
         index=None,
         header=None,
         sep='|'
