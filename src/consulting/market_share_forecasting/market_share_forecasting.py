@@ -1,8 +1,8 @@
-
 # Default
 from datetime import timedelta
 
 # pip
+import pendulum
 from airflow.models import DAG
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
@@ -26,6 +26,10 @@ dag_args = {
         'region': '{{ var.value.develop_smu_unidata_default_region }}',
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['ecastrot@unidata.cl'],
+        'start_date': pendulum.datetime(
+            2025, 6, 18,
+            tz=pendulum.timezone('America/Santiago')
+        ),
         'depends_on_past': False,
         'email_on_failure': True,
         'email_on_retry': False,
@@ -92,3 +96,5 @@ with DAG(**dag_args) as dag:
         batch_id = 'batch-{{ macros.uuid.uuid4() }}',
         project_id = GCP_PROJECT_ID,
     )
+
+get_costs  # noqa: B018
