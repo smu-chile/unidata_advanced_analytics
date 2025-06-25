@@ -47,7 +47,7 @@ def main() -> None:  # noqa: D103
     #ILA
     input_files_ila = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Paneles Power BI/Reporte de Margen/Unimarc/Fuentes datos manuales/ILA/ILA_UNIMARC.xlsx'  # noqa: E501
 
-    sharepoint = sp.SharePointFile(sp_cred['client_id'],sp_cred['client_secert'],input_files_ila)
+    sharepoint = sp.SharePointFile(sp_cred['client_id'],sp_cred['client_secret'],input_files_ila)
     #TODO(csotob): agregar checkfileupdate
     df_ila = sharepoint.toFrame()
 
