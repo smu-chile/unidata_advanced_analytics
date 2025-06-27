@@ -11,7 +11,7 @@
         },
         {
             "name": "monthnumber",
-            "field_type": "INTEFER",
+            "field_type": "INTEGER",
             "mode": "REQUIRED",
             "description": "Month number for which the ILA is projected"
         },
