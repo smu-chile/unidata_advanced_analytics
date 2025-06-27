@@ -61,7 +61,6 @@ RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
       google-cloud-redis \
       google-cloud-secret-manager \
       google-cloud-spanner \
-      google-cloud-speech \
       google-cloud-storage \
       koalas \
       matplotlib \
@@ -84,6 +83,8 @@ RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
       sympy \
       pendulum \
       pandas-gbq \
+      Office365-REST-Python-Client \
+      openpyxl \
       virtualenv
 
 # (Optional) Install additional requirements
