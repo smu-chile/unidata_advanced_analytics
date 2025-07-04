@@ -49,7 +49,7 @@ SQL_QUERIES = QueryDict({
     'nielsen_data':
     """
     SELECT *
-    FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_CATEGORIA
+    FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_CATEGORIA
     """,
 
     'holidays':
@@ -178,14 +178,25 @@ def main():
     final_pred = pd.DataFrame()
 
     target_values = [
-                'mercado_vtas_valor',
-                'mercado_vtas_unit',
-                'unimarc_vtas_valor',
-                'unimarc_vtas_unit'
-            ]
+        f'{x}_{y}'
+        for x
+        in [
+            'total_mercado',
+            'unimarc',
+            'm10s10',
+            'unimarc_internet',
+            'total_internet',
+            'total_mercado_internet'
+        ]
+        for y in [
+            'vtas_valor',
+            'vtas_unit'
+        ]
+    ]
     logging.info('Start trainning')
     for category_names in batchList(
-        nielsen_data['cl_xc_categoria'].drop_duplicates().to_list(),
+        # TODO(ecastrot): Remove after testing
+        nielsen_data['cl_xc_categoria'].drop_duplicates().to_list()[:2],
         batch_size=10
     ):
         for category_name in category_names:
@@ -338,7 +349,7 @@ def main():
         path=(
             's3://smu-datalake-test-athena-query-results/'
             'ecastrot/'
-            'tmp_market_share_proyection/'
+            'fact_week_market_share_proyection/'
             'proyection.csv'
         ),
         index=None,
