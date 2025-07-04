@@ -195,8 +195,7 @@ def main():
     ]
     logging.info('Start trainning')
     for category_names in batchList(
-        # TODO(ecastrot): Remove after testing
-        nielsen_data['cl_xc_categoria'].drop_duplicates().to_list()[:2],
+        nielsen_data['cl_xc_categoria'].drop_duplicates().to_list(),
         batch_size=10
     ):
         for category_name in category_names:
