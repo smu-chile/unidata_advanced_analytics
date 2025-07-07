@@ -91,7 +91,7 @@ def main():
     args = vars(parser.parse_args())
 
     # Environment
-    user: str = args['project_name']
+    user: str = 'week_' + args['project_name']
     gcp_project: str = args['gcp_project']
     execution_date: str = args['execution_date']
 

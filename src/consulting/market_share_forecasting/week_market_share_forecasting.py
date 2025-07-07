@@ -52,7 +52,7 @@ with DAG(**dag_args) as dag:
                     'consulting/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'compute_market_share.py'
+                    'week_compute_market_share.py'
                 ),
                 # Common files
                 'python_file_uris': [
