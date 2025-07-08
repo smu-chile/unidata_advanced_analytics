@@ -50,7 +50,61 @@ SQL_QUERIES = QueryDict({
     """
     SELECT *
     FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_CATEGORIA
-    """,
+
+    UNION ALL
+
+    SELECT
+        'SIN CLASIFICAR' AS departamento
+        ,'SIN CLASIFICAR' AS cl_xc_categoria
+        ,'SIN CLASIFICAR' AS negocio
+        ,'' AS periodos
+        ,c.total_mercado_vtas_valor - COALESCE(cat.mercado_vtas_valor, 0) AS total_mercado_vtas_valor
+        ,c.total_mercado_vtas_unit - COALESCE(cat.mercado_vtas_unit, 0) AS total_mercado_vtas_unit
+        ,c.unimarc_vtas_valor - COALESCE(cat.unimarc_vtas_valor, 0) AS unimarc_vtas_valor
+        ,c.unimarc_vtas_unit - COALESCE(cat.unimarc_vtas_unit, 0) AS unimarc_vtas_unit
+        ,c.m10s10_vtas_valor - COALESCE(cat.m10s10_vtas_valor, 0) AS m10s10_vtas_valor
+        ,c.m10s10_vtas_unit - COALESCE(cat.m10s10_vtas_unit, 0) AS m10s10_vtas_unit
+        ,c.unimarc_internet_vtas_valor - COALESCE(cat.unimarc_internet_vtas_valor, 0) AS unimarc_internet_vtas_valor
+        ,c.unimarc_internet_vtas_unit - COALESCE(cat.unimarc_internet_vtas_unit, 0) AS unimarc_internet_vtas_unit
+        ,c.total_internet_vtas_valor - COALESCE(cat.total_internet_vtas_valor, 0) AS total_internet_vtas_valor
+        ,c.total_internet_vtas_unit - COALESCE(cat.total_internet_vtas_unit, 0) AS total_internet_vtas_unit
+        ,c.total_mercado_internet_vtas_valor - COALESCE(cat.total_mercado_internet_vtas_valor, 0) AS total_mercado_internet_vtas_valor
+        ,c.total_mercado_internet_vtas_unit - COALESCE(cat.total_mercado_internet_vtas_unit, 0) AS total_mercado_internet_vtas_unit
+        ,c.fin_periodo
+        ,id_semana AS p_week
+
+    FROM (
+        SELECT
+            *
+            ,DATE_FORMAT(DATE(fin_periodo), '%x%v') AS id_semana
+
+        FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_NEGOCIO
+
+        WHERE negocio=''
+    ) c
+
+    LEFT JOIN (
+        SELECT
+            DATE_FORMAT(DATE(fin_periodo), '%x%v') AS id_semana
+            ,SUM(total_mercado_vtas_valor) AS mercado_vtas_valor
+            ,SUM(total_mercado_vtas_unit) AS mercado_vtas_unit
+            ,SUM(unimarc_vtas_valor) AS unimarc_vtas_valor
+            ,SUM(unimarc_vtas_unit) AS unimarc_vtas_unit
+            ,SUM(m10s10_vtas_valor) AS m10s10_vtas_valor
+            ,SUM(m10s10_vtas_unit) AS m10s10_vtas_unit
+            ,SUM(unimarc_internet_vtas_valor) AS unimarc_internet_vtas_valor
+            ,SUM(unimarc_internet_vtas_unit) AS unimarc_internet_vtas_unit
+            ,SUM(total_internet_vtas_valor) AS total_internet_vtas_valor
+            ,SUM(total_internet_vtas_unit) AS total_internet_vtas_unit
+            ,SUM(total_mercado_internet_vtas_valor) AS total_mercado_internet_vtas_valor
+            ,SUM(total_mercado_internet_vtas_unit) AS total_mercado_internet_vtas_unit
+
+        FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_CATEGORIA n
+
+        GROUP BY 1
+    ) CAT
+    USING (id_semana)
+    """,  # noqa: E501
 
     'holidays':
     """
@@ -174,9 +228,6 @@ def main():
     logging.getLogger('prophet').setLevel(logging.WARNING)
     logging.getLogger('cmdstanpy').disabled = True
 
-    regressors: dict[str, dict[str, Prophet]] = defaultdict(dict)
-    final_pred = pd.DataFrame()
-
     target_values = [
         f'{x}_{y}'
         for x
@@ -198,6 +249,9 @@ def main():
         nielsen_data['cl_xc_categoria'].drop_duplicates().to_list(),
         batch_size=10
     ):
+        regressors: dict[str, dict[str, Prophet]] = defaultdict(dict)
+        final_pred = pd.DataFrame()
+
         for category_name in category_names:
             for target_value in target_values:
                 # Handle missing values
@@ -322,41 +376,46 @@ def main():
 
         final_pred['inicio_periodo'] = final_pred['fin_periodo'] + pd.to_timedelta(-7, 'days')
 
-    logging.info('Trainning ended')
+        logging.info('Updating temporal tables')
+        for category_name in category_names:
+            wr.s3.to_csv(
+                df=final_pred[
+                    final_pred['cl_xc_categoria'] == category_name
+                ].sort_values(
+                    'fin_periodo'
+                )[[
+                    'departamento', 'cl_xc_categoria', 'negocio',
+                    *[
+                        x
+                        for target_value in target_values
+                        for x in (
+                            target_value,
+                            f'{target_value}_proyectado',
+                            f'{target_value}_proyectado_min',
+                            f'{target_value}_proyectado_max'
+                        )
+                    ],
+                    'inicio_periodo', 'fin_periodo', 'p_week'
+                ]].astype({
+                    'cl_xc_categoria': 'string',
+                    'inicio_periodo': 'string',
+                    'fin_periodo': 'string',
+                    'p_week': 'string',
+                }),
+                path=(
+                    's3://smu-datalake-test-athena-query-results/'
+                    'ecastrot/'
+                    'fact_week_market_share_proyection/'
+                    f'proyection_{category_name}.csv'
+                ),
+                index=None,
+                header=None,
+                sep='|',
+                boto3_session=boto3_session,
+                use_threads=True,
+            )
 
-    logging.info('Updating temporal table')
-    wr.s3.to_csv(
-        df=final_pred.sort_values('fin_periodo')[[
-            'departamento', 'cl_xc_categoria', 'negocio',
-            *[
-                x
-                for target_value in target_values
-                for x in (
-                    target_value,
-                    f'{target_value}_proyectado',
-                    f'{target_value}_proyectado_min',
-                    f'{target_value}_proyectado_max'
-                )
-            ],
-            'inicio_periodo', 'fin_periodo', 'p_week'
-        ]].astype({
-            'cl_xc_categoria': 'string',
-            'inicio_periodo': 'string',
-            'fin_periodo': 'string',
-            'p_week': 'string',
-        }),
-        path=(
-            's3://smu-datalake-test-athena-query-results/'
-            'ecastrot/'
-            'fact_week_market_share_proyection/'
-            'proyection.csv'
-        ),
-        index=None,
-        header=None,
-        sep='|',
-        boto3_session=boto3_session,
-        use_threads=True,
-    )
+    logging.info('Trainning ended')
 
 
 if __name__ == '__main__':
