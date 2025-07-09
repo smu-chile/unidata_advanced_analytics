@@ -257,7 +257,8 @@ def main():
                 # Handle missing values
                 if nielsen_data[
                     nielsen_data['cl_xc_categoria'] == category_name
-                ][target_value].isna().all():
+                ][target_value].notna().sum() < 50:
+                    print(f'Skipping {category_name} {target_value} regressor')
                     regressors[category_name][target_value] = None
                     continue
 
