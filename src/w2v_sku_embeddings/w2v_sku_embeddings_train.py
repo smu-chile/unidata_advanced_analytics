@@ -104,6 +104,7 @@ with DAG(**dag_args) as dag:
                         'service_account': '{{ var.value.develop_smu_unidata_dataproc_sa }}',
                         'network_uri': '{{ var.value.develop_smu_unidata_dataproc_network }}',
                         'subnetwork_uri': '{{ var.value.develop_smu_unidata_dataproc_subnetwork }}',  # noqa: E501
+                        'ttl': '14400s',
                     },
                 },
             },
