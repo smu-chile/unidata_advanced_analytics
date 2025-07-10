@@ -156,6 +156,7 @@ def main() -> None:  # noqa: D103
     }
 
     for file in load_files:
+        logging.info(f'Starting extraction of {file} from Sharepoint')
         sharepoint = sp.SharePointFile(sp_cred['client_id'],
                                        sp_cred['client_secret'],input_files[file])
         sheet_name = 0
