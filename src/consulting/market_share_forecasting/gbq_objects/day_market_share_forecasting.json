@@ -5,25 +5,25 @@
     "columns": [
         {
             "name": "venta_unimarc",
-            "field_type": "DOUBLE",
+            "field_type": "BIGNUMERIC",
             "mode": "REQUIRED",
             "description": "Real Unimarc sales"
         },
         {
             "name": "venta_unimarc_proyectado",
-            "field_type": "DOUBLE",
+            "field_type": "BIGNUMERIC",
             "mode": "REQUIRED",
             "description": "Forecasting of the Unimarc sales"
         },
         {
             "name": "venta_unimarc_proyectado_min",
-            "field_type": "DOUBLE",
+            "field_type": "BIGNUMERIC",
             "mode": "REQUIRED",
             "description": "Minimum value of the Unimarc sales. Useful for obtaining confidence intervals"
         },
         {
             "name": "venta_unimarc_proyectado_max",
-            "field_type": "DOUBLE",
+            "field_type": "BIGNUMERIC",
             "mode": "REQUIRED",
             "description": "Maximum value of the Unimarc sales. Useful for obtaining confidence intervals"
         },
