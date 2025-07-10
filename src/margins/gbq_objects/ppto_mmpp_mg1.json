@@ -1,0 +1,42 @@
+{
+    "schema": "ML_LAB",
+    "table": "PPTO_MMPP_MG1",
+
+    "columns": [
+        {
+            "name": "MES",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Mes"
+        },
+        {
+            "name": "FORMATO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Formato"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria"
+        },
+        {
+            "name": "PPTO_VENTA_NETA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Presupusto Venta Neta"
+        },
+        {
+            "name": "PPTO_CONTRIB",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "PPTO_COSTO_NETO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        }
+
+    ]
+}

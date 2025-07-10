@@ -1,0 +1,269 @@
+{
+    "schema": "ML_LAB",
+    "table": "PPTO_FORMATOS_SELLOUT_RECUPERO_2025",
+
+    "columns": [
+        {
+            "name": "FORMATO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Formato"
+        },
+        {
+            "name": "MES",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Mes"
+        },
+        {
+            "name": "CATEGORIA_H",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria H"
+        },
+        {
+            "name": "NEGOCIO_N",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Negocio"
+        },
+        {
+            "name": "SECCION_N",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Seccion"
+        },
+        {
+            "name": "LINEA N",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Linea"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria"
+        },
+        {
+            "name": "GERENCIA_DE_NEGOCIOS",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Gerencia"
+        },
+        {
+            "name": "CONCEPTO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Concepto"
+        },
+        {
+            "name": "VENTA_NETA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Venta Neta"
+        },
+        {
+            "name": "COSTO_NETO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Costo Neto"
+        },
+        {
+            "name": "MARGEN_COMERCIAL_1",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Margen Comercial 1"
+        },
+        {
+            "name": "RECUPERO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Recupero"
+        },
+        {
+            "name": "AUX",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "AUX2",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "APORTE_FIJO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Aporte Fijo"
+        },
+        {
+            "name": "APORTE_VARIABLE",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Aporte Variable"
+        },
+        {
+            "name": "DEVOLUCION_Y_MERMA_0",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Devolucion y Merma 0"
+        },
+        {
+            "name": "INAUGURACION",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "REINAUGURACION",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "NUEVO_PROVEEDOR",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SERVICION_DE_REPOSICION",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "EXTRANET",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "INCLUSION_PRODUCTOS",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "CONCURSOS_SORTEOS",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "BONIFICACION_DE_MERCADERIA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SELL_OUT",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Sell Out"
+        },
+        {
+            "name": "INGRESO_DIFERIDO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "RECUPERACION_CAMPAÑA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DISTRIBUCION_Y_CENTRALIZACION",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MERMA_0_MANUAL",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "REBATE",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MARGEN_COMERCIAL_2",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "VENTA_2023",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "VENTA_MMPP",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MG1_SO_MMPP",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "IMPACTO_2024",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "GASTO_SELLOUT",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "TOTAL_IMPORTE",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "VENTA_2019",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MG1_SO_2019",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "VENTA_PRICING",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MG1_SO_PRICING",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "NUM_POS",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DEN_POS",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "COMPRADOR_VK_VARIABLE",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SUBGERENTE_DE_NEGOCIOS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        }
+
+
+
+
+
+
+
+
+
+
+    ]
+}
