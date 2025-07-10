@@ -232,8 +232,8 @@ def main() -> None:  # noqa: D103
     logging.info(f'Uploading data for {execution_date}')
     gbq_extended.uploadFrame(
         jobs,
-        table_ref=f'{gcp_project_id}.ML_LAB.GBQ_JOB_CONSUMPTION',
         table_ddl_json_path=os.path.join('gbq_objects', 'gbq_job_consumption.json'),
+        project=gcp_project_id,
         gbq_client=gbq_client,
         if_exists='append',
     )

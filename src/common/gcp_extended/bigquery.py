@@ -253,7 +253,9 @@ def createTableAsSelect(
 
 
 def uploadFrame(
-        df: pd.DataFrame, table_ref: str, table_ddl_json_path: str,
+        df: pd.DataFrame,
+        table_ddl_json_path: str,
+        project: str,
         gbq_client: bigquery.Client,
         if_exists: Literal['fail', 'replace', 'append'] = 'fail',
         progress_bar: bool = False,
@@ -265,11 +267,10 @@ def uploadFrame(
     ----------
     df : pd.DataFrame
         Pandas DataFrame with the data to upload into Google BigQuery
-    table_ref : str
-        Path to the table in the form `project.schema.table` (Case
-        sensitive)
     table_ddl_json_path : str
         Path to a json with the DDL of the table
+    project : str
+        Google BigQuery project in which the table will be loaded.
     gbq_client : bigquery.Client
         Client used for making the queries
     if_exists : {'fail', 'replace', 'append'}
@@ -286,13 +287,17 @@ def uploadFrame(
     **kwargs : pd.DataFrame
         Arguments passed on to `pandas_gbq.to_bgq`
     """
-    with open(table_ddl_json_path) as table_ddl:
-        table_schema = [{
+    with open(table_ddl_json_path) as table_ddl_file:
+        table_ddl = json.load(table_ddl_file)
+
+    table_schema = [{
             'name': x['name'],
             'type': x['field_type']
         }
-        for x in json.load(table_ddl)['columns']
+        for x in table_ddl['columns']
     ]
+
+    table_ref = f"{project}.{table_ddl['schema']}.{table_ddl['table']}"
 
     return pandas_gbq.to_gbq(**{
         'dataframe': df,
