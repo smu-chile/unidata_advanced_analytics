@@ -30,6 +30,10 @@ parser.add_argument(
     '--execution_date', type=str,
     help='DAG execution date'
 )
+parser.add_argument(
+    '--load_files', type=str,
+    help='Files to be bq loaded'
+)
 
 # -------------------------------------------------------------------------
 # Main function
@@ -37,9 +41,7 @@ parser.add_argument(
 def main() -> None:  # noqa: D103
     # Parse input variables
     args = vars(parser.parse_args())
-    execution_date: str = args['execution_date']
     gcp_project_id: str = args['project_id']
-    logging.info(f'execution_date: {execution_date}')
 
     # Set all clients
     sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials')

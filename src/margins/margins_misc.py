@@ -15,7 +15,7 @@ GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
     'dag_id': 'margins_fuentes_manuales_misc',
-    'schedule_interval': '0 9,14,18 * * *',
+    'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': True,
     'max_active_runs': 1,
@@ -41,6 +41,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
+    LOAD_FILES = " {{ dag_run.conf.get('load_files','all')}}"
 
     margins_misc = DataprocCreateBatchOperator(
         task_id = 'margins_misc',
@@ -70,8 +71,9 @@ with DAG(**dag_args) as dag:
                 'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
                 # Main file arguments
                 'args': [
-                    '--project_id', 'cl-cda-unidata-dev', #TODO(csotob): modificar, es test
+                    '--project_id', GCP_PROJECT_ID,
                     '--execution_date', EXECUTION_DATE,
+                    '--load_files', LOAD_FILES,
                 ],
             },
 
