@@ -15,7 +15,7 @@ GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
     'dag_id': 'margins_fuentes_manuales_misc',
-    'schedule_interval': '0 9,14,18 * * *',
+    'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': True,
     'max_active_runs': 1,
