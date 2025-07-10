@@ -6,7 +6,7 @@
         {
             "name": "venta_unimarc",
             "field_type": "BIGNUMERIC",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Real Unimarc sales"
         },
         {
