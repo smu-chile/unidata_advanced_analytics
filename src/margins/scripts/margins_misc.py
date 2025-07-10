@@ -163,7 +163,7 @@ def main() -> None:  # noqa: D103
         if file == 'ppto_mg1':
             sheet_name = 'MG1'
         df_file = sharepoint.toFrame(sheet_name = sheet_name)
-        df_file =cleaning_func(df_file)
+        df_file =cleaning_func(file,df_file)
         # Create GBQ table if does not exist
         logging.info('Creating GBQ table using JSON')
         gbq_extended.createTableFromJSON(
