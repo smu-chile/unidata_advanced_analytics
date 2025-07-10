@@ -1,0 +1,37 @@
+{
+    "schema": "ML_LAB",
+    "table": "FACT_DAY_MARKET_SHARE_FORECASTING",
+
+    "columns": [
+        {
+            "name": "venta_unimarc",
+            "field_type": "DOUBLE",
+            "mode": "REQUIRED",
+            "description": "Real Unimarc sales"
+        },
+        {
+            "name": "venta_unimarc_proyectado",
+            "field_type": "DOUBLE",
+            "mode": "REQUIRED",
+            "description": "Forecasting of the Unimarc sales"
+        },
+        {
+            "name": "venta_unimarc_proyectado_min",
+            "field_type": "DOUBLE",
+            "mode": "REQUIRED",
+            "description": "Minimum value of the Unimarc sales. Useful for obtaining confidence intervals"
+        },
+        {
+            "name": "venta_unimarc_proyectado_max",
+            "field_type": "DOUBLE",
+            "mode": "REQUIRED",
+            "description": "Maximum value of the Unimarc sales. Useful for obtaining confidence intervals"
+        },
+        {
+            "name": "fin_periodo",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Day on which the sales are made"
+        }
+    ]
+}
