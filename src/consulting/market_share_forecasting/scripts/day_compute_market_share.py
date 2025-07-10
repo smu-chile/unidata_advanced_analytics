@@ -172,7 +172,7 @@ def main():
     market_data = readAthenaQuery(
         user=user,
         query=SQL_QUERIES['day_transactions_aws'].substitute(
-            execution_date='2025-01-01',
+            execution_date=execution_date,
             store_banner='Unimarc'
         ),
         database=db_temp,
