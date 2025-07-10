@@ -178,6 +178,7 @@ def main() -> None:  # noqa: D103
         gbq_extended.uploadFrame(
             df_file,
             table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
+            project=gcp_project_id,
             gbq_client=gbq_client,
             if_exists='replace',
         )
