@@ -41,7 +41,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    LOAD_FILES = " {{ dag_run.conf.get('load_files')}}"
+    LOAD_FILES = " {{ dag_run.conf.get('load_files','all')}}"
 
     margins_misc = DataprocCreateBatchOperator(
         task_id = 'margins_misc',
