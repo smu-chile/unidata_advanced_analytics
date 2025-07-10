@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # Default
+import os
 import logging
 import argparse
 from logging import config
@@ -8,14 +9,18 @@ from collections import defaultdict
 
 # pip
 import pandas as pd
-import awswrangler as wr
 from boto3 import Session
 from prophet import Prophet
+from google.cloud.bigquery import Client
 
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.aws_extended.athena import readAthenaQuery
+from common.gcp_extended.bigquery import (
+    uploadFrame,
+    createTableFromJSON,
+)
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -164,6 +169,17 @@ def main():
 
     # Constants
     db_temp = 'dev_temp'
+    gbq_client = Client()
+
+    # -----------------------
+    # Create output GCP table
+    # -----------------------
+    _ = createTableFromJSON(
+        ddl_json_config_path=os.path.join('gbq_objects', 'day_market_share_forecasting.json'),
+        project=gcp_project,
+        gbq_client=Client(),
+        if_exists='rebuild',
+    )
 
     # ------------
     # Data loading
@@ -310,7 +326,7 @@ def main():
     logging.info('Trainning ended')
 
     logging.info('Updating temporal table')
-    wr.s3.to_csv(
+    uploadFrame(
         df=final_pred.sort_values('fin_periodo')[[
             *[
                 x
@@ -326,17 +342,10 @@ def main():
         ]].astype({
             'fin_periodo': 'string',
         }),
-        path=(
-            's3://smu-datalake-test-athena-query-results/'
-            'ecastrot/'
-            'fact_day_market_share_proyection/'
-            'proyection.csv'
-        ),
-        index=None,
-        header=None,
-        sep='|',
-        boto3_session=boto3_session,
-        use_threads=True,
+        table_ddl_json_path=os.path.join('gbq_objects', 'day_market_share_forecasting.json'),
+        project=gcp_project,
+        gbq_client=gbq_client,
+        if_exists='append'
     )
 
 
