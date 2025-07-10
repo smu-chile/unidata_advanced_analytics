@@ -278,10 +278,6 @@ def uploadFrame(
         -  `fail` throws an error
         -  `replace` re-builds the table inserting the data in the frame
         -  `append` inserts the data in the existing table
-
-        .. warning:: `replace` mode its not recommended as its use will
-           modify the DDL of the table.
-
     progress_bar : pd.DataFrame
         Whether to use `tqdm` to log the upload progress
     **kwargs : pd.DataFrame
@@ -297,7 +293,21 @@ def uploadFrame(
         for x in table_ddl['columns']
     ]
 
+    # Build table reference
     table_ref = f"{project}.{table_ddl['schema']}.{table_ddl['table']}"
+
+    # Handle replace automatically
+    if if_exists == 'replace':
+        # Delete the object with all its data and create it again
+        createTableFromJSON(
+            ddl_json_config_path=table_ddl_json_path,
+            project=project,
+            gbq_client=gbq_client,
+            if_exists='rebuild',
+        )
+
+        # Change if_exists
+        if_exists = 'append'
 
     return pandas_gbq.to_gbq(**{
         'dataframe': df,
