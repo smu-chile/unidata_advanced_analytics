@@ -1,0 +1,56 @@
+{
+    "schema": "ML_LAB",
+    "table": "ESTRUCTURA_COMERCIAL_ALVI",
+
+    "columns": [
+        {
+            "name": "CATEGORIA_H",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoria H"
+        },
+        {
+            "name": "NEGOCIO_N",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Negocio"
+        },
+        {
+            "name": "SECCION_N",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Seccion"
+        },
+        {
+            "name": "LINEA_N",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Linea"
+        },
+        {
+            "name": "ROL_CATEGORIA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description" : "Rol Categori<"
+        },
+        {
+            "name": "ANALISTA_PRICING",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Analista Pricing"
+        },
+        {
+            "name": "COMPRADOR",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description" : "Comprador"
+        },
+        {
+            "name": "NEGOCIO_BW",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Negocio"
+        }
+
+    ]
+}
