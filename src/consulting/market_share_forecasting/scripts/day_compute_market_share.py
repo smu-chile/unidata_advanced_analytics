@@ -250,8 +250,8 @@ def main():
         regressors[target_value] = regressor
 
     periods = regressor.make_future_dataframe(
-        periods=2,
-        freq='M',
+        periods=60,
+        freq='D',
         include_history=True
     ).rename(columns={
         'ds': 'fin_periodo',
@@ -270,8 +270,8 @@ def main():
 
         else:
             future = regressor.make_future_dataframe(
-                periods=8,
-                freq='W',
+                periods=60,
+                freq='D',
                 include_history=True
             )
             pred = regressor.predict(
