@@ -79,7 +79,7 @@ def cleaning_func(file,df):
                     'Mg1+so pricing',
                     'Num pos']
         for c in float_columns:
-            df[c] = df[c].apply(lambda x: f'{x:.8f}')
+            df[c] = df[c].astype('Float64')
         df = df.replace('nan', 0.0)  # noqa: PD901
         df = df.drop(['aux100'], axis=1)  # noqa: PD901
         print('After cleaning:', df)
@@ -91,7 +91,7 @@ def cleaning_func(file,df):
                     'ppto_contrib',
                     'ppto_costo_neto']
         for c in float_columns:
-            df[c] = df[c].apply(lambda x: f'{x:.8f}')
+            df[c] = df[c].astype('Float64')
         df = df.replace('nan', 0.0)  # noqa: PD901
         print('After cleaning:', df)
         return df
