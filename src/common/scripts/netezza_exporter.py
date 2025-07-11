@@ -57,7 +57,7 @@ parser.add_argument(
     choices=['append', 'rebuild']
 )
 parser.add_argument(
-    '--timeout', type=str, required=False,
+    '--timeout', type=int, required=False,
     default=0,
     # TODO(ecastrot): Fill
     help=''
@@ -182,3 +182,7 @@ def main():
     logging.info(f'Command response: {bash_command_response}')
 
     logging.info('Done! :)')
+
+
+if __name__ == '__main__':
+    main()
