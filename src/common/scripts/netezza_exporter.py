@@ -89,6 +89,7 @@ def main():
 
     # Timeout
     if timeout:
+        logging.info(f'Sleeping for {timeout} seconds')
         time.sleep(timeout)
 
     # Get info
@@ -150,7 +151,7 @@ def main():
     bash_command_response = subprocess.run((  # noqa: S602
             'nzodbcsql'
             f' -c "{netezza_credentials_str}"'
-            f' -q "{query}"'
+            f' -q "{netezza_query}"'
         ),
         shell=True,
         check=True,
