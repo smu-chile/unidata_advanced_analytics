@@ -309,6 +309,10 @@ def uploadFrame(
         # Change if_exists
         if_exists = 'append'
 
+    # Rename DataFrame columns
+    df.columns = [column['name'] for column in table_schema]
+
+    # Upload
     return pandas_gbq.to_gbq(**{
         'dataframe': df,
         'destination_table': table_ref,
