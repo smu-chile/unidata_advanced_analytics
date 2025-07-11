@@ -53,7 +53,7 @@ parser.add_argument(
     help=''
 )
 parser.add_argument(
-    '--if_exists', type='str', required=True,
+    '--if_exists', type=str, required=True,
     choices=['append', 'rebuild']
 )
 parser.add_argument(
