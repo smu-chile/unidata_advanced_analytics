@@ -325,8 +325,7 @@ def uploadFrame(
 
 
 def deleteFromTable(
-        table_ref: str, column_name: str, column_value: str, column_type: str,
-        gbq_client: bigquery.Client
+        table_ref: str, where_clause: str, gbq_client: bigquery.Client
     ) -> None:
     """Delete data from a table filtering by a specific column value.
 
@@ -336,13 +335,9 @@ def deleteFromTable(
         Table from which the data will be deleted. The value must included
         a project ID, dataset ID, and table ID, each separated by ``.``.
         For example: `your-project.your_dataset.your_table`
-    column_name : str
-        Name of the column that will be used to filter the data to be
-        deleted
-    column_value : str
-        Value of col_name in the rows to be deleted
-    column_type : str
-        BigQuery column type (same as DDL)
+    where_clause : str
+        Comparisons inside the WHERE clause for the columns to be deleted.
+        For example: `column_a = date('1998-08-30')`
     gbq_client : bigquery.Client
         Client used for making the queries
     """
@@ -350,16 +345,15 @@ def deleteFromTable(
         'delete_query':
         """
         DELETE FROM `${table_ref}`
-        WHERE ${column_name} = CAST('${column_value}' AS ${column_type})
+        WHERE ${column_name} ${comparison_operator} CAST('${column_value}' AS ${column_type})
+        WHERE ${where_clause}
         """
     })
 
     gbq_client.query_and_wait(
         query=sql_query['delete_query'].substitute(
             table_ref=table_ref,
-            column_name=column_name,
-            column_value=column_value,
-            column_type=column_type,
+            where_clause=where_clause,
         ),
     )
 
