@@ -18,7 +18,7 @@
         {
             "name": "MATERIAL",
             "field_type": "INTEGER",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Material PLU"
         },
         {
