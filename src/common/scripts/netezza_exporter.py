@@ -57,7 +57,8 @@ parser.add_argument(
     choices=['append', 'rebuild']
 )
 parser.add_argument(
-    '--timeout', type=str, required=True,
+    '--timeout', type=str, required=False,
+    default=0,
     # TODO(ecastrot): Fill
     help=''
 )
