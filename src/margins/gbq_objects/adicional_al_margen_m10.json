@@ -42,7 +42,8 @@
         {
             "name": "CATEGORIA_REPORTE",
             "field_type": "STRING",
-            "mode": "Categoria Reporte"
+            "mode": "NULLABLE",
+            "description": "Categoria Reporte"
         },
         {
             "name": "NEGOCIO",
