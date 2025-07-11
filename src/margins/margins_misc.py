@@ -76,7 +76,6 @@ with DAG(**dag_args) as dag:
                     '--load_files', LOAD_FILES,
                 ],
             },
-
             # Docker image to be used in the dataproc pod
             'runtime_config': {
                 'version': '2.2',
