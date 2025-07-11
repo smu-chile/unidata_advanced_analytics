@@ -104,4 +104,77 @@ with DAG(**dag_args) as dag:
         project_id = GCP_PROJECT_ID,
     )
 
-get_costs  # noqa: B018
+
+    export_to_netezza = DataprocCreateBatchOperator(
+        task_id = 'export_to_netezza',
+
+        batch = {
+            'pyspark_batch': {
+                # Main file to run in the dataproc pod
+                'main_python_file_uri': (
+                    'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                    'common/'
+                    'scripts/'
+                    'netezza_exporter.py'
+                ),
+                # Common files
+                'python_file_uris': [
+                    (
+                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                        'common/'
+                    )
+                ],
+                # For Google Big Query read/write
+                'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
+                # Main file arguments
+                'args': [
+                    '--project_name', PROJECT_NAME,
+                    '--gcp_project', GCP_PROJECT_ID,
+                    '--query',
+                        f"""
+                            SELECT *
+                            FROM {GCP_PROJECT_ID}.ML_LAB.FACT_DAY_MARKET_SHARE_FORECASTING
+                        """,  # noqa: S608
+                    '--netezza_table_ref',
+                        'DESA_CLIENTES.ML_LAB.FACT_DAY_MARKET_SHARE_FORECASTING',  # noqa: E501
+                    '--netezza_columns',
+                        """
+                            venta_unimarc double,
+                            venta_unimarc_proyectado double,
+                            venta_unimarc_proyectado_min double,
+                            venta_unimarc_proyectado_max double,
+                            fin_periodo VARCHAR(10)
+                        """,
+                    '--if_exists', 'rebuild',
+                    'timeout', 60
+                ],
+            },
+
+            # Docker image to be used in the dataproc pod
+            'runtime_config': {
+                'version': '2.2',
+                'container_image': (
+                    'us-east1-docker.pkg.dev/'
+                    f'{GCP_PROJECT_ID}/'
+                    'dataproc-worker-images/'
+                    'netezza-exporter:latest'
+                ),
+            },
+
+            # Privileges config
+            'environment_config': {
+                'execution_config': {
+                    'service_account': '{{ var.value.develop_smu_unidata_dataproc_sa }}',
+                    'network_uri': '{{ var.value.develop_smu_unidata_dataproc_network }}',
+                    'subnetwork_uri': '{{ var.value.develop_smu_unidata_dataproc_subnetwork }}',
+                    'ttl': '14400s',
+                },
+            },
+        },
+
+        # Batch ID
+        batch_id = 'batch-{{ macros.uuid.uuid4() }}',
+        project_id = GCP_PROJECT_ID,
+    )
+
+get_costs >> export_to_netezza
