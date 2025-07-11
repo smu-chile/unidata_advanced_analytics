@@ -164,14 +164,6 @@ def main() -> None:  # noqa: D103
             sheet_name = 'MG1'
         df_file = sharepoint.toFrame(sheet_name = sheet_name)
         df_file =cleaning_func(file,df_file)
-        # Create GBQ table if does not exist
-        logging.info('Creating GBQ table using JSON')
-        gbq_extended.createTableFromJSON(
-            ddl_json_config_path=os.path.join('gbq_objects', jsons[file]),
-            project=gcp_project_id,
-            gbq_client=gbq_client,
-            if_exists='rebuild',
-        )
 
         # Upload data
         logging.info('Uploading data')
@@ -180,7 +172,7 @@ def main() -> None:  # noqa: D103
             table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
             project=gcp_project_id,
             gbq_client=gbq_client,
-            if_exists='append',
+            if_exists='replace',
         )
     logging.info('Process ended!')
 
