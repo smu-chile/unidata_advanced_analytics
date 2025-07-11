@@ -146,7 +146,7 @@ with DAG(**dag_args) as dag:
                             fin_periodo VARCHAR(10)
                         """,
                     '--if_exists', 'rebuild',
-                    'timeout', '60'
+                    '--timeout', '60'
                 ],
             },
 
