@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 # Default
-import os
 import logging
 import argparse
 from logging import config
@@ -9,19 +8,14 @@ from collections import defaultdict
 
 # pip
 import pandas as pd
+import awswrangler as wr
 from boto3 import Session
 from prophet import Prophet
-from google.cloud.bigquery import Client
 
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.aws_extended.athena import readAthenaQuery
-from common.gcp_extended.bigquery import (
-    uploadFrame,
-    deleteFromTable,
-    createTableFromJSON,
-)
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -121,7 +115,7 @@ SQL_QUERIES = QueryDict({
     USING (market_basket_key)
 
     WHERE
-        transaction_date >= CAST(DATE_ADD('MONTH', -24, DATE('${execution_date}')) AS VARCHAR)
+        transaction_date >= CAST(DATE('2022-06-01') AS VARCHAR)
         AND transaction_date < CAST(DATE('${execution_date}') AS VARCHAR)
         AND store_banner = '${store_banner}'
         AND transaction_type IN ('TN','TF','BX','B','BE','F','NC')
@@ -170,17 +164,6 @@ def main():
 
     # Constants
     db_temp = 'dev_temp'
-    gbq_client = Client()
-
-    # -----------------------
-    # Create output GCP table
-    # -----------------------
-    _ = createTableFromJSON(
-        ddl_json_config_path=os.path.join('gbq_objects', 'day_market_share_forecasting.json'),
-        project=gcp_project,
-        gbq_client=Client(),
-        if_exists='rebuild',
-    )
 
     # ------------
     # Data loading
@@ -326,15 +309,8 @@ def main():
 
     logging.info('Trainning ended')
 
-    logging.info(f"Deleting records from {final_pred['fin_periodo'].min()} ahead")
-    deleteFromTable(
-        table_ref=f'{gcp_project}.ML_LAB.FACT_DAY_MARKET_SHARE_FORECASTING',
-        where_clause=f"fin_periodo >= DATE({final_pred['fin_periodo'].min()})",
-        gbq_client=gbq_client
-    )
-
-    logging.info(f"Uploading records from {final_pred['fin_periodo'].min()} ahead")
-    uploadFrame(
+    logging.info('Updating temporal table')
+    wr.s3.to_csv(
         df=final_pred.sort_values('fin_periodo')[[
             *[
                 x
@@ -350,10 +326,17 @@ def main():
         ]].astype({
             'fin_periodo': 'string',
         }),
-        table_ddl_json_path=os.path.join('gbq_objects', 'day_market_share_forecasting.json'),
-        project=gcp_project,
-        gbq_client=gbq_client,
-        if_exists='append',
+        path=(
+            's3://smu-datalake-test-athena-query-results/'
+            'ecastrot/'
+            'fact_day_market_share_proyection/'
+            'proyection.csv'
+        ),
+        index=None,
+        header=None,
+        sep='|',
+        boto3_session=boto3_session,
+        use_threads=True,
     )
 
 
