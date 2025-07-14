@@ -1,6 +1,6 @@
 {
     "schema": "ML_LAB",
-    "table": "ESTRUCTURA_COMERCIAL_ALVI",
+    "table": "REPORTE_MARGEN_ESTRUCTURA_COMERCIAL_ALVI",
 
     "columns": [
         {

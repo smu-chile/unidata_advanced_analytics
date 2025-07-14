@@ -1,6 +1,6 @@
 {
     "schema": "ML_LAB",
-    "table": "PPTO_MMPP_MG1",
+    "table": "REPORTE_MARGEN_PPTO_MMPP_MG1",
 
     "columns": [
         {

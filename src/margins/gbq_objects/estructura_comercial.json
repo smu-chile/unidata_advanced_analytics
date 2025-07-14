@@ -1,6 +1,6 @@
 {
     "schema": "ML_LAB",
-    "table": "ESTRUCTURA_COMERCIAL",
+    "table": "REPORTE_MARGEN_ESTRUCTURA_COMERCIAL",
 
     "columns": [
         {

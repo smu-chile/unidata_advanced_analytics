@@ -1,6 +1,6 @@
 {
     "schema": "ML_LAB",
-    "table": "ILA_PROYECTADO_S10",
+    "table": "REPORTE_MARGEN_ILA_PROYECTADO_S10",
 
     "columns": [
         {
