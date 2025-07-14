@@ -1,6 +1,6 @@
 {
     "schema": "ML_LAB",
-    "table": "ILA_PROYECTADO_UNIMARC",
+    "table": "REPORTE_MARGEN_ILA_PROYECTADO_UNIMARC",
 
     "columns": [
         {

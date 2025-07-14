@@ -1,6 +1,6 @@
 {
     "schema": "ML_LAB",
-    "table": "PPTO_FORMATOS_SELLOUT_RECUPERO_2025",
+    "table": "REPORTE_MARGEN_PPTO_FORMATOS_SELLOUT_RECUPERO_2025",
 
     "columns": [
         {
