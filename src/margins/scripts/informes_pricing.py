@@ -39,20 +39,20 @@ def cleaning_func(formato,df):
     print('Before cleaning:', df)
     if formato == 'unimarc':
         df = df.iloc[:, :26]  # noqa: PD901
-        df = df.replace('\|', '', regex=True)  # noqa: PD901, W605
+        df = df.replace('|', '', regex=True)  # noqa: PD901
         print('After cleaning:', df)
         return df
     if formato == 's10':
         df.columns = df.iloc[5,]
         df = df.iloc[6:, :25]  # noqa: PD901
-        df = df.replace('\|', '', regex=True)  # noqa: PD901, W605
+        df = df.replace('|', '', regex=True)  # noqa: PD901
         print('After cleaning:', df)
         return df
     if formato == 'm10':
         df.columns = df.iloc[5,]
         df = df[6:]  # noqa: PD901
         df = df.iloc[:, :22]  # noqa: PD901
-        df = df.replace('\|', '', regex=True)  # noqa: PD901, W605
+        df = df.replace('|', '', regex=True)  # noqa: PD901
         print('After cleaning:', df)
         return df
     return df
