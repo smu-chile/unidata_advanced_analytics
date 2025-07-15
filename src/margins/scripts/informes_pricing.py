@@ -105,6 +105,5 @@ def main() -> None:  # noqa: D103
         )
     logging.info('Process ended!')
 
-
 if __name__ == '__main__':
     main()
