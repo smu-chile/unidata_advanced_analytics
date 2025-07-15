@@ -65,7 +65,7 @@
         },
         {
             "name": "ID_2",
-            "field_type": "BIGINT",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
@@ -126,12 +126,12 @@
         },
         {
             "name": "ID_ALTERNATIVO_WF",
-            "field_type": "BIGINT",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
             "name": "NUMERO_CABECERA",
-            "field_type": "BIGINT",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
