@@ -41,7 +41,6 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    LOAD_FILES = "{{ dag_run.conf.get('load_files','all')}}"
 
     informes_pricing = DataprocCreateBatchOperator(
         task_id = 'informes_pricing',
@@ -72,8 +71,7 @@ with DAG(**dag_args) as dag:
                 # Main file arguments
                 'args': [
                     '--project_id', GCP_PROJECT_ID,
-                    '--execution_date', EXECUTION_DATE,
-                    '--load_files', LOAD_FILES,
+                    '--execution_date', EXECUTION_DATE
                 ],
             },
             # Docker image to be used in the dataproc pod
