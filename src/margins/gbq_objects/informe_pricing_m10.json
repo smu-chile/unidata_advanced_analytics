@@ -95,7 +95,7 @@
         },
         {
             "name": "IMPORTE_SELL_OUT",
-            "field_type": "FLOAT",
+            "field_type": "STRING",
             "mode": "NULLABLE",
             "description" : "Importe Sell Out de promoción"
         },
