@@ -60,7 +60,7 @@
         },
         {
             "name": "ID_ACTUAL",
-            "field_type": "BIGINT",
+            "field_type": "INTEGER",
             "mode": "NULLABLE"
         },
         {
