@@ -11,7 +11,7 @@
         },
         {
             "name": "SOLO_1_BARRA_POR_LINEA",
-            "field_type": "BIGINT",
+            "field_type": "INTEGER",
             "mode": "NULLABLE"
         },
         {
@@ -60,7 +60,7 @@
         },
         {
             "name": "ID_1",
-            "field_type": "BIGINT",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
