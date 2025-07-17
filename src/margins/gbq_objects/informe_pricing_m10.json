@@ -50,7 +50,7 @@
         },
         {
             "name": "PRECIO_OFERTA_POR_FACTOR",
-            "field_type": "INTEGER",
+            "field_type": "FLOAT",
             "mode": "NULLABLE"
         },
         {
