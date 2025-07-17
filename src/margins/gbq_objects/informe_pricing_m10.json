@@ -11,7 +11,7 @@
         },
         {
             "name": "SOLO_1_BARRA_POR_LINEA",
-            "field_type": "BIGINT",
+            "field_type": "INTEGER",
             "mode": "NULLABLE"
         },
         {
@@ -55,7 +55,7 @@
         },
         {
             "name": "OFERTA",
-            "field_type": "INTEGER",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
@@ -106,12 +106,12 @@
         },
         {
             "name": "FECHA_INICIO",
-            "field_type": "DATE",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
             "name": "FECHA_TERMINO",
-            "field_type": "DATE",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
