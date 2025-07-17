@@ -14,7 +14,7 @@ PROJECT_NAME = 'margins'
 GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
-    'dag_id': 'margins_ing_informes_pricing',
+    'dag_id': 'margins_ing_informes_pricing_formatos',
     'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': True,
