@@ -40,7 +40,7 @@
         },
         {
             "name": "PRECIO_OFERTA",
-            "field_type": "FLOAT",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
