@@ -46,7 +46,7 @@ def cleaning_func(formato,df):
         df.columns = df.iloc[5,]
         df = df.iloc[6:, :25]  # noqa: PD901
         df = df.replace('|', '', regex=True)  # noqa: PD901
-        df['Solo 1 barra por linea'] = df['Solo 1 barra por linea'].astype('Int64')
+        df['Solo 1 barra por linea'] = df['Solo 1 barra por linea'].astype('Float64').astype('Int64')  # noqa: E501
         print('After cleaning:', df)
         return df
     if formato == 'm10':
