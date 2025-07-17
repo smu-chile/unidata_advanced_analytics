@@ -5,7 +5,7 @@
     "columns": [
         {
             "name": "CODIGO_SAP_SMU",
-            "field_type": "BIGINT",
+            "field_type": "STRING",
             "mode": "NULLABLE",
             "description": "Material PLU"
         },
@@ -121,12 +121,12 @@
         },
         {
             "name": "ID_ALTERNATIVO_WF",
-            "field_type": "BIGINT",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
             "name": "NUMERO_CABECERA",
-            "field_type": "BIGINT",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
