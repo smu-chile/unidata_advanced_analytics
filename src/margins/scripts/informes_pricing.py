@@ -40,6 +40,7 @@ def cleaning_func(formato,df):
     if formato == 'unimarc':
         df = df.iloc[:, :26]  # noqa: PD901
         df = df.replace('|', '', regex=True)  # noqa: PD901
+        df['Solo 1 barra por linea'] = df['Solo 1 barra por linea'].astype('Float64').astype('Int64')  # noqa: E501
         print('After cleaning:', df)
         return df
     if formato == 's10':
@@ -54,6 +55,7 @@ def cleaning_func(formato,df):
         df = df[6:]  # noqa: PD901
         df = df.iloc[:, :22]  # noqa: PD901
         df = df.replace('|', '', regex=True)  # noqa: PD901
+        df['Solo 1 barra por linea'] = df['Solo 1 barra por linea'].astype('Float64').astype('Int64')  # noqa: E501
         print('After cleaning:', df)
         return df
     return df
