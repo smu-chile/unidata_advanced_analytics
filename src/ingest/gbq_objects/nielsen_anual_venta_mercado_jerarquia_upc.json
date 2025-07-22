@@ -64,6 +64,43 @@
             "description": "Variedad"
         },
         {
+            "name": "upc",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "UPC"
+        },
+        {
+            "name": "cl_xc_marca",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Marca"
+        },
+        {
+            "name": "dermo",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "envase",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "level_4_nielsen",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "sabores",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "submarca",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
             "name": "periodos",
             "field_type": "STRING",
             "mode": "NULLABLE",
@@ -74,24 +111,6 @@
             "field_type": "FLOAT",
             "mode": "NULLABLE",
             "description": "Total de ventas del mercado"
-        },
-        {
-            "name": "total_mercado_vtas_unit",
-            "field_type": "FLOAT",
-            "mode": "NULLABLE",
-            "description": "Total de unidades vendidas del mercado"
-        },
-        {
-            "name": "total_supermercados_amp_internet_vtas_valor",
-            "field_type": "FLOAT",
-            "mode": "NULLABLE",
-            "description": "Total de ventas del mercado e internet"
-        },
-        {
-            "name": "total_supermercados_amp_internet_vtas_unit",
-            "field_type": "FLOAT",
-            "mode": "NULLABLE",
-            "description": "Total de unidades vendidas del mercado e internet"
         },
         {
             "name": "year",

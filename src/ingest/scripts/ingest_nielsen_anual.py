@@ -73,7 +73,7 @@ def main() -> None:  # noqa: D103
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
     proc_years: list[str] = args['proc_years'].split(':')
-    load_files = ['jerarquia_ytd']
+    load_files = ['jerarquia_ytd','jerarquia_upc']
     # Set all clients
     sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials')
     gbq_client = bigquery.Client()
@@ -86,11 +86,13 @@ def main() -> None:  # noqa: D103
     )
     #input files
     input_files = {
-        'jerarquia_ytd' :  Template('$site_root/Jerarquia Mercado YTD/VENTA MERCADO JERARQUIA NIELSEN $year.xlsx')  # noqa: E501
+        'jerarquia_ytd' :  Template('$site_root/Jerarquia Mercado YTD/VENTA MERCADO JERARQUIA NIELSEN $year.xlsx'),  # noqa: E501
+        'jerarquia_upc' : Template('$site_root/Jerarquia Mercado YTD/VENTA MERCADO JERARQUIA NIELSEN UPC $year.xlsx'),  # noqa: E501
        }
     #table definitions jsons
     jsons = {
-        'jerarquia_ytd' : 'nielsen_anual_venta_mercado_jerarquia_ytd.json'
+        'jerarquia_ytd' : 'nielsen_anual_venta_mercado_jerarquia_ytd.json',
+        'jerarquia_upc' : 'nielsen_anual_venta_mercado_jerarquia_upc.json'
 
     }
 
