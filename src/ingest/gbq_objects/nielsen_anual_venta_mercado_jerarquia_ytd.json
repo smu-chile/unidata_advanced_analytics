@@ -92,6 +92,12 @@
             "field_type": "FLOAT",
             "mode": "NULLABLE",
             "description": "Total de unidades vendidas del mercado e internet"
+        },
+        {
+            "name": "year",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Año que comprende el dato obtenido desde Nielsen"
         }
 
     ]
