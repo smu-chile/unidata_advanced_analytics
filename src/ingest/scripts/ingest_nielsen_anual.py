@@ -1,5 +1,6 @@
 # Default
 import os
+import json
 import logging
 import argparse
 from string import Template
@@ -120,6 +121,16 @@ def main() -> None:  # noqa: D103
 
             # Upload data
             logging.info('Uploading data')
+            #get table ref
+            with open(jsons[file]) as table_ddl_file:
+                table_ddl = json.load(table_ddl_file)
+
+             # Build table reference
+            table_ref = f"{gcp_project_id}.{table_ddl['schema']}.{table_ddl['table']}"
+            gbq_extended.deleteFromTable(table_ref=table_ref,
+                                         where_clause=f'year={year}',
+                                         gbq_client=gbq_client
+                                         )
             gbq_extended.uploadFrame(
                 df_file,
                 table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
