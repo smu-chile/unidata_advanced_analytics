@@ -17,7 +17,7 @@ dag_args = {
     'dag_id': 'ingest_data_nielsen_anual',
     'schedule_interval': '30 9 * * 4',
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': [PROJECT_NAME, 'csotob'],
