@@ -38,20 +38,32 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(df, year):
+def cleaning_func(df, year,file):
     print('Before cleaning:', df)
-    #Drop first 8 rows and empty right columns
-    df = df[9:]  # noqa: PD901
-    df = df.iloc[:, :15]  # noqa: PD901
-    logging.info('shape: %s', df.shape)
-    #rename columns
-    df.columns = ['departamento','cl_xc_categoria', 'segmento',
-                 'negocio', 'item_code', 'item', 'subsegmento',
-                 'tamano', 'tipo', 'variedad', 'periodos',
-                 'total_mercado_vtas_valor', 'total_mercado_vtas_unit',
-                 'total_supermercados_amp_internet_vtas_valor',
-                'total_supermercados_amp_internet_vtas_unit'
-                 ]
+    if file == 'jerarquia_ytd':
+        #Drop first 8 rows and empty right columns
+        df = df[9:]  # noqa: PD901
+        df = df.iloc[:, :15]  # noqa: PD901
+        logging.info('shape: %s', df.shape)
+        #rename columns
+        df.columns = ['departamento','cl_xc_categoria', 'segmento',
+                    'negocio', 'item_code', 'item', 'subsegmento',
+                    'tamano', 'tipo', 'variedad', 'periodos',
+                    'total_mercado_vtas_valor', 'total_mercado_vtas_unit',
+                    'total_supermercados_amp_internet_vtas_valor',
+                    'total_supermercados_amp_internet_vtas_unit'
+                    ]
+    if file == 'jerarquia_upc':
+        df = df[9:]  # noqa: PD901
+        df = df.iloc[:, :19]  # noqa: PD901
+        logging.info('shape: %s', df.shape)
+        #rename columns
+        df.columns = ['departamento','cl_xc_categoria', 'segmento',
+                     'negocio', 'item_code', 'item', 'subsegmento',
+                     'tamano', 'tipo', 'variedad', 'upc', 'cl_xc_marca',
+                      'dermo', 'envase', 'level_4_nielsen', 'sabores',
+                    'submarca', 'periodos', 'total_mercado_vtas_valor'
+                     ]
     #Drop trailing rows
     df = df.dropna(axis=0,subset=['departamento','cl_xc_categoria'])  # noqa: PD901
     df = df.replace('|', '', regex=True)  # noqa: PD901
