@@ -116,7 +116,7 @@ def main() -> None:  # noqa: D103
             sharepoint = sp.SharePointFile(sp_cred['client_id'],
                                        sp_cred['client_secret'],input_file_ytd)
             df_file = sharepoint.toFrame()
-            df_file =cleaning_func(df_file,year)
+            df_file =cleaning_func(df_file,year, file)
 
             # Upload data
             logging.info('Uploading data')
