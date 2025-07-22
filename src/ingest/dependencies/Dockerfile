@@ -5,10 +5,7 @@ FROM debian:11-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 # (Required) Install utilities required by Spark scripts.
-RUN apt update && apt install -y procps tini libjemalloc2 wget
-
-# (Optional) Install utilities required by XGBoost for Spark.
-RUN apt install -y procps libgomp1
+RUN apt update && apt install -y procps tini libjemalloc2 wget libgomp1
 
 # Enable jemalloc2 as default memory allocator
 ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
@@ -66,6 +63,7 @@ RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
       openblas \
       orc \
       office365-rest-python-client \
+      openpyxl \
       pandas \
       pyarrow \
       pytables \
