@@ -1,6 +1,5 @@
 # Default
 import os
-import json
 import logging
 import argparse
 from string import Template
@@ -108,6 +107,11 @@ def main() -> None:  # noqa: D103
         'jerarquia_upc' : 'nielsen_anual_venta_mercado_jerarquia_upc.json'
 
     }
+    schema = 'ML_LAB'
+    table_ref = {
+        'jerarquia_ytd' : f'{gcp_project_id}.{schema}.NIELSEN_ANUAL_VENTA_MERCADO_JERARQUIA_YTD',
+        'jerarquia_upc' : f'{gcp_project_id}.{schema}.NIELSEN_ANUAL_VENTA_MERCADO_JERARQUIA_UPC'
+    }
 
     for file in load_files:
         for year in proc_years:
@@ -121,13 +125,9 @@ def main() -> None:  # noqa: D103
 
             # Upload data
             logging.info('Uploading data')
-            #get table ref
-            with open(jsons[file]) as table_ddl_file:
-                table_ddl = json.load(table_ddl_file)
 
              # Build table reference
-            table_ref = f"{gcp_project_id}.{table_ddl['schema']}.{table_ddl['table']}"
-            gbq_extended.deleteFromTable(table_ref=table_ref,
+            gbq_extended.deleteFromTable(table_ref=table_ref[file],
                                          where_clause=f'year={year}',
                                          gbq_client=gbq_client
                                          )
