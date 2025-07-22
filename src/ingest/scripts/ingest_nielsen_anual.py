@@ -60,6 +60,8 @@ def cleaning_func(df, year):
     df['year'] = year
     df = df.replace(' nan', 0.0)  # noqa: PD901
     df = df.replace('nan', 0.0)  # noqa: PD901
+    df['item_code'] = df['item_code'].astype('Float64').astype('Int64')  # noqa: E501
+
     print('After cleaning:', df)
     return df
 
