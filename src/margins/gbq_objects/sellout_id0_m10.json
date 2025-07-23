@@ -1,6 +1,6 @@
 {
     "schema": "ML_LAB",
-    "table": "REPORTE_MARGEN_SELLOUT_ID0_S10",
+    "table": "REPORTE_MARGEN_SELLOUT_ID0_M10",
 
     "columns": [
         {
