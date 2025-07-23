@@ -17,7 +17,7 @@ dag_args = {
     'dag_id': 'margins_ing_informes_pricing_formatos',
     'schedule_interval': '00 18 * * 1,5',
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': [PROJECT_NAME, 'csotob'],
