@@ -110,7 +110,7 @@ def main() -> None:  # noqa: D103
             last_time_modified = sharepoint.lastTimeModified()
             logging.info(f'Last time modified: {last_time_modified}')
             logging.info(f'Execution date: {execution_date}')
-            if last_time_modified.split('T')[0] == execution_date:
+            if last_time_modified.strftime('%Y-%m-%d') == execution_date:
                 modified = True
         except ClientRequestException:
             logging.info('Error getting file')
