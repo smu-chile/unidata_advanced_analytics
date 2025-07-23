@@ -14,10 +14,10 @@ PROJECT_NAME = 'margins'
 GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
-    'dag_id': 'margins_ing_informes_pricing_formatos',
-    'schedule_interval': '00 18 * * 1,5',
+    'dag_id': 'margins_ing_importe_sellout_m10_s10',
+    'schedule_interval': None,
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': [PROJECT_NAME, 'csotob'],
@@ -41,9 +41,10 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
+    EXECUTION_MONTH = "{{ dag_run.conf.get('execution_month', dag.timezone.convert(data_interval_end).strftime('%Y%m')) }}"  # noqa: E501
 
-    informes_pricing = DataprocCreateBatchOperator(
-        task_id = 'informes_pricing',
+    importe_sellout_m10_s10 = DataprocCreateBatchOperator(
+        task_id = 'importe_sellout_m10_s10',
 
         batch = {
             'pyspark_batch': {
@@ -52,7 +53,7 @@ with DAG(**dag_args) as dag:
                     'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'informes_pricing.py'
+                    'importe_sellout_m10_s10.py'
                 ),
                 # Common files
                 'python_file_uris': [
@@ -71,7 +72,8 @@ with DAG(**dag_args) as dag:
                 # Main file arguments
                 'args': [
                     '--project_id', GCP_PROJECT_ID,
-                    '--execution_date', EXECUTION_DATE
+                    '--execution_date', EXECUTION_DATE,
+                    '--execution_month', EXECUTION_MONTH
                 ],
             },
             # Docker image to be used in the dataproc pod
