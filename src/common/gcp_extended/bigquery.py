@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Literal
 # pip
 import pandas_gbq
 from google.cloud import bigquery
-from google.cloud.exceptions import BadRequest
+from google.cloud.exceptions import NotFound, BadRequest
 
 # Own
 from ..databases.queries import QueryDict  # noqa: TID252
@@ -345,10 +345,14 @@ def deleteFromTable(
         'delete_query':
         """
         DELETE FROM `${table_ref}`
-        WHERE ${column_name} ${comparison_operator} CAST('${column_value}' AS ${column_type})
         WHERE ${where_clause}
         """
     })
+    try:
+        gbq_client.get_table(table_ref)  # Make an API request.
+    except NotFound:
+        print(f'Table {table_ref} not found.')
+        return
 
     gbq_client.query_and_wait(
         query=sql_query['delete_query'].substitute(

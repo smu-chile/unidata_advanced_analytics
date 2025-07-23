@@ -108,6 +108,11 @@ def main() -> None:  # noqa: D103
         'jerarquia_upc' : 'nielsen_anual_venta_mercado_jerarquia_upc.json'
 
     }
+    schema = 'ML_LAB'
+    table_ref = {
+        'jerarquia_ytd' : f'{gcp_project_id}.{schema}.NIELSEN_ANUAL_VENTA_MERCADO_JERARQUIA_YTD',
+        'jerarquia_upc' : f'{gcp_project_id}.{schema}.NIELSEN_ANUAL_VENTA_MERCADO_JERARQUIA_UPC'
+    }
 
 
     for file in load_files:
@@ -123,6 +128,11 @@ def main() -> None:  # noqa: D103
             # Upload data
             logging.info('Uploading data')
 
+            #Delete from table so that data is not duplicated
+            gbq_extended.deleteFromTable(table_ref=table_ref[file],
+                                         where_clause=f'year={year}',
+                                         gbq_client=gbq_client
+                                         )
 
             gbq_extended.uploadFrame(
                 df_file,
