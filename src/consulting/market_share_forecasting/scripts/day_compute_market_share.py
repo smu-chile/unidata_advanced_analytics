@@ -285,6 +285,20 @@ def main():
                 'yhat_upper': f'{target_value}_proyectado_max',
             })
 
+            # Boundary condition: values < 0 go to 0
+            pred[f'{target_value}_proyectado'] = pred[f'{target_value}_proyectado'].where(
+                pred[f'{target_value}_proyectado'] >= 0,
+                0
+            )
+            pred[f'{target_value}_proyectado_min'] = pred[f'{target_value}_proyectado_min'].where(
+                pred[f'{target_value}_proyectado_min'] >= 0,
+                0
+            )
+            pred[f'{target_value}_proyectado_max'] = pred[f'{target_value}_proyectado_max'].where(
+                pred[f'{target_value}_proyectado_max'] >= 0,
+                0
+            )
+
         pred['fin_periodo'] = pd.to_datetime(pred['fin_periodo'])
 
         pred = pred.merge(
