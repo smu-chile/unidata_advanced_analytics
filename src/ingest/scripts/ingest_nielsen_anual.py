@@ -55,14 +55,15 @@ def cleaning_func(df, year,file):
                     ]
     if file == 'jerarquia_upc':
         df = df[9:]  # noqa: PD901
-        df = df.iloc[:, :19]  # noqa: PD901
+        df = df.iloc[:, :20]  # noqa: PD901
         logging.info('shape: %s', df.shape)
         #rename columns
         df.columns = ['departamento','cl_xc_categoria', 'segmento',
                      'negocio', 'item_code', 'item', 'subsegmento',
                      'tamano', 'tipo', 'variedad', 'upc', 'cl_xc_marca',
                       'dermo', 'envase', 'level_4_nielsen', 'sabores',
-                    'submarca', 'periodos', 'total_mercado_vtas_valor'
+                    'submarca', 'periodos', 'total_mercado_vtas_valor',
+                    'total_chile_cadena_unimarc_vtas_valor'
                      ]
     #Drop trailing rows
     df = df.dropna(axis=0,subset=['departamento','cl_xc_categoria'])  # noqa: PD901

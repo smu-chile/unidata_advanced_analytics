@@ -113,6 +113,11 @@
             "description": "Total de ventas del mercado"
         },
         {
+            "name": "total_chile_cadena_unimarc_vtas_valor",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
             "name": "year",
             "field_type": "STRING",
             "mode": "NULLABLE",
