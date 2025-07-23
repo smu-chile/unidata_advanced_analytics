@@ -15,7 +15,7 @@ GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
     'dag_id': 'margins_ing_importe_sellout_m10_s10',
-    'schedule_interval': None,
+    'schedule_interval': '0 19 1-7 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,

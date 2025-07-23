@@ -115,27 +115,27 @@ def main() -> None:  # noqa: D103
         except ClientRequestException:
             logging.info('Error getting file')
             return
-        #TODO(csotob): Agregar logica de verificar si archivo existe
+
         if modified:
-            continue
+            logging.info('Archivo existe y fue modificado hoy')
 
-        df_file = sharepoint.toFrame(sheet_name = 'ID 0')
-        df_file =cleaning_func(df_file,execution_month)
+            df_file = sharepoint.toFrame(sheet_name = 'ID 0')
+            df_file =cleaning_func(df_file,execution_month)
 
-        # Upload data
-        logging.info('Uploading data')
-        #Delete from table so that data is not duplicated
-        gbq_extended.deleteFromTable(table_ref=table_ref[file],
-                                     where_clause=f'mes_carga="{execution_month}"',
-                                     gbq_client=gbq_client
-                                     )
-        gbq_extended.uploadFrame(
-            df_file,
-            table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
-            project=gcp_project_id,
-            gbq_client=gbq_client,
-            if_exists='append',
-        )
+            # Upload data
+            logging.info('Uploading data')
+            #Delete from table so that data is not duplicated
+            gbq_extended.deleteFromTable(table_ref=table_ref[file],
+                                        where_clause=f'mes_carga="{execution_month}"',
+                                        gbq_client=gbq_client
+                                        )
+            gbq_extended.uploadFrame(
+                df_file,
+                table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
+                project=gcp_project_id,
+                gbq_client=gbq_client,
+                if_exists='append',
+            )
     logging.info('Process ended!')
 
 if __name__ == '__main__':
