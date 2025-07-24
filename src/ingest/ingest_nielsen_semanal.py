@@ -41,7 +41,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    EXECUTION_WEEK = "{{ dag_run.conf.get('execution_week', dag.timezone.convert(data_interval_end).strftime('%Y')) }}"  # noqa: E501
+    EXECUTION_WEEK = "{{ dag_run.conf.get('execution_week', dag.timezone.convert(data_interval_end).strftime('%Y%V')) }}"  # noqa: E501
 
     ingest_nielsen_semanal = DataprocCreateBatchOperator(
         task_id = 'ingest_nielsen_semanal',
