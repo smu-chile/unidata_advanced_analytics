@@ -108,27 +108,26 @@ def main() -> None:  # noqa: D103
     except ClientRequestException:
         logging.info('Error getting file')
         return
-    #TODO(csotob): Agregar el bloque a if modified
+
     if modified:
-        return
-    logging.info('Archivo existe y fue modificado hoy')
-    df_file = sharepoint.toFrame()
-    df_file =cleaning_func(df_file,execution_month,execution_week)
-    # Upload data
-    logging.info('Uploading data')
-    #Delete from table so that data is not duplicated
-    gbq_extended.deleteFromTable(table_ref=table_ref,
-                                where_clause=f'semana_carga="{execution_week}"',
-                                gbq_client=gbq_client
-                                )
-    gbq_extended.uploadFrame(
-        df_file,
-        table_ddl_json_path=os.path.join('gbq_objects', json),
-        project=gcp_project_id,
-        gbq_client=gbq_client,
-        if_exists='append',
-    )
-    logging.info('Process ended!')
+        logging.info('Archivo existe y fue modificado hoy')
+        df_file = sharepoint.toFrame()
+        df_file =cleaning_func(df_file,execution_month,execution_week)
+        # Upload data
+        logging.info('Uploading data')
+        #Delete from table so that data is not duplicated
+        gbq_extended.deleteFromTable(table_ref=table_ref,
+                                    where_clause=f'semana_carga="{execution_week}"',
+                                    gbq_client=gbq_client
+                                    )
+        gbq_extended.uploadFrame(
+            df_file,
+            table_ddl_json_path=os.path.join('gbq_objects', json),
+            project=gcp_project_id,
+            gbq_client=gbq_client,
+            if_exists='append',
+        )
+        logging.info('Process ended!')
 
 if __name__ == '__main__':
     main()
