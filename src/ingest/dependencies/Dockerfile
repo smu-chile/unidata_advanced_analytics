@@ -73,6 +73,8 @@ RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
       rtree \
       sympy \
       sqlalchemy-with-postgresql \
+      libsqlite \
+      sqlite \
       pendulum \
       pandas-gbq \
       virtualenv
