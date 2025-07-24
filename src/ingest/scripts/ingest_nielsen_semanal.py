@@ -115,7 +115,7 @@ def main() -> None:  # noqa: D103
     # Parse input variables
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
-    execution_week: list[str] = args['execution_week'].split(':') 
+    execution_week: list[str] = args['execution_week'].split(':')
     load_files: list[str] = args['load_files'].split(':')
     reference_files = ['categoria_item','venta_categoria','venta_negocio']
     #Default: tomar todo

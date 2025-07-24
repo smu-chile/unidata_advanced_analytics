@@ -17,7 +17,7 @@ dag_args = {
     'dag_id': 'ingest_data_nielsen_semanal',
     'schedule_interval': '30 9 * * 4',
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': [PROJECT_NAME, 'csotob'],
@@ -31,7 +31,7 @@ dag_args = {
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
-        'catchup': True,
+        'catchup': False,
         'email_on_failure': True,
         'email_on_retry': False,
         'retries': 0,
