@@ -75,7 +75,7 @@ def cleaning_func(df_file, week,file):
         df_file = df_file.replace('|', '', regex=True)
         df_file = df_file.replace(' nan', 0.0)
         df_file = df_file.replace('nan', 0.0)
-        df_file['item_code'] = df_file['item_code'].astype('Float64').astype('Int64')
+        df_file['item_code'] = df_file['item_code'].astype('Int64')
 
 
     if file == 'venta_categoria':
