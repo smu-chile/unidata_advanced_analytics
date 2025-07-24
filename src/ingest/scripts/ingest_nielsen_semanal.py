@@ -73,6 +73,8 @@ def cleaning_func(df_file, week,file):
                 # Drop trailing rows
         df_file = df_file.dropna(axis=0,subset=['departamento','cl_xc_categoria'])
         df_file = df_file.replace('|', '', regex=True)
+        df_file = df_file.replace(' nan', 0.0)
+        df_file = df_file.replace('nan', 0.0)
         df_file['item_code'] = df_file['item_code'].astype('Float64').astype('Int64')
 
 
