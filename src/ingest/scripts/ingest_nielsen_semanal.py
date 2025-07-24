@@ -37,6 +37,11 @@ parser.add_argument(
     '--execution_week', type=str,
     help='Week(s) to process'
 )
+parser.add_argument(
+    '--load_files', type=str,
+    help='File(s) to be bq loaded'
+)
+
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
@@ -68,7 +73,7 @@ def cleaning_func(df_file, week,file):
                 # Drop trailing rows
         df_file = df_file.dropna(axis=0,subset=['departamento','cl_xc_categoria'])
         df_file = df_file.replace('|', '', regex=True)
-
+        df_file['item_code'] = df_file['item_code'].astype('Float64').astype('Int64')
 
 
     if file == 'venta_categoria':
@@ -110,8 +115,12 @@ def main() -> None:  # noqa: D103
     # Parse input variables
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
-    execution_week: list[str] = args['execution_week'].split(':')
-    load_files = ['categoria_item','venta_categoria','venta_negocio']
+    execution_week: list[str] = args['execution_week'].split(':') 
+    load_files: list[str] = args['load_files'].split(':')
+    reference_files = ['categoria_item','venta_categoria','venta_negocio']
+    #Default: tomar todo
+    if 'all' in load_files:
+        load_files = reference_files
     # Set all clients
     sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials')
     gbq_client = bigquery.Client()

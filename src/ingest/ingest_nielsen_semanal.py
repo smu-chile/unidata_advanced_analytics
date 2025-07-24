@@ -42,7 +42,7 @@ dag_args = {
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
     EXECUTION_WEEK = "{{ dag_run.conf.get('execution_week', dag.timezone.convert(data_interval_end).strftime('%Y%V')) }}"  # noqa: E501
-
+    LOAD_FILES = "{{ dag_run.conf.get('load_files','all')}}"
     ingest_nielsen_semanal = DataprocCreateBatchOperator(
         task_id = 'ingest_nielsen_semanal',
 
@@ -73,7 +73,8 @@ with DAG(**dag_args) as dag:
                 'args': [
                     '--project_id', GCP_PROJECT_ID,
                     '--execution_date', EXECUTION_DATE,
-                    '--execution_week', EXECUTION_WEEK
+                    '--execution_week', EXECUTION_WEEK,
+                    '--load_files', LOAD_FILES
                 ],
             },
             # Docker image to be used in the dataproc pod
