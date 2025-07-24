@@ -115,6 +115,12 @@ def main() -> None:  # noqa: D103
         df_file =cleaning_func(df_file,execution_month,execution_week)
         # Upload data
         logging.info('Uploading data')
+        gbq_extended.createTableFromJSON(
+                    ddl_json_config_path=os.path.join('gbq_objects', json),
+                    project=gcp_project_id,
+                    gbq_client=gbq_client,
+                    if_exists='ignore',
+                )
         #Delete from table so that data is not duplicated
         gbq_extended.deleteFromTable(table_ref=table_ref,
                                     where_clause=f'semana_carga="{execution_week}"',

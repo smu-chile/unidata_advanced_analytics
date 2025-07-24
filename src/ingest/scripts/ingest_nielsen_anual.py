@@ -95,7 +95,7 @@ def main() -> None:  # noqa: D103
     'BigDatayAdvancedAnalytics/'
     'Documentos compartidos/'
     'Pricing/Forecast Venta/'
-    'Data Nielsen/Uni M10 Internet/'
+    'Data Nielsen/Uni M10 Internet'
     )
     #input files
     input_files = {
@@ -127,6 +127,12 @@ def main() -> None:  # noqa: D103
 
             # Upload data
             logging.info('Uploading data')
+            gbq_extended.createTableFromJSON(
+                    ddl_json_config_path=os.path.join('gbq_objects', jsons[file]),
+                    project=gcp_project_id,
+                    gbq_client=gbq_client,
+                    if_exists='ignore',
+                )
 
             #Delete from table so that data is not duplicated
             gbq_extended.deleteFromTable(table_ref=table_ref[file],
