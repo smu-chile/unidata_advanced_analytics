@@ -35,15 +35,18 @@ parser.add_argument(
     '--execution_month', type=str,
     help='DAG execution month'
 )
+parser.add_argument(
+    '--execution_week', type=str,
+    help='DAG execution week'
+)
 
 
 
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(df,mes_carga):
+def cleaning_func(df,mes,semana_carga):
     print('Before cleaning:', df)
-    mes = df.columns[1].split(' ')[3]
     #Drop first 2 rows and last 4 columns
     df = df[2:]  # noqa: PD901
     df = df.iloc[:, :17]  # noqa: PD901
@@ -62,9 +65,9 @@ def cleaning_func(df,mes_carga):
 
     df['importe_sell_out'] = df['importe_sell_out'].astype('Float64').astype('Int64')
     df['factor'] = df['factor'].astype('Float64').astype('Int64')
-    #Agregar mes
+    #Agregar semana carga y mes datos
     df['mes'] = mes
-    df['mes_carga'] = mes_carga
+    df['semana_carga'] = semana_carga
     print('After cleaning:', df)
     return df
 
@@ -77,64 +80,54 @@ def main() -> None:  # noqa: D103
     gcp_project_id: str = args['project_id']
     execution_date: str = args['execution_date']
     execution_month: str = args['execution_month']
-    formatos = ['s10','m10']
+    execution_week: str = args['execution_week']
 
     # Set all clients
     sp_cred = secretmanager.getSecret('sellout_sharepoint_credentials')
     gbq_client = bigquery.Client()
     #input files
-    file_site = '/sites/SellOut/Documentos compartidos/SellOut Consolidado/'
+    file_site = '/sites/SellOut/Documentos compartidos'
     #TODO(csotob): Cambiar nombre de input:file y la logica de renombrar a
     # 'Procesado-' en GCP cuando se depreque en aws, eventualmente
-    input_files = {
-        's10': f'{file_site}/S10/PROCESADO-Sellout_S10_{execution_month}.xlsx',
-        'm10': f'{file_site}/M10/PROCESADO-Sellout_M10_{execution_month}.xlsx',
-            }
+    input_file =  f'{file_site}/PROCESADO-Sellout_{execution_month}.xlsx'
     #table definitions jsons
-    jsons = {
-        's10' : 'sellout_id0_s10.json',
-        'm10' : 'sellout_id0_m10.json'
-    }
+    json = 'sellout_unimarc.json'
     schema = 'ML_LAB'
-    table_ref = {
-        's10' : f'{gcp_project_id}.{schema}.REPORTE_MARGEN_SELLOUT_ID0_S10',
-        'm10' : f'{gcp_project_id}.{schema}.REPORTE_MARGEN_SELLOUT_ID0_M10'
-    }
-    for file in formatos:
-        logging.info(f'Starting extraction of -- sellout id0 {file} -- from Sharepoint')
-        sharepoint = sp.SharePointFile(sp_cred['client_id'],
-                                       sp_cred['client_secret'],input_files[file])
-        modified = False
-        try:
-            last_time_modified = sharepoint.lastTimeModified()
-            logging.info(f'Last time modified: {last_time_modified}')
-            logging.info(f'Execution date: {execution_date}')
-            if last_time_modified.strftime('%Y-%m-%d') == execution_date:
-                modified = True
-        except ClientRequestException:
-            logging.info('Error getting file')
-            return
+    table_ref =  f'{gcp_project_id}.{schema}.REPORTE_MARGEN_SELLOUT_UNIMARC'
 
-        if modified:
-            logging.info('Archivo existe y fue modificado hoy')
-
-            df_file = sharepoint.toFrame(sheet_name = 'ID 0')
-            df_file =cleaning_func(df_file,execution_month)
-
-            # Upload data
-            logging.info('Uploading data')
-            #Delete from table so that data is not duplicated
-            gbq_extended.deleteFromTable(table_ref=table_ref[file],
-                                        where_clause=f'mes_carga="{execution_month}"',
-                                        gbq_client=gbq_client
-                                        )
-            gbq_extended.uploadFrame(
-                df_file,
-                table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
-                project=gcp_project_id,
-                gbq_client=gbq_client,
-                if_exists='append',
-            )
+    logging.info(f'Starting extraction of -- sellout unimarc {input_file} -- from Sharepoint')
+    sharepoint = sp.SharePointFile(sp_cred['client_id'],
+                                   sp_cred['client_secret'],input_file)
+    modified = False
+    try:
+        last_time_modified = sharepoint.lastTimeModified()
+        logging.info(f'Last time modified: {last_time_modified}')
+        logging.info(f'Execution date: {execution_date}')
+        if last_time_modified.strftime('%Y-%m-%d') == execution_date:
+            modified = True
+    except ClientRequestException:
+        logging.info('Error getting file')
+        return
+    #TODO(csotob): Agregar el bloque a if modified
+    if modified:
+        return
+    logging.info('Archivo existe y fue modificado hoy')
+    df_file = sharepoint.toFrame()
+    df_file =cleaning_func(df_file,execution_month,execution_week)
+    # Upload data
+    logging.info('Uploading data')
+    #Delete from table so that data is not duplicated
+    gbq_extended.deleteFromTable(table_ref=table_ref,
+                                where_clause=f'semana_carga="{execution_week}"',
+                                gbq_client=gbq_client
+                                )
+    gbq_extended.uploadFrame(
+        df_file,
+        table_ddl_json_path=os.path.join('gbq_objects', json),
+        project=gcp_project_id,
+        gbq_client=gbq_client,
+        if_exists='append',
+    )
     logging.info('Process ended!')
 
 if __name__ == '__main__':
