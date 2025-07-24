@@ -47,7 +47,10 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 def cleaning_func(df_file, week,file):
     print('Before cleaning:', df_file)
+    df_file = df_file[9:]
+    logging.info('shape: %s', df_file.shape)
     if file == 'categoria_item':
+        df_file = df_file.iloc[:, :18]
         n_columns = df_file.shape[1]
         #data does not contain unimarc emcommerce
         if n_columns == 16:
@@ -75,10 +78,11 @@ def cleaning_func(df_file, week,file):
         df_file = df_file.replace('|', '', regex=True)
         df_file = df_file.replace(' nan', 0.0)
         df_file = df_file.replace('nan', 0.0)
-        df_file['item_code'] = df_file['item_code'].astype('Int64')
+        df_file['item_code'] = df_file['item_code'].astype('Float64').astype('Int64')
 
 
     if file == 'venta_categoria':
+        df_file = df_file.iloc[:, :16]
         df_file.columns = ['departamento', 'cl_xc_categoria', 'negocio',
                      'periodos', 'total_mercado_vtas_valor', 'total_mercado_vtas_unit',
                      'unimarc_vtas_valor', 'unimarc_vtas_unit',
@@ -90,6 +94,7 @@ def cleaning_func(df_file, week,file):
         df_file = df_file.dropna(axis=0,subset=['departamento','cl_xc_categoria'])
         df_file = df_file.replace('|', '', regex=True)
     if file == 'venta_negocio':
+        df_file = df_file.iloc[:, :18]
         #rename columns
         df_file.columns = ['negocio','cl_total_store',
                      'periodos', 'total_mercado_vtas_valor', 'total_mercado_vtas_unit',
