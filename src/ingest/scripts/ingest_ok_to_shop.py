@@ -9,6 +9,7 @@ from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.databases.postgresql import readPostgresQuery
 from common.gcp_extended.bigquery import uploadFrame
+from common.gcp_extended.secretsmanager import getSecret
 
 
 # -------------------------------------------------------------------------
@@ -90,7 +91,10 @@ def main() -> None:
     gbq_client = Client()
 
     # Get data
-    data = readPostgresQuery(SQL_QUERIES['get_data'])
+    data = readPostgresQuery(
+        SQL_QUERIES['get_data'],
+        credentials_dict=getSecret('ecommerce_postgres_credentials')
+    )
 
     # Upload data to the table
     uploadFrame(
