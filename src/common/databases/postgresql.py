@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 
 
 def readPostgresQuery(
-    query: str, credentials_string: str, **kwargs
+    query: str, credentials_dict: dict, **kwargs
 ) -> pd.DataFrame:
     """Read a query from PostgreSQL database.
 
@@ -14,7 +14,7 @@ def readPostgresQuery(
     ----------
     query : str
         SQL query
-    credentials_string : str
+    credentials_dict : dict
         Credentials string for database connection
     kwargs
         Arguments passed to the ``pandas.read_sql_query`` function
@@ -25,7 +25,17 @@ def readPostgresQuery(
         Pandas DataFrame object with the Netezza SQL query response
     """
     # Stablish connection
-    db_connection = create_engine(credentials_string)
+    db_connection = create_engine(
+        'postgresql://'
+        + credentials_dict['username']
+        + ':'
+        + credentials_dict['password']
+        + '@'
+        + credentials_dict['host']
+        + ':'
+        + credentials_dict['port']
+        + '/postgres'
+    )
 
     # Make the query
     response = pd.read_sql_query(query, con=db_connection, **kwargs)
