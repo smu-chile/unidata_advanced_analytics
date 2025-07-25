@@ -138,7 +138,7 @@ def main() -> None:  # noqa: D103
 
             #Delete from table so that data is not duplicated
             gbq_extended.deleteFromTable(table_ref=table_ref[file],
-                                         where_clause=f'year="{year}"',
+                                         where_clause=f'year=cast("{year}-01-01" as date)',
                                          gbq_client=gbq_client
                                          )
 
