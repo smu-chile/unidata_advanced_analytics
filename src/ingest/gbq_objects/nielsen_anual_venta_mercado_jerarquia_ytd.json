@@ -95,7 +95,7 @@
         },
         {
             "name": "year",
-            "field_type": "DATETIME",
+            "field_type": "DATE",
             "mode": "NULLABLE",
             "description": "Año que comprende el dato obtenido desde Nielsen"
         }
