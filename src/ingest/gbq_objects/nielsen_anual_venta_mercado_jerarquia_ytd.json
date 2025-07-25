@@ -100,5 +100,9 @@
             "description": "Año que comprende el dato obtenido desde Nielsen"
         }
 
-    ]
+    ],
+    "time_partitioning": {
+        "field": "year",
+        "type_": "YEAR"
+    }
 }
