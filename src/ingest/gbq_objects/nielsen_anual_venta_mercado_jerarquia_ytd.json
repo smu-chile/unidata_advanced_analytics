@@ -95,9 +95,14 @@
         },
         {
             "name": "year",
-            "field_type": "STRING",
+            "field_type": "DATE",
             "mode": "NULLABLE",
             "description": "Año que comprende el dato obtenido desde Nielsen"
         }
 
-    ]
+    ],
+    "time_partitioning": {
+        "field": "year",
+        "type_": "YEAR"
+    }
+}
