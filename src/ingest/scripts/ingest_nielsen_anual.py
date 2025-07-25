@@ -74,7 +74,7 @@ def cleaning_func(df, year,file):
     #Add column out of periodos
     df['periodos'] = df['periodos'].str.lower()#
     df['year'] = datetime.strptime(year,'%Y')  # noqa: DTZ007
-    pd.to_datetime(df.year)
+    df['year'] = pd.to_datetime(df.year)
     df = df.replace(' nan', 0.0)  # noqa: PD901
     df = df.replace('nan', 0.0)  # noqa: PD901
     df['item_code'] = df['item_code'].astype('Float64').astype('Int64')  # noqa: E501
