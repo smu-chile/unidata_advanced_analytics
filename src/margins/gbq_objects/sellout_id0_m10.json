@@ -109,7 +109,7 @@
         },
         {
             "name": "mes_carga",
-            "field_type": "STRING",
+            "field_type": "DATE",
             "mode": "NULLABLE",
             "description": "Mes en el que se carga el registro (mes + 1)"
         }

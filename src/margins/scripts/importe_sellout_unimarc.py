@@ -4,6 +4,8 @@ import logging
 import argparse
 from logging import config
 
+import pandas as pd
+
 # pip
 from google.cloud import bigquery
 from office365.runtime.client_request_exception import ClientRequestException
@@ -66,7 +68,7 @@ def cleaning_func(df,mes,semana_carga):
     df['importe_sell_out'] = df['importe_sell_out'].astype('Float64').astype('Int64')
     df['factor'] = df['factor'].astype('Float64').astype('Int64')
     #Agregar semana carga y mes datos
-    df['mes'] = mes
+    df['mes'] = pd.to_datetime(mes,format='%Y%m')
     df['semana_carga'] = semana_carga
     print('After cleaning:', df)
     return df
@@ -121,9 +123,10 @@ def main() -> None:  # noqa: D103
                     gbq_client=gbq_client,
                     if_exists='ignore',
                 )
+        where_clause=f'semana_carga="{execution_week}" and mes=CAST("{execution_month}-01-01" AS DATE)'  # noqa: E501
         #Delete from table so that data is not duplicated
         gbq_extended.deleteFromTable(table_ref=table_ref,
-                                    where_clause=f'semana_carga="{execution_week}"',
+                                    where_clause= where_clause,
                                     gbq_client=gbq_client
                                     )
         gbq_extended.uploadFrame(

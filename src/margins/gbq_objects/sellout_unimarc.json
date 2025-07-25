@@ -103,7 +103,7 @@
         },
         {
             "name": "mes",
-            "field_type": "STRING",
+            "field_type": "DATE",
             "mode": "NULLABLE",
             "description": "Mes al que corresponde el registro"
         },
@@ -115,8 +115,8 @@
         }
     ],
     "time_partitioning": {
-        "field": "mes_carga",
-        "type_": "WEEK"
+        "field": "mes",
+        "type_": "MONTH"
     }
     
 }
