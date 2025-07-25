@@ -6,7 +6,7 @@
         {
             "name": "id",
             "field_type": "STRING",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "ID Material 0"
         },
         {
@@ -48,7 +48,7 @@
         {
             "name": "articulo",
             "field_type": "INTEGER",
-            "mode": "NULLABLE",
+            "mode": "REQUIRED",
             "description": "Material PLU"
         },
         {
