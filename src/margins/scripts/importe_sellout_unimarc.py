@@ -112,31 +112,30 @@ def main() -> None:  # noqa: D103
         return
 
     if modified:
-        return
-    logging.info('Archivo existe y fue modificado hoy')
-    df_file = sharepoint.toFrame()
-    df_file =cleaning_func(df_file,execution_month,execution_week)
-    # Upload data
-    logging.info('Uploading data')
-    gbq_extended.createTableFromJSON(
-                ddl_json_config_path=os.path.join('gbq_objects', json),
-                project=gcp_project_id,
-                gbq_client=gbq_client,
-                if_exists='ignore',
-            )
-    where_clause=f'semana_carga="{execution_week}" and mes=CAST("{execution_month}-01-01" AS DATE)'  # noqa: E501
-    #Delete from table so that data is not duplicated
-    gbq_extended.deleteFromTable(table_ref=table_ref,
-                                where_clause= where_clause,
-                                gbq_client=gbq_client
-                                )
-    gbq_extended.uploadFrame(
-        df_file,
-        table_ddl_json_path=os.path.join('gbq_objects', json),
-        project=gcp_project_id,
-        gbq_client=gbq_client,
-        if_exists='append',
-    )
+        logging.info('Archivo existe y fue modificado hoy')
+        df_file = sharepoint.toFrame()
+        df_file =cleaning_func(df_file,execution_month,execution_week)
+        # Upload data
+        logging.info('Uploading data')
+        gbq_extended.createTableFromJSON(
+                    ddl_json_config_path=os.path.join('gbq_objects', json),
+                    project=gcp_project_id,
+                    gbq_client=gbq_client,
+                    if_exists='ignore',
+                )
+        where_clause=f'semana_carga="{execution_week}" and mes=CAST("{execution_month}-01-01" AS DATE)'  # noqa: E501
+        #Delete from table so that data is not duplicated
+        gbq_extended.deleteFromTable(table_ref=table_ref,
+                                    where_clause= where_clause,
+                                    gbq_client=gbq_client
+                                    )
+        gbq_extended.uploadFrame(
+            df_file,
+            table_ddl_json_path=os.path.join('gbq_objects', json),
+            project=gcp_project_id,
+            gbq_client=gbq_client,
+            if_exists='append',
+        )
     logging.info('Process ended!')
 
 if __name__ == '__main__':
