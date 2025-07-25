@@ -4,6 +4,7 @@ import logging
 import argparse
 from string import Template
 from logging import config
+from datetime import datetime
 
 # pip
 from google.cloud import bigquery
@@ -70,7 +71,7 @@ def cleaning_func(df, year,file):
     df = df.replace('|', '', regex=True)  # noqa: PD901
     #Add column out of periodos
     df['periodos'] = df['periodos'].str.lower()#
-    df['year'] = year
+    df['year'] = datetime.strptime(year,'%Y')
     df = df.replace(' nan', 0.0)  # noqa: PD901
     df = df.replace('nan', 0.0)  # noqa: PD901
     df['item_code'] = df['item_code'].astype('Float64').astype('Int64')  # noqa: E501
