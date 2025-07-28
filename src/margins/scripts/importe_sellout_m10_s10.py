@@ -124,17 +124,20 @@ def main() -> None:  # noqa: D103
         df_file =cleaning_func(df_file,execution_month)
         # Upload data
         logging.info('Uploading data')
+        logging.info('Create table')
         gbq_extended.createTableFromJSON(
                 ddl_json_config_path=os.path.join('gbq_objects', jsons[file]),
                 project=gcp_project_id,
                 gbq_client=gbq_client,
                 if_exists='ignore',
             )
+        logging.info('Delete from table to avoid duplication')
         #Delete from table so that data is not duplicated
         gbq_extended.deleteFromTable(table_ref=table_ref[file],
                                     where_clause=f'mes_carga=CAST(CONCAT(SUBSTRING("{execution_month}",0,4),"-01-01") AS DATE)',  # noqa: E501
                                     gbq_client=gbq_client
                                     )
+        logging.info('Uploading dataframe')
         gbq_extended.uploadFrame(
             df_file,
             table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
