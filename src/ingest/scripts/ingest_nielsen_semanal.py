@@ -60,8 +60,8 @@ def cleaning_func(df_file, week,file):
                         'm10s10_vtas_valor', 'm10s10_vtas_unit',
                         'total_internet_vtas_valor','total_internet_vtas_unit',
                         'total_mercado_internet_vtas_valor','total_mercado_internet_vtas_unit']
-            df_file = df_file.insert(12,'unimarc_internet_vtas_valor',0)
-            df_file = df_file.insert(13,'unimarc_internet_vtas_unit',0)
+            df_file.insert(12,'unimarc_internet_vtas_valor',0)
+            df_file.insert(13,'unimarc_internet_vtas_unit',0)
         elif n_columns == 18:
             df_file.columns = ['departamento', 'cl_xc_categoria', 'negocio', 'item_code',
                         'item', 'periodos', 'total_mercado_vtas_valor', 'total_mercado_vtas_unit',
