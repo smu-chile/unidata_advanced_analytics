@@ -132,7 +132,7 @@ def main() -> None:  # noqa: D103
             )
         #Delete from table so that data is not duplicated
         gbq_extended.deleteFromTable(table_ref=table_ref[file],
-                                    where_clause=f'mes_carga=CAST(CONCAT(SUBSTRING({execution_month},0,4),"-01-01") AS DATE)',  # noqa: E501
+                                    where_clause=f'mes_carga=CAST(CONCAT(SUBSTRING("{execution_month}",0,4),"-01-01") AS DATE)',  # noqa: E501
                                     gbq_client=gbq_client
                                     )
         gbq_extended.uploadFrame(
