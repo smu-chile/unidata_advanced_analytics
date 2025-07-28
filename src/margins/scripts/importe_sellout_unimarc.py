@@ -123,7 +123,7 @@ def main() -> None:  # noqa: D103
                     gbq_client=gbq_client,
                     if_exists='ignore',
                 )
-        where_clause=f'semana_carga="{execution_week}" and mes=CAST("{execution_month}-01-01" AS DATE)'  # noqa: E501
+        where_clause=f'semana_carga="{execution_week}"'  # noqa: E501
         #Delete from table so that data is not duplicated
         gbq_extended.deleteFromTable(table_ref=table_ref,
                                     where_clause= where_clause,
