@@ -62,6 +62,12 @@ with DAG(**dag_args) as dag:
                     (
                         'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
                         'common/'
+                    ),
+                    (
+                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                        'consulting'
+                        f'{PROJECT_NAME}/'
+                        'gbq_objects/'
                     )
                 ],
                 # For Google Big Query read/write
