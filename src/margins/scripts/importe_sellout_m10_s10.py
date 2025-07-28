@@ -103,7 +103,7 @@ def main() -> None:  # noqa: D103
         'm10' : f'{gcp_project_id}.{schema}.REPORTE_MARGEN_SELLOUT_ID0_M10'
     }
     for file in formatos:
-        logging.info(f'Starting extraction of -- sellout id0 {file} -- from Sharepoint')
+        logging.info(f'Starting extraction of -- sellout id0 {file} {execution_month} -- from Sharepoint')
         sharepoint = sp.SharePointFile(sp_cred['client_id'],
                                        sp_cred['client_secret'],input_files[file])
         modified = False
