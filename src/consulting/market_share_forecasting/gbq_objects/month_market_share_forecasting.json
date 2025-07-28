@@ -1,0 +1,32 @@
+{
+    "schema": "ML_LAB",
+    "table": "FACT_MONTH_MARKET_SHARE_FORECASTING",
+    "columns": [
+        {"name": "category_description", "field_type": "STRING"},
+        {"name": "unimarc", "field_type": "BIGNUMERIC"},
+        {"name": "unimarc_proyectado", "field_type": "BIGNUMERIC"},
+        {"name": "unimarc_proyectado_min", "field_type": "BIGNUMERIC"},
+        {"name": "unimarc_proyectado_max", "field_type": "BIGNUMERIC"},
+        {"name": "alvi", "field_type": "BIGNUMERIC"},
+        {"name": "alvi_proyectado", "field_type": "BIGNUMERIC"},
+        {"name": "alvi_proyectado_min", "field_type": "BIGNUMERIC"},
+        {"name": "alvi_proyectado_max", "field_type": "BIGNUMERIC"},
+        {"name": "s10", "field_type": "BIGNUMERIC"},
+        {"name": "s10_proyectado", "field_type": "BIGNUMERIC"},
+        {"name": "s10_proyectado_min", "field_type": "BIGNUMERIC"},
+        {"name": "s10_proyectado_max", "field_type": "BIGNUMERIC"},
+        {"name": "m10", "field_type": "BIGNUMERIC"},
+        {"name": "m10_proyectado", "field_type": "BIGNUMERIC"},
+        {"name": "m10_proyectado_min", "field_type": "BIGNUMERIC"},
+        {"name": "m10_proyectado_max", "field_type": "BIGNUMERIC"},
+        {"name": "inicio_periodo", "field_type": "DATE"},
+        {"name": "fin_periodo", "field_type": "DATE"}
+    ],
+
+    "time_partitioning": {
+        "field": "inicio_periodo",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": ["category_description"]
+}
