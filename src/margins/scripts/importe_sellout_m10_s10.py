@@ -103,7 +103,7 @@ def main() -> None:  # noqa: D103
         'm10' : f'{gcp_project_id}.{schema}.REPORTE_MARGEN_SELLOUT_ID0_M10'
     }
     for file in formatos:
-        logging.info(f'Starting extraction of -- sellout id0 {file} {execution_month} -- from Sharepoint')
+        logging.info(f'Starting extraction of sellout id0 {file} {execution_month} from SP')
         sharepoint = sp.SharePointFile(sp_cred['client_id'],
                                        sp_cred['client_secret'],input_files[file])
         modified = False
@@ -134,7 +134,7 @@ def main() -> None:  # noqa: D103
         logging.info('Delete from table to avoid duplication')
         #Delete from table so that data is not duplicated
         gbq_extended.deleteFromTable(table_ref=table_ref[file],
-                                    where_clause=f'mes_carga=CAST(CONCAT(SUBSTRING("{execution_month}",0,4),"-01-01") AS DATE)',  # noqa: E501
+                                    where_clause=f'mes_carga=CAST(CONCAT(SUBSTRING("{execution_month}",0,4),"-",SUBSTRING("{execution_month}",5,2),"-01") AS DATE)',  # noqa: E501
                                     gbq_client=gbq_client
                                     )
         logging.info('Uploading dataframe')
