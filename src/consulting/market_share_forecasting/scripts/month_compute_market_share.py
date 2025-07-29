@@ -19,7 +19,7 @@ from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.aws_extended.athena import readAthenaQuery
 from common.utils.data_transform import batchList
-from common.gcp_extended.bigquery import uploadFrame
+from common.gcp_extended.bigquery import uploadFrame, createTableFromJSON
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -146,6 +146,14 @@ def main():
         project=gcp_project,
         secret_name='bdaa_aws_credentials'  # noqa: S106
     ))
+
+    # Build output table
+    createTableFromJSON(
+        os.path.join('gbq_objects', 'month_market_share_forecasting.json'),
+        project=gcp_project,
+        gbq_client=gbq_client,
+        if_exists='rebuild'
+    )
 
     # ------------
     # Data loading
@@ -381,7 +389,7 @@ def main():
             table_ddl_json_path=os.path.join('gbq_objects', 'month_market_share_forecasting.json'),
             project=gcp_project,
             gbq_client=gbq_client,
-            if_exists='replace',
+            if_exists='append',
         )
 
     logging.info('Trainning ended')
