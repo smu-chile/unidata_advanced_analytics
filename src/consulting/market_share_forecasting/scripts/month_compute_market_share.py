@@ -12,7 +12,7 @@ import pandas as pd
 from boto3 import Session
 from prophet import Prophet
 from google.cloud.bigquery import Client
-from pandas.tseries.offsets import MonthEnd, DateOffset
+from pandas.tseries.offsets import MonthEnd
 
 # Own
 from common.constants import LOGGING_CONFIG
@@ -355,12 +355,7 @@ def main():
             )
 
 
-        final_pred['p_month'] = final_pred['fin_periodo'].astype(str).str.replace('-', '')[:6]
-        final_pred['inicio_periodo'] = (
-            final_pred['fin_periodo']
-            + DateOffset(months=-1)
-            + DateOffset(days=1)
-        )
+        final_pred['inicio_periodo'] = final_pred['fin_periodo'].astype(str).str[:8] + '01'
 
         logging.info('Updating temporal tables')
 
