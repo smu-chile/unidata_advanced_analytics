@@ -117,6 +117,7 @@ def main() -> None:  # noqa: D103
         df_file =cleaning_func(df_file,execution_month,execution_week)
         # Upload data
         logging.info('Uploading data')
+        logging.info('Creating table')
         gbq_extended.createTableFromJSON(
                     ddl_json_config_path=os.path.join('gbq_objects', json),
                     project=gcp_project_id,
@@ -125,10 +126,12 @@ def main() -> None:  # noqa: D103
                 )
         where_clause=f'semana_carga="{execution_week}"'  # noqa: E501
         #Delete from table so that data is not duplicated
+        logging.info('Delete from to avoid duplicates')
         gbq_extended.deleteFromTable(table_ref=table_ref,
                                     where_clause= where_clause,
                                     gbq_client=gbq_client
                                     )
+        logging.info('Uploading dataframe')
         gbq_extended.uploadFrame(
             df_file,
             table_ddl_json_path=os.path.join('gbq_objects', json),
@@ -136,6 +139,7 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client,
             if_exists='append',
         )
+        logging.info('Data uploaded')
     logging.info('Process ended!')
 
 if __name__ == '__main__':

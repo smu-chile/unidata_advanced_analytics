@@ -34,7 +34,7 @@
             "description": "Seccion"
         },
         {
-            "name": "LINEA N",
+            "name": "LINEA_N",
             "field_type": "STRING",
             "mode": "NULLABLE",
             "description": "Linea"
