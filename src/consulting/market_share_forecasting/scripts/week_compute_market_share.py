@@ -298,7 +298,10 @@ def main():
 
                 regressors[category_name][target_value] = regressor
 
-            periods = regressor.make_future_dataframe(
+                # Save last valid regressor for later
+                last_valid_regressor = regressor
+
+            periods = last_valid_regressor.make_future_dataframe(
                 periods=8,
                 freq='W',
                 include_history=True
