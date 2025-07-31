@@ -1,6 +1,6 @@
 {
     "schema": "ML_LAB",
-    "table": "FACT_MONTH_MARKET_SHARE_FORECASTING",
+    "table": "FACT_MONTH_PROPHET_SALES_FORECASTING",
     "columns": [
         {"name": "category_description", "field_type": "STRING"},
         {"name": "venta_unimarc", "field_type": "FLOAT64"},

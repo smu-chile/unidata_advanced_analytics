@@ -149,7 +149,7 @@ def main():
 
     # Build output table
     createTableFromJSON(
-        os.path.join('gbq_objects', 'month_market_share_forecasting.json'),
+        os.path.join('gbq_objects', 'month_prophet_sales_forecasting.json'),
         project=gcp_project,
         gbq_client=gbq_client,
         if_exists='rebuild'
@@ -384,7 +384,7 @@ def main():
                 'inicio_periodo',
                 'fin_periodo'
             ]],
-            table_ddl_json_path=os.path.join('gbq_objects', 'month_market_share_forecasting.json'),
+            table_ddl_json_path=os.path.join('gbq_objects', 'month_prophet_sales_forecasting.json'),  # noqa: E501
             project=gcp_project,
             gbq_client=gbq_client,
             if_exists='append',
