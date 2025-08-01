@@ -19,7 +19,7 @@ dag_args = {
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
-    'concurrency': 1,
+    'concurrency': 2,
     'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
         'project_id': GCP_PROJECT_ID,
