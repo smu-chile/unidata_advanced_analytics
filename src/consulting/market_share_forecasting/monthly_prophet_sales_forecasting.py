@@ -14,7 +14,7 @@ PROJECT_NAME = 'market_share_forecasting'
 GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
-    'dag_id': 'monthly_market_share_forecasting',
+    'dag_id': 'monthly_prophet_sales_forecasting',
     'schedule_interval': '0 1 1 * *',
     'dagrun_timeout': None,
     'catchup': False,
