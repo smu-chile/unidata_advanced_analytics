@@ -96,8 +96,10 @@ def cleaning_func(file,df):
         print('After cleaning:', df)
         return df
     if file.startswith('admg'):
+        df['MES'] = df['MES'].astype('Int64')
         df['Material'] = df['Material'].astype('Int64')
         df['SELLOUT'] = df['SELLOUT'].astype('Float64')
+        df = df.dropna(axis=0,subset=['MES'])  # noqa: PD901
         print('After cleaning:', df)
         return df
     if file == 'est_com_alvi':
