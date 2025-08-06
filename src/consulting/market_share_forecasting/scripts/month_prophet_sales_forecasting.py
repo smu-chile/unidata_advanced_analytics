@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # Default
+import os
 import logging
 import argparse
 from logging import config
@@ -8,16 +9,17 @@ from collections import defaultdict
 
 # pip
 import pandas as pd
-import pendulum
-import awswrangler as wr
 from boto3 import Session
 from prophet import Prophet
+from google.cloud.bigquery import Client
+from pandas.tseries.offsets import MonthEnd
 
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.aws_extended.athena import readAthenaQuery
 from common.utils.data_transform import batchList
+from common.gcp_extended.bigquery import uploadFrame, createTableFromJSON
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -46,65 +48,58 @@ parser.add_argument(
 # SQL Queries
 # -------------------------------------------------------------------------
 SQL_QUERIES = QueryDict({
-    'nielsen_data':
+    'month_transactions_aws':
     """
-    SELECT *
-    FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_CATEGORIA
-
-    UNION ALL
-
     SELECT
-        'SIN CLASIFICAR' AS departamento
-        ,'SIN CLASIFICAR' AS cl_xc_categoria
-        ,'SIN CLASIFICAR' AS negocio
-        ,'' AS periodos
-        ,c.total_mercado_vtas_valor - COALESCE(cat.mercado_vtas_valor, 0) AS total_mercado_vtas_valor
-        ,c.total_mercado_vtas_unit - COALESCE(cat.mercado_vtas_unit, 0) AS total_mercado_vtas_unit
-        ,c.unimarc_vtas_valor - COALESCE(cat.unimarc_vtas_valor, 0) AS unimarc_vtas_valor
-        ,c.unimarc_vtas_unit - COALESCE(cat.unimarc_vtas_unit, 0) AS unimarc_vtas_unit
-        ,c.m10s10_vtas_valor - COALESCE(cat.m10s10_vtas_valor, 0) AS m10s10_vtas_valor
-        ,c.m10s10_vtas_unit - COALESCE(cat.m10s10_vtas_unit, 0) AS m10s10_vtas_unit
-        ,c.unimarc_internet_vtas_valor - COALESCE(cat.unimarc_internet_vtas_valor, 0) AS unimarc_internet_vtas_valor
-        ,c.unimarc_internet_vtas_unit - COALESCE(cat.unimarc_internet_vtas_unit, 0) AS unimarc_internet_vtas_unit
-        ,c.total_internet_vtas_valor - COALESCE(cat.total_internet_vtas_valor, 0) AS total_internet_vtas_valor
-        ,c.total_internet_vtas_unit - COALESCE(cat.total_internet_vtas_unit, 0) AS total_internet_vtas_unit
-        ,c.total_mercado_internet_vtas_valor - COALESCE(cat.total_mercado_internet_vtas_valor, 0) AS total_mercado_internet_vtas_valor
-        ,c.total_mercado_internet_vtas_unit - COALESCE(cat.total_mercado_internet_vtas_unit, 0) AS total_mercado_internet_vtas_unit
-        ,c.fin_periodo
-        ,id_semana AS p_week
+        SUBSTR(transaction_date, 1, 7) AS fin_periodo,
+        category_description,
+        SUM(CASE
+            WHEN store_banner = 'Unimarc' THEN value ELSE 0
+        END) AS unimarc,
+        SUM(CASE
+            WHEN store_banner = 'Alvi' THEN value ELSE 0
+        END) AS alvi,
+        SUM(CASE
+            WHEN store_banner = 'Super 10' THEN value ELSE 0
+        END) AS s10,
+        SUM(CASE
+            WHEN store_banner = 'Mayorista' THEN value ELSE 0
+        END) AS m10
 
-    FROM (
+    FROM dev_perm.TMP_LAB_SMU_SALES_ITEM sales_item
+
+    INNER JOIN dev_perm.TMP_LAB_SMU_DIM_STORE dim_store
+    USING (store_id)
+
+    INNER JOIN (
         SELECT
-            *
-            ,DATE_FORMAT(DATE(fin_periodo), '%x%v') AS id_semana
-
-        FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_NEGOCIO
-
-        WHERE negocio=''
-    ) c
+            product_id,
+            MAX(business_name) AS business_name,
+            MAX(category_description) AS category_description
+        FROM dev_perm.TMP_LAB_SMU_DIM_PRODUCTS
+        GROUP BY 1
+        HAVING MAX(business_name) NOT IN ('SERVICIOS COMERCIALES', 'NO RETAIL')
+    ) e
+    USING (product_id)
 
     LEFT JOIN (
         SELECT
-            DATE_FORMAT(DATE(fin_periodo), '%x%v') AS id_semana
-            ,SUM(total_mercado_vtas_valor) AS mercado_vtas_valor
-            ,SUM(total_mercado_vtas_unit) AS mercado_vtas_unit
-            ,SUM(unimarc_vtas_valor) AS unimarc_vtas_valor
-            ,SUM(unimarc_vtas_unit) AS unimarc_vtas_unit
-            ,SUM(m10s10_vtas_valor) AS m10s10_vtas_valor
-            ,SUM(m10s10_vtas_unit) AS m10s10_vtas_unit
-            ,SUM(unimarc_internet_vtas_valor) AS unimarc_internet_vtas_valor
-            ,SUM(unimarc_internet_vtas_unit) AS unimarc_internet_vtas_unit
-            ,SUM(total_internet_vtas_valor) AS total_internet_vtas_valor
-            ,SUM(total_internet_vtas_unit) AS total_internet_vtas_unit
-            ,SUM(total_mercado_internet_vtas_valor) AS total_mercado_internet_vtas_valor
-            ,SUM(total_mercado_internet_vtas_unit) AS total_mercado_internet_vtas_unit
+            market_basket_key,
+            TRUE AS from_other_ecommerce
+        FROM dev_perm.TMP_LAB_SMU_FACT_MARKET_BASKET_E_COMMERCE
+        WHERE canal_venta IN ('PEDIDOS YA','CORNER SHOP','RAPPI','RAPPI TURBO')
+    ) external_ecommerce_filter
+    USING (market_basket_key)
 
-        FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_CATEGORIA n
+    WHERE
+        transaction_date >= CAST(DATE_ADD('MONTH', -24, DATE('${execution_month}-01')) AS VARCHAR)
+        AND transaction_date < CAST(DATE('${execution_month}-01') AS VARCHAR)
+        AND transaction_type IN ('TN','TF','BX','B','BE','F','NC')
+        AND itm_txn_fcn_tp_dsc = 'V'
+        AND from_other_ecommerce IS NULL
 
-        GROUP BY 1
-    ) CAT
-    USING (id_semana)
-    """,  # noqa: E501
+    GROUP BY 1,2
+    """,
 
     'holidays':
     """
@@ -123,16 +118,11 @@ SQL_QUERIES = QueryDict({
 })
 
 
+# -------------------------------------------------------------------------
+# Functions and classes
+# -------------------------------------------------------------------------
 def fixFinPeriodo(row):
-    if row['fin_periodo']:
-        return row['fin_periodo']
-
-    date = pendulum.from_format(row['strdate'].strftime('%Y-%m-%d'), 'YYYY-MM-DD').date()
-
-    if date.day_of_week == pendulum.SUNDAY:
-        return date
-
-    return date.next(pendulum.SUNDAY)
+    return row['fin_periodo'] if row['fin_periodo'] else row['strdate'].strftime('%Y-%m')
 
 
 # -------------------------------------------------------------------------
@@ -145,26 +135,35 @@ def main():
     args = vars(parser.parse_args())
 
     # Environment
-    user: str = 'week_' + args['project_name']
+    user: str = 'month_' + args['project_name']
     gcp_project: str = args['gcp_project']
     execution_date: str = args['execution_date']
 
-    # Automatic
+    # Constants
+    db_temp = 'dev_temp'
+    gbq_client = Client()
     boto3_session = Session(**getSecret(
         project=gcp_project,
         secret_name='bdaa_aws_credentials'  # noqa: S106
     ))
 
-    # Constants
-    db_temp = 'dev_temp'
+    # Build output table
+    createTableFromJSON(
+        os.path.join('gbq_objects', 'month_prophet_sales_forecasting.json'),
+        project=gcp_project,
+        gbq_client=gbq_client,
+        if_exists='rebuild'
+    )
 
     # ------------
     # Data loading
     # ------------
     logging.info('Loading data...')
-    nielsen_data = readAthenaQuery(
+    market_data = readAthenaQuery(
         user=user,
-        query=SQL_QUERIES['nielsen_data'].substitute(),
+        query=SQL_QUERIES['month_transactions_aws'].substitute(
+            execution_month='2025-07',
+        ),
         database=db_temp,
         boto3_session=boto3_session
     )
@@ -196,57 +195,31 @@ def main():
         ignore_index=True
     )
 
-    nielsen_data['p_week'] = (
-        nielsen_data['fin_periodo'].astype(str).str[:4]
-        + pd.to_datetime(nielsen_data['fin_periodo']).dt.isocalendar()['week'].astype(str).str.zfill(2)  # noqa: E501
-    )
-
-    nielsen_data['p_year'] = nielsen_data['fin_periodo'].astype(str).str[:4]
-    nielsen_data.head()
+    market_data['p_month'] = market_data['fin_periodo'].astype(str).str.replace('-', '').str[:6]
+    market_data['p_year'] = market_data['fin_periodo'].astype(str).str[:4]
 
     holidays['strdate'] = pd.to_datetime(holidays['strdate'])
-    holidays['p_week'] = (
-        holidays['strdate'].astype(str).str[:4]
-        + pd.to_datetime(holidays['strdate']).dt.isocalendar()['week'].astype(str).str.zfill(2)
-    )
+    holidays['p_month'] = holidays['strdate'].astype(str).str.replace('-', '').str[:6]
 
     holidays = holidays.merge(
-        nielsen_data[['p_week', 'fin_periodo']].drop_duplicates(),
+        market_data[['p_month', 'fin_periodo']].drop_duplicates(),
         how='left',
-        on='p_week'
+        on='p_month'
     )
 
     holidays['fin_periodo'] = holidays['fin_periodo'].fillna('')
-    holidays['fin_periodo'] = holidays.apply(fixFinPeriodo, axis=1)
+    holidays['fin_periodo'] = pd.to_datetime(holidays.apply(fixFinPeriodo, axis=1)) + MonthEnd(0)
     holidays = holidays.sort_values('title').drop_duplicates(subset='fin_periodo', keep='first')
 
-    nielsen_data['fin_periodo'] = pd.to_datetime(nielsen_data['fin_periodo'])
-
-    logging.info(f'min p_week: {nielsen_data['p_week'].min()}')
-    logging.info(f'max p_week: {nielsen_data['p_week'].max()}')
+    market_data['fin_periodo'] = pd.to_datetime(market_data['fin_periodo']) + MonthEnd(0)
 
     logging.getLogger('prophet').setLevel(logging.WARNING)
-    logging.getLogger('cmdstanpy').disabled = True
+    logging.getLogger('cmdstanpy').disabled=True
 
-    target_values = [
-        f'{x}_{y}'
-        for x
-        in [
-            'total_mercado',
-            'unimarc',
-            'm10s10',
-            'unimarc_internet',
-            'total_internet',
-            'total_mercado_internet'
-        ]
-        for y in [
-            'vtas_valor',
-            'vtas_unit'
-        ]
-    ]
-    logging.info('Start trainning')
+    target_values = ['unimarc', 'alvi', 's10', 'm10']
+
     for category_names in batchList(
-        nielsen_data['cl_xc_categoria'].drop_duplicates().to_list(),
+        market_data['category_description'].drop_duplicates().to_list(),
         batch_size=10
     ):
         regressors: dict[str, dict[str, Prophet]] = defaultdict(dict)
@@ -255,9 +228,9 @@ def main():
         for category_name in category_names:
             for target_value in target_values:
                 # Handle missing values
-                if nielsen_data[
-                    nielsen_data['cl_xc_categoria'] == category_name
-                ][target_value].notna().sum() < 50:
+                if market_data[
+                    market_data['category_description'] == category_name
+                ][target_value].notna().sum() < 13:
                     print(f'Skipping {category_name} {target_value} regressor')
                     regressors[category_name][target_value] = None
                     continue
@@ -269,23 +242,21 @@ def main():
                     daily_seasonality=False,
                     interval_width=.95,
                     mcmc_samples=500,
-                    holidays=holidays[[
-                        'fin_periodo', 'title'
-                    ]].sort_values(
-                        'fin_periodo'
-                    ).rename(columns={
-                        'fin_periodo': 'ds',
-                        'title': 'holiday'
-                    })
-                ).add_seasonality(
-                    name='monthly',
-                    period=30.5,
-                    fourier_order=5,
+                    # Leave commented. Holidays do not give any info to the
+                    # model
+                    #holidays=holidays[[  # noqa: ERA001
+                    #    'fin_periodo', 'title'
+                    #]].sort_values(
+                    #    'fin_periodo'
+                    #).rename(columns={
+                    #    'fin_periodo': 'ds',  # noqa: ERA001
+                    #    'title': 'holiday'
+                    #})  # noqa: ERA001
                 )
 
                 regressor = regressor.fit(
-                    nielsen_data[
-                        nielsen_data['cl_xc_categoria'] == category_name
+                    market_data[
+                        market_data['category_description'] == category_name
                     ][[
                         'fin_periodo', target_value
                     ]].sort_values(
@@ -302,8 +273,8 @@ def main():
                 last_valid_regressor = regressor
 
             periods = last_valid_regressor.make_future_dataframe(
-                periods=8,
-                freq='W',
+                periods=18,
+                freq='M',
                 include_history=True
             ).rename(columns={
                 'ds': 'fin_periodo',
@@ -322,8 +293,8 @@ def main():
 
                 else:
                     future = regressor.make_future_dataframe(
-                        periods=8,
-                        freq='W',
+                        periods=18,
+                        freq='M',
                         include_history=True
                     )
                     pred = regressor.predict(
@@ -354,8 +325,8 @@ def main():
                 pred['fin_periodo'] = pd.to_datetime(pred['fin_periodo'])
 
                 pred = pred.merge(
-                    nielsen_data[
-                        nielsen_data['cl_xc_categoria'] == category_name
+                    market_data[
+                        market_data['category_description'] == category_name
                     ][[
                         'fin_periodo', target_value,
                     ]],
@@ -369,14 +340,14 @@ def main():
                     how='inner'
                 )
 
-            periods['cl_xc_categoria'] = category_name
+            periods['category_description'] = category_name
             periods = periods.merge(
-                nielsen_data[
-                    nielsen_data['cl_xc_categoria'] == category_name
+                market_data[
+                    market_data['category_description'] == category_name
                 ][[
-                    'departamento', 'cl_xc_categoria', 'negocio'
+                    'category_description'
                 ]].drop_duplicates(),
-                on='cl_xc_categoria',
+                on='category_description',
                 how='inner'
             )
 
@@ -387,51 +358,37 @@ def main():
             )
 
 
-        final_pred['p_week'] = (
-            final_pred['fin_periodo'].astype(str).str[:4]
-            + pd.to_datetime(final_pred['fin_periodo']).dt.isocalendar()['week'].astype(str).str.zfill(2)  # noqa: E501
-        )
-
-        final_pred['inicio_periodo'] = final_pred['fin_periodo'] + pd.to_timedelta(-7, 'days')
+        final_pred['inicio_periodo'] = final_pred['fin_periodo'].astype(str).str[:8] + '01'
 
         logging.info('Updating temporal tables')
-        for category_name in category_names:
-            wr.s3.to_csv(
-                df=final_pred[
-                    final_pred['cl_xc_categoria'] == category_name
-                ].sort_values(
-                    'fin_periodo'
-                )[[
-                    'departamento', 'cl_xc_categoria', 'negocio',
-                    *[
-                        x
-                        for target_value in target_values
-                        for x in (
-                            target_value,
-                            f'{target_value}_proyectado',
-                            f'{target_value}_proyectado_min',
-                            f'{target_value}_proyectado_max'
-                        )
-                    ],
-                    'inicio_periodo', 'fin_periodo', 'p_week'
-                ]].astype({
-                    'cl_xc_categoria': 'string',
-                    'inicio_periodo': 'string',
-                    'fin_periodo': 'string',
-                    'p_week': 'string',
-                }),
-                path=(
-                    's3://smu-datalake-test-athena-query-results/'
-                    'ecastrot/'
-                    'fact_week_market_share_proyection/'
-                    f'proyection_{category_name}.csv'
-                ),
-                index=None,
-                header=None,
-                sep='|',
-                boto3_session=boto3_session,
-                use_threads=True,
-            )
+
+        uploadFrame(
+            final_pred[[
+                'category_description',
+                'unimarc',
+                'unimarc_proyectado',
+                'unimarc_proyectado_min',
+                'unimarc_proyectado_max',
+                'alvi',
+                'alvi_proyectado',
+                'alvi_proyectado_min',
+                'alvi_proyectado_max',
+                's10',
+                's10_proyectado',
+                's10_proyectado_min',
+                's10_proyectado_max',
+                'm10',
+                'm10_proyectado',
+                'm10_proyectado_min',
+                'm10_proyectado_max',
+                'inicio_periodo',
+                'fin_periodo'
+            ]],
+            table_ddl_json_path=os.path.join('gbq_objects', 'month_prophet_sales_forecasting.json'),  # noqa: E501
+            project=gcp_project,
+            gbq_client=gbq_client,
+            if_exists='append',
+        )
 
     logging.info('Trainning ended')
 

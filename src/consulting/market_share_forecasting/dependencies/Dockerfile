@@ -67,6 +67,7 @@ RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
       openblas \
       orc \
       pandas \
+      pandas-gbq \
       pyarrow \
       pytables \
       python \

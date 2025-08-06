@@ -14,12 +14,12 @@ PROJECT_NAME = 'market_share_forecasting'
 GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
-    'dag_id': 'market_share_forecasting',
-    'schedule_interval': '0 1 * * FRI',
+    'dag_id': 'monthly_prophet_sales_forecasting',
+    'schedule_interval': '0 1 1 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
-    'concurrency': 2,
+    'concurrency': 1,
     'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
         'project_id': GCP_PROJECT_ID,
@@ -44,8 +44,8 @@ with DAG(**dag_args) as dag:
     # ---------------------------------------------------------------------
     # Week forecasting
     # ---------------------------------------------------------------------
-    week_forecasting = DataprocCreateBatchOperator(
-        task_id = 'week_forecasting',
+    month_forecasting = DataprocCreateBatchOperator(
+        task_id = 'month_forecasting',
 
         batch = {
             'pyspark_batch': {
@@ -55,68 +55,7 @@ with DAG(**dag_args) as dag:
                     'consulting/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'week_compute_market_share.py'
-                ),
-                # Common files
-                'python_file_uris': [
-                    (
-                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
-                        'common/'
-                    )
-                ],
-                # For Google Big Query read/write
-                'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
-                # Main file arguments
-                'args': [
-                    '--project_name', PROJECT_NAME,
-                    '--gcp_project', GCP_PROJECT_ID,
-                    '--execution_date', EXECUTION_DATE,
-                ],
-            },
-
-            # Docker image to be used in the dataproc pod
-            'runtime_config': {
-                'version': '2.2',
-                'container_image': (
-                    'us-east1-docker.pkg.dev/'
-                    f'{GCP_PROJECT_ID}/'
-                    'dataproc-worker-images/'
-                    f"{PROJECT_NAME.replace('_', '-')}:latest"
-                ),
-            },
-
-            # Privileges config
-            'environment_config': {
-                'execution_config': {
-                    'service_account': '{{ var.value.develop_smu_unidata_dataproc_sa }}',
-                    'network_uri': '{{ var.value.develop_smu_unidata_dataproc_network }}',
-                    'subnetwork_uri': '{{ var.value.develop_smu_unidata_dataproc_subnetwork }}',
-                    'ttl': '43200s',
-                },
-            },
-        },
-
-        # Batch ID
-        batch_id = 'batch-{{ macros.uuid.uuid4() }}',
-        project_id = GCP_PROJECT_ID,
-    )
-
-
-    # ---------------------------------------------------------------------
-    # Day forecasting
-    # ---------------------------------------------------------------------
-    day_forecasting = DataprocCreateBatchOperator(
-        task_id = 'day_forecasting',
-
-        batch = {
-            'pyspark_batch': {
-                # Main file to run in the dataproc pod
-                'main_python_file_uri': (
-                    'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
-                    'consulting/'
-                    f'{PROJECT_NAME}/'
-                    'scripts/'
-                    'day_compute_market_share.py'
+                    'month_prophet_sales_forecasting.py'
                 ),
                 # Common files
                 'python_file_uris': [
@@ -128,7 +67,7 @@ with DAG(**dag_args) as dag:
                         'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
                         'consulting/'
                         f'{PROJECT_NAME}/'
-                        'gbq_objects'
+                        'gbq_objects/'
                     )
                 ],
                 # For Google Big Query read/write
@@ -158,7 +97,7 @@ with DAG(**dag_args) as dag:
                     'service_account': '{{ var.value.develop_smu_unidata_dataproc_sa }}',
                     'network_uri': '{{ var.value.develop_smu_unidata_dataproc_network }}',
                     'subnetwork_uri': '{{ var.value.develop_smu_unidata_dataproc_subnetwork }}',
-                    'ttl': '14400s',
+                    'ttl': '21600s',
                 },
             },
         },
@@ -168,5 +107,3 @@ with DAG(**dag_args) as dag:
         project_id = GCP_PROJECT_ID,
     )
 
-
-[week_forecasting, day_forecasting]  # noqa: B018
