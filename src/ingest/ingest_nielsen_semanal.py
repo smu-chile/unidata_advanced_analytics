@@ -15,7 +15,7 @@ GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
     'dag_id': 'ingest_data_nielsen_semanal',
-    'schedule_interval': '30 9 * * 4',
+    'schedule_interval': '30 10 * * 4',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
