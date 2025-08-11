@@ -11,6 +11,7 @@ from airflow.providers.google.cloud.operators.dataproc import (
 
 # Globals
 PROJECT_NAME = 'ingest'
+SUBPROJECT_NAME = 'nielsen'
 GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
@@ -20,7 +21,7 @@ dag_args = {
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME, 'csotob'],
+    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'csotob'],
     'default_args': {
         'project_id': GCP_PROJECT_ID,
         'region': '{{ var.value.develop_smu_unidata_default_region }}',
@@ -52,6 +53,7 @@ with DAG(**dag_args) as dag:
                 'main_python_file_uri': (
                     'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
                     f'{PROJECT_NAME}/'
+                    f'{SUBPROJECT_NAME}/'
                     'scripts/'
                     'ingest_nielsen_semanal.py'
                 ),
@@ -64,6 +66,7 @@ with DAG(**dag_args) as dag:
                     (
                         'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
                         f'{PROJECT_NAME}/'
+                        f'{SUBPROJECT_NAME}/'
                         'gbq_objects/'
                     )
                 ],
@@ -84,7 +87,7 @@ with DAG(**dag_args) as dag:
                     'us-east1-docker.pkg.dev/'
                     f'{GCP_PROJECT_ID}/'
                     'dataproc-worker-images/'
-                    f"{PROJECT_NAME.replace('_', '-')}:latest"
+                    f"{PROJECT_NAME.replace('_', '-')}-{SUBPROJECT_NAME}:latest"
                 ),
             },
 
