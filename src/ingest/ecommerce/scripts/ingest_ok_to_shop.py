@@ -80,7 +80,7 @@ SQL_QUERIES = QueryDict({
 #  Main function
 # -------------------------------------------------------------------------
 def main() -> None:
-    user = 'ingest'  # noqa: F841
+    user = 'ingest-ecommerce'  # noqa: F841
     # Parse input variables
     args = vars(parser.parse_args())
     execution_date: str = args['execution_date']
