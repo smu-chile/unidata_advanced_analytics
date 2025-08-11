@@ -213,7 +213,7 @@ def main() -> None:  # noqa: D103
     # Create GBQ table if does not exist
     logging.info('Creating GBQ table using JSON')
     gbq_extended.createTableFromJSON(
-        ddl_json_config_path=os.path.join('gbq_objects', 'gbq_job_consumption.json'),
+        table_ddl_json_path=os.path.join('gbq_objects', 'gbq_job_consumption.json'),
         project=gcp_project_id,
         gbq_client=gbq_client,
         if_exists='ignore',

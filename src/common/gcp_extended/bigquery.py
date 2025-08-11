@@ -68,7 +68,7 @@ def readBigQuery(
 
 
 def createTableFromJSON(
-        ddl_json_config_path: str,
+        table_ddl_json_path: str,
         project: str,
         gbq_client: bigquery.Client,
         if_exists: Literal['raise', 'ignore', 'rebuild'] = 'raise',
@@ -77,7 +77,7 @@ def createTableFromJSON(
 
     Parameters
     ----------
-    ddl_json_config_path : str,
+    table_ddl_json_path : str,
         Path to the JSON file with the DDL configuration for the table.
     project : str
         Google BigQuery project in which the table will be created.
@@ -107,7 +107,7 @@ def createTableFromJSON(
         err_msg = "if_exists must be one of 'raise', 'ignore' or 'rebuild'"
         raise ValueError(err_msg)
     # Read config JSON
-    with open(ddl_json_config_path) as f:
+    with open(table_ddl_json_path) as f:
         ddl_config = json.load(f)
 
     # Build table location
@@ -300,7 +300,7 @@ def uploadFrame(
     if if_exists == 'replace':
         # Delete the object with all its data and create it again
         createTableFromJSON(
-            ddl_json_config_path=table_ddl_json_path,
+            table_ddl_json_path=table_ddl_json_path,
             project=project,
             gbq_client=gbq_client,
             if_exists='rebuild',
