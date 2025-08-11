@@ -172,6 +172,30 @@ jobs:
           parent: false
           process_gcloudignore: false
 
+      - name: Upload ingest scripts to GCS
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
+          destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
+          path: src
+          glob: 'ingest/*/scripts/*.py'
+          gzip: false
+          parent: false
+          process_gcloudignore: false
+          headers: |-
+            content-type: text/x-python
+
+      - name: Upload ingest GBQ objects to GCS
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
+          destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
+          path: src
+          glob: 'ingest/*/gbq_objects/**'
+          gzip: false
+          parent: false
+          process_gcloudignore: false
+
 
   gcs_upload_dags:
     needs: [secret_scanning, check_lint, set_env_vars]
@@ -222,6 +246,18 @@ jobs:
           destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.ref_name }}/${{ github.repository }}
           path: src
           glob: 'consulting/*/*.py'
+          gzip: false
+          process_gcloudignore: false
+          headers: |-
+            content-type: text/x-python
+
+      - name: Upload ingest DAGs to GCS
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          project_id: ${{ needs.set_env_vars.outputs.DAG_PROJECT_ID }}
+          destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.ref_name }}/${{ github.repository }}
+          path: src
+          glob: 'ingest/*/*.py'
           gzip: false
           process_gcloudignore: false
           headers: |-
