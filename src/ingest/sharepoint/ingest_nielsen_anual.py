@@ -21,7 +21,7 @@ dag_args = {
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'csotob'],
+    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'nielsen','csotob'],
     'default_args': {
         'project_id': GCP_PROJECT_ID,
         'region': '{{ var.value.develop_smu_unidata_default_region }}',

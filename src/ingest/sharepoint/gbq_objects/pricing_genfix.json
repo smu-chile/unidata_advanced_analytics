@@ -1,0 +1,46 @@
+{
+    "schema": "ML_LAB",
+    "table": "TBL_PRICING_GENFIX",
+
+    "columns": [
+        {
+            "name": "SKU_PADRE",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED",
+            "description": "SKU Padre"
+        },
+        {
+            "name": "DESC_PADRE",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Descripción SKU Padre"
+        },
+        {
+            "name": "GRUPO_ARTICULO",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DESC_GRUPO_ARTÍCULO",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        }
+        ,
+        {
+            "name": "MATERIAL",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DESC_MATERIAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "TIPO",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        }
+
+    ]
+}

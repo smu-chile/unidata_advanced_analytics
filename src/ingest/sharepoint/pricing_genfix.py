@@ -15,13 +15,13 @@ SUBPROJECT_NAME = 'sharepoint'
 GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
-    'dag_id': 'ingest_data_nielsen_semanal',
-    'schedule_interval': '30 10 * * 4',
+    'dag_id': 'ingest_data_pricing_genfix',
+    'schedule_interval': '15 8,14 * * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'nielsen','csotob'],
+    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'pricing', 'csotob'],
     'default_args': {
         'project_id': GCP_PROJECT_ID,
         'region': '{{ var.value.develop_smu_unidata_default_region }}',
@@ -42,10 +42,9 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    EXECUTION_WEEK = "{{ dag_run.conf.get('execution_week', dag.timezone.convert(data_interval_start).strftime('%Y%V')) }}"  # noqa: E501
-    LOAD_FILES = "{{ dag_run.conf.get('load_files','all')}}"
-    ingest_nielsen_semanal = DataprocCreateBatchOperator(
-        task_id = 'ingest_nielsen_semanal',
+
+    ingest_pricing_genfix = DataprocCreateBatchOperator(
+        task_id = 'ingest_pricing_genfix',
 
         batch = {
             'pyspark_batch': {
@@ -55,7 +54,7 @@ with DAG(**dag_args) as dag:
                     f'{PROJECT_NAME}/'
                     f'{SUBPROJECT_NAME}/'
                     'scripts/'
-                    'ingest_nielsen_semanal.py'
+                    'pricing_genfix.py'
                 ),
                 # Common files
                 'python_file_uris': [
@@ -75,9 +74,7 @@ with DAG(**dag_args) as dag:
                 # Main file arguments
                 'args': [
                     '--project_id', GCP_PROJECT_ID,
-                    '--execution_date', EXECUTION_DATE,
-                    '--execution_week', EXECUTION_WEEK,
-                    '--load_files', LOAD_FILES
+                    '--execution_date', EXECUTION_DATE
                 ],
             },
             # Docker image to be used in the dataproc pod
