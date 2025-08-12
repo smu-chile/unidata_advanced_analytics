@@ -69,7 +69,7 @@ def main() -> None:  # noqa: D103
     last_time_modified = sharepoint.lastTimeModified()
     logging.info(f'Last time modified: {last_time_modified}')
     df_file = sharepoint.toFrame()
-    df_file =cleaning_func(input_file,df_file)
+    df_file =cleaning_func(df_file)
     # Upload data
     logging.info('Uploading data')
     gbq_extended.uploadFrame(
