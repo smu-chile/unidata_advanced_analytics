@@ -11,7 +11,7 @@ from airflow.providers.google.cloud.operators.dataproc import (
 
 # Globals
 PROJECT_NAME = 'ingest'
-SUBPROJECT_NAME = 'ecommerce'
+SUBPROJECT_NAME = 'rds'
 GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
