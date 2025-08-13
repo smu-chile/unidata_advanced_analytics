@@ -78,24 +78,28 @@ def main() -> None:  # noqa: D103
     }
     for formato in formatos:
         logging.info(f'Starting extraction of Reporte General {formato} from SFTP Marketing Cloud')
-        sftp_cred = secretmanager.getSecret('salesforce_sftp_credentials')
+        sftp_secret = secretmanager.getSecret('salesforce_sftp_credentials')
         #connect
         logging.info('Connecting to sftp')
-        ssh_client = paramiko.SSHClient()
-
-        ssh_client.connect(hostname=sftp_cred['host'],
-                           port=int(sftp_cred['port']),
-                           username=sftp_cred[f'user_{formato}'],
-                           password=sftp_cred[f'pass_{formato}'])
+        ssh_session = paramiko.Transport(
+            f"{sftp_secret['host']}:{sftp_secret['port']}"
+        )
+        ssh_session.connect(
+            username=sftp_secret[f'user_{formato}'],
+            password=sftp_secret[f'pass_{formato}'],
+        )
         logging.info('Opening sftp')
-        ftp = ssh_client.open_sftp()
+        ftp = paramiko.SFTPClient.from_transport(
+            ssh_session
+        )
+
         #get file
         formato_name = formato.upper() if formato == 'm10s10' else formato.capitalize()
         logging.info(f'Getting file ReporteGeneral{formato.capitalize()}')
         zip_file_name = f'ReporteGeneral{formato_name}{execution_date}.zip'
         ftp.get(zip_file_name,zip_file_name)
         #close sftp
-        ssh_client.close()
+        ssh_session.close()
 
         logging.info('Unzipping File')
         with zipfile.ZipFile(zip_file_name,'r') as zip_ref:
