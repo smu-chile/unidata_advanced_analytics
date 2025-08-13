@@ -119,7 +119,7 @@ def main() -> None:  # noqa: D103
 
             #TODO(csotob): fix where_clause
             logging.info('Delete from table so that data is not duplicated')
-            gbq_extended.deleteFromTable(table_ref=jsons[file].split('.')[0],
+            gbq_extended.deleteFromTable(table_ref=jsons[file].removeprefix('CRM_').split('.')[0],
                                          where_clause=f"""FECHA_CARGA={execution_date}
                                         AND BUSINESS_UNIT = "{formato_name}" """,
                                          gbq_client=gbq_client
