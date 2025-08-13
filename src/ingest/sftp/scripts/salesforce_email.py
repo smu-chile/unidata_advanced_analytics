@@ -97,7 +97,7 @@ def main() -> None:  # noqa: D103
         formato_name = formato.upper() if formato == 'm10s10' else formato.capitalize()
         logging.info(f'Getting file ReporteGeneral{formato.capitalize()}')
         zip_file_name = f'ReporteGeneral{formato_name}{execution_date}.zip'
-        ftp.get(zip_file_name,zip_file_name)
+        ftp.get(f'/Import/Reportes/{zip_file_name}',zip_file_name)
         #close sftp
         ssh_session.close()
 
