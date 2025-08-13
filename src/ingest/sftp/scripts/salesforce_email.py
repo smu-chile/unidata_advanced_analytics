@@ -67,14 +67,14 @@ def main() -> None:  # noqa: D103
 
     #table definitions jsons
     jsons = {
-    'Bounces' : 'TMP_DATA_SF_EMAIL_BOUNCE.json',
-    'Clicks': 'TMP_DATA_SF_EMAIL_CLICK.json',
-    'Complaints' : 'TMP_DATA_SF_EMAIL_COMPLAINTS.json',
-    'NotSent' : 'TMP_DATA_SF_EMAIL_NOTSENT.json',
-    'Opens': 'TMP_DATA_SF_EMAIL_OPEN.json',
-    'SendJobs' : 'TMP_DATA_SF_EMAIL_JOBS.json',
-    'Sent' : 'TMP_DATA_SF_EMAIL_SEND.json',
-    'Unsubs' : 'TMP_DATA_SF_EMAIL_UNSUBSCRIBE.json'
+    'Bounces' : 'CRM_TMP_DATA_SF_EMAIL_BOUNCE.json',
+    'Clicks': 'CRM_TMP_DATA_SF_EMAIL_CLICK.json',
+    'Complaints' : 'CRM_TMP_DATA_SF_EMAIL_COMPLAINTS.json',
+    'NotSent' : 'CRM_TMP_DATA_SF_EMAIL_NOTSENT.json',
+    'Opens': 'CRM_TMP_DATA_SF_EMAIL_OPEN.json',
+    'SendJobs' : 'CRM_TMP_DATA_SF_EMAIL_JOBS.json',
+    'Sent' : 'CRM_TMP_DATA_SF_EMAIL_SEND.json',
+    'Unsubs' : 'CRM_TMP_DATA_SF_EMAIL_UNSUBSCRIBE.json'
     }
     for formato in formatos:
         logging.info(f'Starting extraction of Reporte General {formato} from SFTP Marketing Cloud')
