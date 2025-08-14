@@ -72,6 +72,7 @@ def createTableFromJSON(
         project: str,
         gbq_client: bigquery.Client,
         if_exists: Literal['raise', 'ignore', 'rebuild'] = 'raise',
+        json_encoding: str = 'utf8',
     ) -> dict:
     """Create a BigQuery table using a JSON config file.
 
@@ -91,6 +92,8 @@ def createTableFromJSON(
 
        .. warning:: All the data in the table will be lost if `rebuild` is
           used.
+    json_encoding : str, default='utf8'
+        Encoding of the JSON file with the DDL
 
     Returns
     -------
@@ -107,7 +110,7 @@ def createTableFromJSON(
         err_msg = "if_exists must be one of 'raise', 'ignore' or 'rebuild'"
         raise ValueError(err_msg)
     # Read config JSON
-    with open(table_ddl_json_path) as f:
+    with open(table_ddl_json_path, encoding=json_encoding) as f:
         ddl_config = json.load(f)
 
     # Build table location
@@ -259,6 +262,7 @@ def uploadFrame(
         gbq_client: bigquery.Client,
         if_exists: Literal['fail', 'replace', 'append'] = 'fail',
         progress_bar: bool = False,
+        json_encoding: str = 'utf8',
         **kwargs
     ) -> None:
     """Uploads a Pandas DataFrame to a table in Google BigQuery.
@@ -280,10 +284,12 @@ def uploadFrame(
         -  `append` inserts the data in the existing table
     progress_bar : pd.DataFrame
         Whether to use `tqdm` to log the upload progress
+    json_encoding : str, default='utf8'
+        Encoding of the JSON file with the DDL
     **kwargs : pd.DataFrame
         Arguments passed on to `pandas_gbq.to_bgq`
     """
-    with open(table_ddl_json_path) as table_ddl_file:
+    with open(table_ddl_json_path, encoding=json_encoding) as table_ddl_file:
         table_ddl = json.load(table_ddl_file)
 
     table_schema = [{
