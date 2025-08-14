@@ -127,7 +127,7 @@ def main() -> None:  # noqa: D103
             table = jsons[file].removeprefix('CRM_').split('.')[0]
             table_ref = f'{gcp_project_id}.{schema}.{table}'
             gbq_extended.deleteFromTable(table_ref= table_ref,
-                                         where_clause=f"""FECHA_CARGA=parse_date('%Y%m%d',{execution_date})
+                                         where_clause=f"""FECHA_CARGA=parse_date('%Y%m%d',"{execution_date}")
                                         AND BUSINESS_UNIT = "{formato_name}" """,
                                          gbq_client=gbq_client
                                          )
