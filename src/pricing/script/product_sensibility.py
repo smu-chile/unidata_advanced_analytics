@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
-from string import Template
 from datetime import datetime
-from textwrap import dedent
 
 # Pip
 import numpy as np
@@ -30,13 +28,13 @@ while directorio_actual != os.path.sep:
         directorio_actual = os.path.dirname(directorio_actual)  # Retrocede
 
 
+from src.common.databases.queries import QueryDict  # noqa: E402
 from src.common.gcp_extended.bigquery import (  # noqa: E402
     uploadFrame,
     readBigQuery,
     deleteFromTable,
     createTableFromJSON,
 )
-from src.common.databases.queries import QueryDict
 from src.common.gcp_extended.secretsmanager import getSecret  # noqa: E402
 
 
@@ -880,7 +878,7 @@ category_sums = df_detalle4.groupby('category_description'
 # Paso 2: Seleccionar las top 80 categorías con más gasto
 top_categories = category_sums.nlargest(80).index
 
-# # Filtrar el DataFrame original para incluir solo esas 80 categorías
+# # Filtrar el DataFrame original para incluir solo esas 80 categoría
 filtered_df = df_detalle4[df_detalle4['category_description'].isin(
     top_categories)]
 
@@ -984,7 +982,7 @@ createTableFromJSON(
         project='cl-bigdata-analytics',
         gbq_client=gbq_client_cda,
         if_exists = 'ignore'
-    ) 
+    )
 
 # Se elimina los datos para cierto formato y rango (si existen)
 deleteFromTable(table_ref='cl-bigdata-analytics.ML_LAB.PRODUCT_SENSIBILITY',
