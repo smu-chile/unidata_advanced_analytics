@@ -42,6 +42,15 @@ def cleaning_func(df_file, execution_date,archivo,formato):
     print('Before cleaning:', df_file)
     if 'TriggeredSendExternalKey' in df_file.columns and archivo != 'SendJobs':
         df_file = df_file.drop(columns=['TriggeredSendExternalKey'])
+    if 'EventDate' in df_file.columns:
+        df_file['EventDate'] = pd.to_datetime(df_file['EventDate'],
+                                              format='%-m/%-d/%Y %-I:%M:%S %p')
+    if 'SchedTime' in df_file.columns:
+        df_file['SchedTime'] = pd.to_datetime(df_file['SchedTime'],
+                                              format='%-m/%-d/%Y %-I:%M:%S %p')
+    if 'SentTime' in df_file.columns:
+        df_file['SentTime'] = pd.to_datetime(df_file['SentTime'],
+                                              format='%-m/%-d/%Y %-I:%M:%S %p')
     df_file['BUSINESS_UNIT'] = formato
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
     print('After cleaning:', df_file)
