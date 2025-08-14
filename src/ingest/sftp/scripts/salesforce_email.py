@@ -106,6 +106,8 @@ def main() -> None:  # noqa: D103
         formato_name = formato.upper() if formato == 'm10s10' else formato.capitalize()
         logging.info(f'Getting file ReporteGeneral{formato.capitalize()}')
         zip_file_name = f'ReporteGeneral{formato_name}{execution_date}.zip'
+        if formato=='unipay':
+            zip_file_name = f'ReporteGeneral{formato_name}_{execution_date}.zip'
         ftp.get(f'/Import/Reportes/{zip_file_name}',zip_file_name)
         #close sftp
         ssh_session.close()
@@ -136,8 +138,8 @@ def main() -> None:  # noqa: D103
             table = jsons[file].removeprefix('CRM_').split('.')[0]
             table_ref = f'{gcp_project_id}.{schema}.{table}'
             gbq_extended.deleteFromTable(table_ref= table_ref,
-                                         where_clause=f"""FECHA_CARGA=parse_date('%Y%m%d',"{execution_date}")
-                                        AND BUSINESS_UNIT = "{formato_name}" """,
+                                         where_clause=f"""(FECHA_CARGA=parse_date('%Y%m%d',"{execution_date}")
+                                        AND BUSINESS_UNIT = "{formato_name}") """,
                                          gbq_client=gbq_client
                                          )
 
