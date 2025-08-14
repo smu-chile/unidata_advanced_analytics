@@ -110,7 +110,7 @@ def main() -> None:  # noqa: D103
 
         for file in archivos:
             logging.info(F'Getting {file}.csv into Dataframe')
-            df_file = pd.read_csv(f'{file}.csv')
+            df_file = pd.read_csv(f'{file}.csv', sep='|')
             df_file = cleaning_func(df_file, execution_date,file,formato_name)
             # Upload data
             logging.info('Create table if not exists')
