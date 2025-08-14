@@ -1,0 +1,75 @@
+{
+    "schema": "ML_LAB",
+    "table": "PRODUCT_SENSIBILITY",
+
+    "columns": [
+        {
+            "name": "formato",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la información"
+        },
+        {
+            "name": "rango",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Cantidad de meses considerados en el análisis, por ejemplo '202407-202506'"
+        },
+        {
+            "name": "categoria",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoría a la que pertenece el producto"
+        },
+        {
+            "name": "material",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Código del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "descripcion_material",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre o descripción del producto"
+        },
+        {
+            "name": "material_padre",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Código del producto padre al que pertenece dentro de la familia"
+        },
+        {
+            "name": "genfix",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Indica si el producto está en la tabla genfix"
+        },
+        {
+            "name": "familia",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Indica si el producto es parte de una familia"
+        },
+        {
+            "name": "indice_sensibilidad",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Índice propio de sensibilidad del producto (media geométrica)"
+        },
+        {
+            "name": "indice_sensibilidad_familia",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Índice de sensibilidad contagiado desde el producto con mayores ventas de la familia"
+        },
+        {
+            "name": "KVI",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Cluster al que pertenece el producto según su índice de sensibilidad de familia"
+        }
+    ],
+
+    "clustering_fields": ["rango", "formato"]
+}

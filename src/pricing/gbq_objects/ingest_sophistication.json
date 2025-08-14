@@ -1,0 +1,17 @@
+{
+    "schema": "SANDBOX_BMOLINAB",
+    "table": "customer_segmentation_sophistication",
+    "columns": [
+        {"name": "customer_id", "field_type": "BIGNUMERIC"},
+        {"name": "indice_cliente", "field_type": "FLOAT64"},
+        {"name": "clasificacion_cliente", "field_type": "STRING"},
+        {"name": "category_description", "field_type": "STRING"},
+        {"name": "clasificacion_categoria", "field_type": "STRING"},
+        {"name": "monthid", "field_type": "STRING"},
+        {"name": "rango", "field_type": "STRING"},
+        {"name": "formato", "field_type": "STRING"}
+    ],
+
+    "clustering_fields": ["monthid","formato"]
+
+}
