@@ -148,7 +148,7 @@ def main() -> None:  # noqa: D103
 
 
         logging.info('Removing file')
-        os.remove(f'{file}.csv')
+        os.remove(f'{file}')
     logging.info('Process ended!')
 
 if __name__ == '__main__':
