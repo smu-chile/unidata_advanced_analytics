@@ -104,6 +104,7 @@ def main() -> None:  # noqa: D103
             modified = datetime.fromtimestamp(latest, tz=pytz.timezone('America/Santiago'))
             logging.info(f'Latest file found from date {modified}')
             if modified.strftime('%Y%m%d') != execution_date:
+                logging.info('Not Updated today')
                 return
             ftp.get(f'reports/{latestfile}', latestfile)
         else:
@@ -113,8 +114,8 @@ def main() -> None:  # noqa: D103
 
         file = latestfile
 
-        logging.info(F'Getting {file}.csv into Dataframe')
-        df_file = pd.read_csv(f'{file}.csv', sep=',')
+        logging.info(F'Getting {file} into Dataframe')
+        df_file = pd.read_csv(f'{file}', sep=',')
 
         df_file = cleaning_func(df_file, execution_date,formato_name)
         # Upload data

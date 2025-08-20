@@ -107,6 +107,7 @@ def main() -> None:  # noqa: D103
             modified = datetime.fromtimestamp(latest, tz=pytz.timezone('America/Santiago'))
             logging.info(f'Latest file found from date {modified}')
             if modified.strftime('%Y%m%d') != execution_date:
+                logging.info('Not Updated today')
                 return
             ftp.get(f'reports/{latestfile}', latestfile)
         else:
