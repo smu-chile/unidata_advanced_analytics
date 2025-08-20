@@ -1,7 +1,6 @@
 # Default
 import os
 import logging
-import zipfile
 import argparse
 from logging import config
 from datetime import datetime
@@ -44,10 +43,6 @@ def cleaning_func(df_file, execution_date,formato):
     print('Before cleaning:', df_file)
     df_file['Date'] = pd.to_datetime(df_file['Date'],
                                               format='%m/%d/%Y %I:%M:%S %p')
-    df_file['DateTimeSend'] = pd.to_datetime(df_file['DateTimeSend'],
-                                              format='%m/%d/%Y %I:%M:%S %p')
-    df_file['OpenDate'] = pd.to_datetime(df_file['OpenDate'],
-                                              format='%m/%d/%Y %I:%M:%S %p')
 
     df_file['BUSINESS_UNIT'] = formato
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
@@ -64,16 +59,16 @@ def main() -> None:  # noqa: D103
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
     execution_date: str = args['execution_date']
-    formatos = ['unimarc','alvi']
+    formatos = ['unimarc','alvi', 'm10s10']
     # Set all clients
 
     gbq_client = bigquery.Client()
     #input files
 
     #table definitions jsons
-    json = 'CRM_TMP_DATA_SF_PUSH_EVENT.json'
+    json = 'CRM_TMP_FACT_EVENTS_SMS_SALESFORCE.json'
     for formato in formatos:
-        logging.info(f'Starting extraction of Reporte PUSH {formato} from SFTP Marketing Cloud')
+        logging.info(f'Starting extraction of Reporte SMS {formato} from SFTP Marketing Cloud')
         sftp_secret = secretmanager.getSecret('salesforce_sftp_credentials')
         #connect
         logging.info('Connecting to sftp')
@@ -90,10 +85,11 @@ def main() -> None:  # noqa: D103
         )
 
         #get file
-        formato_name =  formato.capitalize()
-        logging.info(f'Getting file Reporte Push{formato.capitalize()}')
-        zip_file_prefix = f'Reporte_{formato_name}_Push_'
-
+        formato_name = formato.upper() if formato == 'm10s10' else formato.capitalize()
+        logging.info(f'Getting file Reporte SMS{formato.capitalize()}')
+        zip_file_prefix = f'Reporte_{formato_name}_SMS_'
+        if formato == 'alvi':
+            zip_file_prefix = zip_file_prefix.replace('_','')
         latest = 0
         latestfile = None
 
@@ -101,6 +97,7 @@ def main() -> None:  # noqa: D103
             if fileattr.filename.startswith(zip_file_prefix) and fileattr.st_mtime > latest:
                 latest = fileattr.st_mtime
                 latestfile = fileattr.filename
+
 
         if latestfile is not None:
             logging.info(f'Got file {latestfile}')
@@ -114,13 +111,7 @@ def main() -> None:  # noqa: D103
         #close sftp
         ssh_session.close()
 
-        logging.info('Unzipping File')
-        with zipfile.ZipFile(latestfile,'r') as zip_ref:
-            zip_ref.extractall()
-
-        logging.info('Removing zip file')
-        os.remove(latestfile)
-        file = 'MobilePush Message Detail Report'
+        file = latestfile
 
         logging.info(F'Getting {file}.csv into Dataframe')
         df_file = pd.read_csv(f'{file}.csv', sep=',')

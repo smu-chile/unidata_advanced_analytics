@@ -4,7 +4,7 @@
 
     "columns": [
         {
-            "name": "DATE_EVENT",
+            "name": "EVENT_DATE",
             "field_type": "DATE",
             "mode": "NULLABLE"
         },
@@ -16,8 +16,7 @@
         {
             "name": "EID",
             "field_type": "INTEGER",
-            "mode": "REQUIRED",
-            "description": "Subscriber Key"
+            "mode": "REQUIRED"
         },
         {
             "name": "APP_NAME",
@@ -37,14 +36,12 @@
         {
             "name": "TEMPLATE",
             "field_type": "STRING",
-            "mode": "NULLABLE",
-            "description": "Fecha evento"
+            "mode": "NULLABLE"
         },
         {
             "name": "FORMAT_TYPE",
             "field_type": "STRING",
-            "mode": "NULLABLE",
-            "description": "Tipo de Evento"
+            "mode": "NULLABLE"
         },
         {
             "name": "GEOFENCENAME",
