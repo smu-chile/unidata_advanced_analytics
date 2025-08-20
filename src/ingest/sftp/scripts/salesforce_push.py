@@ -119,7 +119,7 @@ def main() -> None:  # noqa: D103
 
         logging.info(F'Getting {file}.csv into Dataframe')
         df_file = pd.read_csv(f'{file}.csv', sep=',')
-        #TODO(csotob): Adjust
+
         df_file = cleaning_func(df_file, execution_date,formato_name)
         # Upload data
         logging.info('Create table if not exists')
