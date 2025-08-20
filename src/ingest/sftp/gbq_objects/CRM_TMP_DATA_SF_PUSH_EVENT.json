@@ -93,7 +93,7 @@
         },
         {
             "name": "TIME_IN_APP",
-            "field_type": "TIMESTAMP",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {

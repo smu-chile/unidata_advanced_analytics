@@ -46,8 +46,7 @@ def cleaning_func(df_file, execution_date,formato):
                                               format='%m/%d/%Y %I:%M:%S %p')
     df_file['OpenDate'] = pd.to_datetime(df_file['OpenDate'],
                                               format='%m/%d/%Y %I:%M:%S %p')
-    df_file['TimeInApp'] = pd.to_datetime(df_file['TimeInApp'],
-                                              format='%m/%d/%Y %I:%M:%S %p')
+
     df_file['BUSINESS_UNIT'] = formato
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
     print('After cleaning:', df_file)
