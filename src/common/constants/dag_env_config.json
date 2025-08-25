@@ -1,0 +1,40 @@
+{
+    "dev": {
+        "project_id": "cl-bigdata-analytics",
+        "region": "us-east1",
+        "default_email": [
+            "e_ebenites@smu.cl",
+            "sabbas@smu.cl"
+        ],
+        "network": "projects/cl-bigdata-analytics/global/networks/dev-network-bi-poc",
+        "subnetwork": "projects/cl-bigdata-analytics/regions/us-east1/subnetworks/dev-subnet-bi-poc",
+        "scripts_gcs": "cl-bigdata-analytics-dev-us-dataproc-scripts",
+        "g_service_account": "156006129315-compute@developer.gserviceaccount.com"
+    },
+
+    "preprod": {
+        "project_id": "cl-bigdata-analytics-preprod",
+        "region": "us-east1",
+        "default_email": [
+            "e_ebenites@smu.cl",
+            "sabbas@smu.cl"
+        ],
+        "network": "projects/cl-bigdata-analytics-preprod/global/networks/preprod-network-bigdata-analytics",
+        "subnetwork": "projects/cl-bigdata-analytics-preprod/regions/us-east1/subnetworks/preprod-subnetwork-bigdata-analytics",
+        "scripts_gcs": "cl-bigdata-analytics-preprod-us-dataproc-scripts",
+        "g_service_account": "125582050147-compute@developer.gserviceaccount.com"
+    },
+
+    "prod": {
+        "project_id": "cl-bigdata-analytics-prod",
+        "region": "us-east1",
+        "default_email": [
+            "e_ebenites@smu.cl",
+            "sabbas@smu.cl"
+        ],
+        "network": "projects/cl-bigdata-analytics-prod/global/networks/prod-network-bigdata-analytics",
+        "subnetwork": "projects/cl-bigdata-analytics-prod/regions/us-east1/subnetworks/prod-subnetwork-bigdata-analytics",
+        "scripts_gcs": "cl-bigdata-analytics-prod-us-dataproc-scripts",
+        "g_service_account": "987985293469-compute@developer.gserviceaccount.com"
+    }
+}
