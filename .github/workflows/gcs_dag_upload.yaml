@@ -1,0 +1,171 @@
+name: "Format and upload DAGs"
+on:
+  workflow_call:
+    inputs:
+      GLOB_EXPRESSION:
+        required: true
+        type: string
+        description: "Glob expression that captures the DAGs to be formated and uploaded"
+      DAG_PROJECT_ID:
+        required: true
+        type: string
+        description: "Prefix for folder and tag"
+      DAG_GCS:
+        required: true
+        type: string
+        description: "Prefix for folder and tag"
+    secrets:
+      GCP_SERVICE_ACCOUNT:
+        required: true
+        description: "GCP Service account used to connect to services"
+      GCP_WORKLOAD_IDENTITY:
+        required: true
+        description: "GCP Workload identity used to connect to services"
+
+jobs:
+  tag_and_upload:
+    name: "Format and upload DAGs"
+    runs-on: ubuntu-latest
+    steps:
+      - id: 'checkout'
+        name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: auth
+        name: Auth with GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      # Removes commons as do not contain any DAG
+      - name: Remove common dir
+        run: rm -rf src/common
+
+      # Removes examples dir when branch is main or preprod
+      - name: Remove examples dir
+        if: ${{ (github.ref_name == 'main') || (github.ref_name == 'preprod') }}
+        run: rm -rf src/examples
+
+      - name: "Added Prefix to tags and DagID"
+        shell: bash
+        run: |-
+
+          prefix="${{ github.ref_name }}"
+
+          dagListing=$(ls src/${{ inputs.GLOB_EXPRESSION }})
+
+          for dagFile in $dagListing; do
+              # Verify file
+              if [ -e "$dagFile" ]; then
+                  # Replace BRANCH_PLACEHOLDER with branch name
+                  sed -i -e "s/BRANCH_PLACEHOLDER/$prefix/g" $dagFile
+
+                  # Add prefix to dag_id
+                  
+                  echo "Modification of dag_id on $dagFile with $prefix"
+                  sed -i -E "s/(['|\"]*dag_id['|\"]*\s*[:=]\s*['|\"]?)([a-zA-Z0-9_]+)(['|\"]?)/\1$prefix\_\2\3/" $dagFile
+                  
+                  # Add or modify tags
+                  if $(grep -qE "^\s*['|\"]?tags['|\"]?" $dagFile); then #Check if tags line exists or not
+                      if $(! grep -qE ".*tags.*[:|=].*\[.*['|\"]$prefix['|\"].*\]" $dagFile); then #Check if the prefix already exists in tags
+                          #If tags exists and the prefix is not loaded, then add ir to the list
+                          sed -i -E "s/(['|\"]?tags['|\"]?\s*[:|=]\s*\[)(.*)/\1'$prefix',\2/" $dagFile
+                          echo "Prefix add to the tag list on $dagFile"    
+                      fi;
+                  else
+                      # If there are no tags, then add it
+                      echo "==============> Adding tags en $dagFile"
+                      
+                      # Check if the dag is using a external dictionary for config
+                      
+                      dictionaryName=$(sed -nE 's/.*with DAG\(\*\*([^)]*)\).*/\1/p' $dagFile)
+
+                      if [[ -n "$dictionaryName" ]]; then #A external dicttionary is being used
+
+                          textToInsert="'tags': ['$prefix']," 
+                          # Insert this text inside the dictionary definition
+
+                          awk -v dictionary="$dictionaryName" -v textInsert="$textToInsert" '
+                          BEGIN { insideDictionary = 0; inserted = 1}
+                          {
+                              regexp = "^\s?" dictionary "*.*=.*\{";
+
+                              if (match($0, regexp)) {
+                                  insideDictionary = 1; #Dictionary found
+                              }
+
+                              if (insideDictionary) {
+                                  if (match($0, /^.*#/)) { #If line is empty or a comment ignore it
+                                      print $0
+                                      next;
+                                  }
+                                  
+                                  if ((inserted) && (match($0, /^.*["'\''][a-zA-Z0-9_-]*["'\'']:.*/))) {
+                                      indentSpaces = substr($0, 0, match($0, /[^[:space:]]/)-1); #Calculate indentation
+                                      print indentSpaces textInsert;  # Insert tags with indentation
+                                      insideDictionary = 0;  
+                                      inserted = 0; # We ensure that there are no insertions in the other dictionary
+                                  }
+                              }
+                              print $0
+                          }' "$dagFile" > temp.txt && mv temp.txt "$dagFile"
+
+                          echo "Tags added in dictionary '${dictionaryName}' on file $dagFile"
+                      else
+                          # Configuraton within with DAG(...)
+
+                          textToInsert="tags=['$prefix'],"
+                          awk -v dictionary="with\ DAG" -v textInsert="$textToInsert" '
+                          BEGIN { insideDictionary = 0; inserted = 1}
+                          {
+                              regexp = dictionary ;
+
+                              if (match($0, regexp)) {
+                                  insideDictionary = 1; #Dictionary found
+                              }
+
+                              if (insideDictionary) {
+                                  if (match($0, /^.*#/)) { #If line is empty or a comment ignore it
+                                      print $0
+                                      next;
+                                  }
+
+                                  if ((inserted) && (match($0, /^.*["'\'']?[a-zA-Z0-9_-]*["'\'']?[:|\=].*/))) {
+                                      indentSpaces = substr($0, 0, match($0, /[^[:space:]]/)-1); #Calculate indentation
+                                      print indentSpaces textInsert; # Insert tags with indentation
+                                      insideDictionary = 0;  
+                                      inserted = 0; # We ensure that there are no insertions in the other dictionary
+                                  }
+                              }
+                              print $0
+                          }' "$dagFile" > temp.txt && mv temp.txt "$dagFile"
+
+                          echo "Tags added within dag definition on file $dagFile"
+                      fi
+            
+            
+                  fi
+
+                  echo "All modifications done for file $dagFile"
+
+              else
+                  echo "Could not find $dagFile"
+                  break
+              fi
+              echo "********************************************"
+          done
+
+      - name: Upload DAGs to GCS
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          project_id: ${{ inputs.DAG_PROJECT_ID }}
+          destination: ${{ inputs.DAG_GCS }}/dags/${{ github.ref_name }}/${{ github.repository }}
+          path: src
+          glob: '${{ inputs.GLOB_EXPRESSION }}'
+          gzip: false
+          process_gcloudignore: false
+          headers: |-
+            content-type: text/x-python
