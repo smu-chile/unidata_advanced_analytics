@@ -1,9 +1,11 @@
 # Default
+import json
 from datetime import timedelta
 
 # pip
 import pendulum
 from airflow.models import DAG
+from airflow.configuration import conf
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
 )
@@ -11,7 +13,18 @@ from airflow.providers.google.cloud.operators.dataproc import (
 
 # Globals
 PROJECT_NAME = 'margins'
-GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
+with open(
+    f'{conf.get("core", "dags_folder")}/'
+    'BRANCH_PLACEHOLDER/'
+    'smu-chile/unidata_advanced_analytics/src/common/constants/dag_env_config.json'
+) as f:
+    dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
+GCP_PROJECT_ID = dag_env_config['project_id']
+REGION = dag_env_config['region']
+SCRIPTS_GCS =  dag_env_config['scripts_gcs']
+SERVIICE_ACCOUNT = dag_env_config['g_service_account']
+NETWORK = dag_env_config['network']
+SUBNETWORK = dag_env_config['subnetwork']
 
 dag_args = {
     'dag_id': 'margins_ing_importe_sellout_unimarc',
@@ -23,7 +36,7 @@ dag_args = {
     'tags': [PROJECT_NAME, 'csotob'],
     'default_args': {
         'project_id': GCP_PROJECT_ID,
-        'region': '{{ var.value.develop_smu_unidata_default_region }}',
+        'region': REGION,
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['csotob@unidata.cl'],
         'start_date': pendulum.datetime(
@@ -51,7 +64,7 @@ with DAG(**dag_args) as dag:
             'pyspark_batch': {
                 # Main file to run in the dataproc pod
                 'main_python_file_uri': (
-                    'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                    f'gs://{SCRIPTS_GCS}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
                     'importe_sellout_unimarc.py'
@@ -59,11 +72,11 @@ with DAG(**dag_args) as dag:
                 # Common files
                 'python_file_uris': [
                     (
-                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                        f'gs://{SCRIPTS_GCS}/'
                         'common/'
                     ),
                     (
-                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                        f'gs://{SCRIPTS_GCS}/'
                         f'{PROJECT_NAME}/'
                         'gbq_objects/'
                     )
@@ -92,9 +105,9 @@ with DAG(**dag_args) as dag:
             # Privileges config
             'environment_config': {
                 'execution_config': {
-                    'service_account': '{{ var.value.develop_smu_unidata_dataproc_sa }}',
-                    'network_uri': '{{ var.value.develop_smu_unidata_dataproc_network }}',
-                    'subnetwork_uri': '{{ var.value.develop_smu_unidata_dataproc_subnetwork }}',
+                    'service_account': SERVIICE_ACCOUNT,
+                    'network_uri': NETWORK,
+                    'subnetwork_uri': SUBNETWORK,
                     'ttl': '14400s',
                 },
             },

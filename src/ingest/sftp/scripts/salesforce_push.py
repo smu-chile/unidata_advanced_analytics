@@ -112,6 +112,7 @@ def main() -> None:  # noqa: D103
             ftp.get(f'reports/{latestfile}', latestfile)
         else:
             logging.info('File not found')
+            return
         #close sftp
         ssh_session.close()
 

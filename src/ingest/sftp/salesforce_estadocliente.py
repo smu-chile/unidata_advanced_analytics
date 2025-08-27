@@ -1,36 +1,30 @@
 # Default
-import json
 from datetime import timedelta
 
 # pip
 import pendulum
 from airflow.models import DAG
-from airflow.configuration import conf
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
 )
 
 
 # Globals
-PROJECT_NAME = 'margins'
-with open(
-    f'{conf.get("core", "dags_folder")}/'
-    'BRANCH_PLACEHOLDER/'
-    'smu-chile/unidata_advanced_analytics/src/common/constants/dag_env_config.json'
-) as f:
-    dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
+PROJECT_NAME = 'ingest'
+SUBPROJECT_NAME = 'sftp'
+GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
 
 dag_args = {
-    'dag_id': 'margins_ing_importe_sellout_m10_s10',
-    'schedule_interval': '0 19 1-7 * *',
+    'dag_id': 'salesforce_ing_estadocliente_data',
+    'schedule_interval': '20 8 * * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME, 'csotob'],
+    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'salesforce', 'csotob'],
     'default_args': {
-        'project_id':  dag_env_config['project_id'],
-        'region': dag_env_config['region'],
+        'project_id': GCP_PROJECT_ID,
+        'region': '{{ var.value.develop_smu_unidata_default_region }}',
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['csotob@unidata.cl'],
         'start_date': pendulum.datetime(
@@ -47,30 +41,31 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    EXECUTION_MONTH = "{{ dag_run.conf.get('execution_month', dag.timezone.convert(data_interval_end).strftime('%Y%m')) }}"  # noqa: E501
+    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y%m%d')) }}"  # noqa: E501
 
-    importe_sellout_m10_s10 = DataprocCreateBatchOperator(
-        task_id = 'importe_sellout_m10_s10',
+    salesforce_estadocliente = DataprocCreateBatchOperator(
+        task_id = 'salesforce_estadocliente',
 
         batch = {
             'pyspark_batch': {
                 # Main file to run in the dataproc pod
                 'main_python_file_uri': (
-                     f'gs://{dag_env_config["scripts_gcs"]}/'
+                    'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
                     f'{PROJECT_NAME}/'
+                    f'{SUBPROJECT_NAME}/'
                     'scripts/'
-                    'importe_sellout_m10_s10.py'
+                    'salesforce_estadocliente.py'
                 ),
                 # Common files
                 'python_file_uris': [
                     (
-                         f'gs://{dag_env_config["scripts_gcs"]}/'
+                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
                         'common/'
                     ),
                     (
-                         f'gs://{dag_env_config["scripts_gcs"]}/'
+                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
                         f'{PROJECT_NAME}/'
+                        f'{SUBPROJECT_NAME}/'
                         'gbq_objects/'
                     )
                 ],
@@ -78,9 +73,8 @@ with DAG(**dag_args) as dag:
                 'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
                 # Main file arguments
                 'args': [
-                    '--project_id', dag_env_config['project_id'],
-                    '--execution_date', EXECUTION_DATE,
-                    '--execution_month', EXECUTION_MONTH
+                    '--project_id', GCP_PROJECT_ID,
+                    '--execution_date', EXECUTION_DATE
                 ],
             },
             # Docker image to be used in the dataproc pod
@@ -88,18 +82,18 @@ with DAG(**dag_args) as dag:
                 'version': '2.2',
                 'container_image': (
                     'us-east1-docker.pkg.dev/'
-                    f'{dag_env_config["project_id"]}/'
+                    f'{GCP_PROJECT_ID}/'
                     'dataproc-worker-images/'
-                    f"{PROJECT_NAME.replace('_', '-')}:latest"
+                    f"{PROJECT_NAME.replace('_', '-')}-{SUBPROJECT_NAME}:latest"
                 ),
             },
 
             # Privileges config
             'environment_config': {
                 'execution_config': {
-                    'service_account': dag_env_config['g_service_account'],
-                    'network_uri': dag_env_config['network'],
-                    'subnetwork_uri': dag_env_config['subnetwork'],
+                    'service_account': '{{ var.value.develop_smu_unidata_dataproc_sa }}',
+                    'network_uri': '{{ var.value.develop_smu_unidata_dataproc_network }}',
+                    'subnetwork_uri': '{{ var.value.develop_smu_unidata_dataproc_subnetwork }}',
                     'ttl': '14400s',
                 },
             },
@@ -107,5 +101,5 @@ with DAG(**dag_args) as dag:
 
         # Batch ID
         batch_id = 'batch-{{ macros.uuid.uuid4() }}',
-        project_id = dag_env_config['project_id'],
+        project_id = GCP_PROJECT_ID,
     )
