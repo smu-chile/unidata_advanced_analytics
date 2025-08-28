@@ -40,15 +40,15 @@ parser.add_argument(
 def cleaning_func(df_file, execution_date):
     print('Before cleaning:', df_file)
     df_file['DATE_UNDELIVERABLE'] = pd.to_datetime(df_file['DATE_UNDELIVERABLE'],
-                                              format='%Y/%m/%d %H:%M:%S')
+                                              format='%Y-%m-%d %H:%M:%S')
     df_file['DATE_JOINED'] = pd.to_datetime(df_file['DATE_JOINED'],
-                                              format='%Y/%m/%d %H:%M:%S')
+                                              format='%Y-%m-%d %H:%M:%S')
     df_file['DATE_UNSUBSCRIBED'] = pd.to_datetime(df_file['DATE_UNSUBSCRIBED'],
-                                              format='%Y/%m/%d %H:%M:%S')
+                                              format='%Y-%m-%d %H:%M:%S')
     df_file['CREATED_DATE'] = pd.to_datetime(df_file['CREATED_DATE'],
-                                              format='%Y/%m/%d %H:%M:%S')
+                                              format='%Y-%m-%d %H:%M:%S')
     df_file['LIST_DATE_UNSUBSCRIBED'] = pd.to_datetime(df_file['LIST_DATE_UNSUBSCRIBED'],
-                                              format='%Y/%m/%d %H:%M:%S')
+                                              format='%Y-%m-%d %H:%M:%S')
 
 
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
