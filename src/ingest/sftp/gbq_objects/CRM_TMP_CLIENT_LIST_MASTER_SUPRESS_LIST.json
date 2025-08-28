@@ -1,0 +1,76 @@
+{
+    "schema": "TMP_CRM",
+    "table": "TMP_CLIENT_LIST_MASTER_SUPRESS_LIST",
+
+    "columns": [
+        {
+            "name": "RUTHASH",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "DATE_UNDELIVERABLE",
+            "field_type": "TIMESTAMP",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DATE_JOINED",
+            "field_type": "TIMESTAMP",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DATE_UNSUBSCRIBED",
+            "field_type": "TIMESTAMP",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DOMAIN",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+         {
+            "name": "EMAIL",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "BOUNCE_COUNT",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SUBSCRIBERS_STATUS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "CREATED_DATE",
+            "field_type": "TIMESTAMP",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "LIST_DATE_UNSUBSCRIBED",
+            "field_type": "TIMESTAMP",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "LIST_ID",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "LIST_NAME",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "NULLABLE"
+        }       
+    ],
+    "time_partitioning": {
+        "field": "FECHA_CARGA",
+        "type_": "DAY"
+    }
+}

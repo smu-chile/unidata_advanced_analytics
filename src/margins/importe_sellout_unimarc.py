@@ -19,10 +19,11 @@ with open(
     'smu-chile/unidata_advanced_analytics/src/common/constants/dag_env_config.json'
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
+
 GCP_PROJECT_ID = dag_env_config['project_id']
 REGION = dag_env_config['region']
 SCRIPTS_GCS =  dag_env_config['scripts_gcs']
-SERVIICE_ACCOUNT = dag_env_config['g_service_account']
+SERVICE_ACCOUNT = dag_env_config['g_service_account']
 NETWORK = dag_env_config['network']
 SUBNETWORK = dag_env_config['subnetwork']
 
@@ -105,7 +106,7 @@ with DAG(**dag_args) as dag:
             # Privileges config
             'environment_config': {
                 'execution_config': {
-                    'service_account': SERVIICE_ACCOUNT,
+                    'service_account': SERVICE_ACCOUNT,
                     'network_uri': NETWORK,
                     'subnetwork_uri': SUBNETWORK,
                     'ttl': '14400s',
