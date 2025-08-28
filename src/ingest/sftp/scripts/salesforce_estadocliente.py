@@ -99,7 +99,7 @@ def main() -> None:  # noqa: D103
 
 
         logging.info(F'Getting {file_name} into Dataframe')
-        df_file = pd.read_csv(f'{file_name}', sep='|')
+        df_file = pd.read_csv(f'{file_name}', sep='|', encoding='UTF-16')
 
         df_file = cleaning_func(df_file, execution_date)
         # Upload data
