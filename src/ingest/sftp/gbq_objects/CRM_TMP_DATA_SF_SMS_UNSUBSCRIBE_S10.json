@@ -14,11 +14,6 @@
             "mode": "NULLABLE"
         },
         {
-            "name": "BUSINESS_UNIT",
-            "field_type": "STRING",
-            "mode": "NULLABLE"
-        },
-        {
             "name": "FECHA_CARGA",
             "field_type": "DATE",
             "mode": "NULLABLE"
