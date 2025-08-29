@@ -1,6 +1,6 @@
 {
     "schema": "TMP_CRM",
-    "table": "TMP_DATA_SF_SMS_REPORT_UNSUBSCRIBE",
+    "table": "TMP_DATA_SF_SMS_UNSUBSCRIBE_S10",
 
     "columns": [
         {

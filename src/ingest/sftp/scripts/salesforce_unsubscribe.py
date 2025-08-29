@@ -37,13 +37,13 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(df_file, execution_date,formato):
+def cleaning_func(df_file, execution_date):
     print('Before cleaning:', df_file)
-    df_file.columns = ['KEY', 'FECHA']
+    if 'FECHA_UNSUBSCRIBE' in df_file.columns:
+        df_file = df_file.rename(columns={'FECHA_UNSUBSCRIBE': 'FECHA'})
     #TODO(csotob): Averiguar formato para ms y arreglar estop
     df_file['FECHA'] = pd.to_datetime(df_file['FECHA'], format='ISO8601', dayfirst= True)
 
-    df_file['BUSINESS_UNIT'] = formato
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
     print('After cleaning:', df_file)
 
@@ -66,34 +66,33 @@ def main() -> None:  # noqa: D103
     gbq_client = bigquery.Client()
     #input files
 
-    #table definitions jsons
-    jsons = {
-    'EMAIL' : 'CRM_TMP_DATA_SF_EMAIL_REPORT_UNSUBSCRIBE.json',
-    'SMS': 'CRM_TMP_DATA_SF_SMS_REPORT_UNSUBSCRIBE.json'
-    }
-    for file in archivos:
-        frames = []
-        for formato in formatos:
+
+    for formato in formatos:
+        logging.info(f'Starting extraction of Reportes Unsub {formato} from SFTP SF')
+        sftp_secret = secretmanager.getSecret('salesforce_sftp_credentials')
+         #connect
+        logging.info('Connecting to sftp')
+        ssh_session = paramiko.Transport(
+            f"{sftp_secret['host']}:{sftp_secret['port']}"
+        )
+        cred_suffix = formato if formato in ('alvi', 'unimarc', 'unipay') else 'm10s10'
+        ssh_session.connect(
+            username=sftp_secret[f'user_{cred_suffix}'],
+            password=sftp_secret[f'pass_{cred_suffix}'],
+        )
+        logging.info('Opening sftp')
+        ftp = paramiko.SFTPClient.from_transport(
+            ssh_session
+        )
+        formato_name = formato.upper()
+        #table definitions jsons
+        jsons = {
+        'EMAIL' : f'CRM_TMP_DATA_SF_EMAIL_UNSUBSCRIBE_{formato_name}.json',
+        'SMS': f'CRM_TMP_DATA_SF_SMS_UNSUBSCRIBE_{formato_name}.json'
+        }
+        for file in archivos:
             if formato == 'unipay' and file=='SMS':
                 continue
-            logging.info(f'Starting extraction of Reporte {file} {formato} from SFTP SF')
-            sftp_secret = secretmanager.getSecret('salesforce_sftp_credentials')
-             #connect
-            logging.info('Connecting to sftp')
-            ssh_session = paramiko.Transport(
-                f"{sftp_secret['host']}:{sftp_secret['port']}"
-            )
-            cred_suffix = formato if formato in ('alvi', 'unimarc', 'unipay') else 'm10s10'
-            ssh_session.connect(
-                username=sftp_secret[f'user_{cred_suffix}'],
-                password=sftp_secret[f'pass_{cred_suffix}'],
-            )
-            logging.info('Opening sftp')
-            ftp = paramiko.SFTPClient.from_transport(
-                ssh_session
-            )
-            formato_name = formato.upper()
-
             #get file
             logging.info(f'Getting file Reporte Unsubscribe {file} {formato.capitalize()}')
             csv_name = f'ReporteUnsubscribe{file}{formato_name}_{execution_date}.csv'
@@ -104,23 +103,21 @@ def main() -> None:  # noqa: D103
 
             logging.info(F'Getting {csv_name} into Dataframe')
             df_file = pd.read_csv(f'{csv_name}', sep=',', encoding='UTF-16')
-            df_file = cleaning_func(df_file, execution_date,formato_name)
-            #Agregar archivo
-            frames.append(df_file)
+            df_file = cleaning_func(df_file, execution_date)
+
             #Eliminar archivo
             logging.info('Removing file')
             os.remove(f'{csv_name}')
+             # Upload data
 
-        # Upload data
-        df_final = pd.concat(frames)
-        logging.info('Uploading data from Dataframe')
-        gbq_extended.uploadFrame(
-            df_final,
-            table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
-            project=gcp_project_id,
-            gbq_client=gbq_client,
-            if_exists='replace',
-        )
+            logging.info('Uploading data from Dataframe')
+            gbq_extended.uploadFrame(
+                df_file,
+                table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
+                project=gcp_project_id,
+                gbq_client=gbq_client,
+                if_exists='replace',
+            )
 
 
     logging.info('Process ended!')

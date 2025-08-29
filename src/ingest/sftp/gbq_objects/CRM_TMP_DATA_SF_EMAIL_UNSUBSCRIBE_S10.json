@@ -1,6 +1,6 @@
 {
     "schema": "TMP_CRM",
-    "table": "TMP_DATA_SF_EMAIL_REPORT_UNSUBSCRIBE",
+    "table": "TMP_DATA_SF_EMAIL_UNSUBSCRIBE_S10",
 
     "columns": [
         {
@@ -11,11 +11,6 @@
         {
             "name": "FECHA",
             "field_type": "TIMESTAMP",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "BUSINESS_UNIT",
-            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
