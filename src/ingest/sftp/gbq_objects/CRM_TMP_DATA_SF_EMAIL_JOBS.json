@@ -16,12 +16,12 @@
         {
             "name": "FROMNAME",
             "field_type": "STRING",
-            "mode": "REQUIRED"
+            "mode": "NULLABLE"
         },
         {
             "name": "FROMEMAIL",
             "field_type": "STRING",
-            "mode": "REQUIRED"
+            "mode": "NULLABLE"
         },
          {
             "name": "SCHEDTIME",
