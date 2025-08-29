@@ -103,31 +103,13 @@ def main() -> None:  # noqa: D103
 
         df_file = cleaning_func(df_file, execution_date)
         # Upload data
-        logging.info('Create table if not exists')
-        gbq_extended.createTableFromJSON(
-                    table_ddl_json_path=os.path.join('gbq_objects', json),
-                    project=gcp_project_id,
-                    gbq_client=gbq_client,
-                    if_exists='ignore',
-                )
-
-        logging.info('Delete from table so that data is not duplicated')
-        schema = 'TMP_CRM'
-        table = json.removeprefix('CRM_').split('.')[0]
-        table_ref = f'{gcp_project_id}.{schema}.{table}'
-        gbq_extended.deleteFromTable(table_ref= table_ref,
-                                     where_clause=f"""FECHA_CARGA=parse_date('%Y%m%d',"{execution_date}")
-                                     """,
-                                     gbq_client=gbq_client
-                                    )
-
         logging.info('Uploading data from Dataframe')
         gbq_extended.uploadFrame(
                 df_file,
                 table_ddl_json_path=os.path.join('gbq_objects', json),
                 project=gcp_project_id,
                 gbq_client=gbq_client,
-                if_exists='append',
+                if_exists='replace',
             )
 
 
