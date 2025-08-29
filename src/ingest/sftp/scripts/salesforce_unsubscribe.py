@@ -39,6 +39,7 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 def cleaning_func(df_file, execution_date,formato):
     print('Before cleaning:', df_file)
+    df_file.columns = ['KEY', 'FECHA']
     #TODO(csotob): Averiguar formato para ms y arreglar estop
     df_file['FECHA'] = pd.to_datetime(df_file['FECHA'], format='ISO8601', dayfirst= True)
 
