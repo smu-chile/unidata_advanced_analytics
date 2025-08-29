@@ -98,8 +98,7 @@ def main() -> None:  # noqa: D103
             csv_name = f'ReporteUnsubscribe{file}{formato_name}_{execution_date}.csv'
 
             ftp.get(f'/Import/Reportes/{csv_name}',csv_name)
-            #close sftp
-            ssh_session.close()
+
 
             logging.info(F'Getting {csv_name} into Dataframe')
             df_file = pd.read_csv(f'{csv_name}', sep=',', encoding='UTF-16')
@@ -119,7 +118,8 @@ def main() -> None:  # noqa: D103
                 if_exists='replace',
             )
 
-
+    #close sftp
+    ssh_session.close()
     logging.info('Process ended!')
 
 if __name__ == '__main__':
