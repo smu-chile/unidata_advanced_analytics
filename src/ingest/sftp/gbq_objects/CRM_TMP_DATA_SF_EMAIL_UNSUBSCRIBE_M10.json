@@ -19,11 +19,5 @@
             "mode": "NULLABLE"
         }
        
-    ],
-    "time_partitioning": {
-        "field": "FECHA_CARGA",
-        "type_": "DAY"
-    },
-
-    "clustering_fields": ["BUSINESS_UNIT"]
+    ]
 }
