@@ -102,7 +102,7 @@ def main() -> None:  # noqa: D103
             ssh_session.close()
 
             logging.info(F'Getting {csv_name} into Dataframe')
-            df_file = pd.read_csv(f'{csv_name}', sep=',')
+            df_file = pd.read_csv(f'{csv_name}', sep=',', encoding='UTF-16')
             df_file = cleaning_func(df_file, execution_date,formato_name)
             #Agregar archivo
             frames.append(df_file)
