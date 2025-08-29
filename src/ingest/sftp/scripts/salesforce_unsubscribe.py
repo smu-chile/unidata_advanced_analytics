@@ -40,7 +40,7 @@ parser.add_argument(
 def cleaning_func(df_file, execution_date,formato):
     print('Before cleaning:', df_file)
     #TODO(csotob): Averiguar formato para ms y arreglar estop
-    df_file['FECHA'] = pd.to_datetime(df_file['FECHA'], dayfirst= True)
+    df_file['FECHA'] = pd.to_datetime(df_file['FECHA'], format='ISO8601', dayfirst= True)
 
     df_file['BUSINESS_UNIT'] = formato
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
