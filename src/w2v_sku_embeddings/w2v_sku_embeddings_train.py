@@ -1,10 +1,12 @@
 """Defines the DAG that trains the product embeddings."""
 # Default
+import json
 from datetime import timedelta
 
 # pip
 import pendulum
 from airflow.models import DAG
+from airflow.configuration import conf
 from airflow.models.baseoperator import chain
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
@@ -12,20 +14,25 @@ from airflow.providers.google.cloud.operators.dataproc import (
 
 
 # Globals
-PROJECT_NAME = 'w2v_sku_embeddings'
-GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
+with open(
+    f'{conf.get("core", "dags_folder")}/'
+    'BRANCH_PLACEHOLDER/'
+    'smu-chile/unidata_advanced_analytics/src/common/constants/dag_env_config.json'
+) as f:
+    dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
+PROJECT_NAME = 'w2v_sku_embeddings'
 dag_args = {
     'dag_id': 'w2v_sku_embeddings_train',
     'schedule_interval': '30 0 1 * *',
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
-        'project_id': GCP_PROJECT_ID,
-        'region': '{{ var.value.develop_smu_unidata_default_region }}',
+        'project_id': dag_env_config['project_id'],
+        'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['ecastrot@unidata.cl'],
         'start_date': pendulum.datetime(
@@ -53,7 +60,7 @@ with DAG(**dag_args) as dag:
                 'pyspark_batch': {
                     # Main file to run in the dataproc pod
                     'main_python_file_uri': (
-                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                        f'gs://{dag_env_config["scripts_gcs"]}/'
                         f'{PROJECT_NAME}/'
                         'scripts/'
                         'sku_embedding_train.py'
@@ -61,7 +68,7 @@ with DAG(**dag_args) as dag:
                     # Common files
                     'python_file_uris': [
                         (
-                            'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                            f'gs://{dag_env_config["scripts_gcs"]}/'
                             'common/'
                         )
                     ],
@@ -71,7 +78,7 @@ with DAG(**dag_args) as dag:
                     'args': [
                         '--uuid', RUN_UUID4,
                         '--project_name', PROJECT_NAME,
-                        '--gcp_project', GCP_PROJECT_ID,
+                        '--gcp_project', dag_env_config['project_id'],
                         '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}",  # noqa: E501
                         '--store_banner', store_banner,
                         '--epochs', "{{ dag_run.conf.get('epochs', 10) }}",
@@ -92,7 +99,7 @@ with DAG(**dag_args) as dag:
                     'version': '2.2',
                     'container_image': (
                         'us-east1-docker.pkg.dev/'
-                        f'{GCP_PROJECT_ID}/'
+                        f'{dag_env_config["project_id"]}/'
                         'dataproc-worker-images/'
                         f"{PROJECT_NAME.replace('_', '-')}:latest"
                     ),
@@ -101,17 +108,17 @@ with DAG(**dag_args) as dag:
                 # Privileges config
                 'environment_config': {
                     'execution_config': {
-                        'service_account': '{{ var.value.develop_smu_unidata_dataproc_sa }}',
-                        'network_uri': '{{ var.value.develop_smu_unidata_dataproc_network }}',
-                        'subnetwork_uri': '{{ var.value.develop_smu_unidata_dataproc_subnetwork }}',  # noqa: E501
+                        'service_account': dag_env_config['g_service_account'],
+                        'network_uri': dag_env_config['network'],
+                        'subnetwork_uri': dag_env_config['subnetwork'],  # noqa: E501
                         'ttl': '14400s',
                     },
                 },
             },
 
             # Batch ID
-            batch_id = f'batch-{RUN_UUID4}',
-            project_id = GCP_PROJECT_ID,
+            batch_id=f'batch-{RUN_UUID4}',
+            project_id=dag_env_config['project_id'],
         )
 
         for store_banner in [

@@ -1,18 +1,25 @@
 # Default
+import json
 from datetime import timedelta
 
 # pip
 import pendulum
 from airflow.models import DAG
+from airflow.configuration import conf
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
 )
 
 
 # Globals
-PROJECT_NAME = 'market_share_forecasting'
-GCP_PROJECT_ID =  '{{ var.value.develop_smu_unidata_default_project_id }}'
+with open(
+    f'{conf.get("core", "dags_folder")}/'
+    'BRANCH_PLACEHOLDER/'
+    'smu-chile/unidata_advanced_analytics/src/common/constants/dag_env_config.json'
+) as f:
+    dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
+PROJECT_NAME = 'market_share_forecasting'
 dag_args = {
     'dag_id': 'monthly_prophet_sales_forecasting',
     'schedule_interval': '0 1 1 * *',
@@ -22,12 +29,12 @@ dag_args = {
     'concurrency': 1,
     'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
-        'project_id': GCP_PROJECT_ID,
-        'region': '{{ var.value.develop_smu_unidata_default_region }}',
+        'project_id': dag_env_config['project_id'],
+        'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['ecastrot@unidata.cl'],
         'start_date': pendulum.datetime(
-            2025, 6, 18,
+            2025, 9, 1,
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
@@ -51,7 +58,7 @@ with DAG(**dag_args) as dag:
             'pyspark_batch': {
                 # Main file to run in the dataproc pod
                 'main_python_file_uri': (
-                    'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                    f'gs://{dag_env_config["scripts_gcs"]}/'
                     'consulting/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
@@ -60,11 +67,11 @@ with DAG(**dag_args) as dag:
                 # Common files
                 'python_file_uris': [
                     (
-                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                        f'gs://{dag_env_config["scripts_gcs"]}/'
                         'common/'
                     ),
                     (
-                        'gs://{{ var.value.develop_smu_unidata_dataproc_scripts_storage }}/'
+                        f'gs://{dag_env_config["scripts_gcs"]}/'
                         'consulting/'
                         f'{PROJECT_NAME}/'
                         'gbq_objects/'
@@ -75,7 +82,7 @@ with DAG(**dag_args) as dag:
                 # Main file arguments
                 'args': [
                     '--project_name', PROJECT_NAME,
-                    '--gcp_project', GCP_PROJECT_ID,
+                    '--gcp_project', dag_env_config['project_id'],
                     '--execution_date', EXECUTION_DATE,
                 ],
             },
@@ -85,7 +92,7 @@ with DAG(**dag_args) as dag:
                 'version': '2.2',
                 'container_image': (
                     'us-east1-docker.pkg.dev/'
-                    f'{GCP_PROJECT_ID}/'
+                    f'{dag_env_config["project_id"]}/'
                     'dataproc-worker-images/'
                     f"{PROJECT_NAME.replace('_', '-')}:latest"
                 ),
@@ -94,16 +101,16 @@ with DAG(**dag_args) as dag:
             # Privileges config
             'environment_config': {
                 'execution_config': {
-                    'service_account': '{{ var.value.develop_smu_unidata_dataproc_sa }}',
-                    'network_uri': '{{ var.value.develop_smu_unidata_dataproc_network }}',
-                    'subnetwork_uri': '{{ var.value.develop_smu_unidata_dataproc_subnetwork }}',
+                    'service_account': dag_env_config['g_service_account'],
+                    'network_uri': dag_env_config['network'],
+                    'subnetwork_uri': dag_env_config['subnetwork'],
                     'ttl': '21600s',
                 },
             },
         },
 
         # Batch ID
-        batch_id = 'batch-{{ macros.uuid.uuid4() }}',
-        project_id = GCP_PROJECT_ID,
+        batch_id='batch-{{ macros.uuid.uuid4() }}',
+        project_id=dag_env_config['project_id'],
     )
 
