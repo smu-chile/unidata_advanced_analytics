@@ -1,0 +1,176 @@
+{
+    "schema": "SANDBOX_BMOLINAB",
+    "table": "REGRESSION_PROCESSED_DATA_GROUP",
+
+    "columns": [
+        {
+            
+            "name": "grupo",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Grupo"
+        },
+        {
+            
+            "name": "category_description",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoria a la que pertenece el producto"
+        },
+        {
+            "name": "sub_category_description",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Subcategoria a la que pertenece el producto"
+        },
+        {
+            "name": "material",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Codigo del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "product_description",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre o descripcion del producto"
+        },
+        {
+            "name": "ean",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Codigo EAN del producto"
+        },
+        {
+            "name": "sales_uom",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Unidad de medida de ventas (ej. KG, LT, UN)"
+        },
+        {
+            "name": "sales_unit",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Unidades de venta base del producto"
+        },
+        {
+            "name": "p_date",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha del registro en formato YYYY-MM-DD"
+        },
+        {
+            "name": "p_week",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Numero de semana ISO de la fecha"
+        },
+        {
+            "name": "p_month",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Identificador de mes en formato YYYYMM"
+        },
+        {
+            "name": "ventas_totales_producto",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Ventas totales del producto en el periodo"
+        },
+        {
+            "name": "cantidad_total",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Cantidad total vendida del producto"
+        },
+        {
+            "name": "precio_promedio",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Precio promedio del producto en el periodo"
+        },
+        {
+            "name": "primer_dia_mes",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Primer dia calendario del mes (YYYYMMDD)"
+        },
+        {
+            "name": "ultimo_dia_mes",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Ultimo dia calendario del mes (YYYYMMDD)"
+        },
+        {
+            "name": "multiplicador_x05",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Factor de multiplicacion usado en calculos (ej. x0.5)"
+        },
+        {
+            "name": "apo",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Indica si el producto esta en una accion promocional (1) o no (0)"
+        },
+        {
+            "name": "proporcion_categoria",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Proporcion de ventas que representa la categoria respecto a su promedio"
+        },
+        {
+            "name": "ean_sustituto_1",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 1"
+        },
+        {
+            "name": "ean_sustituto_2",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 2"
+        },
+        {
+            "name": "ean_sustituto_3",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 3"
+        },
+        {
+            "name": "ean_sustituto_4",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 4"
+        },
+        {
+            "name": "ean_sustituto_5",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 5"
+        },
+        {
+            "name": "variacion_porcentual_subcategoria",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Variacion porcentual de ventas respecto a la subcategoria"
+        },
+        {
+            "name": "variacion_top1_sustituto",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Variacion porcentual respecto al sustituto mas relevante"
+        },
+        {
+            "name": "variacion_top3_sustitutos",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Variacion porcentual respecto a los 3 principales sustitutos"
+        }
+    ],
+
+    "time_partitioning": {
+        "field": "p_date",
+        "type_": "DAY"
+    }
+}

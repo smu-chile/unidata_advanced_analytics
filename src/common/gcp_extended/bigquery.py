@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal
 
 # pip
 import pandas_gbq
-from google.cloud import bigquery
+from google.cloud import bigquery, bigquery_storage
 from google.cloud.exceptions import NotFound, BadRequest
 
 # Own
