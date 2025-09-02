@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal
 
 # pip
 import pandas_gbq
-from google.cloud import bigquery
+from google.cloud import bigquery, bigquery_storage
 from google.cloud.exceptions import NotFound, BadRequest
 
 # Own
@@ -35,8 +35,8 @@ def readBigQuery(
     ) -> pd.DataFrame | None:
     """Read a query from a GCP BigQuery table.
 
-    Wrapper over `pandas_gbq.read_gbq` function to send a SQL query to a
-    GCP BigQuery database
+    Sends a SQL query to a GCP BigQuery database and bring the resultant
+    table as a DataFrame
 
     Parameters
     ----------
@@ -47,24 +47,25 @@ def readBigQuery(
     gbq_client : bigquery.Client
         Client used for making the queries
     **kwargs
-        Arguments passed to the `pandas_gbq.read_gbq` function
+        Arguments passed to the `bigquery.QueryJobConfig` constructor.
+        **This argument will override the user argument**, so you'll need
+        to add a user label manually.
 
     Returns
     -------
     response_df : pd.DataFrame | None
         Pandas DataFrame object with the query response
     """
-    return pandas_gbq.read_gbq(**{
-        'query_or_table': query,
-        'configuration': {
-            'labels': {
-                'user': user
-            }
-        },
-        'progress_bar_type': None,
-        'bigquery_client': gbq_client,
-        **kwargs
-    })
+    return gbq_client.query_and_wait(
+        query=query,
+        job_config=bigquery.QueryJobConfig(**{
+            'labels': {'user': user},
+            **kwargs
+        }),
+    ).to_dataframe(
+        bqstorage_client=bigquery_storage.BigQueryReadClient(),
+        progress_bar_type=None,
+    )
 
 
 def createTableFromJSON(
