@@ -13,7 +13,7 @@ from airflow.providers.google.cloud.operators.dataproc import (
 
 # Globals
 PROJECT_NAME = 'ingest'
-SUBPROJECT_NAME = 'sharepoint'
+SUBPROJECT_NAME = 'sftp'
 with open(
     f'{conf.get("core", "dags_folder")}/'
     'BRANCH_PLACEHOLDER/'
@@ -28,15 +28,14 @@ SERVICE_ACCOUNT = dag_env_config['g_service_account']
 NETWORK = dag_env_config['network']
 SUBNETWORK = dag_env_config['subnetwork']
 
-
 dag_args = {
-    'dag_id': 'ingest_data_nielsen_anual',
-    'schedule_interval': '30 10 * * 4',
+    'dag_id': 'salesforce_ing_sms_data',
+    'schedule_interval': '20 8 * * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'nielsen','csotob'],
+    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'salesforce', 'csotob'],
     'default_args': {
         'project_id': GCP_PROJECT_ID,
         'region': REGION,
@@ -56,11 +55,10 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    PROC_YEARS = "{{ dag_run.conf.get('proc_years', dag.timezone.convert(data_interval_end).strftime('%Y')) }}"  # noqa: E501
+    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y%m%d')) }}"  # noqa: E501
 
-    ingest_nielsen_anual = DataprocCreateBatchOperator(
-        task_id = 'ingest_nielsen_anual',
+    salesforce_sms = DataprocCreateBatchOperator(
+        task_id = 'salesforce_sms',
 
         batch = {
             'pyspark_batch': {
@@ -70,7 +68,7 @@ with DAG(**dag_args) as dag:
                     f'{PROJECT_NAME}/'
                     f'{SUBPROJECT_NAME}/'
                     'scripts/'
-                    'ingest_nielsen_anual.py'
+                    'salesforce_sms.py'
                 ),
                 # Common files
                 'python_file_uris': [
@@ -90,8 +88,7 @@ with DAG(**dag_args) as dag:
                 # Main file arguments
                 'args': [
                     '--project_id', GCP_PROJECT_ID,
-                    '--execution_date', EXECUTION_DATE,
-                    '--proc_years', PROC_YEARS
+                    '--execution_date', EXECUTION_DATE
                 ],
             },
             # Docker image to be used in the dataproc pod

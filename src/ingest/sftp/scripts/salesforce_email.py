@@ -132,7 +132,6 @@ def main() -> None:  # noqa: D103
                     if_exists='ignore',
                 )
 
-            #TODO(csotob): fix where_clause
             logging.info('Delete from table so that data is not duplicated')
             schema = 'TMP_CRM'
             table = jsons[file].removeprefix('CRM_').split('.')[0]

@@ -1,58 +1,76 @@
 {
     "schema": "TMP_CRM",
-    "table": "TMP_DATA_SF_EMAIL_OPEN",
+    "table": "TMP_FACT_EVENTS_SMS_SALESFORCE",
 
     "columns": [
+        {
+            "name": "EVENT_DATE",
+            "field_type": "DATE",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "EID",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED",
+            "description": "Subscriber Key"
+        },
         {
             "name": "CLIENT_ID",
             "field_type": "INTEGER",
             "mode": "NULLABLE"
         },
         {
-            "name": "SEND_ID",
+            "name": "MESSAGE_NAME",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "MESSAGE_TYPE",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+         {
+            "name": "CAMPAIGN_NAME",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MESSAGE_ORIGIN",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MESSAGE_TEXT",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MOBILE_NUMBER",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "COUNTRY_CODE",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SHORT_CODE",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "STATUS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MOBILE_MESSAGE_TRACKING_ID",
             "field_type": "INTEGER",
             "mode": "NULLABLE"
         },
         {
             "name": "SUBSCRIBERKEY",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "Subscriber Key"
-        },
-        {
-            "name": "EMAIL",
-            "field_type": "STRING",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "SUBSCRIBERID",
-            "field_type": "INTEGER",
-            "mode": "NULLABLE"
-        },
-         {
-            "name": "LISTID",
-            "field_type": "INTEGER",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "EVENT_DATE",
-            "field_type": "TIMESTAMP",
-            "mode": "NULLABLE",
-            "description": "Fecha evento"
-        },
-        {
-            "name": "EVENT_TYPE",
-            "field_type": "STRING",
-            "mode": "NULLABLE",
-            "description": "Tipo de Evento"
-        },
-        {
-            "name": "BATCHID",
-            "field_type": "INTEGER",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "ISUNIQUE",
             "field_type": "STRING",
             "mode": "NULLABLE"
         },

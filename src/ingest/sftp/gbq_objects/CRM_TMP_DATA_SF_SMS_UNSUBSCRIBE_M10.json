@@ -1,0 +1,23 @@
+{
+    "schema": "TMP_CRM",
+    "table": "TMP_DATA_SF_SMS_UNSUBSCRIBE_M10",
+
+    "columns": [
+        {
+            "name": "MOBILE",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "FECHA",
+            "field_type": "TIMESTAMP",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "NULLABLE"
+        }
+       
+    ]
+}

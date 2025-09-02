@@ -22,7 +22,7 @@
         {
             "name": "EMAIL",
             "field_type": "STRING",
-            "mode": "REQUIRED"
+            "mode": "NULLABLE"
         },
         {
             "name": "SUBSCRIBERID",
