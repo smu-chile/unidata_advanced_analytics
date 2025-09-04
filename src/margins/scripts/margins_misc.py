@@ -180,7 +180,7 @@ def main() -> None:  # noqa: D103
             table_ref = f'{gcp_project_id}.{schema}.{table}'
             logging.info(f'Delete from {table_ref} to avoid duplicates')  # noqa: S608
             gbq_extended.deleteFromTable(table_ref=table_ref,
-                                        where_clause= f"año='{ppto_year}'",
+                                        where_clause= 'año = 2025',
                                         gbq_client=gbq_client
                                         )
             logging.info('Uploading dataframe')
