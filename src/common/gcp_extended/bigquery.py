@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Literal
 
 # pip
 import pandas_gbq
+from pendulum import DateTime
 from google.cloud import bigquery, bigquery_storage
 from google.cloud.exceptions import NotFound, BadRequest
 
@@ -16,8 +17,6 @@ from ..databases.queries import QueryDict  # noqa: TID252
 
 # Type checking imports
 if TYPE_CHECKING:
-    from datetime import datetime
-
     import pandas as pd
 
 
@@ -370,10 +369,17 @@ def deleteFromTable(
 
 
 def setTableExpiration(
-        table_ref: str, expiration: datetime,
-        gbq_client: bigquery.Client
+        table_ref: str,
+        expiration: DateTime | int,
+        gbq_client: bigquery.Client,
+        partition_colum_name: str = '',
     ) -> None:
-    """Sets an expiration date and time for a BigQuery table.
+    """Sets an expiration BigQuery table or partition.
+
+    When ``partition_column_name`` is not given then ``expiration`` must be
+    a datetime in which the whole table will expire. If given, then
+    ``expiration`` must be the number of miliseconds in which the
+    partitions will expire.
 
     Parameters
     ----------
@@ -381,14 +387,37 @@ def setTableExpiration(
         Table from which the data will be deleted. The value must included
         a project ID, dataset ID, and table ID, each separated by ``.``.
         For example: `your-project.your_dataset.your_table`
-    expiration : datetime.datetime
-        Date and time of the table expiration
+    expiration : pendulum.DateTime
+        Datetime in which the whole table will expire or number of
+        miliseconds in which the partitions must be deleted
     gbq_client : bigquery.Client
         Client used for making the queries
+    partition_colum_name : str, optional
+        Name of the column in which the partition is located
     """
     gbq_table = gbq_client.get_table(table_ref)
-    gbq_table.expires = expiration
-    gbq_table = gbq_client.update_table(gbq_table, ['expires'])
+    # Partition column name is not given, so expiration applies to the
+    # whole table
+    if (
+        isinstance(expiration, DateTime)
+        and (not partition_colum_name)
+    ):
+        gbq_table.expires = expiration
+        gbq_table = gbq_client.update_table(gbq_table, ['expires'])
+    # Partition column name is given, so expiration applies only to the
+    # partition
+    elif (
+        isinstance(expiration, int)
+        and partition_colum_name
+    ):
+        gbq_table.time_partitioning.expiration_ms = expiration
+        gbq_table = gbq_client.update_table(gbq_table, ['time_partitioning'])
+    else:
+        err_msg = (
+            'You pass a wrong combination of expiration type and '
+            'partition_colum_name value.'
+        )
+        raise ValueError(err_msg)
 
 
 if __name__ == '__main__':
