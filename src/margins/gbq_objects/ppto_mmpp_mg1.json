@@ -36,7 +36,14 @@
             "name": "PPTO_COSTO_NETO",
             "field_type": "FLOAT",
             "mode": "NULLABLE"
+        },
+        {
+            "name": "AÑO",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
         }
 
-    ]
+    ],
+
+    "clustering_fields": ["AÑO","MES","FORMATO"]
 }

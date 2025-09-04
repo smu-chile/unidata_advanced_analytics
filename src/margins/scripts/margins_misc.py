@@ -4,6 +4,8 @@ import logging
 import argparse
 from logging import config
 
+import pandas as pd
+
 # pip
 from google.cloud import bigquery
 
@@ -35,53 +37,38 @@ parser.add_argument(
     help='Files to be bq loaded'
 )
 
-
+month_dict = {
+    'Enero' : '01',
+    'Febrero' : '02',
+    'Marzo' : '03',
+    'Abril' : '04',
+    'Mayo' : '05',
+    'Junio' : '06',
+    'Julio' : '07',
+    'Agosto' : '08',
+    'Septiembre' : '09',
+    'Octubre' : '10',
+    'Noviembre' : '11',
+    'Diciembre' : '12'
+}
+ppto_year = '2025' #sorry about this, will think of something, thx
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(file,df):
     print('Before cleaning:', df)
     if file == 'ppto':
-        df['Nuevo Proveedor'] = df['Nuevo Proveedor'].astype('Int64')
-        df['den pos'] = df['den pos'].astype('Int64')
         float_columns = 	['Venta_Neta',
                     'Costo_Neto',
                     'Margen Comercial 1',
                     'Recupero',
-                    'aux',
-                    'aux2',
-                    'Aporte Fijo',
-                    'Aporte Variable (Cumpl.Meta)',
-                    'Devolucion y Merma 0',
-                    'Inauguración',
-                    'Reinaguración',
-                    'Servicio de Reposición',
-                    'Extranet',
-                    ' Inclusión productos',
-                    'Concursos/Sorteos',
-                    'Bonificacion de Mercaderia',
-                    'Sell Out',
-                    'Ingreso Diferido',
-                    'Recuperación Campaña',
-                    'Distribucion y Centralizacion (Back Houl)',
-                    'Merma 0 Manual',
-                    'Rebate',
-                    'Margen Comercial 2',
-                    'Venta 2023',
-                    'Venta MMPP',
-                    'Mg1+SO MMPP',
-                    'Impacto 2024',
-                    'Gasto SellOut',
-                    'Total Importe',
-                    'Venta 2019',
-                    'Mg1+SO 2019',
-                    'Venta pricing',
-                    'Mg1+so pricing',
-                    'Num pos']
+                    'Sell Out']
         for c in float_columns:
             df[c] = df[c].astype('Float64')
         df = df.replace('nan', 0.0)  # noqa: PD901
-        df = df.drop(['aux100'], axis=1)  # noqa: PD901
+        df['año'] = ppto_year
+        df['Mes'] = df['año'] + df['Mes'].map(month_dict)
+        df['año'] = df['año'].astype('Int64')
         print('After cleaning:', df)
         return df
     if file == 'ppto_mg1':
@@ -93,6 +80,9 @@ def cleaning_func(file,df):
         for c in float_columns:
             df[c] = df[c].astype('Float64')
         df = df.replace('nan', 0.0)  # noqa: PD901
+        df['año'] = ppto_year
+        df['Mes'] =  pd.to_datetime(df['Mes'], format='%Y-%m-%d').dt.strftime('%Y%m')
+        df['año'] = df['año'].astype('Int64')
         print('After cleaning:', df)
         return df
     if file.startswith('admg'):
@@ -116,10 +106,11 @@ def main() -> None:  # noqa: D103
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
     load_files: list[str] = args['load_files'].split(':')
-    reference_files = ['ppto','ppto_mg1',
+    reference_files = ['ppto','ppto_mg1', 'cat_h'
                        'est_com','est_com_alvi',
                        'ila','ila_m10','ila_s10',
                        'admg','admg_alvi','admg_m10','admg_s10']
+
     #Default: tomar todo
     if 'all' in load_files:
         load_files = reference_files
@@ -128,23 +119,29 @@ def main() -> None:  # noqa: D103
     sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials')
     gbq_client = bigquery.Client()
     #input files
+    site = (
+        '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
+        'Paneles Power BI/Reporte de Margen'
+    )
     input_files = {
-            'ppto' :'/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Paneles Power BI/Reporte de Margen/Unimarc/Fuentes datos manuales/Presupuesto/2025/PPTO FORMATOS SELLOUT RECUPERO 2025.xlsx',  # noqa: E501
-            'ppto_mg1' : '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Paneles Power BI/Reporte de Margen/Unimarc/Reporte Unimarc MMPP/PPTO/PPTO 2025.xlsx',  # noqa: E501
-            'est_com' : '/sites/BigDatayAdvancedAnalytics/Documentos%20compartidos/Paneles%20Power%20BI/Reporte%20de%20Margen/Unimarc/Fuentes%20datos%20manuales/Estructura comercial/Estructura Comercial.xlsx',  # noqa: E501
-            'est_com_alvi' : '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Paneles Power BI/Reporte de Margen/Alvi/Fuentes manuales de informacion/Estructura Comercial/Estructura Comercial Alvi.xlsx',  # noqa: E501
-            'ila' : '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Paneles Power BI/Reporte de Margen/Unimarc/Fuentes datos manuales/ILA/ILA_UNIMARC.xlsx',  # noqa: E501
-            'ila_m10': '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Paneles Power BI/Reporte de Margen/M10/Fuentes manuales de informacion/ILA/ILA_M10.xlsx' ,  # noqa: E501
-            'ila_s10' : '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Paneles Power BI/Reporte de Margen/S10/Fuentes manuales de informacion/ILA/ILA_S10.xlsx',  # noqa: E501
-            'admg': '/sites/BigDatayAdvancedAnalytics/Documentos%20compartidos/Paneles%20Power%20BI/Reporte%20de%20Margen/Unimarc/Fuentes%20datos%20manuales/Adicional%20al%20Margen/Adicional%20al%20margen.xlsx',  # noqa: E501
-            'admg_alvi' : '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Paneles Power BI/Reporte de Margen/Alvi/Fuentes manuales de informacion/Adicional al margen/Adicional al margen Alvi.xlsx',  # noqa: E501
-            'admg_m10' : '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Paneles Power BI/Reporte de Margen/M10/Fuentes manuales de informacion/Adicional al margen/Adicional al margen M10.xlsx',  # noqa: E501
-            'admg_s10': '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Paneles Power BI/Reporte de Margen/S10/Fuentes manuales de informacion/Adicional al margen/Adicional al margen S10.xlsx'  # noqa: E501
+            'ppto' :f'{site}/Unimarc/Fuentes datos manuales/Presupuesto/2025 V2/PPTO FORMATOS SELLOUT RECUPERO 2025.xlsx',  # noqa: E501
+            'ppto_mg1' : f'{site}/Unimarc/Reporte Unimarc MMPP/PPTO/PPTO 2025.xlsx',  # noqa: E501
+            'cat_h' : f'{site}/Unimarc/Fuentes datos manuales/Categoria H/Categoria_H_Estructura_Comercial.xlsx',  # noqa: E501
+            'est_com' : f'{site}/Unimarc/Fuentes datos manuales/Estructura comercial/Estructura Comercial.xlsx',  # noqa: E501
+            'est_com_alvi' : f'{site}/Alvi/Fuentes manuales de informacion/Estructura Comercial/Estructura Comercial Alvi.xlsx',  # noqa: E501
+            'ila' : f'{site}/Unimarc/Fuentes datos manuales/ILA/ILA_UNIMARC.xlsx',  # noqa: E501
+            'ila_m10': f'{site}/M10/Fuentes manuales de informacion/ILA/ILA_M10.xlsx' ,  # noqa: E501
+            'ila_s10' : f'{site}/S10/Fuentes manuales de informacion/ILA/ILA_S10.xlsx',  # noqa: E501
+            'admg': f'{site}/Unimarc/Fuentes datos manuales/Adicional al Margen/Adicional al margen.xlsx',  # noqa: E501
+            'admg_alvi' : f'{site}/Alvi/Fuentes manuales de informacion/Adicional al margen/Adicional al margen Alvi.xlsx',  # noqa: E501
+            'admg_m10' : f'{site}/M10/Fuentes manuales de informacion/Adicional al margen/Adicional al margen M10.xlsx',  # noqa: E501
+            'admg_s10': f'{site}/S10/Fuentes manuales de informacion/Adicional al margen/Adicional al margen S10.xlsx'  # noqa: E501
             }
     #table definitions jsons
     jsons = {
-        'ppto' : 'ppto_formatos_sellout_recupero_2025.json',
+        'ppto' : 'ppto_formatos_sellout_recupero.json',
         'ppto_mg1' : 'ppto_mmpp_mg1.json',
+        'cat_h' : 'categoria_h.json',
         'est_com' : 'estructura_comercial.json',
         'est_com_alvi' : 'estructura_comercial_alvi.json',
         'ila' : 'ila_proyectado_unimarc.json',
@@ -164,18 +161,48 @@ def main() -> None:  # noqa: D103
         sheet_name = 0
         if file == 'ppto_mg1':
             sheet_name = 'MG1'
+        if file == 'ppto':
+            sheet_name = 'PPTO Formatos'
         df_file = sharepoint.toFrame(sheet_name = sheet_name)
         df_file =cleaning_func(file,df_file)
 
-        # Upload data
-        logging.info('Uploading data')
-        gbq_extended.uploadFrame(
-            df_file,
-            table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
-            project=gcp_project_id,
-            gbq_client=gbq_client,
-            if_exists='replace',
-        )
+        if file.startswith('ppto'):
+            logging.info('Creating table if not exists')
+            gbq_extended.createTableFromJSON(
+                        table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
+                        project=gcp_project_id,
+                        gbq_client=gbq_client,
+                        if_exists='ignore',
+                    )
+            #Delete from table so that data is not duplicated
+            schema = 'ML_LAB'
+            table_suffix = jsons[file].split('.')[0].upper()
+            #REPORTE_MARGEN_PPTO_FORMATOS_SELLOUT_RECUPERO_2025
+            table = f'REPORTE_MARGEN_{table_suffix}'
+            table_ref = f'{gcp_project_id}.{schema}.{table}'
+            logging.info(f'Delete from {table_ref} to avoid duplicates')  # noqa: S608
+            gbq_extended.deleteFromTable(table_ref=table_ref,
+                                        where_clause= 'anio = 2025',
+                                        gbq_client=gbq_client
+                                        )
+            logging.info('Uploading dataframe')
+            gbq_extended.uploadFrame(
+                df_file,
+                table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
+                project=gcp_project_id,
+                gbq_client=gbq_client,
+                if_exists='append',
+            )
+        else:
+            # Upload data w/replace
+            logging.info('Uploading data')
+            gbq_extended.uploadFrame(
+                df_file,
+                table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
+                project=gcp_project_id,
+                gbq_client=gbq_client,
+                if_exists='replace',
+            )
     logging.info('Process ended!')
 
 
