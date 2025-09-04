@@ -172,7 +172,6 @@ def main() -> None:  # noqa: D103
                         gbq_client=gbq_client,
                         if_exists='ignore',
                     )
-            where_clause=f'año="{ppto_year}"'  # noqa: E501
             #Delete from table so that data is not duplicated
             schema = 'ML_LAB'
             table_suffix = jsons[file].split('.')[0].upper()
@@ -181,7 +180,7 @@ def main() -> None:  # noqa: D103
             table_ref = f'{gcp_project_id}.{schema}.{table}'
             logging.info(f'Delete from {table} to avoid duplicates')  # noqa: S608
             gbq_extended.deleteFromTable(table_ref=table_ref,
-                                        where_clause= where_clause,
+                                        where_clause= f'año="{ppto_year}"',
                                         gbq_client=gbq_client
                                         )
             logging.info('Uploading dataframe')
