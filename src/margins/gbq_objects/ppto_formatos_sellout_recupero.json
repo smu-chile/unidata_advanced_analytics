@@ -53,7 +53,7 @@
         },
         {
             "name": "AÑO",
-            "field_type": "STRING",
+            "field_type": "INTEGER",
             "mode": "NULLABLE"
         }
     ],

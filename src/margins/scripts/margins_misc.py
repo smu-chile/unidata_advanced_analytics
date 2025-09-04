@@ -172,12 +172,12 @@ def main() -> None:  # noqa: D103
                         gbq_client=gbq_client,
                         if_exists='ignore',
                     )
-            where_clause=f'año="{ppto_year}"'  # noqa: E501
+            where_clause=f'año={ppto_year}'  # noqa: E501
             #Delete from table so that data is not duplicated
             logging.info('Delete from to avoid duplicates')
             schema = 'ML_LAB'
             #REPORTE_MARGEN_PPTO_FORMATOS_SELLOUT_RECUPERO_2025
-            table = f'REPORTE_MARGEN_{jsons[file].split('.')[0]}'
+            table = f'REPORTE_MARGEN_{jsons[file].split('.')[0].upper()}'
             table_ref = f'{gcp_project_id}.{schema}.{table}'
             gbq_extended.deleteFromTable(table_ref=table_ref,
                                         where_clause= where_clause,
