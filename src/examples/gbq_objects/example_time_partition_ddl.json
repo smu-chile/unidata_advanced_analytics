@@ -32,7 +32,8 @@
 
     "time_partitioning": {
         "field": "col1",
-        "type_": "DAY"
+        "type_": "DAY",
+        "expiration_ms": 120000
     },
 
     "clustering_fields": ["col2", "col3"]
