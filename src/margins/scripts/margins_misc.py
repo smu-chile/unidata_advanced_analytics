@@ -172,7 +172,7 @@ def main() -> None:  # noqa: D103
                         gbq_client=gbq_client,
                         if_exists='ignore',
                     )
-            where_clause=f'año={ppto_year}'  # noqa: E501
+            where_clause=f'año="{ppto_year}"'  # noqa: E501
             #Delete from table so that data is not duplicated
             schema = 'ML_LAB'
             table_suffix = jsons[file].split('.')[0].upper()
