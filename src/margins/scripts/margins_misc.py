@@ -106,7 +106,7 @@ def main() -> None:  # noqa: D103
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
     load_files: list[str] = args['load_files'].split(':')
-    reference_files = ['ppto','ppto_mg1', 'cat_h'
+    reference_files = ['ppto','ppto_mg1', 'cat_h',
                        'est_com','est_com_alvi',
                        'ila','ila_m10','ila_s10',
                        'admg','admg_alvi','admg_m10','admg_s10']
