@@ -68,6 +68,7 @@ def cleaning_func(file,df):
         df = df.replace('nan', 0.0)  # noqa: PD901
         df['año'] = ppto_year
         df['Mes'] = df['año'] + df['Mes'].map(month_dict)
+        df['año'] = df['año'].astype('Int64')
         print('After cleaning:', df)
         return df
     if file == 'ppto_mg1':
@@ -81,6 +82,7 @@ def cleaning_func(file,df):
         df = df.replace('nan', 0.0)  # noqa: PD901
         df['año'] = ppto_year
         df['Mes'] =  pd.to_datetime(df['Mes'], format='%Y-%m-%d').dt.strftime('%Y%m')
+        df['año'] = df['año'].astype('Int64')
         print('After cleaning:', df)
         return df
     if file.startswith('admg'):
