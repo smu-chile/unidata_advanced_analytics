@@ -176,8 +176,9 @@ def main() -> None:  # noqa: D103
             #Delete from table so that data is not duplicated
             logging.info('Delete from to avoid duplicates')
             schema = 'ML_LAB'
+            table_suffix = jsons[file].split('.')[0].upper()
             #REPORTE_MARGEN_PPTO_FORMATOS_SELLOUT_RECUPERO_2025
-            table = f'REPORTE_MARGEN_{jsons[file].split('.')[0].upper()}'
+            table = f'REPORTE_MARGEN_{table_suffix}'
             table_ref = f'{gcp_project_id}.{schema}.{table}'
             gbq_extended.deleteFromTable(table_ref=table_ref,
                                         where_clause= where_clause,
