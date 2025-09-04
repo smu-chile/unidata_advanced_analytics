@@ -178,9 +178,9 @@ def main() -> None:  # noqa: D103
             #REPORTE_MARGEN_PPTO_FORMATOS_SELLOUT_RECUPERO_2025
             table = f'REPORTE_MARGEN_{table_suffix}'
             table_ref = f'{gcp_project_id}.{schema}.{table}'
-            logging.info(f'Delete from {table} to avoid duplicates')  # noqa: S608
+            logging.info(f'Delete from {table_ref} to avoid duplicates')  # noqa: S608
             gbq_extended.deleteFromTable(table_ref=table_ref,
-                                        where_clause= f'año="{ppto_year}"',
+                                        where_clause= f"año='{ppto_year}'",
                                         gbq_client=gbq_client
                                         )
             logging.info('Uploading dataframe')
