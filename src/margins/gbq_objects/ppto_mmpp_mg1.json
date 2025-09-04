@@ -38,12 +38,12 @@
             "mode": "NULLABLE"
         },
         {
-            "name": "AÑO",
+            "name": "ANIO",
             "field_type": "INTEGER",
             "mode": "NULLABLE"
         }
 
     ],
 
-    "clustering_fields": ["AÑO","MES","FORMATO"]
+    "clustering_fields": ["ANIO","MES","FORMATO"]
 }
