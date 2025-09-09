@@ -53,7 +53,7 @@ def main() -> None:  # noqa: D103
     gcp_project_id: str = args['project_id']
 
     # Set all clients
-    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials')
+    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials', project=gcp_project_id)
     gbq_client = bigquery.Client()
     #input files
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Pricing/Genfix'
