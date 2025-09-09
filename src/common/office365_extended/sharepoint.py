@@ -57,6 +57,7 @@ class SharePointFile:
             *server_relative_path.split(posixpath.sep)[:3]
         )
 
+        # Create client context for API connection
         self._client_context = ClientContext(
             self.site_url + posixpath.sep
         ).with_client_certificate(
