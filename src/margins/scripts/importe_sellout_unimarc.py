@@ -85,10 +85,10 @@ def main() -> None:  # noqa: D103
     execution_week: str = args['execution_week']
 
     # Set all clients
-    sp_cred = secretmanager.getSecret('sellout_sharepoint_credentials',project=gcp_project_id)
+    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',project=gcp_project_id)
     gbq_client = bigquery.Client()
     #input files
-    file_site = '/sites/SellOut/Documentos compartidos'
+    file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Pricing/SellOut'
     #TODO(csotob): Cambiar nombre de input:file y la logica de renombrar a
     # 'Procesado-' en GCP cuando se depreque en aws, eventualmente
     input_file =  f'{file_site}/SellOut ID_0 Unimarc/PROCESADO-Sellout_{execution_month}.xlsx'
