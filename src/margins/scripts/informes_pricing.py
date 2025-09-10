@@ -70,7 +70,7 @@ def main() -> None:  # noqa: D103
     formatos = ['unimarc','s10','m10']
 
     # Set all clients
-    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials')
+    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',project=gcp_project_id)
     gbq_client = bigquery.Client()
     #input files
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Pricing/Informes Pricing/'

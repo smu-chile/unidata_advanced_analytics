@@ -125,7 +125,7 @@ def main() -> None:  # noqa: D103
         load_files = reference_files
 
     # Set all clients
-    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials')
+    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',project=gcp_project_id)
     gbq_client = bigquery.Client()
     #input files
     input_files = {

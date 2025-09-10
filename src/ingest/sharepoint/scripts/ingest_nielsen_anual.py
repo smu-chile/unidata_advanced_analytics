@@ -90,7 +90,7 @@ def main() -> None:  # noqa: D103
     proc_years: list[str] = args['proc_years'].split(':')
     load_files = ['jerarquia_ytd','jerarquia_upc']
     # Set all clients
-    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials')
+    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',project=gcp_project_id)
     gbq_client = bigquery.Client()
     site_root = (
     '/sites/'

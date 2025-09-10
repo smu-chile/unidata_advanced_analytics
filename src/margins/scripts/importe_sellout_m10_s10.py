@@ -82,7 +82,7 @@ def main() -> None:  # noqa: D103
     formatos = ['s10','m10']
 
     # Set all clients
-    sp_cred = secretmanager.getSecret('sellout_sharepoint_credentials')
+    sp_cred = secretmanager.getSecret('sellout_sharepoint_credentials',project=gcp_project_id)
     gbq_client = bigquery.Client()
     #input files
     file_site = '/sites/SellOut/Documentos compartidos/SellOut Consolidado/'

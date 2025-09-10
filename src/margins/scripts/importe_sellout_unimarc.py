@@ -85,7 +85,7 @@ def main() -> None:  # noqa: D103
     execution_week: str = args['execution_week']
 
     # Set all clients
-    sp_cred = secretmanager.getSecret('sellout_sharepoint_credentials')
+    sp_cred = secretmanager.getSecret('sellout_sharepoint_credentials',project=gcp_project_id)
     gbq_client = bigquery.Client()
     #input files
     file_site = '/sites/SellOut/Documentos compartidos'
