@@ -87,7 +87,7 @@ def main() -> None:  # noqa: D103
     }
     for formato in formatos:
         logging.info(f'Starting extraction of Reporte General {formato} from SFTP Marketing Cloud')
-        sftp_secret = secretmanager.getSecret('salesforce_sftp_credentials')
+        sftp_secret = secretmanager.getSecret('salesforce_sftp_credentials',project=gcp_project_id)
         #connect
         logging.info('Connecting to sftp')
         ssh_session = paramiko.Transport(
