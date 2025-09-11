@@ -125,6 +125,7 @@ def main() -> None:  # noqa: D103
     execution_week: list[str] = args['execution_week'].split(':')
     load_files: list[str] = args['load_files'].split(':')
     reference_files = ['categoria_item','venta_categoria','venta_negocio']
+
     #Default: tomar todo
     if 'all' in load_files:
         load_files = reference_files
