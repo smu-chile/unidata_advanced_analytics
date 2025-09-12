@@ -105,7 +105,7 @@ jobs:
         uses: astral-sh/ruff-action@v3
         with:
           args: "check -q --config ${{ env.RUFF_CONFIG_PATH }}"
-          version: "latest"
+          version: "0.12.12"
 
 
   gcs_upload_scripts:
