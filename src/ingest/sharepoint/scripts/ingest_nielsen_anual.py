@@ -90,9 +90,9 @@ def main() -> None:  # noqa: D103
     proc_years: list[str] = args['proc_years'].split(':')
     load_files = ['jerarquia_ytd','jerarquia_upc']
     # Set all clients
-    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',project=gcp_project_id)
+    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',
+                                      project=gcp_project_id)
     gbq_client = bigquery.Client()
-
     site_root = (
     '/sites/'
     'BigDatayAdvancedAnalytics/'
@@ -123,8 +123,10 @@ def main() -> None:  # noqa: D103
             input_file_ytd = input_files[file].substitute(site_root=site_root,
                                                           year=year)
             logging.info(f'Starting extraction of {input_file_ytd} from Sharepoint')
-            sharepoint = sp.SharePointFile(sp_cred['client_id'],
-                                       sp_cred['client_secret'],input_file_ytd)
+            sharepoint = sp.SharePointFile(
+            **sp_cred,
+            server_relative_path=input_file_ytd
+            )
             df_file = sharepoint.toFrame()
             df_file =cleaning_func(df_file,year, file)
 

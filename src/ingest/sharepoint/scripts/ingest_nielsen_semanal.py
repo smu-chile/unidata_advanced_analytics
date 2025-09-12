@@ -125,12 +125,12 @@ def main() -> None:  # noqa: D103
     execution_week: list[str] = args['execution_week'].split(':')
     load_files: list[str] = args['load_files'].split(':')
     reference_files = ['categoria_item','venta_categoria','venta_negocio']
-
     #Default: tomar todo
     if 'all' in load_files:
         load_files = reference_files
     # Set all clients
-    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',project=gcp_project_id)
+    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',
+                                      project=gcp_project_id)
     gbq_client = bigquery.Client()
     site_root = (
     '/sites/'
@@ -165,8 +165,10 @@ def main() -> None:  # noqa: D103
             input_file_wk = input_files[file].substitute(site_root=site_root,
                                                           week=week)
             logging.info(f'Starting extraction of {input_file_wk} from Sharepoint')
-            sharepoint = sp.SharePointFile(sp_cred['client_id'],
-                                       sp_cred['client_secret'],input_file_wk)
+            sharepoint = sp.SharePointFile(
+            **sp_cred,
+            server_relative_path=input_file_wk
+            )
             df_file = sharepoint.toFrame()
             df_file =cleaning_func(df_file,week, file)
 

@@ -116,7 +116,8 @@ def main() -> None:  # noqa: D103
         load_files = reference_files
 
     # Set all clients
-    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials', project=gcp_project_id)
+    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',
+                                      project=gcp_project_id)
     gbq_client = bigquery.Client()
     #input files
     site = (
@@ -156,8 +157,10 @@ def main() -> None:  # noqa: D103
 
     for file in load_files:
         logging.info(f'Starting extraction of {file} from Sharepoint')
-        sharepoint = sp.SharePointFile(sp_cred['client_id'],
-                                       sp_cred['client_secret'],input_files[file])
+        sharepoint = sp.SharePointFile(
+            **sp_cred,
+            server_relative_path=input_files[file]
+            )
         sheet_name = 0
         if file == 'ppto_mg1':
             sheet_name = 'MG1'

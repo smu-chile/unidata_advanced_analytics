@@ -1,6 +1,8 @@
 """Extends usage for the sharepoint part of the MS Office365 library."""
 from __future__ import annotations
 
+import os
+
 # Default
 import logging
 import posixpath
@@ -10,7 +12,12 @@ from io import BytesIO
 import pandas as pd
 from office365.sharepoint.files.file import File
 from office365.sharepoint.client_context import ClientContext
-from office365.runtime.auth.client_credential import ClientCredential
+from cryptography.hazmat.primitives.serialization import (
+    Encoding,
+    NoEncryption,
+    PrivateFormat,
+    pkcs12,
+)
 
 
 class SharePointFile:
@@ -18,10 +25,16 @@ class SharePointFile:
 
     Parameters
     ----------
-    client_id : str
-        Sharepoint web API client id
-    client_secret : str
-        Sharepoint web API client secret
+    tenant : str,
+        Tenant name. Also known as directory ID when creating the `.pfx`
+        certificate
+    client_id : str,
+        The OAuth client id of the calling application. Also known as
+        API ID when creating the `.pfx` certificate
+    thumbprint : str,
+        Hex encoded thumbprint of the certificate
+    private_key : str,
+        A PEM encoded certificate private key
     server_relative_path : str
         Relative path to the file in Sharepoint e.g.
         `/sites/SiteName/SPDirectory1/SPDirectory2/file.xlsx`
@@ -29,7 +42,12 @@ class SharePointFile:
     _sharepoint_server = 'https://corpsmu.sharepoint.com'
 
     def __init__(
-            self, client_id: str, client_secret: str, server_relative_path: str
+            self,
+            tenant: str,
+            client_id: str,
+            thumbprint: str,
+            private_key: str,
+            server_relative_path: str,
         ):
         self.server_relative_path = server_relative_path
 
@@ -39,14 +57,14 @@ class SharePointFile:
             *server_relative_path.split(posixpath.sep)[:3]
         )
 
-        # Stablish client context
+        # Create client context for API connection
         self._client_context = ClientContext(
             self.site_url + posixpath.sep
-        ).with_credentials(
-            ClientCredential(
-                client_id,
-                client_secret
-            )
+        ).with_client_certificate(
+            tenant=tenant,
+            client_id=client_id,
+            thumbprint=thumbprint,
+            private_key=private_key,
         )
 
 
@@ -134,6 +152,55 @@ class SharePointFile:
         target_dir.files.upload(
             filename, content
         ).execute_query()
+
+
+def unpackPFXCredentials(pfx_path: str, pfx_password: str) -> tuple[str, str]:
+    """Unpack `.pfx` file with SharePoint credentials into `.pem` files
+
+    Takes the path to a `.pfx` file and creates two `.pem` files with the
+    same name as the original with the suffix:
+
+    - _pk: for the `.pem` public key
+    - _sk: for the `.pem` secret key
+
+    Parameters
+    ----------
+    pfx_path : str
+        Path to `.pfx` file with the SharePoint credentials
+    pfx_password: str
+        Password for the `.pfx` file
+
+    Returns
+    -------
+    pk_path : str
+        Path to the `.pem` file with the public key
+    sk_path : str
+        Path to the `.pem` file with the secret key
+    """
+    pk_path = os.path.splitext(pfx_path)[0] + '_pk.pem'
+    sk_path = os.path.splitext(pfx_path)[0] + '_sk.pem'
+
+    # Transform .pfx to .pem
+    with open(pfx_path, 'rb') as pfx_file, \
+        open(sk_path, 'wb') as sk_file, open(pk_path, 'wb') as pk_file:
+        private_key, certificate, _ = pkcs12.load_key_and_certificates(
+            data=pfx_file.read(),
+            password=pfx_password.encode(),
+        )
+
+        sk_file.write(
+            private_key.private_bytes(
+                encoding=Encoding.PEM,
+                format=PrivateFormat.PKCS8,
+                encryption_algorithm=NoEncryption()
+            )
+        )
+
+        pk_file.write(
+            certificate.public_bytes(Encoding.PEM)
+        )
+
+    return pk_path, sk_path
 
 
 if __name__ == '__main__':
