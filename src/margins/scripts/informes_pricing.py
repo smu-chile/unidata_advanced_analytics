@@ -70,7 +70,8 @@ def main() -> None:  # noqa: D103
     formatos = ['unimarc','s10','m10']
 
     # Set all clients
-    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials')
+    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',
+                                      project=gcp_project_id)
     gbq_client = bigquery.Client()
     #input files
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Pricing/Informes Pricing/'
@@ -88,8 +89,11 @@ def main() -> None:  # noqa: D103
 
     for file in formatos:
         logging.info(f'Starting extraction of -- informe pricing {file} -- from Sharepoint')
-        sharepoint = sp.SharePointFile(sp_cred['client_id'],
-                                       sp_cred['client_secret'],input_files[file])
+        sharepoint = sp.SharePointFile(
+            **sp_cred,
+            server_relative_path=input_files[file]
+            )
+
         last_time_modified = sharepoint.lastTimeModified()
 
         logging.info(f'Last time modified: {last_time_modified}')

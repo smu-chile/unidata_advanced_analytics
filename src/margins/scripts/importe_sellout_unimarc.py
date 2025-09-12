@@ -85,7 +85,8 @@ def main() -> None:  # noqa: D103
     execution_week: str = args['execution_week']
 
     # Set all clients
-    sp_cred = secretmanager.getSecret('sellout_sharepoint_credentials')
+    sp_cred = secretmanager.getSecret('sellout_sharepoint_credentials',
+                                      project=gcp_project_id)
     gbq_client = bigquery.Client()
     #input files
     file_site = '/sites/SellOut/Documentos compartidos'
@@ -98,8 +99,11 @@ def main() -> None:  # noqa: D103
     table_ref =  f'{gcp_project_id}.{schema}.REPORTE_MARGEN_SELLOUT_UNIMARC'
 
     logging.info(f'Starting extraction of -- sellout unimarc {input_file} -- from Sharepoint')
-    sharepoint = sp.SharePointFile(sp_cred['client_id'],
-                                   sp_cred['client_secret'],input_file)
+    sharepoint = sp.SharePointFile(
+            **sp_cred,
+            server_relative_path=input_file
+            )
+
     modified = False
     try:
         last_time_modified = sharepoint.lastTimeModified()
