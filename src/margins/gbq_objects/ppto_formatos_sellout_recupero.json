@@ -1,0 +1,62 @@
+{
+    "schema": "ML_LAB",
+    "table": "REPORTE_MARGEN_PPTO_FORMATOS_SELLOUT_RECUPERO",
+
+    "columns": [
+        {
+            "name": "FORMATO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Formato"
+        },
+        {
+            "name": "MES",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Mes"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria"
+        },
+        {
+            "name": "VENTA_NETA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Venta Neta"
+        },
+        {
+            "name": "COSTO_NETO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Costo Neto"
+        },
+        {
+            "name": "MARGEN_COMERCIAL_1",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Margen Comercial 1"
+        },
+        {
+            "name": "RECUPERO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Recupero"
+        },
+        {
+            "name": "SELL_OUT",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Sell Out"
+        },
+        {
+            "name": "ANIO",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        }
+    ],
+
+    "clustering_fields": ["ANIO","MES","FORMATO"]
+}
