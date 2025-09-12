@@ -53,19 +53,23 @@ def main() -> None:  # noqa: D103
     gcp_project_id: str = args['project_id']
 
     # Set all clients
-    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials', project=gcp_project_id)
+    sp_cred = secretmanager.getSecret(
+        'bdaa_sharepoint_credentials',
+        project=gcp_project_id
+    )
     gbq_client = bigquery.Client()
-    #input files
+    # Input files
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Pricing/Genfix'
     input_file =  f'{file_site}/Genfix Equipo.xlsx'
-    #table definitions jsons
+    # table definitions jsons
     json = 'pricing_genfix.json'
 
 
     logging.info(f'Starting extraction of -- informe pricing {input_file} -- from Sharepoint')
-    sharepoint = sp.SharePointFile(sp_cred['client_id'],
-                                   sp_cred['client_secret'],
-                                   input_file)
+    sharepoint = sp.SharePointFile(
+        **sp_cred,
+        server_relative_path=input_file
+    )
     last_time_modified = sharepoint.lastTimeModified()
     logging.info(f'Last time modified: {last_time_modified}')
     df_file = sharepoint.toFrame()
