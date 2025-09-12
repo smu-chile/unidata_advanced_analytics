@@ -19,7 +19,7 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'lifecycle_status'
+PROJECT_NAME = 'lifecycle'
 dag_args = {
     'dag_id': 'lifecycle_status',
     'schedule_interval': '0 0 2 * *',
