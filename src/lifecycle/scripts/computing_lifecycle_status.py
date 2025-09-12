@@ -506,7 +506,7 @@ def main() -> None:  # noqa: D103
     # Parse input variables
     args = vars(parser.parse_args())
     execution_date: str = args['execution_date']
-    gcp_project_id: str = args['project_id']  # noqa: F841
+    proyecto: str = args['project_id']  # noqa: F841
     logging.info(f'execution_date: {execution_date}')
 
 
@@ -542,8 +542,7 @@ def main() -> None:  # noqa: D103
     usuario = 'lifecycle'
 
     # Proyecto en que se almacena
-    proyecto = 'cl-bigdata-analytics'
-    esquema = 'SANDBOX_BMOLINAB'
+    esquema = 'CONOCIMIENTO_CLIENTE'
     tabla = 'LIFECYCLE_STATUS'
 
     # Ruta completa
