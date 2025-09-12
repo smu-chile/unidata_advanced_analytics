@@ -1,0 +1,34 @@
+{
+    "schema": "SANDBOX_BMOLINAB",
+    "table": "LIFECYCLE_STATUS",
+
+    "columns": [
+        {
+            "name": "CUSTOMER_KEY",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": "Cliente"
+        },
+        {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Mes asociado"
+        },
+        {
+            "name": "STATUS",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Marca de ciclo de vida"
+        },
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece el cliente"
+        }
+        
+    ],
+
+    "clustering_fields": ["MONTHID", "STORE_BANNER"]
+}

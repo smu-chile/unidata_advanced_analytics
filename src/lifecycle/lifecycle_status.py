@@ -21,7 +21,7 @@ with open(
 
 PROJECT_NAME = 'lifecycle_status'
 dag_args = {
-    'dag_id': 'cost_analyzer',
+    'dag_id': 'lifecycle_status',
     'schedule_interval': '0 0 2 * *',
     'dagrun_timeout': None,
     'catchup': True,
