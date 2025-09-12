@@ -13,16 +13,16 @@ import pandas as pd
 from google.cloud import bigquery  # noqa: F401
 from google.cloud.bigquery import Client
 from dateutil.relativedelta import relativedelta
-from src.common.gcp_extended.bigquery import (  # noqa: E402
-    uploadFrame,  # noqa: F401
-    readBigQuery,
-    deleteFromTable,  # noqa: F401
-)
 
 # Own
 import common.gcp_extended.bigquery as gbq_extended  # noqa: F401
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
+from common.gcp_extended.bigquery import (  # noqa: E402
+    uploadFrame,  # noqa: F401
+    readBigQuery,
+    deleteFromTable,  # noqa: F401
+)
 
 
 # -------------------------------------------------------------------------
