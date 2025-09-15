@@ -733,7 +733,7 @@ def main() -> None:  # noqa: D103
 
         uploadFrame(
             seg_monthid[['customer_key','monthid','status','store_banner']],
-            table_ddl_json_path=os.path.join('..','gbq_objects', 'ingest_lifecycle.json'),
+            table_ddl_json_path=os.path.join('gbq_objects', 'ingest_lifecycle.json'),
             project=proyecto,
             gbq_client=gbq_client,
             if_exists='append')
