@@ -71,7 +71,7 @@ SQL_QUERIES = QueryDict({
     customer_key,
     COUNT(DISTINCT MARKET_BASKET_KEY) AS canastas_compradas,
     SUM(BASKET_VALUE) AS gasto_total
-    FROM `cl-bigdata-analytics-prod.ML_LAB.VW_SALES_BASKET` A
+    FROM `cl-bigdata-analytics-preprod.ML_LAB.VW_SALES_BASKET` A
     INNER JOIN `cl-bigdata-analytics.ML_LAB.VW_DIM_STORE` D
     ON A.STORE_ID = D.STORE_ID
     WHERE TRANSACTION_DATE BETWEEN DATE_TRUNC(DATE_SUB(fecha_final, INTERVAL meses-1 MONTH), MONTH)
