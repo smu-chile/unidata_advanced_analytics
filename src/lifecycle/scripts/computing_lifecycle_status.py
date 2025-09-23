@@ -684,7 +684,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
 
-    # Si el mes anterior es el mes0 entonces no hay mes anterior
+    # Si el mes anterior es el mes0 entonces no hay mes anterior#
     if last_month == mes0:
         # PRIMER periodo: todos -> onboard
         seg_monthid = segmentarVentanaOptimizada(
