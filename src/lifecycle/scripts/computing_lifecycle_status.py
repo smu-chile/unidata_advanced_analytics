@@ -10,6 +10,7 @@ from datetime import datetime
 # Pip
 import numpy as np
 import pandas as pd
+import pendulum
 from google.cloud import bigquery  # noqa: F401
 from google.cloud.bigquery import Client
 from dateutil.relativedelta import relativedelta
@@ -525,7 +526,7 @@ def main() -> None:  # noqa: D103
 
 
     # Convertir a objeto datetime
-    fecha_dt = datetime.strptime(execution_date, '%Y-%m-%d')
+    fecha_dt = pendulum.parse(execution_date)
 
     # Formatear a 'YYYYMM'
     monthid = fecha_dt.strftime('%Y%m')
@@ -697,7 +698,7 @@ def main() -> None:  # noqa: D103
         project = proyecto,
         gbq_client = gbq_client,
         if_exists = 'raise'
-    ) 
+    )
 
 
 
