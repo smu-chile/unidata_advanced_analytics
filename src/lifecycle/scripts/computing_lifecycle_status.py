@@ -19,9 +19,10 @@ import common.gcp_extended.bigquery as gbq_extended  # noqa: F401
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.gcp_extended.bigquery import (  # noqa: E402
-    uploadFrame,  # noqa: F401
+    uploadFrame,
     readBigQuery,
-    deleteFromTable,  # noqa: F401
+    deleteFromTable,
+    createTableFromJSON,
 )
 
 
@@ -522,12 +523,12 @@ def main() -> None:  # noqa: D103
     # REGION: Inputs del proceso
     #----------------------------------------------------------------------
 
-    # Formato a calcular
 
+    # Convertir a objeto datetime
+    fecha_dt = datetime.strptime(execution_date, '%Y-%m-%d')
 
-
-    logging.info(execution_date)
-    logging.info('ACA')
+    # Formatear a 'YYYYMM'
+    monthid = fecha_dt.strftime('%Y%m')
 
     # Parámetros de clasificación
     umbral_tasa = 0.15
@@ -569,7 +570,7 @@ def main() -> None:  # noqa: D103
 
     logging.info(' ')
     logging.info('--------------------')
-    logging.info(f'Se inicia el proceso para {formato_mayusculas}')
+    logging.info(f'Se inicia el proceso para {formato_mayusculas} en monthid {monthid}')
     logging.info('--------------------')
 
 
@@ -580,177 +581,179 @@ def main() -> None:  # noqa: D103
     # REGION: Query de tabla principal
     #----------------------------------------------------------------------
 
-    lista_monthid = ['202401']
+    # Año movil: Primer mes
+    last_month = calcular_mes_anterior(monthid)
+    logging.info(f'El ultimo mes del que se tendran transacciones es {last_month}')
 
 
 
-    for monthid in lista_monthid:
-        logging.info('------------------------------')
-        logging.info(f'El mes a calcular es {monthid}')
-        logging.info('------------------------------')
-        logging.info(' ')
-        # Año movil: Primer mes
-        last_month = calcular_mes_anterior(monthid)
-        logging.info(f'El ultimo mes del que se tendran transacciones es {last_month}')
+    # Se genera query definitiva
+    query_principal = SQL_QUERIES['query_principal'].substitute(formato=formato,
+                                                                last_month = last_month,
+                                                                proyecto = proyecto)
+
+
+    logging.info('Inicia la consulta de principal ...')
+
+    df_datos = readBigQuery(
+        query=query_principal,
+        user=usuario,
+        gbq_client=gbq_client
+    )
+
+    # Nombres columnas a minusculas
+    df_datos.columns = df_datos.columns.str.lower()
+
+    logging.info('Termina la consulta de principal ...')
+
+    #----------------------------------------------------------------------
+    # ENDREGION
+
+
+    # REGION: Procesamiento de data
+    #----------------------------------------------------------------------
+
+    # =========================
+    # 1) Copia y estandarización
+    # =========================
+    df_procesado = df_datos.copy()
+    logging.info('Copia de df_datos -> df_procesado')
+
+    # Asegurar columnas esperadas
+    cols_necesarias = {'yyyymm', 'customer_key', 'gasto_total'}
+    faltantes = cols_necesarias - set(df_procesado.columns.str.lower())
+    if faltantes:
+        msg = f'Faltan columnas requeridas: {faltantes}'
+        raise ValueError(msg)
+
+    # Homogeneizar nombres por si vienen en otra capitalización
+    df_procesado.columns = df_procesado.columns.str.lower()
+
+    # yyyymm -> Period[M]
+    df_procesado['yyyymm'] = df_procesado['yyyymm'].astype(str)
+    df_procesado['periodo'] = pd.to_datetime(
+        df_procesado['yyyymm'], format='%Y%m').dt.to_period('M')
+
+    # tipos numéricos y nulos
+    df_procesado['gasto_total'] = pd.to_numeric(
+        df_procesado['gasto_total'], errors='coerce').fillna(0.0)
+
+    # Se recorta columna
+    df_procesado = df_procesado[df_procesado['yyyymm'] >= mes0]
+
+
+    logging.info('Columnas estandarizadas y periodo creado (Period[M])')
+
+    # =========================
+    # 1.1) Filtro: eliminar meses con gasto < 10.000
+    # =========================
+
+
+    # Aplicar filtro de gasto >= 10.000
+    df_procesado = df_procesado[df_procesado['gasto_total'] >= 10_000].copy()
+
+
+    # =========================
+    # 2) Baseline mensual
+    # =========================
+    # Baseline = promedio de gasto por cliente activo por mes
+    activos = df_procesado[df_procesado['gasto_total'] > 0]
+    baseline_mensual = (
+        activos.groupby('periodo', as_index=False)['gasto_total']
+        .mean()
+        .rename(columns={'gasto_total': 'baseline_mensual'})
+    )
+    logging.info('Baseline mensual calculado (promedio por cliente activo)')
+
+    # Unir baseline y calcular offset log
+    df_procesado = df_procesado.merge(baseline_mensual, on='periodo', how='left')
+    df_procesado['baseline_mensual'] = df_procesado['baseline_mensual'].fillna(0.0)
+
+    df_procesado['z_offset'] = np.log1p(df_procesado['gasto_total']
+                                        ) - np.log1p(df_procesado['baseline_mensual'])
+    logging.info('Offset log aplicado: z_offset = log1p(gasto) - log1p(baseline)')
+
+    #----------------------------------------------------------------------
+    # ENDREGION
 
 
 
-        # Se genera query definitiva
-        query_principal = SQL_QUERIES['query_principal'].substitute(formato=formato,
-                                                                    last_month = last_month,
-                                                                    proyecto = proyecto)
+
+    # REGION: Calculo de los estados
+    #----------------------------------------------------------------------
 
 
-        logging.info('Inicia la consulta de principal ...')
+    # Si el mes anterior es el mes0 entonces no hay mes anterior
+    if last_month == mes0:
+        # PRIMER periodo: todos -> onboard
+        seg_monthid = segmentarVentanaOptimizada(
+            int(monthid), df_procesado,
+            umbral_tasa=umbral_tasa
+        )
 
-        df_datos = readBigQuery(
-            query=query_principal,
+
+        createTableFromJSON(
+        table_ddl_json_path = os.path.join('gbq_objects', 'ingest_lifecycle.json'),
+        project = proyecto,
+        gbq_client = gbq_client,
+        if_exists = 'raise'
+    ) 
+
+
+
+
+
+    # Si el mes anterior no es el mes0, entonces hay que obtener la
+    # segmentación anterior.
+    else:
+        # Se genera query de segmentacion anterior
+        query_anterior = SQL_QUERIES['query_estado_anterior'].substitute(
+                                                                last_month = last_month,
+                                                                formato = formato,
+                                                                path_table_lc = path_table_lc
+                                                                )
+
+        logging.info('Inicia la consulta de de la segmentación anterior ...')
+
+        seg_monthid_anterior = readBigQuery(
+            query=query_anterior,
             user=usuario,
             gbq_client=gbq_client
         )
 
-        # Nombres columnas a minusculas
-        df_datos.columns = df_datos.columns.str.lower()
+        seg_monthid_anterior.columns = seg_monthid_anterior.columns.str.lower()
 
-        logging.info('Termina la consulta de principal ...')
-
-        #----------------------------------------------------------------------
-        # ENDREGION
-
-
-        # REGION: Procesamiento de data
-        #----------------------------------------------------------------------
-
-        # =========================
-        # 1) Copia y estandarización
-        # =========================
-        df_procesado = df_datos.copy()
-        logging.info('Copia de df_datos -> df_procesado')
-
-        # Asegurar columnas esperadas
-        cols_necesarias = {'yyyymm', 'customer_key', 'gasto_total'}
-        faltantes = cols_necesarias - set(df_procesado.columns.str.lower())
-        if faltantes:
-            msg = f'Faltan columnas requeridas: {faltantes}'
-            raise ValueError(msg)
-
-        # Homogeneizar nombres por si vienen en otra capitalización
-        df_procesado.columns = df_procesado.columns.str.lower()
-
-        # yyyymm -> Period[M]
-        df_procesado['yyyymm'] = df_procesado['yyyymm'].astype(str)
-        df_procesado['periodo'] = pd.to_datetime(
-            df_procesado['yyyymm'], format='%Y%m').dt.to_period('M')
-
-        # tipos numéricos y nulos
-        df_procesado['gasto_total'] = pd.to_numeric(
-            df_procesado['gasto_total'], errors='coerce').fillna(0.0)
-
-        # Se recorta columna
-        df_procesado = df_procesado[df_procesado['yyyymm'] >= mes0]
-
-
-        logging.info('Columnas estandarizadas y periodo creado (Period[M])')
-
-        # =========================
-        # 1.1) Filtro: eliminar meses con gasto < 10.000
-        # =========================
-
-
-        # Aplicar filtro de gasto >= 10.000
-        df_procesado = df_procesado[df_procesado['gasto_total'] >= 10_000].copy()
-
-
-        # =========================
-        # 2) Baseline mensual
-        # =========================
-        # Baseline = promedio de gasto por cliente activo por mes
-        activos = df_procesado[df_procesado['gasto_total'] > 0]
-        baseline_mensual = (
-            activos.groupby('periodo', as_index=False)['gasto_total']
-            .mean()
-            .rename(columns={'gasto_total': 'baseline_mensual'})
+        # Se genera segmentacion mes actual
+        seg_monthid = segmentarVentanaOptimizada(
+        int(monthid), df_procesado,
+        umbral_tasa=umbral_tasa,
+        df_segmentacion_anterior=seg_monthid_anterior
         )
-        logging.info('Baseline mensual calculado (promedio por cliente activo)')
-
-        # Unir baseline y calcular offset log
-        df_procesado = df_procesado.merge(baseline_mensual, on='periodo', how='left')
-        df_procesado['baseline_mensual'] = df_procesado['baseline_mensual'].fillna(0.0)
-
-        df_procesado['z_offset'] = np.log1p(df_procesado['gasto_total']
-                                            ) - np.log1p(df_procesado['baseline_mensual'])
-        logging.info('Offset log aplicado: z_offset = log1p(gasto) - log1p(baseline)')
-
-        #----------------------------------------------------------------------
-        # ENDREGION
 
 
+    # Se elimina particion anterior si es que existia
+    deleteFromTable(
+    table_ref=path_table_lc,
+    where_clause=f"monthid = '{monthid}' and store_banner = '{formato}'",
+    gbq_client=gbq_client,
+    )
+    logging.info(f'Se borra la partición actual de {monthid}')
 
 
-        # REGION: Calculo de los estados
-        #----------------------------------------------------------------------
+    # Se agrega el formato y se sube a GCP
+    seg_monthid['store_banner'] = formato
 
-
-        # Si el mes anterior es el mes0 entonces no hay mes anterior
-        if last_month == mes0:
-            # PRIMER periodo: todos -> onboard
-            seg_monthid = segmentarVentanaOptimizada(
-                int(monthid), df_procesado,
-                umbral_tasa=umbral_tasa
-            )
-
-
-        # Si el mes anterior no es el mes0, entonces hay que obtener la
-        # segmentación anterior.
-        else:
-            # Se genera query de segmentacion anterior
-            query_anterior = SQL_QUERIES['query_estado_anterior'].substitute(
-                                                                    last_month = last_month,
-                                                                    formato = formato,
-                                                                    path_table_lc = path_table_lc
-                                                                    )
-
-            logging.info('Inicia la consulta de de la segmentación anterior ...')
-
-            seg_monthid_anterior = readBigQuery(
-                query=query_anterior,
-                user=usuario,
-                gbq_client=gbq_client
-            )
-
-            seg_monthid_anterior.columns = seg_monthid_anterior.columns.str.lower()
-
-            # Se genera segmentacion mes actual
-            seg_monthid = segmentarVentanaOptimizada(
-            int(monthid), df_procesado,
-            umbral_tasa=umbral_tasa,
-            df_segmentacion_anterior=seg_monthid_anterior
-            )
-
-
-        # Se elimina particion anterior si es que existia
-        deleteFromTable(
-        table_ref=path_table_lc,
-        where_clause=f"monthid = '{monthid}' and store_banner = '{formato}'",
+    uploadFrame(
+        seg_monthid[['customer_key','monthid','status','store_banner']],
+        table_ddl_json_path=os.path.join('gbq_objects', 'ingest_lifecycle.json'),
+        project=proyecto,
         gbq_client=gbq_client,
-        )
-        logging.info(f'Se borra la partición actual de {monthid}')
+        if_exists='append')
 
+    logging.info(f'Se escribe la nueva particion de {monthid}')
 
-        # Se agrega el formato y se sube a GCP
-        seg_monthid['store_banner'] = formato
-
-        uploadFrame(
-            seg_monthid[['customer_key','monthid','status','store_banner']],
-            table_ddl_json_path=os.path.join('gbq_objects', 'ingest_lifecycle.json'),
-            project=proyecto,
-            gbq_client=gbq_client,
-            if_exists='append')
-
-        logging.info(f'Se escribe la nueva particion de {monthid}')
-
-        #plotDistribucionClientes(seg_monthid)  # noqa: ERA001
-        logging.info('\n\n')
+    #plotDistribucionClientes(seg_monthid)  # noqa: ERA001
+    logging.info('\n\n')
 
 
 
