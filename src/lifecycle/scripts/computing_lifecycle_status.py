@@ -43,7 +43,7 @@ parser.add_argument(
     help='DAG execution date'
 )
 parser.add_argument(
-    '--formato', type=str,
+    '--store_banner', type=str,
     help='Store banner'
 )
 
@@ -513,7 +513,7 @@ def main() -> None:  # noqa: D103
     args = vars(parser.parse_args())
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']  # noqa: F841
-    formato:str = args['formato']
+    formato:str = args['store_banner']
     logging.info(f'execution_date: {execution_date}')
 
 
@@ -697,7 +697,7 @@ def main() -> None:  # noqa: D103
         table_ddl_json_path = os.path.join('gbq_objects', 'ingest_lifecycle.json'),
         project = proyecto,
         gbq_client = gbq_client,
-        if_exists = 'raise'
+        if_exists = 'ignore'
     )
 
 
