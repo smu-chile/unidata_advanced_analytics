@@ -523,7 +523,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     # Formato a calcular
-    #formato = 'Unimarc'
+
 
 
     logging.info(execution_date)
