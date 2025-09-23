@@ -61,7 +61,7 @@ SQL_QUERIES = QueryDict({
     # ------------------------------------------------------------------
     'query_principal':
 """
-    DECLARE meses INT64 DEFAULT 12;
+    DECLARE meses INT64 DEFAULT 6;
     DECLARE periodo STRING DEFAULT '${last_month}';  -- formato YYYYMM
 
     DECLARE fecha_final DATE DEFAULT LAST_DAY(PARSE_DATE('%Y%m', periodo), MONTH);
@@ -80,7 +80,7 @@ SQL_QUERIES = QueryDict({
     AND ITM_TXN_FCN_TP_DSC = 'V'
     AND MARKET_BASKET_KEY NOT IN (
         SELECT MARKET_BASKET_KEY
-        FROM `cl-cda-qa.DS_CDA_VW_SMU.DW_VW_FACT_MARKET_BASKET_E_COMMERCE`
+        FROM `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_MARKET_BASKET_E_COMMERCE`
         WHERE CANAL_VENTA IN ('PEDIDOS YA','CORNER SHOP','RAPPI','RAPPI TURBO')
     )
     AND D.STORE_BANNER = '${formato}'
@@ -728,7 +728,6 @@ def main() -> None:  # noqa: D103
 
 
         # Se agrega el formato y se sube a GCP
-
         seg_monthid['store_banner'] = formato
 
         uploadFrame(
