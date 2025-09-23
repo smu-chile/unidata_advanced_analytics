@@ -25,7 +25,7 @@ dag_args = {
     'dag_id': 'lifecycle_status',
     'schedule_interval': '0 0 2 * *',
     'dagrun_timeout': None,
-    'catchup': False,
+    'catchup': True,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': [PROJECT_NAME, 'bmolinab'],
@@ -35,7 +35,7 @@ dag_args = {
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['bmolinab@unidata.cl'],
         'start_date': pendulum.datetime(
-            2023, 12, 20,
+            2023, 6 , 20,
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,

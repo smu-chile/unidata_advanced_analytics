@@ -7,19 +7,19 @@
             "name": "CUSTOMER_KEY",
             "field_type": "BYTES",
             "mode": "REQUIRED",
-            "description": "Cliente"
+            "description": "Identificador único del cliente en formato encriptado o codificado"
         },
         {
             "name": "MONTHID",
             "field_type": "STRING",
             "mode": "REQUIRED",
-            "description": "Mes asociado"
+            "description": "Periodo de referencia en formato YYYYMM (año y mes)."
         },
         {
             "name": "STATUS",
             "field_type": "STRING",
             "mode": "REQUIRED",
-            "description": "Marca de ciclo de vida"
+            "description": "Estado de ciclo de vida del cliente"
         },
         {
             "name": "STORE_BANNER",
