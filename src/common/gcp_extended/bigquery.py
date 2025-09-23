@@ -340,6 +340,18 @@ def uploadFrame(
     # Build table reference
     table_ref = f"{project}.{table_ddl['schema']}.{table_ddl['table']}"
 
+    # If table does not exists then create it first
+    if not verifyTableExistence(
+        table_ref=table_ref, gbq_client=gbq_client, if_not_exists='ignore',
+    ):
+        createTableFromJSON(
+            table_ddl_json_path=table_ddl_json_path,
+            project=project,
+            gbq_client=gbq_client,
+            if_exists='rebuild',
+            json_encoding=json_encoding,
+        )
+
     # Handle replace automatically
     if if_exists == 'replace':
         # Delete the object with all its data and create it again
@@ -348,6 +360,7 @@ def uploadFrame(
             project=project,
             gbq_client=gbq_client,
             if_exists='rebuild',
+            json_encoding=json_encoding,
         )
 
         # Change if_exists
