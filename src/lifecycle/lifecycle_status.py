@@ -27,7 +27,7 @@ dag_args = {
     'dagrun_timeout': None,
     'catchup': True,
     'max_active_runs': 1,
-    'concurrency': 4,
+    'concurrency': 1,
     'tags': [PROJECT_NAME, 'bmolinab'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
