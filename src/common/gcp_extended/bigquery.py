@@ -255,6 +255,44 @@ def createTableAsSelect(
     return ctas_response.to_dataframe()
 
 
+def verifyTableExistence(
+        table_ref: str,
+        gbq_client: bigquery.Client,
+        if_not_exists: Literal['raise', 'ignore'] = 'raise',
+    ) -> bool:
+    """Verifies table existence.
+
+    Returns True if the table exists. If it doesn't the behavior depends on
+    the value of `if_not_exists`.
+
+    Parameters
+    ----------
+    table_ref : str
+        Table from which the data will be deleted. The value must included
+        a project ID, dataset ID, and table ID, each separated by ``.``.
+        For example: `your-project.your_dataset.your_table`
+    gbq_client : bigquery.Client
+        Client used for making the queries
+    if_not_exists : ['raise', 'ignore'], default='raise'
+        Behavior if table does not exist:
+        - `ignore`: Return False if the table does not exist
+        - `raise`: Raises NotFound exception
+
+    Returns
+    -------
+    table_exists : bool
+        True when table exists and False when it doesn't and the behavior
+        is ignore
+    """
+    # Search the table
+    try:
+        gbq_client.get_table(table_ref)  # Make an API request.
+        return True
+    except NotFound:
+        if if_not_exists == 'ignore': return False
+        raise
+
+
 def uploadFrame(
         df: pd.DataFrame,
         table_ddl_json_path: str,
@@ -302,6 +340,18 @@ def uploadFrame(
     # Build table reference
     table_ref = f"{project}.{table_ddl['schema']}.{table_ddl['table']}"
 
+    # If table does not exists then create it first
+    if not verifyTableExistence(
+        table_ref=table_ref, gbq_client=gbq_client, if_not_exists='ignore',
+    ):
+        createTableFromJSON(
+            table_ddl_json_path=table_ddl_json_path,
+            project=project,
+            gbq_client=gbq_client,
+            if_exists='rebuild',
+            json_encoding=json_encoding,
+        )
+
     # Handle replace automatically
     if if_exists == 'replace':
         # Delete the object with all its data and create it again
@@ -310,6 +360,7 @@ def uploadFrame(
             project=project,
             gbq_client=gbq_client,
             if_exists='rebuild',
+            json_encoding=json_encoding,
         )
 
         # Change if_exists
@@ -331,7 +382,8 @@ def uploadFrame(
 
 
 def deleteFromTable(
-        table_ref: str, where_clause: str, gbq_client: bigquery.Client
+        table_ref: str, where_clause: str, gbq_client: bigquery.Client,
+        if_not_exists: Literal['raise', 'ignore'] = 'ignore',
     ) -> None:
     """Delete data from a table filtering by a specific column value.
 
@@ -346,6 +398,12 @@ def deleteFromTable(
         For example: `column_a = date('1998-08-30')`
     gbq_client : bigquery.Client
         Client used for making the queries
+    if_not_exists: ['raise', 'ignore'], default='raise'
+        Behavior to take if the table does not exist.
+
+    See Also
+    --------
+    :func:`~verifyTableExistence`
     """
     sql_query = QueryDict({
         'delete_query':
@@ -354,18 +412,17 @@ def deleteFromTable(
         WHERE ${where_clause}
         """
     })
-    try:
-        gbq_client.get_table(table_ref)  # Make an API request.
-    except NotFound:
-        print(f'Table {table_ref} not found.')
-        return
-
-    gbq_client.query_and_wait(
-        query=sql_query['delete_query'].substitute(
-            table_ref=table_ref,
-            where_clause=where_clause,
-        ),
-    )
+    if verifyTableExistence(
+        table_ref=table_ref,
+        gbq_client=gbq_client,
+        if_not_exists=if_not_exists,
+    ):
+        gbq_client.query_and_wait(
+            query=sql_query['delete_query'].substitute(
+                table_ref=table_ref,
+                where_clause=where_clause,
+            ),
+        )
 
 
 def setTableExpiration(
