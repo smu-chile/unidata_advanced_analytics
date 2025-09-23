@@ -132,17 +132,17 @@ def segmentarVentanaOptimizada(
 
     Reglas base (siempre respecto al ciclo anterior):
       - Primer mes (sin segmentación previa):
-          * Compran en p-1 => 'nuevos1'
+          * Compran en p-1 => 'nuevo1'
           * Resto visto en ventana => 'sin estado'
       - Con segmentación previa:
-          * 'sin estado' o nuevos que compran en p-1 => 'nuevos1'
-          * 'nuevos1' previo => 'nuevos2'
-          * 'nuevos2' previo:
+          * 'sin estado' o nuevos que compran en p-1 => 'nuevo1'
+          * 'nuevo1' previo => 'nuevo2'
+          * 'nuevo2' previo:
               - actividad últimos 3 meses (p-3..p-1):
                   1 => 'sin estado'
                   2 => 'esporadico'
                   3 => candidato G/R/R (vía OLS)
-          * 'crecimiento'-'estables'-'decrecimiento'-'esporadico' previos:
+          * 'crecimiento'-'estable'-'decrecimiento'-'esporadico' previos:
               - en p-4..p-1:
                   >=3 meses => candidato G/R/R (vía OLS)
                   1-2 meses => 'fugado'
@@ -158,7 +158,7 @@ def segmentarVentanaOptimizada(
       - z_offset ~ a + beta1 * t, con t=0..3 en p-4..p-1
       - tasa_mensual = expm1(beta1)
       - crecimiento si tasa >=  umbral_tasa
-        estables si |tasa| < umbral_tasa
+        estable si |tasa| < umbral_tasa
         decrecimiento si tasa <= -umbral_tasa
       - Si no hay datos suficientes => 'esporadico'
 
@@ -317,18 +317,18 @@ def segmentarVentanaOptimizada(
 
         # Primer mes: sin previa
         if not prev_map:
-            return 'nuevos1' if act_m1_ == 1 else 'sin estado'
+            return 'nuevo1' if act_m1_ == 1 else 'sin estado'
 
         # Nuevos o 'sin estado' que compran en p-1
         if prev_c in ('sin estado', 'no_existia') and act_m1_ == 1:
-            return 'nuevos1'
+            return 'nuevo1'
 
-        # nuevos1 -> nuevos2
-        if prev_c == 'nuevos1':
-            return 'nuevos2'
+        # nuevo1 -> nuevo2
+        if prev_c == 'nuevo1':
+            return 'nuevo2'
 
-        # nuevos2: últimos 3 meses
-        if prev_c == 'nuevos2':
+        # nuevo2: últimos 3 meses
+        if prev_c == 'nuevo2':
             if act_3m_ <= 1:
                 return 'sin estado'
             if act_3m_ == 2:
@@ -336,7 +336,7 @@ def segmentarVentanaOptimizada(
             return 'GRR_CANDIDATO'  # 3/3
 
         # G/R/R o esporádico previos
-        if prev_c in ('crecimiento', 'estables', 'decrecimiento', 'esporadico'):
+        if prev_c in ('crecimiento', 'estable', 'decrecimiento', 'esporadico'):
             if act_4m_ >= 3:
                 return 'GRR_CANDIDATO'
             if (pm2 == 0) and (pm1 == 0):
@@ -418,7 +418,7 @@ def segmentarVentanaOptimizada(
                 return 'crecimiento'
             if r['tasa_mensual'] <= -umbral_tasa:
                 return 'decrecimiento'
-            return 'estables'
+            return 'estable'
 
         stats['cls_grr'] = stats.apply(_cls_row, axis=1)
         grr = stats[['customer_key', 'beta1', 'tasa_mensual', 'cls_grr']].copy()
@@ -448,7 +448,7 @@ def segmentarVentanaOptimizada(
     base['meses_activos'] = base['act_4m'].astype(int)
 
     # beta1/tasa solo para G/R/R; resto NaN
-    is_grr = base['status'].isin(['crecimiento', 'estables', 'decrecimiento'])
+    is_grr = base['status'].isin(['crecimiento', 'estable', 'decrecimiento'])
     base.loc[~is_grr, ['beta1', 'tasa_mensual']] = np.nan
 
     # Salida
@@ -463,10 +463,10 @@ def segmentarVentanaOptimizada(
         return int(d.get(k, 0))
 
     _p(f'Seg {p_final} listo. Dist:')
-    _p(f"  nuevos1: {_get(vc,'nuevos1'):,} "
-       f"| nuevos2: {_get(vc,'nuevos2'):,}")
+    _p(f"  nuevo1: {_get(vc,'nuevo1'):,} "
+       f"| nuevo2: {_get(vc,'nuevo2'):,}")
     _p(f"  crecimiento: {_get(vc,'crecimiento'):,} "
-       f"| estables: {_get(vc,'estables'):,} "
+       f"| estable: {_get(vc,'estable'):,} "
        f"| decrecimiento: {_get(vc,'decrecimiento'):,}")
     _p(f"  esporadico: {_get(vc,'esporadico'):,} "
        f"| fugado: {_get(vc,'fugado'):,} "
