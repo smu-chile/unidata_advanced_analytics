@@ -6,6 +6,7 @@ from datetime import timedelta
 import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
+from airflow.models.baseoperator import chain
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
 )
@@ -118,3 +119,4 @@ with DAG(**dag_args) as dag:
         ]
 
     ]
+chain(computing_lifecycle_status)
