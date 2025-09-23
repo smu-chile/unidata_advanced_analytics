@@ -79,6 +79,7 @@ with DAG(**dag_args) as dag:
                 'args': [
                     '--project_id', dag_env_config['project_id'],
                     '--execution_date', EXECUTION_DATE,
+                    '--formato','Unimarc'
                 ],
             },
 

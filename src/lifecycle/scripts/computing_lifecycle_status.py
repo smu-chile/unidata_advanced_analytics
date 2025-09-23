@@ -40,6 +40,10 @@ parser.add_argument(
     '--execution_date', type=str,
     help='DAG execution date'
 )
+parser.add_argument(
+    '--formato', type=str,
+    help='Store banner'
+)
 
 
 # -------------------------------------------------------------------------
@@ -71,8 +75,8 @@ SQL_QUERIES = QueryDict({
     customer_key,
     COUNT(DISTINCT MARKET_BASKET_KEY) AS canastas_compradas,
     SUM(BASKET_VALUE) AS gasto_total
-    FROM `cl-bigdata-analytics-preprod.ML_LAB.VW_SALES_BASKET` A
-    INNER JOIN `cl-bigdata-analytics-preprod.ML_LAB.VW_DIM_STORE` D
+    FROM `${proyecto}.ML_LAB.VW_SALES_BASKET` A
+    INNER JOIN `${proyecto}.ML_LAB.VW_DIM_STORE` D
     ON A.STORE_ID = D.STORE_ID
     WHERE TRANSACTION_DATE BETWEEN DATE_TRUNC(DATE_SUB(fecha_final, INTERVAL meses-1 MONTH), MONTH)
                             AND fecha_final
@@ -507,6 +511,7 @@ def main() -> None:  # noqa: D103
     args = vars(parser.parse_args())
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']  # noqa: F841
+    formato:str = args['formato']
     logging.info(f'execution_date: {execution_date}')
 
 
@@ -518,7 +523,11 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     # Formato a calcular
-    formato = 'Unimarc'
+    #formato = 'Unimarc'
+
+
+    logging.info(execution_date)
+    logging.info('ACA')
 
     # Parámetros de clasificación
     umbral_tasa = 0.15
@@ -588,7 +597,8 @@ def main() -> None:  # noqa: D103
 
         # Se genera query definitiva
         query_principal = SQL_QUERIES['query_principal'].substitute(formato=formato,
-                                                                    last_month = last_month)
+                                                                    last_month = last_month,
+                                                                    proyecto = proyecto)
 
 
         logging.info('Inicia la consulta de principal ...')
