@@ -6,6 +6,7 @@ from datetime import timedelta
 import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
+from airflow.providers.google.cloud.sensors.dataproc import DataprocBatchSensor
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
 )
@@ -56,7 +57,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y%m%d')) }}"  # noqa: E501
-
+    BATCH_ID = 'batch-{{ macros.uuid.uuid4() }}'
     salesforce_sms = DataprocCreateBatchOperator(
         task_id = 'salesforce_sms',
 
@@ -115,5 +116,13 @@ with DAG(**dag_args) as dag:
 
         # Batch ID
         batch_id = 'batch-{{ macros.uuid.uuid4() }}',
-        project_id = GCP_PROJECT_ID,
+        project_id = BATCH_ID,
     )
+
+    salesforce_sms_sensor = DataprocBatchSensor(
+        batch_id =BATCH_ID ,
+        region = REGION,
+        project_id = GCP_PROJECT_ID
+    )
+
+salesforce_sms >> salesforce_sms_sensor
