@@ -35,7 +35,7 @@ dag_args = {
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
-    'concurrency': 1,
+    'concurrency': 2,
     'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'salesforce', 'csotob'],
     'default_args': {
         'project_id': GCP_PROJECT_ID,
@@ -57,7 +57,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y%m%d')) }}"  # noqa: E501
-    BATCH_ID = 'batch-{{ macros.uuid.uuid4() }}'
+
     salesforce_sms = DataprocCreateBatchOperator(
         task_id = 'salesforce_sms',
 
@@ -116,12 +116,13 @@ with DAG(**dag_args) as dag:
 
         # Batch ID
         batch_id = 'batch-{{ macros.uuid.uuid4() }}',
-        project_id = BATCH_ID,
+        project_id = GCP_PROJECT_ID,
+        do_xcom_push=True
     )
 
     salesforce_sms_sensor = DataprocBatchSensor(
         task_id = 'salesforce_sms_sensor',
-        batch_id =BATCH_ID ,
+        batch_id ="{{ ti.xcom_pull(task_ids='salesforce_sms', key='batch_id') }}" ,
         region = REGION,
         project_id = GCP_PROJECT_ID,
         trigger_rule = 'always'
