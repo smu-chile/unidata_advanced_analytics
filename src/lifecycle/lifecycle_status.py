@@ -6,6 +6,7 @@ from datetime import timedelta
 import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
+from airflow.models.baseoperator import chain
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
 )
@@ -19,7 +20,7 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'lifecycle'
+PROJECT_NAME = 'lifecycle'#
 dag_args = {
     'dag_id': 'lifecycle_status',
     'schedule_interval': '0 0 2 * *',
@@ -34,7 +35,7 @@ dag_args = {
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['bmolinab@unidata.cl'],
         'start_date': pendulum.datetime(
-            2024, 1, 20,
+            2023, 6 , 20,
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
@@ -49,8 +50,8 @@ dag_args = {
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
-    computing_lifecycle_status = DataprocCreateBatchOperator(
-        task_id = 'computing_lifecycle_status',
+    computing_lifecycle_status = [DataprocCreateBatchOperator(
+        task_id = f"computing_lifecycle_status_{store_banner.replace(' ', '_').lower()}",
 
         batch = {
             'pyspark_batch': {
@@ -79,7 +80,7 @@ with DAG(**dag_args) as dag:
                 'args': [
                     '--project_id', dag_env_config['project_id'],
                     '--execution_date', EXECUTION_DATE,
-                    '--formato','Unimarc'
+                    '--store_banner', store_banner
                 ],
             },
 
@@ -109,3 +110,13 @@ with DAG(**dag_args) as dag:
         batch_id='batch-{{ macros.uuid.uuid4() }}',
         project_id=dag_env_config['project_id'],
     )
+
+        for store_banner in [
+            'Unimarc',
+            'Mayorista',
+            'Alvi',
+            'Super 10'
+        ]
+
+    ]
+chain(computing_lifecycle_status)
