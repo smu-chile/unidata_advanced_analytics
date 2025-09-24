@@ -117,6 +117,7 @@ with DAG(**dag_args) as dag:
         # Batch ID
         batch_id = BATCH_ID,
         project_id = GCP_PROJECT_ID,
+        asynchronous = True,
         deferrable = True,
         do_xcom_push=True
     )
