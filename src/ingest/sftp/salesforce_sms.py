@@ -6,6 +6,7 @@ from datetime import timedelta
 import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
+from airflow.operators.python import PythonOperator
 from airflow.providers.google.cloud.sensors.dataproc import DataprocBatchSensor
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
@@ -122,12 +123,23 @@ with DAG(**dag_args) as dag:
         do_xcom_push=True
     )
 
+    def _extract_batch_id(**context):
+        ti = context['ti']
+        dataproc_batch_info = ti.xcom_pull(task_ids='salesforce_sms', key='return_value')
+        batch_id = dataproc_batch_info['reference']['name'].split('/')[-1]
+        ti.xcom_push(key='dataproc_batch_id', value=batch_id)
+
+    extract_batch_id_task = PythonOperator(
+        task_id='extract_batch_id_task',
+        python_callable=_extract_batch_id,
+        provide_context=True,
+    )
     salesforce_sms_sensor = DataprocBatchSensor(
         task_id = 'salesforce_sms_sensor',
-        batch_id =BATCH_ID ,
+        batch_id ="{{ ti.xcom_pull(task_ids='extract_batch_id_task', key='dataproc_batch_id') }}" ,
         region = REGION,
         project_id = GCP_PROJECT_ID,
         poke_interval=10,
     )
 
-salesforce_sms >> salesforce_sms_sensor
+salesforce_sms >> extract_batch_id_task >> salesforce_sms_sensor
