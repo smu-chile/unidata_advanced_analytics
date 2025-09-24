@@ -125,7 +125,7 @@ with DAG(**dag_args) as dag:
     def _extract_batch_id(**context):
         ti = context['ti']
         dataproc_batch_info = ti.xcom_pull(task_ids='salesforce_sms', key='return_value')
-        batch_id = dataproc_batch_info['reference']['name'].split('/')[-1]
+        batch_id = dataproc_batch_info['name'].split('/')[-1]
         ti.xcom_push(key='dataproc_batch_id', value=batch_id)
 
     extract_batch_id_task = PythonOperator(
