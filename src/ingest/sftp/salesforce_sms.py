@@ -120,6 +120,7 @@ with DAG(**dag_args) as dag:
     )
 
     salesforce_sms_sensor = DataprocBatchSensor(
+        task_id = 'salesforce_sms_sensor',
         batch_id =BATCH_ID ,
         region = REGION,
         project_id = GCP_PROJECT_ID
