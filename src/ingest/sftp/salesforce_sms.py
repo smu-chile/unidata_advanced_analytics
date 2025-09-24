@@ -122,7 +122,7 @@ with DAG(**dag_args) as dag:
 
     salesforce_sms_sensor = DataprocBatchSensor(
         task_id = 'salesforce_sms_sensor',
-        batch_id ="{{ ti.xcom_pull(task_ids='salesforce_sms', key='batch_id') }}" ,
+        batch_id ="{{ ti.xcom_pull(task_ids='salesforce_sms', key='dataproc_batch'[1]) }}" ,
         region = REGION,
         project_id = GCP_PROJECT_ID
     )
