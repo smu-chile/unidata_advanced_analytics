@@ -57,7 +57,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y%m%d')) }}"  # noqa: E501
-
+    BATCH_ID = 'batch-{{ macros.uuid.uuid4() }}'
     salesforce_sms = DataprocCreateBatchOperator(
         task_id = 'salesforce_sms',
 
@@ -115,16 +115,18 @@ with DAG(**dag_args) as dag:
         },
 
         # Batch ID
-        batch_id = 'batch-{{ macros.uuid.uuid4() }}',
+        batch_id = BATCH_ID,
         project_id = GCP_PROJECT_ID,
+        deferrable = True,
         do_xcom_push=True
     )
 
     salesforce_sms_sensor = DataprocBatchSensor(
         task_id = 'salesforce_sms_sensor',
-        batch_id ="{{ ti.xcom_pull(task_ids='salesforce_sms', key='dataproc_batch'[1]) }}" ,
+        batch_id =BATCH_ID ,
         region = REGION,
-        project_id = GCP_PROJECT_ID
+        project_id = GCP_PROJECT_ID,
+        poke_interval=10,
     )
 
 salesforce_sms >> salesforce_sms_sensor
