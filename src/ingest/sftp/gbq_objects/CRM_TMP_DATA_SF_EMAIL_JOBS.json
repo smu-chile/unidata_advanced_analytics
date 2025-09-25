@@ -1,5 +1,5 @@
 {
-    "schema": "TMP_CRM",
+    "schema": "TMP",
     "table": "TMP_DATA_SF_EMAIL_JOBS",
 
     "columns": [
@@ -25,12 +25,12 @@
         },
          {
             "name": "SCHEDTIME",
-            "field_type": "TIMESTAMP",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {
             "name": "SENTTIME",
-            "field_type": "TIMESTAMP",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {

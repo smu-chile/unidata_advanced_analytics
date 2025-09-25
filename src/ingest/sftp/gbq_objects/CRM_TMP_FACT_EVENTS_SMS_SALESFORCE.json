@@ -1,5 +1,5 @@
 {
-    "schema": "TMP_CRM",
+    "schema": "TMP",
     "table": "TMP_FACT_EVENTS_SMS_SALESFORCE",
 
     "columns": [

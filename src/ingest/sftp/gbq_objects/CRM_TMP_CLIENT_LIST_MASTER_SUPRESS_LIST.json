@@ -1,5 +1,5 @@
 {
-    "schema": "TMP_CRM",
+    "schema": "TMP",
     "table": "TMP_CLIENT_LIST_MASTER_SUPRESS_LIST",
 
     "columns": [
@@ -10,17 +10,17 @@
         },
         {
             "name": "DATE_UNDELIVERABLE",
-            "field_type": "TIMESTAMP",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {
             "name": "DATE_JOINED",
-            "field_type": "TIMESTAMP",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {
             "name": "DATE_UNSUBSCRIBED",
-            "field_type": "TIMESTAMP",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {
@@ -45,12 +45,12 @@
         },
         {
             "name": "CREATED_DATE",
-            "field_type": "TIMESTAMP",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {
             "name": "LIST_DATE_UNSUBSCRIBED",
-            "field_type": "TIMESTAMP",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {

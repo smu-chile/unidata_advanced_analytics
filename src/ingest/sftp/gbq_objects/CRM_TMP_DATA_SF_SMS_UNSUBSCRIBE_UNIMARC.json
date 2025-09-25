@@ -1,5 +1,5 @@
 {
-    "schema": "TMP_CRM",
+    "schema": "TMP",
     "table": "TMP_DATA_SF_SMS_UNSUBSCRIBE_UNIMARC",
 
     "columns": [
@@ -10,7 +10,7 @@
         },
         {
             "name": "FECHA",
-            "field_type": "TIMESTAMP",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {

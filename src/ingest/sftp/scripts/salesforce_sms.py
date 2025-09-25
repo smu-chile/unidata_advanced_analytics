@@ -129,7 +129,7 @@ def main() -> None:  # noqa: D103
                 )
 
         logging.info('Delete from table so that data is not duplicated')
-        schema = 'TMP_CRM'
+        schema = 'TMP'
         table = json.removeprefix('CRM_').split('.')[0]
         table_ref = f'{gcp_project_id}.{schema}.{table}'
         gbq_extended.deleteFromTable(table_ref= table_ref,
