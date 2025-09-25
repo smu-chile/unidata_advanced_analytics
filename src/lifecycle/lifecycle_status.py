@@ -106,6 +106,9 @@ with DAG(**dag_args) as dag:
             },
         },
 
+        # Leaves Airflow Trigger to track the status of the Dataproc batch
+        deferrable=True,
+
         # Batch ID
         batch_id='batch-{{ macros.uuid.uuid4() }}',
         project_id=dag_env_config['project_id'],
@@ -119,4 +122,5 @@ with DAG(**dag_args) as dag:
         ]
 
     ]
+
 chain(computing_lifecycle_status)
