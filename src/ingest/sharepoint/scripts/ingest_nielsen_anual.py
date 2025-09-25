@@ -111,7 +111,7 @@ def main() -> None:  # noqa: D103
         'jerarquia_upc' : 'nielsen_anual_venta_mercado_jerarquia_upc.json'
 
     }
-    schema = 'ML_LAB'
+    schema = 'MARKET_SHARE'
     table_ref = {
         'jerarquia_ytd' : f'{gcp_project_id}.{schema}.NIELSEN_ANUAL_VENTA_MERCADO_JERARQUIA_YTD',
         'jerarquia_upc' : f'{gcp_project_id}.{schema}.NIELSEN_ANUAL_VENTA_MERCADO_JERARQUIA_UPC'

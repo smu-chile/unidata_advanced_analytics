@@ -1,5 +1,5 @@
 {
-    "schema": "ML_LAB",
+    "schema": "MARKET_SHARE",
     "table": "NIELSEN_ANUAL_VENTA_MERCADO_JERARQUIA_YTD",
 
     "columns": [
