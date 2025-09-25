@@ -59,21 +59,23 @@ with DAG(**dag_args) as dag:
 
     margins_create_compilation_result = DataformCreateCompilationResultOperator(
         task_id = 'margins_create_compilation_result',
-        project_id = 'cl-cda-unidata-dev',
+        project_id = 'cl-cda-qa',
         region = REGION,
-        repository_id = 'bi-dataform-uni-reporte-margen',
+        repository_id = 'bi-dataform-cda-unidata',
         compilation_result={
-            'git_commitish': 'uni-dev',
+            'git_commitish': 'herquinigo-unidatacdaqa',
         },
     )
 
     margins_workflow_invocation =  DataformCreateWorkflowInvocationOperator(
          task_id='margins_workflow_invocation',
-        project_id = 'cl-cda-unidata-dev',
+        project_id = 'cl-cda-qa',
         region = REGION,
-        repository_id = 'bi-dataform-uni-reporte-margen',
+        repository_id = 'bi-dataform-cda-unidata',
           workflow_invocation={
-             'compilation_result': "{{ task_instance.xcom_pull('margins_create_compilation_result')['name'] }}"  # noqa: E501
+             'compilation_result': "{{ task_instance.xcom_pull('margins_create_compilation_result')['name'] }}",  # noqa: E501
+             'invocation_config': { 'included_tags': ['SP_LOAD_EVENTS_EMAIL_CAMPAIGN'], 'serviceAccount': 'service-441940803283@gcp-sa-dataform.iam.gserviceaccount.com' }  # noqa: E501
+
          },
 )
 
