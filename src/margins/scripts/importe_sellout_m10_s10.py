@@ -101,7 +101,7 @@ def main() -> None:  # noqa: D103
         's10' : 'sellout_id0_s10.json',
         'm10' : 'sellout_id0_m10.json'
     }
-    schema = 'ML_LAB'
+    schema = 'REPORTE_MARGEN'
     table_ref = {
         's10' : f'{gcp_project_id}.{schema}.REPORTE_MARGEN_SELLOUT_ID0_S10',
         'm10' : f'{gcp_project_id}.{schema}.REPORTE_MARGEN_SELLOUT_ID0_M10'

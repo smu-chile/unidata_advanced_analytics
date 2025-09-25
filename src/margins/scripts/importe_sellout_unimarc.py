@@ -95,7 +95,7 @@ def main() -> None:  # noqa: D103
     input_file =  f'{file_site}/SellOut ID_0 Unimarc/PROCESADO-Sellout_{execution_month}.xlsx'
     #table definitions jsons
     json = 'sellout_unimarc.json'
-    schema = 'ML_LAB'
+    schema = 'REPORTE_MARGEN'
     table_ref =  f'{gcp_project_id}.{schema}.REPORTE_MARGEN_SELLOUT_UNIMARC'
 
     logging.info(f'Starting extraction of -- sellout unimarc {input_file} -- from Sharepoint')
