@@ -1,5 +1,5 @@
 {
-    "schema": "ML_LAB",
+    "schema": "REPORTE_MARGEN",
     "table": "REPORTE_MARGEN_ESTRUCTURA_COMERCIAL",
 
     "columns": [

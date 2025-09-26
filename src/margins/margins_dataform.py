@@ -64,6 +64,7 @@ with DAG(**dag_args) as dag:
         repository_id = 'bi-dataform-cda-unidata',
         compilation_result={
             'git_commitish': 'herquinigo-unidatacdaqa',
+            'workspace' : 'herquinigo-unidatacdaqa'
         },
     )
 
