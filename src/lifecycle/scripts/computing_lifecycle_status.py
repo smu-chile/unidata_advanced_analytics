@@ -89,7 +89,7 @@ SQL_QUERIES = QueryDict({
         FROM `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_MARKET_BASKET_E_COMMERCE`
         WHERE CANAL_VENTA IN ('PEDIDOS YA','CORNER SHOP','RAPPI','RAPPI TURBO')
     )
-    AND D.STORE_BANNER = '${formato}'
+    AND D.STORE_BANNER in (${formato_query})
     GROUP BY yyyymm, customer_key
     ORDER BY yyyymm, customer_key;
 """,
@@ -113,7 +113,7 @@ SQL_QUERIES = QueryDict({
     SELECT *
     FROM `${path_table_lc}`
     WHERE monthid = '${last_month}'
-      AND store_banner = '${formato}'
+      AND store_banner in (${formato_query})
 
 """
 })
@@ -582,14 +582,29 @@ def main() -> None:  # noqa: D103
     # REGION: Query de tabla principal
     #----------------------------------------------------------------------
 
-    # Año movil: Primer mes
+    # Formato querys
+    if formato == 'Unimarc':
+        formato_list = ['Unimarc']
+    elif formato == 'Alvi':
+        formato_list = ['Alvi']
+    elif formato == 'Mayorista':
+        formato_list = ['Mayorista']
+    elif formato == 'Super 10':
+        formato_list = ['Super 10', 'Mayorista']
+
+
+    formato_query = ','.join([f"'{f}'" for f in formato_list])
+    logging.info(f'Se consideran las compras de {formato_query}')
+
+
+    # Año movil: Ultimo mes del que se tienen datos
     last_month = calcular_mes_anterior(monthid)
     logging.info(f'El ultimo mes del que se tendran transacciones es {last_month}')
 
 
 
     # Se genera query definitiva
-    query_principal = SQL_QUERIES['query_principal'].substitute(formato=formato,
+    query_principal = SQL_QUERIES['query_principal'].substitute(formato_query=formato_query,
                                                                 last_month = last_month,
                                                                 proyecto = proyecto)
 
@@ -710,7 +725,7 @@ def main() -> None:  # noqa: D103
         # Se genera query de segmentacion anterior
         query_anterior = SQL_QUERIES['query_estado_anterior'].substitute(
                                                                 last_month = last_month,
-                                                                formato = formato,
+                                                                formato_query = formato_query,
                                                                 path_table_lc = path_table_lc
                                                                 )
 
