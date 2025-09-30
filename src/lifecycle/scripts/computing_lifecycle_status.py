@@ -113,7 +113,7 @@ SQL_QUERIES = QueryDict({
     SELECT *
     FROM `${path_table_lc}`
     WHERE monthid = '${last_month}'
-      AND store_banner in (${formato_query})
+      AND store_banner in (${formato})
 
 """
 })
@@ -725,7 +725,7 @@ def main() -> None:  # noqa: D103
         # Se genera query de segmentacion anterior
         query_anterior = SQL_QUERIES['query_estado_anterior'].substitute(
                                                                 last_month = last_month,
-                                                                formato_query = formato_query,
+                                                                formato = formato,
                                                                 path_table_lc = path_table_lc
                                                                 )
 
