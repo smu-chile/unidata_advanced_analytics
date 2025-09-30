@@ -113,7 +113,7 @@ SQL_QUERIES = QueryDict({
     SELECT *
     FROM `${path_table_lc}`
     WHERE monthid = '${last_month}'
-      AND store_banner in (${formato})
+      AND store_banner in ('${formato}')
 
 """
 })
