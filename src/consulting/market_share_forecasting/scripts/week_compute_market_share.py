@@ -110,15 +110,15 @@ SQL_QUERIES = QueryDict({
     """
     SELECT *
     FROM dev_perm.tmp_lab_smu_dim_holidays
-    WHERE p_year != '{p_year}'
+    WHERE p_year != '${p_year}'
 
     UNION ALL
 
     SELECT *
     FROM dev_perm.tmp_lab_smu_dim_holidays
     WHERE
-        p_year = '{p_year}'
-        AND title NOT LIKE '%elecciones%'
+        p_year = '${p_year}'
+        AND title NOT LIKE '%eleccion%'
     """
 })
 
