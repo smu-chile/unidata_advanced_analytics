@@ -27,7 +27,7 @@ dag_args = {
     'dagrun_timeout': None,
     'catchup': True,
     'max_active_runs': 1,
-    'concurrency': 1,
+    'concurrency': 4,
     'tags': [PROJECT_NAME, 'bmolinab'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
@@ -107,7 +107,6 @@ with DAG(**dag_args) as dag:
         },
 
         # Leaves Airflow Trigger to track the status of the Dataproc batch
-        deferrable=True,
 
         # Batch ID
         batch_id='batch-{{ macros.uuid.uuid4() }}',

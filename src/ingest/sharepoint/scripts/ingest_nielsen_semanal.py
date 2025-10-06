@@ -152,7 +152,7 @@ def main() -> None:  # noqa: D103
         'venta_negocio' : 'nielsen_semanal_venta_negocio.json'
 
     }
-    schema = 'ML_LAB'
+    schema = 'MARKET_SHARE'
     table_ref = {
         'categoria_item' : f'{gcp_project_id}.{schema}.NIELSEN_SEMANAL_VENTA_CATEGORIA_ITEM',
         'venta_categoria' : f'{gcp_project_id}.{schema}.NIELSEN_SEMANAL_VENTA_CATEGORIA',

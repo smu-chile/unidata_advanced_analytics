@@ -178,7 +178,7 @@ def main() -> None:  # noqa: D103
                         if_exists='ignore',
                     )
             #Delete from table so that data is not duplicated
-            schema = 'ML_LAB'
+            schema = 'REPORTE_MARGEN'
             table_suffix = jsons[file].split('.')[0].upper()
             #REPORTE_MARGEN_PPTO_FORMATOS_SELLOUT_RECUPERO_2025
             table = f'REPORTE_MARGEN_{table_suffix}'
