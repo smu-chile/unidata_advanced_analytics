@@ -302,7 +302,7 @@ def main():
                 last_valid_regressor = regressor
 
             periods = last_valid_regressor.make_future_dataframe(
-                periods=8,
+                periods=12,
                 freq='W',
                 include_history=True
             ).rename(columns={
@@ -322,7 +322,7 @@ def main():
 
                 else:
                     future = regressor.make_future_dataframe(
-                        periods=8,
+                        periods=12,
                         freq='W',
                         include_history=True
                     )
