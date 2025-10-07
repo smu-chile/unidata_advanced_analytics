@@ -205,6 +205,8 @@ def main():
     )
 
     holidays['fin_periodo'] = pd.to_datetime(holidays['strdate'])
+    # TODO(ecastrot): Temporal fix holiday names
+    holidays['title'] = holidays['title'].str.replace('yprotestantes', 'y_protestantes')
 
     logging.getLogger('prophet').setLevel(logging.WARNING)
     logging.getLogger('cmdstanpy').disabled=True

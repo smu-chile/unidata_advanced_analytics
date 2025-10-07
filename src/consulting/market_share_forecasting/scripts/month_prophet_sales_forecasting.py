@@ -210,6 +210,8 @@ def main():
     holidays['fin_periodo'] = holidays['fin_periodo'].fillna('')
     holidays['fin_periodo'] = pd.to_datetime(holidays.apply(fixFinPeriodo, axis=1)) + MonthEnd(0)
     holidays = holidays.sort_values('title').drop_duplicates(subset='fin_periodo', keep='first')
+    # TODO(ecastrot): Temporal fix holiday names
+    holidays['title'] = holidays['title'].str.replace('yprotestantes', 'y_protestantes')
 
     market_data['fin_periodo'] = pd.to_datetime(market_data['fin_periodo']) + MonthEnd(0)
 

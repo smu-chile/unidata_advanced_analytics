@@ -219,6 +219,8 @@ def main():
     holidays['fin_periodo'] = holidays['fin_periodo'].fillna('')
     holidays['fin_periodo'] = holidays.apply(fixFinPeriodo, axis=1)
     holidays = holidays.sort_values('title').drop_duplicates(subset='fin_periodo', keep='first')
+    # TODO(ecastrot): Temporal fix holiday names
+    holidays['title'] = holidays['title'].str.replace('yprotestantes', 'y_protestantes')
 
     nielsen_data['fin_periodo'] = pd.to_datetime(nielsen_data['fin_periodo'])
 
