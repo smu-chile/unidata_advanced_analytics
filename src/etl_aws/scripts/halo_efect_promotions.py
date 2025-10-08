@@ -1,5 +1,4 @@
 # Default
-import os
 import logging
 import argparse
 from logging import config
@@ -9,7 +8,6 @@ import awswrangler as wr
 from boto3 import Session
 
 # Own
-import common.gcp_extended.bigquery as gbq_extended
 import common.office365_extended.sharepoint as sp_extended
 from common.constants import LOGGING_CONFIG
 from common.gcp_extended.secretsmanager import getSecret

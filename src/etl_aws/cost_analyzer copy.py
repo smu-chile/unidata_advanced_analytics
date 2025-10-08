@@ -3,7 +3,6 @@ import json
 from datetime import timedelta
 
 # pip
-import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
 from airflow.providers.google.cloud.operators.dataproc import (
@@ -46,7 +45,7 @@ dag_args = {
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
-    get_costs = DataprocCreateBatchOperator(
+    move_sharepoint_file = DataprocCreateBatchOperator(
         task_id = 'move_sharepoint_file',
 
         batch = {
