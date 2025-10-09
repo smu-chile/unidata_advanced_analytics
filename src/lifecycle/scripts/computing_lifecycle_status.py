@@ -757,14 +757,6 @@ def main() -> None:  # noqa: D103
     logging.info(f'Se borra la partición actual de {monthid}')
 
 
-    deleteFromTable(
-    table_ref=path_table_lc,
-    where_clause="CUSTOMER_KEY = MD5('CST^CL^-1')",
-    gbq_client=gbq_client,
-    )
-    logging.info(f'Se borra la partición actual de {monthid}')
-
-
     # Se agrega el formato y se sube a GCP
     seg_monthid['store_banner'] = formato
 
