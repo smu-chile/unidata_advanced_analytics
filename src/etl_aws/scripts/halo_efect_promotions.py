@@ -67,6 +67,7 @@ def main() -> None:  # noqa: D103
             's3://smu-datalake-test-landing/'
             'views/'
             'datascience/'
+            'TMP_LAB_SMU_DIM_PROMOTIONS_TO_EVALUATE/'
             'TMP_LAB_SMU_DIM_PROMOTIONS_TO_EVALUATE.csv.gz'
         ),
         header=False,
