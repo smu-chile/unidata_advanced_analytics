@@ -42,7 +42,8 @@ def main() -> None:  # noqa: D103
     logging.info('Load the file to DataFrame')
     sp_file = sp_extended.SharePointFile(
         **getSecret(
-            'bdaa_sharepoint_credentials', 'cl-bigdata-analytics'
+            'bdaa_sharepoint_credentials',
+            gcp_project_id,
         ),
         server_relative_path=(
             '/sites/'
