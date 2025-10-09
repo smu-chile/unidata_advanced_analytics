@@ -90,6 +90,7 @@ SQL_QUERIES = QueryDict({
         WHERE CANAL_VENTA IN ('PEDIDOS YA','CORNER SHOP','RAPPI','RAPPI TURBO')
     )
     AND D.STORE_BANNER in (${formato_query})
+    AND CUSTOMER_KEY <> MD5('CST^CL^-1') -- Se elimina cliente no identificado
     GROUP BY yyyymm, customer_key
     ORDER BY yyyymm, customer_key;
 """,
@@ -751,6 +752,14 @@ def main() -> None:  # noqa: D103
     deleteFromTable(
     table_ref=path_table_lc,
     where_clause=f"monthid = '{monthid}' and store_banner = '{formato}'",
+    gbq_client=gbq_client,
+    )
+    logging.info(f'Se borra la partición actual de {monthid}')
+
+
+    deleteFromTable(
+    table_ref=path_table_lc,
+    where_clause="CUSTOMER_KEY = MD5('CST^CL^-1')",
     gbq_client=gbq_client,
     )
     logging.info(f'Se borra la partición actual de {monthid}')
