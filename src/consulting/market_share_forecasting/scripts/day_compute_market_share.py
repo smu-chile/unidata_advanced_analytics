@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # Default
+import os
 import logging
 import argparse
 from logging import config
@@ -11,8 +12,10 @@ import pandas as pd
 import awswrangler as wr
 from boto3 import Session
 from prophet import Prophet
+from google.cloud.bigquery import Client
 
 # Own
+import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.aws_extended.athena import readAthenaQuery
@@ -323,7 +326,7 @@ def main():
 
     logging.info('Trainning ended')
 
-    logging.info('Updating temporal table')
+    logging.info('Updating table to AWS')
     wr.s3.to_csv(
         df=final_pred.sort_values('fin_periodo')[[
             *[
@@ -351,6 +354,29 @@ def main():
         sep='|',
         boto3_session=boto3_session,
         use_threads=True,
+    )
+
+    logging.info('Updating table to GCP')
+    gbq_extended.uploadFrame(
+        df=final_pred.sort_values('fin_periodo')[[
+            *[
+                x
+                for target_value in target_values
+                for x in (
+                    target_value,
+                    f'{target_value}_proyectado',
+                    f'{target_value}_proyectado_min',
+                    f'{target_value}_proyectado_max'
+                )
+            ],
+            'fin_periodo'
+        ]].astype({
+            'fin_periodo': 'string',
+        }),
+        table_ddl_json_path=os.path.join('gbq_objects', 'day_prophet_sales_forecasting.json'),
+        project=gcp_project,
+        gbq_client=Client(),
+        if_exists='replace',
     )
 
 

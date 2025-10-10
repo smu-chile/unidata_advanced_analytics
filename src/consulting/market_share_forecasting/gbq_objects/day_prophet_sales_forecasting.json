@@ -1,6 +1,6 @@
 {
-    "schema": "ML_LAB",
-    "table": "FACT_DAY_MARKET_SHARE_FORECASTING",
+    "schema": "MARKET_SHARE",
+    "table": "DAY_MARKET_SHARE_FORECASTING",
 
     "columns": [
         {
