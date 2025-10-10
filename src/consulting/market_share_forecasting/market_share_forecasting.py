@@ -65,7 +65,7 @@ with DAG(**dag_args) as dag:
                     (
                         f'gs://{dag_env_config["scripts_gcs"]}/'
                         'common/'
-                    )
+                    ),
                     (
                         f'gs://{dag_env_config["scripts_gcs"]}/'
                         'consulting/'
