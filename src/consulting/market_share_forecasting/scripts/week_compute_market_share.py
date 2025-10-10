@@ -160,6 +160,7 @@ def main():
 
     # Constants
     db_temp = 'dev_temp'
+    gbq_client = Client()
 
     # ------------
     # Data loading
@@ -230,6 +231,15 @@ def main():
 
     logging.getLogger('prophet').setLevel(logging.WARNING)
     logging.getLogger('cmdstanpy').disabled = True
+
+    logging.info('Removing previous table from GCP')
+    gbq_extended.createTableFromJSON(
+        table_ddl_json_path=os.path.join('gbq_objects', 'week_prophet_sales_forecasting.json'),  # noqa: E501
+        project=gcp_project,
+        gbq_client=gbq_client,
+        if_exists='rebuild',
+    )
+
 
     target_values = [
         f'{x}_{y}'
@@ -464,7 +474,7 @@ def main():
                 }),
                 table_ddl_json_path=os.path.join('gbq_objects', 'week_prophet_sales_forecasting.json'),  # noqa: E501
                 project=gcp_project,
-                gbq_client=Client(),
+                gbq_client=gbq_client,
                 if_exists='replace',
             )
 
