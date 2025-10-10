@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # Default
+import os
 import logging
 import argparse
 from logging import config
@@ -12,8 +13,10 @@ import pendulum
 import awswrangler as wr
 from boto3 import Session
 from prophet import Prophet
+from google.cloud.bigquery import Client
 
 # Own
+import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.aws_extended.athena import readAthenaQuery
@@ -394,7 +397,7 @@ def main():
 
         final_pred['inicio_periodo'] = final_pred['fin_periodo'] + pd.to_timedelta(-7, 'days')
 
-        logging.info('Updating temporal tables')
+        logging.info('Updating temporal tables to AWS')
         for category_name in category_names:
             wr.s3.to_csv(
                 df=final_pred[
@@ -431,6 +434,38 @@ def main():
                 sep='|',
                 boto3_session=boto3_session,
                 use_threads=True,
+            )
+
+        logging.info('Updating temporal tables to GCP')
+        for category_name in category_names:
+            gbq_extended.uploadFrame(
+                df=final_pred[
+                    final_pred['cl_xc_categoria'] == category_name
+                ].sort_values(
+                    'fin_periodo'
+                )[[
+                    'departamento', 'cl_xc_categoria', 'negocio',
+                    *[
+                        x
+                        for target_value in target_values
+                        for x in (
+                            target_value,
+                            f'{target_value}_proyectado',
+                            f'{target_value}_proyectado_min',
+                            f'{target_value}_proyectado_max'
+                        )
+                    ],
+                    'inicio_periodo', 'fin_periodo', 'p_week'
+                ]].astype({
+                    'cl_xc_categoria': 'string',
+                    'inicio_periodo': 'string',
+                    'fin_periodo': 'string',
+                    'p_week': 'string',
+                }),
+                table_ddl_json_path=os.path.join('gbq_objects', 'week_prophet_sales_forecasting.json'),  # noqa: E501
+                project=gcp_project,
+                gbq_client=Client(),
+                if_exists='replace',
             )
 
     logging.info('Trainning ended')
