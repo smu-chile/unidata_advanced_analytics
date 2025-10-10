@@ -475,7 +475,7 @@ def main():
                 table_ddl_json_path=os.path.join('gbq_objects', 'week_prophet_sales_forecasting.json'),  # noqa: E501
                 project=gcp_project,
                 gbq_client=gbq_client,
-                if_exists='replace',
+                if_exists='append',
             )
 
     logging.info('Trainning ended')
