@@ -63,7 +63,6 @@ with DAG(**dag_args) as dag:
         region = 'us-central1',
         repository_id = 'bi-dataform-uni-reporte-margen',
         compilation_result={
-            'git_commitish': 'uni-dev',
             'workspace' : 'uni-dev'
         },
     )
