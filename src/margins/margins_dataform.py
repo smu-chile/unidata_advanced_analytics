@@ -63,7 +63,10 @@ with DAG(**dag_args) as dag:
         region = 'us-central1',
         repository_id = 'bi-dataform-uni-reporte-margen',
         compilation_result={
-            'workspace' : 'uni-dev'
+            'workspace': (
+                'projects/cl-cda-unidata-dev/locations/us-central1/'
+                'repositories/bi-dataform-uni-reporte-margen/workspaces/uni-dev'
+            )
         },
     )
 
