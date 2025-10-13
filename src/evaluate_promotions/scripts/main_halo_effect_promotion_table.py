@@ -209,6 +209,7 @@ def main() -> None:  # noqa: D103
         table_ddl_json_path=os.path.join('gbq_objects', 'halo_promotions_to_evaluate.json'),
         project=gcp_project,
         if_exists='replace',
+        gbq_client=gbq_client,
     )
 
     logging.info('Process ended!')
