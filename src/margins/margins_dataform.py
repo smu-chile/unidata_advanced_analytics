@@ -60,7 +60,7 @@ with DAG(**dag_args) as dag:
     margins_create_compilation_result = DataformCreateCompilationResultOperator(
         task_id = 'margins_create_compilation_result',
         project_id = 'cl-cda-unidata-dev',
-        region = REGION,
+        region = 'us-central1',
         repository_id = 'bi-dataform-uni-reporte-margen',
         compilation_result={
             'git_commitish': 'uni-dev',
@@ -71,7 +71,7 @@ with DAG(**dag_args) as dag:
     margins_workflow_invocation =  DataformCreateWorkflowInvocationOperator(
          task_id='margins_workflow_invocation',
         project_id = 'cl-cda-unidata-dev',
-        region = REGION,
+        region = 'us-central1',
         repository_id = 'bi-dataform-uni-reporte-margen',
           workflow_invocation={
              'compilation_result': "{{ task_instance.xcom_pull('margins_create_compilation_result')['name'] }}",  # noqa: E501
