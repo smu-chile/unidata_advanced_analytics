@@ -10,7 +10,7 @@
         },
         {
             "name": "n_promocion",
-            "field_type": "STRING",
+            "field_type": "BIGNUMERIC",
             "mode": "REQUIRED",
             "description": ""
         },
@@ -28,19 +28,19 @@
         },
         {
             "name": "fecha_inicio_de_promocion_ppal",
-            "field_type": "STRING",
+            "field_type": "DATE",
             "mode": "REQUIRED",
             "description": ""
         },
         {
             "name": "fecha_fin_de_promocion_ppal",
-            "field_type": "STRING",
+            "field_type": "DATE",
             "mode": "REQUIRED",
             "description": ""
         },
         {
             "name": "mes_promocion",
-            "field_type": "STRING",
+            "field_type": "DATE",
             "mode": "REQUIRED",
             "description": ""
         },
@@ -64,13 +64,13 @@
         },
         {
             "name": "fecha_inicio_de_promocion",
-            "field_type": "STRING",
+            "field_type": "DATE",
             "mode": "REQUIRED",
             "description": ""
         },
         {
             "name": "fecha_fin_de_promocio",
-            "field_type": "STRING",
+            "field_type": "DATE",
             "mode": "REQUIRED",
             "description": ""
         }
