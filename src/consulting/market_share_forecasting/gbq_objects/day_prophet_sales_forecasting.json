@@ -1,6 +1,6 @@
 {
     "schema": "MARKET_SHARE",
-    "table": "DAY_MARKET_SHARE_FORECASTING",
+    "table": "DAY_PROPHET_SALES_FORECASTING",
 
     "columns": [
         {
