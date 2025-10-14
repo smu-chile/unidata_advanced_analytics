@@ -43,7 +43,6 @@ RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
       fastparquet \
       gcsfs \
       beautifulsoup4 \
-      requests \
       google-cloud-bigquery-storage \
       google-cloud-bigquery[pandas] \
       google-cloud-bigtable \
@@ -59,6 +58,7 @@ RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
       google-cloud-spanner \
       google-cloud-storage \
       koalas \
+      lxml \
       matplotlib \
       numba \
       numpy \

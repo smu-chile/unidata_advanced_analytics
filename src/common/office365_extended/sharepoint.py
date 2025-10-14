@@ -120,7 +120,7 @@ class SharePointFile:
         return target_file.time_last_modified
 
 
-    def upload(self, content: bytes, root_dir: str = 'Documentos') -> None:
+    def upload(self, content: BytesIO, root_dir: str = 'Documentos') -> None:
         """Upload a file to SharePoint.
 
         ..warning:: This method deletes
@@ -150,7 +150,7 @@ class SharePointFile:
 
         # Upload
         target_dir.files.upload(
-            filename, content
+            path_or_file=content, file_name=filename
         ).execute_query()
 
 
