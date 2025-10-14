@@ -120,7 +120,7 @@ class SharePointFile:
         return target_file.time_last_modified
 
 
-    def upload(self, content: BytesIO, root_dir: str = 'Documentos') -> None:
+    def upload(self, content: BytesIO) -> None:
         """Upload a file to SharePoint.
 
         ..warning:: This method deletes
@@ -129,17 +129,13 @@ class SharePointFile:
         ----------
         content : bytes
             Contents of the file that will be uploaded as bytes.
-        root_dir : str, default='Documentos'
-            Name of the left side list (on SharePoint web interface) in
-            which the file will be uploaded.
         """
         path, filename = posixpath.split(self.server_relative_path)
 
         # Set target directory in SharePoint
-        target_dir = self._client_context.web.lists.get_by_title(root_dir).root_folder
-        subdirs = path.split(posixpath.sep)[4:]
-        for subdir in subdirs:
-            target_dir = target_dir.folders.get_by_url(subdir)
+        target_dir = self._client_context.web.get_folder_by_server_relative_url(
+            posixpath.join(*path.split(posixpath.sep)[3:])
+        )
 
         # Remove file if allready exists
         files = target_dir.files
