@@ -57,7 +57,7 @@ with DAG(**dag_args) as dag:
                     f'{PROJECT_NAME}/'
                     f'{SUBPROJECT_NAME}/'
                     'scripts/'
-                    'ingest_ok_to_shop.py'
+                    'ingest_dim_holidays.py'
                 ),
                 # Common files
                 'python_file_uris': [
