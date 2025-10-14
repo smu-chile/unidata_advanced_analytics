@@ -69,7 +69,7 @@
             "description": ""
         },
         {
-            "name": "fecha_fin_de_promocio",
+            "name": "fecha_fin_de_promocion",
             "field_type": "DATE",
             "mode": "REQUIRED",
             "description": ""
