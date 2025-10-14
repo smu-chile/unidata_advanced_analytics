@@ -1,0 +1,25 @@
+{
+    "schema": "DATOS_GENERALES",
+    "table": "DIM_HOLIDAYS",
+
+    "columns": [
+        {
+            "name": "title",
+            "field_type": "BIGNUMERIC",
+            "mode": "REQUIRED",
+            "description": "Name of the holiday"
+        },
+        {
+            "name": "date",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Date of the holiday"
+        },
+        {
+            "name": "essential",
+            "field_type": "BOOL",
+            "mode": "REQUIRED",
+            "description": "Wether the holiday is inalienable or not"
+        }
+    ]
+}

@@ -18,7 +18,6 @@ from google.cloud.bigquery import Client
 import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.aws_extended.athena import readAthenaQuery
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -47,21 +46,20 @@ parser.add_argument(
 # SQL Queries
 # -------------------------------------------------------------------------
 SQL_QUERIES = QueryDict({
-    'day_transactions_gcp':
+    'day_transactions':
     """
     SELECT
-        transaction_date,
-        SUM(value) AS value
+        transaction_date AS fin_periodo,
+        SUM(value) AS venta_unimarc
 
-    FROM `${gcp_project}.ML_LAB.VW_SALES_ITEM` sales_item
+    FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
 
-    INNER JOIN `${gcp_project}.ML_LAB.VW_DIM_STORE` dim_store
+    INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` dim_store
     USING (store_id)
 
     INNER JOIN (
-        SELECT
-            sku_product
-        FROM `${gcp_project}.ML_LAB.VW_DIM_PRODUCT`
+        SELECT sku_product
+        FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
         GROUP BY 1
         HAVING MAX(neg_dsc) NOT IN ('SERVICIOS COMERCIALES', 'NO RETAIL')
     ) dim_product
@@ -71,10 +69,10 @@ SQL_QUERIES = QueryDict({
         SELECT
             market_basket_key,
             TRUE AS from_other_ecommerce
-        FROM `${gcp_project}.ML_LAB.VW_FACT_MARKET_BASKET_E_COMMERCE`
+        FROM `${gcp_project}.CDA_VISTAS.VW_FACT_MARKET_BASKET_E_COMMERCE`
         WHERE canal_venta IN ('PEDIDOS YA','CORNER SHOP','RAPPI','RAPPI TURBO')
     ) external_ecommerce_filter
-    ON sales_item.market_basket_key = external_ecommerce_filter.market_basket_key
+    USING (market_basket_key)
 
     WHERE
         transaction_date >= DATE('${execution_date}') - INTERVAL 2 YEAR
@@ -87,57 +85,16 @@ SQL_QUERIES = QueryDict({
     GROUP BY 1
     """,
 
-    'day_transactions_aws':
-    """
-    SELECT
-        transaction_date AS fin_periodo,
-        SUM(value) AS venta_unimarc
-
-    FROM  dev_perm.TMP_LAB_SMU_SALES_ITEM sales_item
-
-    INNER JOIN dev_perm.TMP_LAB_SMU_DIM_STORE dim_store
-    USING (store_id)
-
-    INNER JOIN (
-        SELECT
-            product_id,
-            max(business_name) AS business_name
-        FROM dev_perm.TMP_LAB_SMU_DIM_PRODUCTS
-        GROUP BY 1
-        HAVING MAX(business_name) NOT IN ('SERVICIOS COMERCIALES', 'NO RETAIL')
-    ) e
-    USING (product_id)
-
-    LEFT JOIN (
-        SELECT
-            market_basket_key,
-            TRUE AS from_other_ecommerce
-        FROM dev_perm.TMP_LAB_SMU_FACT_MARKET_BASKET_E_COMMERCE
-        WHERE canal_venta IN ('PEDIDOS YA','CORNER SHOP','RAPPI','RAPPI TURBO')
-    ) external_ecommerce_filter
-    USING (market_basket_key)
-
-    WHERE
-        transaction_date >= CAST(DATE('2022-06-01') AS VARCHAR)
-        AND transaction_date < CAST(DATE('${execution_date}') AS VARCHAR)
-        AND store_banner = '${store_banner}'
-        AND transaction_type IN ('TN','TF','BX','B','BE','F','NC')
-        AND itm_txn_fcn_tp_dsc = 'V'
-        AND from_other_ecommerce IS NULL
-
-    GROUP BY 1
-    """,
-
     'holidays':
     """
     SELECT title, strdate
-    FROM dev_perm.tmp_lab_smu_dim_holidays
+    FROM `${gcp_project}.??.DIM_HOLIDAYS` dim_holidays
     WHERE p_year != '${p_year}'
 
     UNION ALL
 
     SELECT title, strdate
-    FROM dev_perm.tmp_lab_smu_dim_holidays
+    FROM `${gcp_project}.??.DIM_HOLIDAYS` dim_holidays
     WHERE
         p_year != '${p_year}'
         AND title NOT LIKE '%eleccion%'
@@ -159,37 +116,30 @@ def main():
     gcp_project: str = args['gcp_project']
     execution_date: str = args['execution_date']
 
-    # Automatic
-    boto3_session = Session(**getSecret(
-        project=gcp_project,
-        secret_name='bdaa_aws_credentials'  # noqa: S106
-    ))
-
     # Constants
-    db_temp = 'dev_temp'
+    gbq_client = Client()
 
     # ------------
     # Data loading
     # ------------
     logging.info('Loading data...')
-    market_data = readAthenaQuery(
-        user=user,
-        query=SQL_QUERIES['day_transactions_aws'].substitute(
+    market_data = gbq_extended.readBigQuery(
+        query=SQL_QUERIES['day_transactions'].substitute(
             execution_date=execution_date,
-            store_banner='Unimarc'
+            store_banner='Unimarc',
+            gcp_project=gcp_project,
         ),
-        database=db_temp,
-        boto3_session=boto3_session,
+        user=user,
+        gbq_client=gbq_client,
     )
     market_data['fin_periodo'] = pd.to_datetime(market_data['fin_periodo'])
 
-    holidays = readAthenaQuery(
-        user=user,
+    holidays = gbq_extended.readBigQuery(
         query=SQL_QUERIES['holidays'].substitute(
             p_year=execution_date[:4]
         ),
-        database=db_temp,
-        boto3_session=boto3_session,
+        user=user,
+        gbq_client=gbq_client,
     )
 
     holidays = pd.concat(
@@ -352,7 +302,10 @@ def main():
         index=None,
         header=None,
         sep='|',
-        boto3_session=boto3_session,
+        boto3_session=Session(**getSecret(
+            project=gcp_project,
+            secret_name='bdaa_aws_credentials'  # noqa: S106
+        )),
         use_threads=True,
     )
 
@@ -375,7 +328,7 @@ def main():
         }),
         table_ddl_json_path=os.path.join('gbq_objects', 'day_prophet_sales_forecasting.json'),
         project=gcp_project,
-        gbq_client=Client(),
+        gbq_client=gbq_client,
         if_exists='replace',
     )
 
