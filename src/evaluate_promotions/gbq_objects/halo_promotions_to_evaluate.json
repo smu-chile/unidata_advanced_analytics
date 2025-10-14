@@ -1,5 +1,5 @@
 {
-    "schema": "RECIO_PROMOCIONES",
+    "schema": "PRECIO_PROMOCIONES",
     "table": "HALO_PROMOTIONS_TO_EVALUATE",
     "columns": [
         {
