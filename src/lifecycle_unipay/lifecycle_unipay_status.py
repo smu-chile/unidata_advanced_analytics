@@ -22,7 +22,7 @@ with open(
 PROJECT_NAME = 'lifecycle_unipay'
 dag_args = {
     'dag_id': 'lifecycle_unipay_status',
-    'schedule_interval': '0 0 5 * *',
+    'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': True,
     'max_active_runs': 1,
