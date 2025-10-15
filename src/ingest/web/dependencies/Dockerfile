@@ -35,9 +35,8 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
 # recommended to include all of them.
 #
 # Use mamba to install packages quickly.
-RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
-    && ${CONDA_HOME}/bin/micromamba install \
-      conda \
+RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
+    && ${CONDA_HOME}/bin/micromamba install --yes -c conda-forge \
       cython \
       fastavro \
       fastparquet \
@@ -76,7 +75,8 @@ RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
       libsqlite \
       pendulum \
       pandas-gbq \
-      virtualenv
+      virtualenv \
+    && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
 # (Optional) Install additional requirements
 # COPY requirements.txt .
