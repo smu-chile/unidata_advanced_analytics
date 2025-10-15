@@ -135,7 +135,6 @@ SQL_QUERIES = QueryDict({
     LEFT JOIN TARJETAS T ON UC.CARD_ID = T.CARD_ID
     LEFT JOIN CREDIT_LIMIT CL ON UC.CARD_ID = CL.CARD_ID
     WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
-    )
     """,
 
     # Estado ciclo de vida unipay en el periodo
