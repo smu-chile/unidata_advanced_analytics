@@ -249,7 +249,10 @@ def main():
         gcp_proyect = 'cl-bigdata-analytics-preprod',
         schema = 'TMP',
         periodo_n1 = periodo_n1
-        ))
+        ),
+        user = usuario,
+        gbq_client = gbq_client
+        )
 
     tarjetas = readBigQuery(SQL_QUERIES['tarjetas_unipay'].substitute(
     gcp_proyect = 'cl-cda-unidata-prod',
