@@ -3,7 +3,6 @@ import json
 from datetime import timedelta
 
 # pip
-import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
 from airflow.models.baseoperator import chain
