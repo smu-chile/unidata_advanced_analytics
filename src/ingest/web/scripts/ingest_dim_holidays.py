@@ -82,8 +82,6 @@ def main() -> None:  # noqa: D103
         )
         for html_row in new_year_anchor.find_next_siblings('tr')
         ])
-    logging.info('DataFrame generated:')
-    logging.info(f'\n{holidays_df.to_markdown()}')
 
     logging.info('Normalizing holiday names...')
     holidays_df[0] = holidays_df[0].apply(
@@ -92,9 +90,6 @@ def main() -> None:  # noqa: D103
         strip_accents=True,
         replace_spaces='_',
     )
-
-    logging.info('Final frame:')
-    logging.info(f'\n{holidays_df.to_markdown()}')
 
     # Upload to GBQ
     uploadFrame(
