@@ -79,10 +79,10 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
                 'args': [
                     '--project_id', dag_env_config['project_id'],
                     '--execution_date', EXECUTION_DATE,
-                    '--periodo', dag_env_config['periodo'],
-                    '--periodo_n1', dag_env_config['periodo_n1'],
-                    '--fecha_ini', dag_env_config['fecha_ini'],
-                    '--fecha_fin', dag_env_config['fecha_fin']
+                    '--periodo', "{{ dag_run.conf.get('periodo', 202301) }}",
+                    '--periodo_n1', "{{ dag_run.conf.get('periodo_n1', 202301) }}",
+                    '--fecha_ini', "{{ dag_run.conf.get('fecha_ini', '2023-01-01') }}",
+                    '--fecha_fin', "{{ dag_run.conf.get('fecha_fin', '2023-02-01') }}"
                 ],
             },
 
@@ -114,8 +114,4 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
         # Batch ID
         batch_id='batch-{{ macros.uuid.uuid4() }}',
         project_id=dag_env_config['project_id'],
-        periodo=dag_env_config['periodo'],
-        periodo_n1=dag_env_config['periodo_n1'],
-        fecha_ini=dag_env_config['fecha_ini'],
-        fecha_fin=dag_env_config['fecha_fin'],
     )
