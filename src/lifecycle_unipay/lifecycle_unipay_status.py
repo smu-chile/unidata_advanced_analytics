@@ -34,7 +34,7 @@ dag_args = {
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['abravom@unidata.cl'],
         'start_date': pendulum.datetime(
-            2023, 1, 5,
+            2023, 1, 1,
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
@@ -59,7 +59,7 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'cost_analyzer.py'
+                    'get_lifecycle_unipay_status.py'
                 ),
                 # Common files
                 'python_file_uris': [
@@ -79,6 +79,10 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
                 'args': [
                     '--project_id', dag_env_config['project_id'],
                     '--execution_date', EXECUTION_DATE,
+                    '--periodo', dag_env_config['periodo'],
+                    '--periodo_n1', dag_env_config['periodo_n1'],
+                    '--fecha_ini', dag_env_config['fecha_ini'],
+                    '--fecha_fin', dag_env_config['fecha_fin']
                 ],
             },
 
