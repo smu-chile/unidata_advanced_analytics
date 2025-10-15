@@ -228,7 +228,7 @@ def main():
     gbq_client = Client()
 
     # Periodo inicial ciclo vida unipay
-    periodo_inicio = '202301'
+    periodo_inicio = 202301
 
     logging.info(' ')
     logging.info('--------------------')
