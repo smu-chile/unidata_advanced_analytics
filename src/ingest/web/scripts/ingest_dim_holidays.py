@@ -16,7 +16,7 @@ from common.constants import LOGGING_CONFIG
 # Own
 from common.utils.requests import safeGet
 from common.utils.data_transform import normalizeText
-from common.gcp_extended.bigquery import uploadFrame
+from common.gcp_extended.bigquery import uploadFrame, deleteFromTable
 
 
 # -------------------------------------------------------------------------
@@ -89,6 +89,11 @@ def main() -> None:  # noqa: D103
         lower=True,
         strip_accents=True,
         replace_spaces='_',
+    )
+
+    # Remove registers from the same year
+    deleteFromTable(
+        where_clause=f'EXTRACT(YEAR FROM date) = {execution_date.year}'
     )
 
     # Upload to GBQ

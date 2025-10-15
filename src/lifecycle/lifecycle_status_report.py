@@ -3,7 +3,6 @@ import json
 from datetime import timedelta
 
 # pip
-import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
 from airflow.models.baseoperator import chain
@@ -25,7 +24,7 @@ dag_args = {
     'dag_id': 'lifecycle_status_report',
     'schedule_interval': '0 0 5 * *',
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 4,
     'tags': [PROJECT_NAME, 'bmolinab'],
@@ -34,10 +33,7 @@ dag_args = {
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['bmolinab@unidata.cl'],
-        'start_date': pendulum.datetime(
-            2023, 6 , 20,
-            tz=pendulum.timezone('America/Santiago')
-        ),
+        'start_date': None,
         'depends_on_past': False,
         'catchup': False,
         'email_on_failure': True,
