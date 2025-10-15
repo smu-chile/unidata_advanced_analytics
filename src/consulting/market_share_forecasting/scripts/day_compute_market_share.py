@@ -88,13 +88,13 @@ SQL_QUERIES = QueryDict({
     'holidays':
     """
     SELECT title, strdate
-    FROM `${gcp_project}.??.DIM_HOLIDAYS` dim_holidays
+    FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
     WHERE p_year != '${p_year}'
 
     UNION ALL
 
     SELECT title, strdate
-    FROM `${gcp_project}.??.DIM_HOLIDAYS` dim_holidays
+    FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
     WHERE
         p_year != '${p_year}'
         AND title NOT LIKE '%eleccion%'
