@@ -123,12 +123,17 @@ class SharePointFile:
     def upload(self, content: BytesIO) -> None:
         """Upload a file to SharePoint.
 
-        ..warning:: This method deletes
-
         Parameters
         ----------
         content : bytes
             Contents of the file that will be uploaded as bytes.
+
+        Notes
+        -----
+        This function will be slow on large files (>4Mb). Its possible to
+        make it fast when it comes to uploading them but is a fucking pain
+        to work with the microsoft API. Please ask the theam if you need
+        this functionality.
         """
         path, filename = posixpath.split(self.server_relative_path)
 
@@ -136,13 +141,6 @@ class SharePointFile:
         target_dir = self._client_context.web.get_folder_by_server_relative_url(
             posixpath.join(*path.split(posixpath.sep)[3:])
         )
-
-        # Remove file if allready exists
-        files = target_dir.files
-        for file in files:
-            if file.name == filename:
-                file.delete_object()
-                self._client_context.execute_query()
 
         # Upload
         target_dir.files.upload(

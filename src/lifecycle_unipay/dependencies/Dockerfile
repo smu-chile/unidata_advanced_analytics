@@ -31,6 +31,9 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
   && ${CONDA_HOME}/bin/conda config --system --set auto_update_conda False \
   && ${CONDA_HOME}/bin/conda config --system --prepend channels conda-forge \
   && ${CONDA_HOME}/bin/conda config --system --set channel_priority strict
+# Packages ipython and ipykernel are required if using custom conda and want to
+# use this container for running notebooks.
+#RUN ${CONDA_HOME}/bin/conda install ipython ipykernel
 
 # (Optional) Install Conda packages.
 #
@@ -38,9 +41,8 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
 # recommended to include all of them.
 #
 # Use mamba to install packages quickly.
-RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
-    && ${CONDA_HOME}/bin/micromamba shell init -p ${CONDA_HOME} -s bash \
-    && /bin/bash -c "source ${CONDA_HOME}/etc/profile.d/micromamba.sh \ && micromamba install -y \
+RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
+    && ${CONDA_HOME}/bin/mamba install \
       conda \
       cython \
       fastavro \
@@ -59,6 +61,7 @@ RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
       google-cloud-redis \
       google-cloud-secret-manager \
       google-cloud-spanner \
+      google-cloud-speech \
       google-cloud-storage \
       koalas \
       matplotlib \
@@ -67,8 +70,6 @@ RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
       numpy \
       openblas \
       orc \
-      office365-rest-python-client \
-      openpyxl \
       pandas \
       pyarrow \
       pytables \
@@ -82,13 +83,12 @@ RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
       sqlalchemy \
       sympy \
       pendulum \
-      awswrangler \
       pandas-gbq \
-      virtualenv"
+      virtualenv
 
 # (Optional) Install additional requirements
 # COPY requirements.txt .
-# RUN pip install --no-cache-dir --no-cache -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt
 
 # Set timezone
 ENV TZ="America/Santiago"
