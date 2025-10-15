@@ -30,6 +30,10 @@ dag_args = {
     'tags': [PROJECT_NAME, 'abravom'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
+        'periodo': dag_env_config['periodo'],
+        'periodo_n1': dag_env_config['periodo_n1'],
+        'fecha_ini': dag_env_config['fecha_ini'],
+        'fecha_fin': dag_env_config['fecha_fin'],
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['abravom@unidata.cl'],
