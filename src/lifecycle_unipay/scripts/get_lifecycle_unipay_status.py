@@ -261,6 +261,9 @@ def main():
     compras['TOT_SALE_AMT'] = compras['TOT_SALE_AMT'].astype('int64')
     compras_unipay['TOT_SALE_AMT'] = compras_unipay['TOT_SALE_AMT'].astype('int64')
 
+    compras['DATE_VALUE'] = pd.to_datetime(compras['DATE_VALUE'])
+    compras_unipay['DATE_VALUE'] = pd.to_datetime(compras_unipay['DATE_VALUE'])
+
     tarjetas_copy = tarjetas.copy()
     tarjetas_copy['SUBSCRIPTION_DATE'] = pd.to_datetime(tarjetas_copy['SUBSCRIPTION_DATE'])
     tarjetas_copy['ACTIVATION_DATE'] = pd.to_datetime(tarjetas_copy['ACTIVATION_DATE'])
@@ -326,8 +329,6 @@ def main():
         'CREDIT_LIMIT',
         'AUX']
     ]
-
-    compras_unipay['DATE_VALUE'] = pd.to_datetime(compras_unipay['DATE_VALUE'])
 
     # Asignar la compra a la tarjeta que esta activa en ese periodo
     # al dataframe compras
