@@ -9,18 +9,15 @@ from collections import defaultdict
 
 # pip
 import pandas as pd
-from boto3 import Session
 from prophet import Prophet
 from google.cloud.bigquery import Client
 from pandas.tseries.offsets import MonthEnd
 
 # Own
+import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.aws_extended.athena import readAthenaQuery
 from common.utils.data_transform import batchList
-from common.gcp_extended.bigquery import uploadFrame
-from common.gcp_extended.secretsmanager import getSecret
 
 
 # -------------------------------------------------------------------------
@@ -48,10 +45,10 @@ parser.add_argument(
 # SQL Queries
 # -------------------------------------------------------------------------
 SQL_QUERIES = QueryDict({
-    'month_transactions_aws':
+    'month_transactions':
     """
     SELECT
-        SUBSTR(transaction_date, 1, 7) AS fin_periodo,
+        FORMAT_DATE('%Y-%m', transaction_date) AS fin_periodo,
         category_description,
         SUM(CASE
             WHEN store_banner = 'Unimarc' THEN value ELSE 0
@@ -66,36 +63,36 @@ SQL_QUERIES = QueryDict({
             WHEN store_banner = 'Mayorista' THEN value ELSE 0
         END) AS m10
 
-    FROM dev_perm.TMP_LAB_SMU_SALES_ITEM sales_item
+    FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
 
-    INNER JOIN dev_perm.TMP_LAB_SMU_DIM_STORE dim_store
+    INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` dim_store
     USING (store_id)
 
     INNER JOIN (
         SELECT
-            product_id,
-            MAX(business_name) AS business_name,
-            MAX(category_description) AS category_description
-        FROM dev_perm.TMP_LAB_SMU_DIM_PRODUCTS
+            sku_product,
+            MAX(neg_dsc) AS business_name,
+            MAX(cat_dsc) AS category_description
+        FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
         GROUP BY 1
-        HAVING MAX(business_name) NOT IN ('SERVICIOS COMERCIALES', 'NO RETAIL')
-    ) e
-    USING (product_id)
+        HAVING MAX(neg_dsc) NOT IN ('SERVICIOS COMERCIALES', 'NO RETAIL')
+    ) dim_product
+    USING (sku_product)
 
     LEFT JOIN (
         SELECT
             market_basket_key,
             TRUE AS from_other_ecommerce
-        FROM dev_perm.TMP_LAB_SMU_FACT_MARKET_BASKET_E_COMMERCE
+        FROM `${gcp_project}.CDA_VISTAS.VW_FACT_MARKET_BASKET_E_COMMERCE`
         WHERE canal_venta IN ('PEDIDOS YA','CORNER SHOP','RAPPI','RAPPI TURBO')
     ) external_ecommerce_filter
     USING (market_basket_key)
 
     WHERE
-        transaction_date >= CAST(DATE_ADD('MONTH', -24, DATE('${execution_month}-01')) AS VARCHAR)
-        AND transaction_date < CAST(DATE('${execution_month}-01') AS VARCHAR)
-        AND transaction_type IN ('TN','TF','BX','B','BE','F','NC')
+        transaction_date >= DATE('${execution_month}-01') - INTERVAL 2 YEAR
+        AND transaction_date < DATE('${execution_month}-01')
         AND itm_txn_fcn_tp_dsc = 'V'
+        AND transaction_type IN ('TN','TF','BX','B','BE','F','NC')
         AND from_other_ecommerce IS NULL
 
     GROUP BY 1,2
@@ -103,17 +100,17 @@ SQL_QUERIES = QueryDict({
 
     'holidays':
     """
-    SELECT *
-    FROM dev_perm.tmp_lab_smu_dim_holidays
-    WHERE p_year != '${p_year}'
+    SELECT title, date
+    FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
+    WHERE EXTRACT(YEAR FROM date) = ${year}
 
     UNION ALL
 
-    SELECT *
-    FROM dev_perm.tmp_lab_smu_dim_holidays
+    SELECT title, date
+    FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
     WHERE
-        p_year = '${p_year}'
-        AND title NOT LIKE '%eleccion%'
+        EXTRACT(YEAR FROM date) != ${year}
+        AND NOT REGEXP_CONTAINS(title, '(?i)eleccion')
     """
 })
 
@@ -122,7 +119,7 @@ SQL_QUERIES = QueryDict({
 # Functions and classes
 # -------------------------------------------------------------------------
 def fixFinPeriodo(row):
-    return row['fin_periodo'] if row['fin_periodo'] else row['strdate'].strftime('%Y-%m')
+    return row['fin_periodo'] if row['fin_periodo'] else row['date'].strftime('%Y-%m')
 
 
 # -------------------------------------------------------------------------
@@ -140,45 +137,39 @@ def main():
     execution_date: str = args['execution_date']
 
     # Constants
-    db_temp = 'dev_temp'
     gbq_client = Client()
-    boto3_session = Session(**getSecret(
-        project=gcp_project,
-        secret_name='bdaa_aws_credentials'  # noqa: S106
-    ))
 
     # ------------
     # Data loading
     # ------------
     logging.info('Loading data...')
-    market_data = readAthenaQuery(
-        user=user,
-        query=SQL_QUERIES['month_transactions_aws'].substitute(
-            execution_month='2025-07',
+    market_data = gbq_extended.readBigQuery(
+        query=SQL_QUERIES['month_transactions'].substitute(
+            execution_month=execution_date[:7],
+            gcp_project=gcp_project,
         ),
-        database=db_temp,
-        boto3_session=boto3_session
+        user=user,
+        gbq_client=gbq_client,
     )
 
-    holidays = readAthenaQuery(
-        user=user,
+    holidays = gbq_extended.readBigQuery(
         query=SQL_QUERIES['holidays'].substitute(
-            p_year=execution_date[:4]
+            year=execution_date[:4],
+            gcp_project=gcp_project,
         ),
-        database=db_temp,
-        boto3_session=boto3_session
+        user=user,
+        gbq_client=gbq_client,
     )
-    logging.info('Loading data...')
 
     holidays = pd.concat(
         [
             holidays[
                 # TODO(ecastrot): Bad fix
-                holidays['strdate'] != '2025-06-29'
+                holidays['date'] != '2025-06-29'
             ],
             pd.DataFrame({
                 'title': ['huelga_lider'],
-                'strdate': ['2024-07-14'],
+                'date': ['2024-07-14'],
                 'essential': [False],
                 'p_year': ['2024'],
             })
@@ -190,8 +181,8 @@ def main():
     market_data['p_month'] = market_data['fin_periodo'].astype(str).str.replace('-', '').str[:6]
     market_data['p_year'] = market_data['fin_periodo'].astype(str).str[:4]
 
-    holidays['strdate'] = pd.to_datetime(holidays['strdate'])
-    holidays['p_month'] = holidays['strdate'].astype(str).str.replace('-', '').str[:6]
+    holidays['date'] = pd.to_datetime(holidays['date'])
+    holidays['p_month'] = holidays['date'].astype(str).str.replace('-', '').str[:6]
 
     holidays = holidays.merge(
         market_data[['p_month', 'fin_periodo']].drop_duplicates(),
@@ -223,11 +214,11 @@ def main():
                 if market_data[
                     market_data['category_description'] == category_name
                 ][target_value].notna().sum() < 13:
-                    print(f'Skipping {category_name} {target_value} regressor')
+                    logging.info(f'Skipping {category_name} {target_value} regressor')
                     regressors[category_name][target_value] = None
                     continue
 
-                print(f'Trainning {category_name} {target_value} regressor')
+                logging.info(f'Trainning {category_name} {target_value} regressor')
                 regressor = Prophet(
                     yearly_seasonality=True,
                     weekly_seasonality=False,
@@ -274,7 +265,7 @@ def main():
 
             for target_value in regressors[category_name]:
                 # Set current regressor
-                print(f'Predicting {category_name} {target_value} regressor')
+                logging.info(f'Predicting {category_name} {target_value} regressor')
                 regressor = regressors[category_name][target_value]
 
                 if regressor is None:
@@ -353,7 +344,7 @@ def main():
         final_pred['inicio_periodo'] = final_pred['fin_periodo'].astype(str).str[:8] + '01'
 
         logging.info('Updating table to GCP')
-        uploadFrame(
+        gbq_extended.uploadFrame(
             final_pred[[
                 'category_description',
                 'unimarc',
