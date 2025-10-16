@@ -137,7 +137,7 @@ def main():
     holidays = gbq_extended.readBigQuery(
         query=SQL_QUERIES['holidays'].substitute(
             p_year=execution_date[:4],
-            gcp_project=gcp_project[:4],
+            gcp_project=gcp_project,
         ),
         user=user,
         gbq_client=gbq_client,
