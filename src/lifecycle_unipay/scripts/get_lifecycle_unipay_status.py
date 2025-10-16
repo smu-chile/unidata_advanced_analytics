@@ -89,52 +89,17 @@ SQL_QUERIES = QueryDict({
     WHERE DATE_VALUE < '${fecha_fin}'
     """,
 
-    # Clientes que solicitaron la tarjeta Unipay
-    # en el periodo establecido
+    # Clientes con tarjeta unipay en el periodo establecido
     'tarjetas_unipay':
     """
-    WITH TARJETAS AS (
-    SELECT PERIOD,CARD_ID,CREDIT_LIMIT
-    FROM (
-    SELECT PERIOD,
+    SELECT CUSTOMER_KEY,
     CARD_ID,
-    CREDIT_LIMIT,
-    ROW_NUMBER() OVER (PARTITION BY CARD_ID ORDER BY PERIOD desc) rw
-    FROM ${gcp_proyect}.${schema}.VW_I_UNICARD_CARD_STATUS
-    WHERE CARD_ID IN (SELECT CARD_ID
-    FROM ${gcp_proyect}.${schema}.VW_I_UNICARD_CARD
-    WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
-    ) t
-    WHERE rw = 1
-    ),
-    CREDIT_LIMIT AS (
-    SELECT PERIOD,CARD_ID,CREDIT_LIMIT
-    FROM (
-    SELECT PERIOD,CARD_ID,CREDIT_LIMIT,
-    ROW_NUMBER() OVER (PARTITION BY CARD_ID ORDER BY PERIOD desc) rw
-    FROM ${gcp_proyect}.${schema}.VW_I_UNICARD_CARD_STATUS
-    WHERE CARD_ID IN (SELECT CARD_ID
-    FROM ${gcp_proyect}.${schema}.VW_I_UNICARD_CARD
-    WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
-    AND PERIOD <= ${periodo}
-    AND CREDIT_LIMIT > 1
-    ) t
-    WHERE rw = 1
-    )
-    SELECT UC.CUSTOMER_ID CUSTOMER_KEY,
-    UC.CARD_ID,
-    UC.SUBSCRIPTION_DATE,
-    UC.ACTIVATION_DATE,
-    UC.TERMINATION_DATE,
-    T.PERIOD PERIODO,
-    CASE
-        WHEN CL.CREDIT_LIMIT IS NULL THEN UC.CREDIT_LIMIT
-        ELSE CL.CREDIT_LIMIT
-    END AS CREDIT_LIMIT
-    FROM ${gcp_proyect}.${schema}.VW_I_UNICARD_CARD UC
-    LEFT JOIN TARJETAS T ON UC.CARD_ID = T.CARD_ID
-    LEFT JOIN CREDIT_LIMIT CL ON UC.CARD_ID = CL.CARD_ID
-    WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
+    SUBSCRIPTION_DATE,
+    ACTIVATION_DATE,
+    TERMINATION_DATE,
+    PERIODO,
+    CREDIT_LIMIT
+    FROM ${gcp_proyect}.${schema}.TMP_DATA_LIFECYCLE_UNIPAY_CARDS
     """,
 
     # Estado ciclo de vida unipay en el periodo
@@ -254,8 +219,8 @@ def main():
         )
 
     tarjetas = readBigQuery(SQL_QUERIES['tarjetas_unipay'].substitute(
-    gcp_proyect = 'cl-cda-unidata-prod',
-    schema = 'DS_PROD_UNI_SSFF',
+    gcp_proyect = 'cl-bigdata-analytics-preprod',
+    schema = 'TMP',
     fecha_fin = fecha_fin,
     periodo = periodo
     ),
