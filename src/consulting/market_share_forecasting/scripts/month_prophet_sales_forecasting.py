@@ -201,6 +201,13 @@ def main():
 
     target_values = ['unimarc', 'alvi', 's10', 'm10']
 
+    gbq_extended.createTableFromJSON(
+        table_ddl_json_path=os.path.join('gbq_objects', 'month_prophet_sales_forecasting.json'),  # noqa: E501
+        project=gcp_project,
+        gbq_client=gbq_client,
+        if_exists='rebuild',
+    )
+
     for category_names in batchList(
         market_data['category_description'].drop_duplicates().to_list(),
         batch_size=10
@@ -369,7 +376,7 @@ def main():
             table_ddl_json_path=os.path.join('gbq_objects', 'month_prophet_sales_forecasting.json'),  # noqa: E501
             project=gcp_project,
             gbq_client=gbq_client,
-            if_exists='replace',
+            if_exists='append',
         )
 
     logging.info('Trainning ended')
