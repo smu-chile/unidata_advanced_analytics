@@ -136,7 +136,7 @@ def main():
 
     holidays = gbq_extended.readBigQuery(
         query=SQL_QUERIES['holidays'].substitute(
-            p_year=execution_date[:4],
+            year=execution_date[:4],
             gcp_project=gcp_project,
         ),
         user=user,
@@ -147,18 +147,18 @@ def main():
         [
             holidays[
                 # TODO(ecastrot): Bad fix
-                holidays['strdate'] != '2025-06-29'
+                holidays['date'] != '2025-06-29'
             ],
             pd.DataFrame({
                 'title': ['huelga_lider'],
-                'strdate': ['2024-07-14'],
+                'date': ['2024-07-14'],
             })
         ],
         axis=0,
         ignore_index=True
     )
 
-    holidays['fin_periodo'] = pd.to_datetime(holidays['strdate'])
+    holidays['fin_periodo'] = pd.to_datetime(holidays['date'])
 
     logging.getLogger('prophet').setLevel(logging.WARNING)
     logging.getLogger('cmdstanpy').disabled=True
