@@ -19,7 +19,6 @@ from google.cloud.bigquery import Client
 import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.aws_extended.athena import readAthenaQuery
 from common.utils.data_transform import batchList
 from common.gcp_extended.secretsmanager import getSecret
 
@@ -159,27 +158,27 @@ def main():
     ))
 
     # Constants
-    db_temp = 'dev_temp'
     gbq_client = Client()
 
     # ------------
     # Data loading
     # ------------
     logging.info('Loading data...')
-    nielsen_data = readAthenaQuery(
+    nielsen_data = gbq_extended.readBigQuery(
+        query=SQL_QUERIES['nielsen_data'].substitute(
+            gcp_project=gcp_project,
+        ),
         user=user,
-        query=SQL_QUERIES['nielsen_data'].substitute(),
-        database=db_temp,
-        boto3_session=boto3_session
+        gbq_client=gbq_client,
     )
 
-    holidays = readAthenaQuery(
-        user=user,
+    holidays = gbq_extended.readBigQuery(
         query=SQL_QUERIES['holidays'].substitute(
-            p_year=execution_date[:4]
+            year=execution_date[:4],
+            gcp_project=gcp_project,
         ),
-        database=db_temp,
-        boto3_session=boto3_session
+        user=user,
+        gbq_client=gbq_client,
     )
     logging.info('Loading data...')
 
