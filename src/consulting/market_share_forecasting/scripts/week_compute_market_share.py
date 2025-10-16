@@ -52,7 +52,7 @@ SQL_QUERIES = QueryDict({
     'nielsen_data':
     """
     SELECT *
-    FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_CATEGORIA
+    FROM ${gcp_project}.MARKET_SHARE.NIELSEN_SEMANAL_VENTA_CATEGORIA
 
     UNION ALL
 
@@ -79,16 +79,16 @@ SQL_QUERIES = QueryDict({
     FROM (
         SELECT
             *
-            ,DATE_FORMAT(DATE(fin_periodo), '%x%v') AS id_semana
+            ,FORMAT_DATE('%G%V', DATE(fin_periodo)) AS id_semana
 
-        FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_NEGOCIO
+        FROM ${gcp_project}.MARKET_SHARE.NIELSEN_SEMANAL_VENTA_NEGOCIO
 
         WHERE negocio=''
     ) c
 
     LEFT JOIN (
         SELECT
-            DATE_FORMAT(DATE(fin_periodo), '%x%v') AS id_semana
+            FORMAT_DATE('%G%V', DATE(fin_periodo)) AS id_semana
             ,SUM(total_mercado_vtas_valor) AS mercado_vtas_valor
             ,SUM(total_mercado_vtas_unit) AS mercado_vtas_unit
             ,SUM(unimarc_vtas_valor) AS unimarc_vtas_valor
@@ -102,7 +102,7 @@ SQL_QUERIES = QueryDict({
             ,SUM(total_mercado_internet_vtas_valor) AS total_mercado_internet_vtas_valor
             ,SUM(total_mercado_internet_vtas_unit) AS total_mercado_internet_vtas_unit
 
-        FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_CATEGORIA n
+        FROM ${gcp_project}.MARKET_SHARE.NIELSEN_SEMANAL_VENTA_CATEGORIA
 
         GROUP BY 1
     ) CAT
@@ -111,17 +111,17 @@ SQL_QUERIES = QueryDict({
 
     'holidays':
     """
-    SELECT *
-    FROM dev_perm.tmp_lab_smu_dim_holidays
-    WHERE p_year != '${p_year}'
+    SELECT title, date
+    FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
+    WHERE EXTRACT(YEAR FROM date) = ${year}
 
     UNION ALL
 
-    SELECT *
-    FROM dev_perm.tmp_lab_smu_dim_holidays
+    SELECT title, date
+    FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
     WHERE
-        p_year = '${p_year}'
-        AND title NOT LIKE '%eleccion%'
+        EXTRACT(YEAR FROM date) != ${year}
+        AND NOT REGEXP_CONTAINS(title, '(?i)eleccion')
     """
 })
 
@@ -130,7 +130,7 @@ def fixFinPeriodo(row):
     if row['fin_periodo']:
         return row['fin_periodo']
 
-    date = pendulum.from_format(row['strdate'].strftime('%Y-%m-%d'), 'YYYY-MM-DD').date()
+    date = pendulum.from_format(row['date'].strftime('%Y-%m-%d'), 'YYYY-MM-DD').date()
 
     if date.day_of_week == pendulum.SUNDAY:
         return date
@@ -187,11 +187,11 @@ def main():
         [
             holidays[
                 # TODO(ecastrot): Bad fix
-                holidays['strdate'] != '2025-06-29'
+                holidays['date'] != '2025-06-29'
             ],
             pd.DataFrame({
                 'title': ['huelga_lider'],
-                'strdate': ['2024-07-14'],
+                'date': ['2024-07-14'],
                 'essential': [False],
                 'p_year': ['2024'],
             })
@@ -208,10 +208,10 @@ def main():
     nielsen_data['p_year'] = nielsen_data['fin_periodo'].astype(str).str[:4]
     nielsen_data.head()
 
-    holidays['strdate'] = pd.to_datetime(holidays['strdate'])
+    holidays['date'] = pd.to_datetime(holidays['date'])
     holidays['p_week'] = (
-        holidays['strdate'].astype(str).str[:4]
-        + pd.to_datetime(holidays['strdate']).dt.isocalendar()['week'].astype(str).str.zfill(2)
+        holidays['date'].astype(str).str[:4]
+        + pd.to_datetime(holidays['date']).dt.isocalendar()['week'].astype(str).str.zfill(2)
     )
 
     holidays = holidays.merge(
