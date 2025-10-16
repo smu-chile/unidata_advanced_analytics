@@ -111,7 +111,7 @@ SQL_QUERIES = QueryDict({
     STATUS,
     MONTHID
     FROM ${gcp_proyect}.${schema}.LIFECYCLE_UNIPAY_STATUS
-    WHERE MONTHID = ${periodo_n1}
+    WHERE MONTHID = CAST(${periodo_n1} AS STRING)
     AND STATUS != 'closed'
     """
 })
@@ -575,11 +575,11 @@ def main():
 
         tarjetas_ajust_copy['ACTIVATION_DATE'] = pd.to_datetime(
             np.where(tarjetas_ajust_copy['ACTIVATION_DATE'].dt.strftime('%Y%m') > \
-                     periodo_n1,pd.NaT,tarjetas_ajust_copy['ACTIVATION_DATE']))
+                     str(periodo_n1),pd.NaT,tarjetas_ajust_copy['ACTIVATION_DATE']))
 
         tarjetas_ajust_copy['CLOSED_DATE'] = pd.to_datetime(
             np.where(tarjetas_ajust_copy['CLOSED_DATE'].dt.strftime('%Y%m') > \
-                     periodo_n1,pd.NaT,tarjetas_ajust_copy['CLOSED_DATE']))
+                     str(periodo_n1),pd.NaT,tarjetas_ajust_copy['CLOSED_DATE']))
 
         tarjetas_ajust_copy['CLOSED_DATE_YYYYMM'] = \
             tarjetas_ajust_copy['CLOSED_DATE'].dt.strftime('%Y%m')
