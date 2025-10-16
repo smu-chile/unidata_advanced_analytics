@@ -351,6 +351,7 @@ def main():
         final_pred['inicio_periodo'] = final_pred['fin_periodo'].astype(str).str[:8] + '01'
 
         logging.info('Updating table to GCP')
+        logging.info(', '.join(final_pred['category_description'].unique().tolist()))
         gbq_extended.uploadFrame(
             final_pred[[
                 'category_description',
