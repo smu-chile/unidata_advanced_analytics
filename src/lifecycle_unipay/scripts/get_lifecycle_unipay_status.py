@@ -665,7 +665,7 @@ def main():
                 on=['CUSTOMER_KEY','CARD_ID'],
                 how='left')
             mask = (
-                ciclo['ULTIMA_COMPRA'].dt.strftime('%Y%m') == periodo
+                ciclo['ULTIMA_COMPRA'].dt.strftime('%Y%m') == str(periodo)
             ) & (
                 ciclo['STATUS'] == 'grow'
             ) & (
@@ -681,7 +681,7 @@ def main():
         # Si el cliente no compro con UNIPAY el mes anterior al mes actual
         # el CICLO queda como 500.0
         ciclo['CICLO'] = np.where(
-            (pd.to_datetime(ciclo['ULTIMA_COMPRA']).dt.strftime('%Y%m') == periodo),
+            (pd.to_datetime(ciclo['ULTIMA_COMPRA']).dt.strftime('%Y%m') == str(periodo)),
             (ciclo['ULTIMA_COMPRA'] - ciclo['PENULTIMA_COMPRA']).dt.days,500.0
         )
 
@@ -723,7 +723,7 @@ def main():
 
         # Tarjetas que se cerraron en el periodo calculado
         tarjetas_cerradas = tarjetas_ajust_copy.query(
-            'CLOSED_DATE_YYYYMM == @periodo').reset_index(drop = True)
+            'CLOSED_DATE_YYYYMM == @str(periodo)').reset_index(drop = True)
 
         # Obtenemos las tarjetas que no se cerraron en el mes anterior
         tarjetas_clientes = riesgo[~riesgo['CARD_ID'].isin(tarjetas_cerradas['CARD_ID'])]
@@ -884,7 +884,7 @@ def main():
 
 
     uploadFrame(
-    estado_clientes[['CUSTOMER_KEY','CARD_ID','STATUS','PERIODO']],
+    estado_clientes[['CUSTOMER_KEY','CARD_ID','STATUS','MONTHID']],
     table_ddl_json_path=os.path.join('gbq_objects','lifecycle_unipay_tmp.json'),
     project=proyecto,
     gbq_client=gbq_client,
