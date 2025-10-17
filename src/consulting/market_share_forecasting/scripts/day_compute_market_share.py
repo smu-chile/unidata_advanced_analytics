@@ -89,14 +89,14 @@ SQL_QUERIES = QueryDict({
     """
     SELECT title, date
     FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
-    WHERE EXTRACT(YEAR FROM date) = ${year}
+    WHERE EXTRACT(YEAR FROM date) != ${year}
 
     UNION ALL
 
     SELECT title, date
     FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
     WHERE
-        EXTRACT(YEAR FROM date) != ${year}
+        EXTRACT(YEAR FROM date) = ${year}
         AND NOT REGEXP_CONTAINS(title, '(?i)eleccion')
     """
 })
