@@ -112,21 +112,21 @@ SQL_QUERIES = QueryDict({
     """
     SELECT title, date
     FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
-    WHERE EXTRACT(YEAR FROM date) = ${year}
+    WHERE EXTRACT(YEAR FROM date) != ${year}
 
     UNION ALL
 
     SELECT title, date
     FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
     WHERE
-        EXTRACT(YEAR FROM date) != ${year}
+        EXTRACT(YEAR FROM date) = ${year}
         AND NOT REGEXP_CONTAINS(title, '(?i)eleccion')
     """
 })
 
 
 def fixFinPeriodo(row):
-    if row['fin_periodo']:
+    if not pd.isna(row['fin_periodo']):
         return row['fin_periodo']
 
     date = pendulum.from_format(row['date'].strftime('%Y-%m-%d'), 'YYYY-MM-DD').date()
@@ -191,8 +191,6 @@ def main():
             pd.DataFrame({
                 'title': ['huelga_lider'],
                 'date': ['2024-07-14'],
-                'essential': [False],
-                'p_year': ['2024'],
             })
         ],
         axis=0,
@@ -200,16 +198,13 @@ def main():
     )
 
     nielsen_data['p_week'] = (
-        nielsen_data['fin_periodo'].astype(str).str[:4]
+        pd.to_datetime(nielsen_data['fin_periodo']).dt.isocalendar()['year'].astype(str)
         + pd.to_datetime(nielsen_data['fin_periodo']).dt.isocalendar()['week'].astype(str).str.zfill(2)  # noqa: E501
     )
 
-    nielsen_data['p_year'] = nielsen_data['fin_periodo'].astype(str).str[:4]
-    nielsen_data.head()
-
     holidays['date'] = pd.to_datetime(holidays['date'])
     holidays['p_week'] = (
-        holidays['date'].astype(str).str[:4]
+        pd.to_datetime(holidays['date']).dt.isocalendar()['year'].astype(str)
         + pd.to_datetime(holidays['date']).dt.isocalendar()['week'].astype(str).str.zfill(2)
     )
 
@@ -219,9 +214,10 @@ def main():
         on='p_week'
     )
 
-    holidays['fin_periodo'] = holidays['fin_periodo'].fillna('')
     holidays['fin_periodo'] = holidays.apply(fixFinPeriodo, axis=1)
     holidays = holidays.sort_values('title').drop_duplicates(subset='fin_periodo', keep='first')
+    # TODO(ecastrot): Temporal fix holiday names
+    holidays['title'] = holidays['title'].str.replace('yprotestantes', 'y_protestantes')
 
     nielsen_data['fin_periodo'] = pd.to_datetime(nielsen_data['fin_periodo'])
 
