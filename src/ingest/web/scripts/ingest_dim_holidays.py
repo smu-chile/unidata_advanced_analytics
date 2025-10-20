@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import logging
 import argparse
 from logging import config
@@ -16,7 +17,7 @@ from common.constants import LOGGING_CONFIG
 # Own
 from common.utils.requests import safeGet
 from common.utils.data_transform import normalizeText
-from common.gcp_extended.bigquery import uploadFrame
+from common.gcp_extended.bigquery import uploadFrame, deleteFromTable
 
 
 # -------------------------------------------------------------------------
@@ -43,6 +44,9 @@ def main() -> None:  # noqa: D103
     args = vars(parser.parse_args())
     gcp_project: str = args['project_id']
     execution_date: pendulum.Date = pendulum.date(*map(int, args['execution_date'].split('-')))
+
+    # Static
+    gbq_client = Client()
 
     months = {
         1: 'enero',
@@ -82,8 +86,6 @@ def main() -> None:  # noqa: D103
         )
         for html_row in new_year_anchor.find_next_siblings('tr')
         ])
-    logging.info('DataFrame generated:')
-    logging.info(f'\n{holidays_df.to_markdown()}')
 
     logging.info('Normalizing holiday names...')
     holidays_df[0] = holidays_df[0].apply(
@@ -93,15 +95,25 @@ def main() -> None:  # noqa: D103
         replace_spaces='_',
     )
 
-    logging.info('Final frame:')
-    logging.info(f'\n{holidays_df.to_markdown()}')
+    # Remove registers from the same year
+    with open(os.path.join('gbq_objects', 'dim_holidays.json')) as f:
+        tbl_config = json.load(f)
+        deleteFromTable(
+            table_ref=(
+                gcp_project
+                + '.' + tbl_config['schema']
+                + '.' + tbl_config['table']
+            ),
+            where_clause=f'EXTRACT(YEAR FROM date) = {execution_date.year}',
+            gbq_client=gbq_client
+        )
 
     # Upload to GBQ
     uploadFrame(
         df=holidays_df,
         table_ddl_json_path=os.path.join('gbq_objects', 'dim_holidays.json'),
         project=gcp_project,
-        gbq_client=Client(),
+        gbq_client=gbq_client,
         if_exists='append',
     )
     logging.info('DataFrame uploaded to GBQ! :)')

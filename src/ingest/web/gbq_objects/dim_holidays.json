@@ -5,7 +5,7 @@
     "columns": [
         {
             "name": "title",
-            "field_type": "BIGNUMERIC",
+            "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Name of the holiday"
         },

@@ -5,7 +5,10 @@ FROM debian:11-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 # (Required) Install utilities required by Spark scripts.
-RUN apt update && apt install -y procps tini libjemalloc2 wget libgomp1
+RUN apt update && apt install -y procps tini libjemalloc2 wget
+
+# (Optional) Install utilities required by XGBoost for Spark.
+RUN apt install -y procps libgomp1
 
 # Enable jemalloc2 as default memory allocator
 ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
@@ -28,6 +31,9 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
   && ${CONDA_HOME}/bin/conda config --system --set auto_update_conda False \
   && ${CONDA_HOME}/bin/conda config --system --prepend channels conda-forge \
   && ${CONDA_HOME}/bin/conda config --system --set channel_priority strict
+# Packages ipython and ipykernel are required if using custom conda and want to
+# use this container for running notebooks.
+#RUN ${CONDA_HOME}/bin/conda install ipython ipykernel
 
 # (Optional) Install Conda packages.
 #
@@ -36,12 +42,12 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
 #
 # Use mamba to install packages quickly.
 RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
-    && ${CONDA_HOME}/bin/micromamba install --yes -c conda-forge \
+    && ${CONDA_HOME}/bin/micromamba install -y -c conda-forge\
+      conda \
       cython \
       fastavro \
       fastparquet \
       gcsfs \
-      beautifulsoup4 \
       google-cloud-bigquery-storage \
       google-cloud-bigquery[pandas] \
       google-cloud-bigtable \
@@ -55,15 +61,15 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       google-cloud-redis \
       google-cloud-secret-manager \
       google-cloud-spanner \
+      google-cloud-speech \
       google-cloud-storage \
       koalas \
-      lxml \
       matplotlib \
+      nltk \
       numba \
       numpy \
       openblas \
       orc \
-      openpyxl \
       pandas \
       pyarrow \
       pytables \
@@ -71,8 +77,11 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       regex \
       requests \
       rtree \
+      scikit-learn \
+      scipy \
+      seaborn \
+      sqlalchemy \
       sympy \
-      libsqlite \
       pendulum \
       pandas-gbq \
       virtualenv \
@@ -80,7 +89,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
 
 # (Optional) Install additional requirements
 # COPY requirements.txt .
-# RUN pip install --no-cache-dir --no-cache -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt
 
 # Set timezone
 ENV TZ="America/Santiago"

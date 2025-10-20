@@ -130,10 +130,10 @@ class SharePointFile:
 
         Notes
         -----
-        This function will be slow on large files. Its possible to make it
-        fast when it comes to uploading this files but is a fucking pain to
-        work with the microsoft API. If you need this function please ask
-        for it to the team.
+        This function will be slow on large files (>4Mb). Its possible to
+        make it fast when it comes to uploading them but is a fucking pain
+        to work with the microsoft API. Please ask the theam if you need
+        this functionality.
         """
         path, filename = posixpath.split(self.server_relative_path)
 

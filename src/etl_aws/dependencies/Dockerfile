@@ -39,7 +39,8 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
 #
 # Use mamba to install packages quickly.
 RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
-    && ${CONDA_HOME}/bin/micromamba install \
+    && ${CONDA_HOME}/bin/micromamba shell init -p ${CONDA_HOME} -s bash \
+    && /bin/bash -c "source ${CONDA_HOME}/etc/profile.d/micromamba.sh \ && micromamba install -y \
       conda \
       cython \
       fastavro \
@@ -83,7 +84,7 @@ RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
       pendulum \
       awswrangler \
       pandas-gbq \
-      virtualenv
+      virtualenv"
 
 # (Optional) Install additional requirements
 # COPY requirements.txt .
