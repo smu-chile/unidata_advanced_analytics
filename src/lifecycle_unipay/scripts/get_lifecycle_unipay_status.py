@@ -728,8 +728,8 @@ def main():
         riesgo['STATUS'] = riesgo['STATUS'].fillna('sin_estado')
 
         # Tarjetas que se cerraron en el periodo calculado
-        tarjetas_cerradas = tarjetas_ajust_copy.query(
-            'CLOSED_DATE_YYYYMM == @str(periodo)').reset_index(drop = True)
+        tarjetas_cerradas = tarjetas_ajust_copy[
+            tarjetas_ajust_copy['CLOSED_DATE_YYYYMM'] == str(periodo)]
 
         # Obtenemos las tarjetas que no se cerraron en el mes anterior
         tarjetas_clientes = riesgo[~riesgo['CARD_ID'].isin(tarjetas_cerradas['CARD_ID'])]
