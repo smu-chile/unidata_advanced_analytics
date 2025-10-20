@@ -420,18 +420,20 @@ def main():
     activacion_tarjeta = compras_unipay_ajust.loc[idx]
 
     tarjetas_revision = tarjetas_ajust.query('ACTIVATION_DATE.isna()')
-    tarjetas_revision['DIAS'] = tarjetas_revision['DATE_VALUE'] - \
-        tarjetas_revision['SUBSCRIPTION_DATE']
-    tarjetas_revision = tarjetas_revision[
-        tarjetas_revision['DIAS'] <= pd.Timedelta(days=365)]
 
     tarjetas_revision = tarjetas_revision.merge(
-        activacion_tarjeta[['CUSTOMER_KEY',
-                            'CARD_ID',
-                            'DATE_VALUE']],
-        on=['CUSTOMER_KEY','CARD_ID'],
-        how='inner'
+    activacion_tarjeta[['CUSTOMER_KEY',
+                        'CARD_ID',
+                        'DATE_VALUE']],
+    on=['CUSTOMER_KEY','CARD_ID'],
+    how='inner'
     )
+
+    tarjetas_revision['DIAS'] = tarjetas_revision['DATE_VALUE'] - \
+        tarjetas_revision['SUBSCRIPTION_DATE']
+
+    tarjetas_revision = tarjetas_revision[
+        tarjetas_revision['DIAS'] <= pd.Timedelta(days=365)]
 
     fechas_dict = tarjetas_revision.set_index('CARD_ID')['DATE_VALUE'].to_dict()
 
