@@ -560,13 +560,13 @@ def main():
             choices,
             default='sin_estado')
 
-        tarjetas_ajust['PERIODO'] = str(periodo)
+        tarjetas_ajust['MONTHID'] = str(periodo)
 
         estado_clientes = tarjetas_ajust[[
             'CUSTOMER_KEY',
             'CARD_ID',
             'STATUS',
-            'PERIODO']]
+            'MONTHID']]
 
         createTableFromJSON(
             table_ddl_json_path = os.path.join('gbq_objects', 'lifecycle_unipay_tmp.json'),
@@ -881,6 +881,7 @@ def main():
             'CUSTOMER_KEY',
             'CARD_ID',
             'STATUS']]
+
         estado_clientes['MONTHID'] = periodo
 
     logging.info(' ')
