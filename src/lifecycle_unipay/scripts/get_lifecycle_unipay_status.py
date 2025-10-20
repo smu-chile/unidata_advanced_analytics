@@ -499,21 +499,6 @@ def main():
 
     tarjetas_ajust = tarjetas_ajust.drop(columns=['DATE_VALUE'])
 
-    tarjetas_ajust['ACTIVATION_DATE'] = pd.to_datetime(
-        np.where(tarjetas_ajust['ACTIVATION_DATE'].dt.strftime('%Y%m') > \
-                 str(periodo),pd.NaT,tarjetas_ajust['ACTIVATION_DATE'])
-        )
-    tarjetas_ajust['CLOSED_DATE'] = pd.to_datetime(
-        np.where(tarjetas_ajust['CLOSED_DATE'].dt.strftime('%Y%m') > \
-                 str(periodo),pd.NaT,tarjetas_ajust['CLOSED_DATE'])
-        )
-
-    tarjetas_ajust['DIAS'] = np.where(
-        pd.isna(tarjetas_ajust['ACTIVATION_DATE']),
-        (pd.Timestamp(fecha_ini) + MonthEnd(0) - tarjetas_ajust['SUBSCRIPTION_DATE']).dt.days,
-        0
-    )
-
     logging.info(' ')
     logging.info('--------------------')
     logging.info('Termina el proceso del ajuste de la activacion y cierre de las tarjetas')
@@ -525,6 +510,21 @@ def main():
     logging.info('--------------------')
 
     if periodo == periodo_inicio:
+        tarjetas_ajust['ACTIVATION_DATE'] = pd.to_datetime(
+            np.where(tarjetas_ajust['ACTIVATION_DATE'].dt.strftime('%Y%m') > \
+                    str(periodo),pd.NaT,tarjetas_ajust['ACTIVATION_DATE'])
+            )
+        tarjetas_ajust['CLOSED_DATE'] = pd.to_datetime(
+            np.where(tarjetas_ajust['CLOSED_DATE'].dt.strftime('%Y%m') > \
+                    str(periodo),pd.NaT,tarjetas_ajust['CLOSED_DATE'])
+            )
+
+        tarjetas_ajust['DIAS'] = np.where(
+            pd.isna(tarjetas_ajust['ACTIVATION_DATE']),
+            (pd.Timestamp(fecha_ini) + MonthEnd(0) - tarjetas_ajust['SUBSCRIPTION_DATE']).dt.days,
+            0
+        )
+
         conditions = [
             (tarjetas_ajust['CLOSED_DATE'].dt.strftime('%Y%m') == str(periodo)), #closed
 
@@ -581,11 +581,11 @@ def main():
 
         tarjetas_ajust_copy['ACTIVATION_DATE'] = pd.to_datetime(
             np.where(tarjetas_ajust_copy['ACTIVATION_DATE'].dt.strftime('%Y%m') > \
-                     str(periodo_n1),pd.NaT,tarjetas_ajust_copy['ACTIVATION_DATE']))
+                     str(periodo),pd.NaT,tarjetas_ajust_copy['ACTIVATION_DATE']))
 
         tarjetas_ajust_copy['CLOSED_DATE'] = pd.to_datetime(
             np.where(tarjetas_ajust_copy['CLOSED_DATE'].dt.strftime('%Y%m') > \
-                     str(periodo_n1),pd.NaT,tarjetas_ajust_copy['CLOSED_DATE']))
+                     str(periodo),pd.NaT,tarjetas_ajust_copy['CLOSED_DATE']))
 
         tarjetas_ajust_copy['CLOSED_DATE_YYYYMM'] = \
             tarjetas_ajust_copy['CLOSED_DATE'].dt.strftime('%Y%m')
