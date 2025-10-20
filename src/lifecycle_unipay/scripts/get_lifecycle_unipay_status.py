@@ -862,25 +862,18 @@ def main():
         # Tarjetas cerradas
         tarjetas_cerradas['STATUS_NEW'] = 'closed'
 
-        # Creamos un Dataframe vacio, para guardar
-        # el cliente, tarjeta, estado y periodo
-        estado_clientes = pd.DataFrame(
-            columns = [
-                'CUSTOMER_KEY',
-                'CARD_ID',
-                'STATUS',
-                'MONTHID'
-            ]
-        )
-
         estado_clientes = pd.concat(
             [tarjetas_clientes,tarjetas_cerradas], ignore_index=True
         )
 
+        # Tabla con los estados del periodo en cuestion
         estado_clientes = estado_clientes[[
             'CUSTOMER_KEY',
             'CARD_ID',
-            'STATUS']]
+            'STATUS_NEW']]
+
+        estado_clientes = estado_clientes.rename(
+            columns={'STATUS_NEW': 'STATUS'})
 
         estado_clientes['MONTHID'] = periodo
 
