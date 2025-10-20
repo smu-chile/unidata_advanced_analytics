@@ -30,7 +30,7 @@ SUBNETWORK = dag_env_config['subnetwork']
 
 dag_args = {
     'dag_id': 'salesforce_ing_contactabilidad_data',
-    'schedule_interval': '20 8 * * *',
+    'schedule_interval': '0 9 * * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
