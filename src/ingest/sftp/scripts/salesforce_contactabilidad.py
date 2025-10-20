@@ -42,7 +42,7 @@ def cleaning_func(df_file, execution_date):
 
     campos_fechas = ['FechaRegistro', 'FechaValidacionEmail', 'FechaValidacionWhatsapp']
     for campo in campos_fechas:
-        df_file[campo] = pd.to_datetime(df_file[campo], dayfirst= True)
+        df_file[campo] = pd.to_datetime(df_file[campo],format='ISO8601', dayfirst= True)
 
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
     print('After cleaning:', df_file)
