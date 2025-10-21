@@ -1,6 +1,6 @@
 {
-    "schema": "TMP",
-    "table": "TMP_DATA_SF_EMAIL_BOUNCE",
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_EMAIL_JOBS",
 
     "columns": [
         {
@@ -14,55 +14,63 @@
             "mode": "NULLABLE"
         },
         {
-            "name": "SUBSCRIBERKEY",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "Subscriber Key"
-        },
-        {
-            "name": "EMAIL",
+            "name": "FROMNAME",
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
-            "name": "SUBSCRIBERID",
-            "field_type": "INTEGER",
+            "name": "FROMEMAIL",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
          {
-            "name": "LISTID",
-            "field_type": "INTEGER",
+            "name": "SCHEDTIME",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {
-            "name": "EVENT_DATE",
+            "name": "SENTTIME",
             "field_type": "DATETIME",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SUBJECT",
+            "field_type": "STRING",
             "mode": "NULLABLE",
             "description": "Fecha evento"
         },
         {
-            "name": "EVENT_TYPE",
-            "field_type": "STRING",
-            "mode": "NULLABLE",
-            "description": "Tipo de Evento"
-        },
-        {
-            "name": "BOUNCECATEGORY",
+            "name": "EMAILNAME",
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
-            "name": "SMTPCODE",
-            "field_type": "INTEGER",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "BOUNCEREASON",
+            "name": "TRIGGERKEY",
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
-            "name": "BATCHID",
+            "name": "SENDKEY",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "JOBSTATUS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "PREVIEWURL",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ISMULTIPART",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ADDITIONAL",
             "field_type": "INTEGER",
             "mode": "NULLABLE"
         },

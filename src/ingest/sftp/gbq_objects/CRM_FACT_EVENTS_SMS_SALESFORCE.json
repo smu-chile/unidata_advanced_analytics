@@ -1,77 +1,77 @@
 {
-    "schema": "TMP",
-    "table": "TMP_DATA_SF_EMAIL_JOBS",
+    "schema": "CRM",
+    "table": "CRM_FACT_EVENTS_SMS_SALESFORCE",
 
     "columns": [
+        {
+            "name": "EVENT_DATE",
+            "field_type": "DATE",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "EID",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED",
+            "description": "Subscriber Key"
+        },
         {
             "name": "CLIENT_ID",
             "field_type": "INTEGER",
             "mode": "NULLABLE"
         },
         {
-            "name": "SEND_ID",
-            "field_type": "INTEGER",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "FROMNAME",
+            "name": "MESSAGE_NAME",
             "field_type": "STRING",
-            "mode": "NULLABLE"
+            "mode": "REQUIRED"
         },
         {
-            "name": "FROMEMAIL",
+            "name": "MESSAGE_TYPE",
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
          {
-            "name": "SCHEDTIME",
-            "field_type": "DATETIME",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "SENTTIME",
-            "field_type": "DATETIME",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "SUBJECT",
-            "field_type": "STRING",
-            "mode": "NULLABLE",
-            "description": "Fecha evento"
-        },
-        {
-            "name": "EMAILNAME",
+            "name": "CAMPAIGN_NAME",
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
-            "name": "TRIGGERKEY",
+            "name": "MESSAGE_ORIGIN",
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
-            "name": "SENDKEY",
+            "name": "MESSAGE_TEXT",
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
-            "name": "JOBSTATUS",
-            "field_type": "STRING",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "PREVIEWURL",
-            "field_type": "STRING",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "ISMULTIPART",
-            "field_type": "STRING",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "ADDITIONAL",
+            "name": "MOBILE_NUMBER",
             "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "COUNTRY_CODE",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SHORT_CODE",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "STATUS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MOBILE_MESSAGE_TRACKING_ID",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SUBSCRIBERKEY",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {

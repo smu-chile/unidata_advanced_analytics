@@ -1,6 +1,6 @@
 {
-    "schema": "TMP",
-    "table": "TMP_DATA_SF_EMAIL_SEND",
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_EMAIL_SEND",
 
     "columns": [
         {

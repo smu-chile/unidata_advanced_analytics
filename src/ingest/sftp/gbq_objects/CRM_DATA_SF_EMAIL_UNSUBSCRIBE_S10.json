@@ -1,11 +1,11 @@
 {
-    "schema": "TMP",
-    "table": "TMP_DATA_SF_SMS_UNSUBSCRIBE_UNIMARC",
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_EMAIL_UNSUBSCRIBE_S10",
 
     "columns": [
         {
-            "name": "MOBILE",
-            "field_type": "INTEGER",
+            "name": "RUTHASH",
+            "field_type": "STRING",
             "mode": "REQUIRED"
         },
         {

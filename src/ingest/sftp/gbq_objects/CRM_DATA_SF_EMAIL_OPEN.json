@@ -1,6 +1,6 @@
 {
-    "schema": "TMP",
-    "table": "TMP_DATA_SF_EMAIL_COMPLAINTS",
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_EMAIL_OPEN",
 
     "columns": [
         {
@@ -24,12 +24,12 @@
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
-         {
+        {
             "name": "SUBSCRIBERID",
             "field_type": "INTEGER",
             "mode": "NULLABLE"
         },
-        {
+         {
             "name": "LISTID",
             "field_type": "INTEGER",
             "mode": "NULLABLE"
@@ -52,7 +52,7 @@
             "mode": "NULLABLE"
         },
         {
-            "name": "DOMAIN",
+            "name": "ISUNIQUE",
             "field_type": "STRING",
             "mode": "NULLABLE"
         },

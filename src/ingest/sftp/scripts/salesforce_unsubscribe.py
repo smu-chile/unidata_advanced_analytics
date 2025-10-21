@@ -87,8 +87,8 @@ def main() -> None:  # noqa: D103
         formato_name = formato.upper()
         #table definitions jsons
         jsons = {
-        'EMAIL' : f'CRM_TMP_DATA_SF_EMAIL_UNSUBSCRIBE_{formato_name}.json',
-        'SMS': f'CRM_TMP_DATA_SF_SMS_UNSUBSCRIBE_{formato_name}.json'
+        'EMAIL' : f'CRM_DATA_SF_EMAIL_UNSUBSCRIBE_{formato_name}.json',
+        'SMS': f'CRM_DATA_SF_SMS_UNSUBSCRIBE_{formato_name}.json'
         }
         for file in archivos:
             if formato == 'unipay' and file=='SMS':
