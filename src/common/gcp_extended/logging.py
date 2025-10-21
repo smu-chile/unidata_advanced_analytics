@@ -1,11 +1,14 @@
 """Extension of the google.cloud.logging_v2 modules."""
 from __future__ import annotations
 
+# Default
 import re
-from string import Template
-from textwrap import dedent
 
+# pip
 import google.cloud.logging_v2 as gclogging
+
+# Own
+from ..databases.queries import QueryDict  # noqa: TID252
 
 
 def getDataprocJobLogs(
@@ -32,24 +35,22 @@ def getDataprocJobLogs(
     logs : list[str]
         Script produced logs
     """
-    base_filter = Template(
+    filled_filter = QueryDict({
+        'filter':
         """
-        log_name="projects/cl-bigdata-analytics/logs/dataproc.googleapis.com%2Foutput"
+        log_name="projects/cl-bigdata-analytics/logs/dataproc.googleapis.com%2foutput"
         resource.type="cloud_dataproc_batch"
         resource.labels.project_id="${project_name}"
         resource.labels.location="${region}"
         resource.labels.batch_id="batch-${job_uuid}"
-        severity>=DEFAULT
-        timestamp>="2025-01-01T00:00:00.615Z"
+        severity>=default
+        timestamp>="2025-01-01t00:00:00.615z"
         """
-    )
-
-    filled_filter = dedent(
-        base_filter.substitute(
-            project_name=project_name,
-            region=region,
-            job_uuid=job_uuid,
-        )
+    }).substitute(
+        query_name='filter',
+        project_name=project_name,
+        region=region,
+        job_uuid=job_uuid,
     )
 
     gclogging_client = gclogging.Client(

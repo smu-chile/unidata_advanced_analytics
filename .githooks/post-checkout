@@ -7,8 +7,11 @@ import subprocess
 
 def main() -> None:
     """Assign Ruffs config depending on the branch in VSC Workspace."""
-    configfile_path = os.path.join(
-        '.vscode/', 'unidata_advanced_analytics.code-workspace'
+    vsc_config_filepath = os.path.join(
+        '.vscode/', 'settings.json'
+    )
+    pre_commit_filepath = os.path.join(
+        '.githooks', 'pre-commit'
     )
 
     # File checkout instead of branch checkout
@@ -20,16 +23,23 @@ def main() -> None:
         ['git', 'symbolic-ref', '--short', 'HEAD'],
         stdout=subprocess.PIPE
     ).stdout.decode().strip()
-    with open(configfile_path, 'r+') as configfile:
-        # Read file
-        txt = json.load(configfile)
-
-    # Replace text
     new_branch = new_branch if new_branch in ['dev', 'main'] else 'dev'
-    txt['settings']['ruff.configuration'] = f'lint/{new_branch}_ruff.toml'
 
-    with open(configfile_path, 'w') as configfile:
-        json.dump(txt, configfile)
+    # Replace text in VSC config
+    with open(vsc_config_filepath) as configfile:
+        txt = json.load(configfile)
+    txt['ruff.configuration'] = f'lint/{new_branch}_ruff.toml'
+    with open(vsc_config_filepath, 'w') as configfile:
+        json.dump(txt, configfile, indent=txt['[yaml]']['editor.tabSize'])
+
+    # Replace text in pre-commit hook
+    with open(pre_commit_filepath, 'r+') as configfile:
+        if new_branch == 'dev':
+            txt = configfile.read().replace('/main_', '/dev_')
+        else:
+            txt = configfile.read().replace('/dev_', '/main_')
+        configfile.seek(0)
+        configfile.write(txt)
 
 
 if __name__ == '__main__':

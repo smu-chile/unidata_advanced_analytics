@@ -4,7 +4,7 @@
 # Python version of the project
 extend-include = ["*.ipynb"]
 extend-exclude = [".githooks"]
-target-version = "py37"
+target-version = "py312"
 src = ['src']
 
 # ------------------------------------------------------------------------------
@@ -21,9 +21,9 @@ src = ['src']
 select = [
     "S",  "F",  "W",  "I",  "N", "B", "G", "A", "Q",
     "UP", "C4", "EM", "FA", "PT", "TD", "PD",
-    "YTT", "BLE", "DTZ", "T10", "EXE", "ISC", "ICN", "LOG", "T20", "PYI", "RSE",
-    "RET", "SLF", "SIM", "ARG", "TCH", "FIX", "ERA", "PGH", "TRY", "FLY", "NPY",
-    "AIR", "RUF", "INP", "PIE",
+    "YTT", "BLE", "DTZ", "T10", "EXE", "ISC", "ICN", "LOG", "PYI", "RSE",
+    "RET", "SLF", "SIM", "ARG", "TCH", "ERA", "PGH", "TRY", "FLY", "NPY", "AIR",
+    "RUF", "INP", "PIE",
     "ASYNC", "SLOT", "PERF",
 ]
 
@@ -32,7 +32,6 @@ extend-select = [
     "D212", "D417",
     "E101", "E401", "E402", "E501", "E702", "E703", "E711", "E712", "E713",
     "E714", "E721", "E722", "E731", "E902",
-    "ANN001", "ANN201", "ANN202", "ANN205", "ANN206",
     "FBT003",
     "COM818", "COM819",
     "TID252", 
@@ -44,6 +43,7 @@ extend-select = [
 
 # Remove rules
 ignore = [
+    "RUF100",
     "N802", "N804",
     "UP040",
     "B905",

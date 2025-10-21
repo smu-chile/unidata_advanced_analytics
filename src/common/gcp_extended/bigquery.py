@@ -7,8 +7,12 @@ from typing import TYPE_CHECKING, Literal
 
 # pip
 import pandas_gbq
-from google.cloud import bigquery
-from google.cloud.exceptions import BadRequest
+from pendulum import DateTime
+from google.cloud import bigquery, bigquery_storage
+from google.cloud.exceptions import NotFound, BadRequest
+
+# Own
+from ..databases.queries import QueryDict  # noqa: TID252
 
 
 # Type checking imports
@@ -24,11 +28,14 @@ _TIME_PARTITIONING_TYPES = {
 }
 
 
-def readBigQuery(query: str, user: str, **kwargs) -> pd.DataFrame | None:
+def readBigQuery(
+        query: str, user: str, gbq_client: bigquery.Client,
+        **kwargs
+    ) -> pd.DataFrame | None:
     """Read a query from a GCP BigQuery table.
 
-    Wrapper over `pandas_gbq.read_gbq` function to send a SQL query to a
-    GCP BigQuery database
+    Sends a SQL query to a GCP BigQuery database and bring the resultant
+    table as a DataFrame
 
     Parameters
     ----------
@@ -36,43 +43,57 @@ def readBigQuery(query: str, user: str, **kwargs) -> pd.DataFrame | None:
         SQL query
     user : str
         Name of the user making the query
+    gbq_client : bigquery.Client
+        Client used for making the queries
     **kwargs
-        Arguments passed to the `pandas_gbq.read_gbq` function
+        Arguments passed to the `bigquery.QueryJobConfig` constructor.
+        **This argument will override the user argument**, so you'll need
+        to add a user label manually.
 
     Returns
     -------
     response_df : pd.DataFrame | None
         Pandas DataFrame object with the query response
     """
-    return pandas_gbq.read_gbq(**{
-        'query_or_table': query,
-        'configuration': {
-            'labels': {
-                'user': user
-            }
-        },
-        'progress_bar_type': None,
-        **kwargs
-    })
+    return gbq_client.query_and_wait(
+        query=query,
+        job_config=bigquery.QueryJobConfig(**{
+            'labels': {'user': user},
+            **kwargs
+        }),
+    ).to_dataframe(
+        bqstorage_client=bigquery_storage.BigQueryReadClient(),
+        progress_bar_type=None,
+    )
 
 
 def createTableFromJSON(
-        ddl_json_config_path: str,
-        if_exists: Literal['raise', 'rebuild'] = 'raise'
+        table_ddl_json_path: str,
+        project: str,
+        gbq_client: bigquery.Client,
+        if_exists: Literal['raise', 'ignore', 'rebuild'] = 'raise',
+        json_encoding: str = 'utf8',
     ) -> dict:
     """Create a BigQuery table using a JSON config file.
 
     Parameters
     ----------
-    ddl_json_config_path : str,
+    table_ddl_json_path : str,
         Path to the JSON file with the DDL configuration for the table.
-    if_exists : {'raise', 'rebuild'}, optional
+    project : str
+        Google BigQuery project in which the table will be created.
+    gbq_client : bigquery.Client
+        Client used for making the queries
+    if_exists : {'raise', 'ignore', 'rebuild'}, optional
         Behavior to take if the table allready exists.
         -  `raise` raises an `Already Exists` error
+        -  `ignore` ignores `Already Exists` errors
         -  `rebuild` deletes the table with all its data and build it again
 
        .. warning:: All the data in the table will be lost if `rebuild` is
           used.
+    json_encoding : str, default='utf8'
+        Encoding of the JSON file with the DDL
 
     Returns
     -------
@@ -84,13 +105,17 @@ def createTableFromJSON(
     google.cloud.exceptions.BadRequest
         If time and range partitioning are used at the same time.
     """
+    # Args verification
+    if if_exists not in ['raise', 'ignore', 'rebuild']:
+        err_msg = "if_exists must be one of 'raise', 'ignore' or 'rebuild'"
+        raise ValueError(err_msg)
     # Read config JSON
-    with open(ddl_json_config_path) as f:
+    with open(table_ddl_json_path, encoding=json_encoding) as f:
         ddl_config = json.load(f)
 
     # Build table location
     table_ref = '.'.join([
-            ddl_config['project'],
+            project,
             ddl_config['schema'],
             ddl_config['table']
     ])
@@ -140,14 +165,14 @@ def createTableFromJSON(
     # Configure clustering fields
     table.clustering_fields = ddl_config.get('clustering_fields', None)
 
-    # Setup client
-    gbq_client = bigquery.Client()
     # Delete the previous table and buildit all over again
     if if_exists == 'rebuild':
         gbq_client.delete_table(table_ref, not_found_ok=True)
         gbq_client.create_table(table)
-    else:
+    elif if_exists == 'raise':
         gbq_client.create_table(table, exists_ok=False)
+    else:
+        gbq_client.create_table(table, exists_ok=True)
 
     # Return the DDL config dict
     return ddl_config
@@ -156,6 +181,7 @@ def createTableFromJSON(
 def createTableAsSelect(
         query: str,
         table_ref: str,
+        gbq_client: bigquery.Client,
         create_disposition: Literal['CREATE_IF_NEEDED', 'CREATE_NEVER'] = 'CREATE_IF_NEEDED',
         write_disposition: Literal['WRITE_TRUNCATE', 'WRITE_APPEND', 'WRITE_EMPTY'] = 'WRITE_TRUNCATE',  # noqa: E501
         use_legacy_sql: bool = True,
@@ -176,6 +202,8 @@ def createTableAsSelect(
         Table where results are written. The value must included a project
         ID, dataset ID, and table ID, each separated by ``.``.
         For example: `your-project.your_dataset.your_table`
+    gbq_client : bigquery.Client
+        Client used for making the queries
     create_disposition : {'CREATE_IF_NEEDED', 'CREATE_NEVER'}
         Specifies whether the job is allowed to create new tables.
         -  `CREATE_IF_NEEDED`: If the table does not exist, BigQuery
@@ -210,7 +238,7 @@ def createTableAsSelect(
     result : pd.DataFrame
         Empty DataFrame with the column names of the created table
     """
-    ctas_response = bigquery.Client().query_and_wait(
+    ctas_response = gbq_client.query_and_wait(
         query=query,
         job_config=bigquery.QueryJobConfig(
             destination=table_ref,
@@ -227,42 +255,226 @@ def createTableAsSelect(
     return ctas_response.to_dataframe()
 
 
+def verifyTableExistence(
+        table_ref: str,
+        gbq_client: bigquery.Client,
+        if_not_exists: Literal['raise', 'ignore'] = 'raise',
+    ) -> bool:
+    """Verify table existence.
+
+    Returns True if the table exists. If it doesn't the behavior depends on
+    the value of `if_not_exists`.
+
+    Parameters
+    ----------
+    table_ref : str
+        Table from which the data will be deleted. The value must included
+        a project ID, dataset ID, and table ID, each separated by ``.``.
+        For example: `your-project.your_dataset.your_table`
+    gbq_client : bigquery.Client
+        Client used for making the queries
+    if_not_exists : ['raise', 'ignore'], default='raise'
+        Behavior if table does not exist:
+        - `ignore`: Return False if the table does not exist
+        - `raise`: Raises NotFound exception
+
+    Returns
+    -------
+    table_exists : bool
+        True when table exists and False when it doesn't and the behavior
+        is ignore
+    """
+    # Search the table
+    try:
+        gbq_client.get_table(table_ref)  # Make an API request.
+        return True
+    except NotFound:
+        if if_not_exists == 'ignore': return False
+        raise
+
+
 def uploadFrame(
-        df: pd.DataFrame, table_ref: str,
+        df: pd.DataFrame,
+        table_ddl_json_path: str,
+        project: str,
+        gbq_client: bigquery.Client,
         if_exists: Literal['fail', 'replace', 'append'] = 'fail',
         progress_bar: bool = False,
+        json_encoding: str = 'utf8',
         **kwargs
     ) -> None:
-    """Add better argument docs to some parameters in `pandas_gbq.to_bgq`.
+    """Upload a Pandas DataFrame to a table in Google BigQuery.
 
     Parameters
     ----------
     df : pd.DataFrame
         Pandas DataFrame with the data to upload into Google BigQuery
-    table_ref : str
-        Path to the table in the form `project.schema.table` (Case
-        sensitive)
+    table_ddl_json_path : str
+        Path to a json with the DDL of the table
+    project : str
+        Google BigQuery project in which the table will be loaded.
+    gbq_client : bigquery.Client
+        Client used for making the queries
     if_exists : {'fail', 'replace', 'append'}
         Behavior to take if the table allready exists.
         -  `fail` throws an error
         -  `replace` re-builds the table inserting the data in the frame
         -  `append` inserts the data in the existing table
-
-        .. warning:: `replace` mode its not recommended as its use will
-           modify the DDL of the table.
-
     progress_bar : pd.DataFrame
         Whether to use `tqdm` to log the upload progress
+    json_encoding : str, default='utf8'
+        Encoding of the JSON file with the DDL
     **kwargs : pd.DataFrame
         Arguments passed on to `pandas_gbq.to_bgq`
     """
-    return pandas_gbq.to_gbq(
-        dataframe=df,
-        destination_table=table_ref,
-        if_exists=if_exists,
-        progress_bar=progress_bar,
+    with open(table_ddl_json_path, encoding=json_encoding) as table_ddl_file:
+        table_ddl = json.load(table_ddl_file)
+
+    table_schema = [{
+            'name': x['name'],
+            'type': x['field_type']
+        }
+        for x in table_ddl['columns']
+    ]
+
+    # Build table reference
+    table_ref = f"{project}.{table_ddl['schema']}.{table_ddl['table']}"
+
+    # If table does not exists then create it first
+    if not verifyTableExistence(
+        table_ref=table_ref, gbq_client=gbq_client, if_not_exists='ignore',
+    ):
+        createTableFromJSON(
+            table_ddl_json_path=table_ddl_json_path,
+            project=project,
+            gbq_client=gbq_client,
+            if_exists='rebuild',
+            json_encoding=json_encoding,
+        )
+
+    # Handle replace automatically
+    if if_exists == 'replace':
+        # Delete the object with all its data and create it again
+        createTableFromJSON(
+            table_ddl_json_path=table_ddl_json_path,
+            project=project,
+            gbq_client=gbq_client,
+            if_exists='rebuild',
+            json_encoding=json_encoding,
+        )
+
+        # Change if_exists
+        if_exists = 'append'
+
+    # Rename DataFrame columns
+    df.columns = [column['name'] for column in table_schema]
+
+    # Upload
+    return pandas_gbq.to_gbq(**{
+        'dataframe': df,
+        'destination_table': table_ref,
+        'if_exists': if_exists,
+        'progress_bar': progress_bar,
+        'table_schema': table_schema,
+        'bigquery_client': gbq_client,
         **kwargs
-    )
+    })
+
+
+def deleteFromTable(
+        table_ref: str, where_clause: str, gbq_client: bigquery.Client,
+        if_not_exists: Literal['raise', 'ignore'] = 'ignore',
+    ) -> None:
+    """Delete data from a table filtering by a specific column value.
+
+    Parameters
+    ----------
+    table_ref : str
+        Table from which the data will be deleted. The value must included
+        a project ID, dataset ID, and table ID, each separated by ``.``.
+        For example: `your-project.your_dataset.your_table`
+    where_clause : str
+        Comparisons inside the WHERE clause for the columns to be deleted.
+        For example: `column_a = date('1998-08-30')`
+    gbq_client : bigquery.Client
+        Client used for making the queries
+    if_not_exists: ['raise', 'ignore'], default='raise'
+        Behavior to take if the table does not exist.
+
+    See Also
+    --------
+    :func:`~verifyTableExistence`
+    """
+    sql_query = QueryDict({
+        'delete_query':
+        """
+        DELETE FROM `${table_ref}`
+        WHERE ${where_clause}
+        """
+    })
+    if verifyTableExistence(
+        table_ref=table_ref,
+        gbq_client=gbq_client,
+        if_not_exists=if_not_exists,
+    ):
+        gbq_client.query_and_wait(
+            query=sql_query['delete_query'].substitute(
+                table_ref=table_ref,
+                where_clause=where_clause,
+            ),
+        )
+
+
+def setTableExpiration(
+        table_ref: str,
+        expiration: DateTime | int,
+        gbq_client: bigquery.Client,
+        partition_colum_name: str = '',
+    ) -> None:
+    """Set an expiration BigQuery table or partition.
+
+    When ``partition_column_name`` is not given then ``expiration`` must be
+    a datetime in which the whole table will expire. If given, then
+    ``expiration`` must be the number of miliseconds in which the
+    partitions will expire.
+
+    Parameters
+    ----------
+    table_ref : str
+        Table from which the data will be deleted. The value must included
+        a project ID, dataset ID, and table ID, each separated by ``.``.
+        For example: `your-project.your_dataset.your_table`
+    expiration : pendulum.DateTime
+        Datetime in which the whole table will expire or number of
+        miliseconds in which the partitions must be deleted
+    gbq_client : bigquery.Client
+        Client used for making the queries
+    partition_colum_name : str, optional
+        Name of the column in which the partition is located
+    """
+    gbq_table = gbq_client.get_table(table_ref)
+    # Partition column name is not given, so expiration applies to the
+    # whole table
+    if (
+        isinstance(expiration, DateTime)
+        and (not partition_colum_name)
+    ):
+        gbq_table.expires = expiration
+        gbq_table = gbq_client.update_table(gbq_table, ['expires'])
+    # Partition column name is given, so expiration applies only to the
+    # partition
+    elif (
+        isinstance(expiration, int)
+        and partition_colum_name
+    ):
+        gbq_table.time_partitioning.expiration_ms = expiration
+        gbq_table = gbq_client.update_table(gbq_table, ['time_partitioning'])
+    else:
+        err_msg = (
+            'You pass a wrong combination of expiration type and '
+            'partition_colum_name value.'
+        )
+        raise ValueError(err_msg)
 
 
 if __name__ == '__main__':

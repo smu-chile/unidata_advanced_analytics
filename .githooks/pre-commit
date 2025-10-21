@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+ruff check --config lint/main_ruff.toml --quiet --no-cache;
