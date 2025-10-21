@@ -19,7 +19,6 @@ from google.cloud.bigquery import Client
 import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.aws_extended.athena import readAthenaQuery
 from common.utils.data_transform import batchList
 from common.gcp_extended.secretsmanager import getSecret
 
@@ -52,7 +51,7 @@ SQL_QUERIES = QueryDict({
     'nielsen_data':
     """
     SELECT *
-    FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_CATEGORIA
+    FROM ${gcp_project}.MARKET_SHARE.NIELSEN_SEMANAL_VENTA_CATEGORIA
 
     UNION ALL
 
@@ -79,16 +78,16 @@ SQL_QUERIES = QueryDict({
     FROM (
         SELECT
             *
-            ,DATE_FORMAT(DATE(fin_periodo), '%x%v') AS id_semana
+            ,FORMAT_DATE('%G%V', DATE(fin_periodo)) AS id_semana
 
-        FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_NEGOCIO
+        FROM ${gcp_project}.MARKET_SHARE.NIELSEN_SEMANAL_VENTA_NEGOCIO
 
         WHERE negocio=''
     ) c
 
     LEFT JOIN (
         SELECT
-            DATE_FORMAT(DATE(fin_periodo), '%x%v') AS id_semana
+            FORMAT_DATE('%G%V', DATE(fin_periodo)) AS id_semana
             ,SUM(total_mercado_vtas_valor) AS mercado_vtas_valor
             ,SUM(total_mercado_vtas_unit) AS mercado_vtas_unit
             ,SUM(unimarc_vtas_valor) AS unimarc_vtas_valor
@@ -102,7 +101,7 @@ SQL_QUERIES = QueryDict({
             ,SUM(total_mercado_internet_vtas_valor) AS total_mercado_internet_vtas_valor
             ,SUM(total_mercado_internet_vtas_unit) AS total_mercado_internet_vtas_unit
 
-        FROM dev_perm.TMP_LAB_SMU_FACT_WEEK_NIELSEN_VENTA_TOTAL_CATEGORIA n
+        FROM ${gcp_project}.MARKET_SHARE.NIELSEN_SEMANAL_VENTA_CATEGORIA
 
         GROUP BY 1
     ) CAT
@@ -111,26 +110,26 @@ SQL_QUERIES = QueryDict({
 
     'holidays':
     """
-    SELECT *
-    FROM dev_perm.tmp_lab_smu_dim_holidays
-    WHERE p_year != '${p_year}'
+    SELECT title, date
+    FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
+    WHERE EXTRACT(YEAR FROM date) != ${year}
 
     UNION ALL
 
-    SELECT *
-    FROM dev_perm.tmp_lab_smu_dim_holidays
+    SELECT title, date
+    FROM `${gcp_project}.DATOS_GENERALES.DIM_HOLIDAYS` dim_holidays
     WHERE
-        p_year = '${p_year}'
-        AND title NOT LIKE '%eleccion%'
+        EXTRACT(YEAR FROM date) = ${year}
+        AND NOT REGEXP_CONTAINS(title, '(?i)eleccion')
     """
 })
 
 
 def fixFinPeriodo(row):
-    if row['fin_periodo']:
+    if not pd.isna(row['fin_periodo']):
         return row['fin_periodo']
 
-    date = pendulum.from_format(row['strdate'].strftime('%Y-%m-%d'), 'YYYY-MM-DD').date()
+    date = pendulum.from_format(row['date'].strftime('%Y-%m-%d'), 'YYYY-MM-DD').date()
 
     if date.day_of_week == pendulum.SUNDAY:
         return date
@@ -159,27 +158,27 @@ def main():
     ))
 
     # Constants
-    db_temp = 'dev_temp'
     gbq_client = Client()
 
     # ------------
     # Data loading
     # ------------
     logging.info('Loading data...')
-    nielsen_data = readAthenaQuery(
+    nielsen_data = gbq_extended.readBigQuery(
+        query=SQL_QUERIES['nielsen_data'].substitute(
+            gcp_project=gcp_project,
+        ),
         user=user,
-        query=SQL_QUERIES['nielsen_data'].substitute(),
-        database=db_temp,
-        boto3_session=boto3_session
+        gbq_client=gbq_client,
     )
 
-    holidays = readAthenaQuery(
-        user=user,
+    holidays = gbq_extended.readBigQuery(
         query=SQL_QUERIES['holidays'].substitute(
-            p_year=execution_date[:4]
+            year=execution_date[:4],
+            gcp_project=gcp_project,
         ),
-        database=db_temp,
-        boto3_session=boto3_session
+        user=user,
+        gbq_client=gbq_client,
     )
     logging.info('Loading data...')
 
@@ -187,13 +186,11 @@ def main():
         [
             holidays[
                 # TODO(ecastrot): Bad fix
-                holidays['strdate'] != '2025-06-29'
+                holidays['date'] != '2025-06-29'
             ],
             pd.DataFrame({
                 'title': ['huelga_lider'],
-                'strdate': ['2024-07-14'],
-                'essential': [False],
-                'p_year': ['2024'],
+                'date': ['2024-07-14'],
             })
         ],
         axis=0,
@@ -201,17 +198,14 @@ def main():
     )
 
     nielsen_data['p_week'] = (
-        nielsen_data['fin_periodo'].astype(str).str[:4]
+        pd.to_datetime(nielsen_data['fin_periodo']).dt.isocalendar()['year'].astype(str)
         + pd.to_datetime(nielsen_data['fin_periodo']).dt.isocalendar()['week'].astype(str).str.zfill(2)  # noqa: E501
     )
 
-    nielsen_data['p_year'] = nielsen_data['fin_periodo'].astype(str).str[:4]
-    nielsen_data.head()
-
-    holidays['strdate'] = pd.to_datetime(holidays['strdate'])
+    holidays['date'] = pd.to_datetime(holidays['date'])
     holidays['p_week'] = (
-        holidays['strdate'].astype(str).str[:4]
-        + pd.to_datetime(holidays['strdate']).dt.isocalendar()['week'].astype(str).str.zfill(2)
+        pd.to_datetime(holidays['date']).dt.isocalendar()['year'].astype(str)
+        + pd.to_datetime(holidays['date']).dt.isocalendar()['week'].astype(str).str.zfill(2)
     )
 
     holidays = holidays.merge(
@@ -220,9 +214,10 @@ def main():
         on='p_week'
     )
 
-    holidays['fin_periodo'] = holidays['fin_periodo'].fillna('')
     holidays['fin_periodo'] = holidays.apply(fixFinPeriodo, axis=1)
     holidays = holidays.sort_values('title').drop_duplicates(subset='fin_periodo', keep='first')
+    # TODO(ecastrot): Temporal fix holiday names
+    holidays['title'] = holidays['title'].str.replace('yprotestantes', 'y_protestantes')
 
     nielsen_data['fin_periodo'] = pd.to_datetime(nielsen_data['fin_periodo'])
 

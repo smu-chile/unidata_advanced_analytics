@@ -89,52 +89,17 @@ SQL_QUERIES = QueryDict({
     WHERE DATE_VALUE < '${fecha_fin}'
     """,
 
-    # Clientes que solicitaron la tarjeta Unipay
-    # en el periodo establecido
+    # Clientes con tarjeta unipay en el periodo establecido
     'tarjetas_unipay':
     """
-    WITH TARJETAS AS (
-    SELECT PERIOD,CARD_ID,CREDIT_LIMIT
-    FROM (
-    SELECT PERIOD,
+    SELECT CUSTOMER_KEY,
     CARD_ID,
-    CREDIT_LIMIT,
-    ROW_NUMBER() OVER (PARTITION BY CARD_ID ORDER BY PERIOD desc) rw
-    FROM ${gcp_proyect}.${schema}.VW_I_UNICARD_CARD_STATUS
-    WHERE CARD_ID IN (SELECT CARD_ID
-    FROM ${gcp_proyect}.${schema}.VW_I_UNICARD_CARD
-    WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
-    ) t
-    WHERE rw = 1
-    ),
-    CREDIT_LIMIT AS (
-    SELECT PERIOD,CARD_ID,CREDIT_LIMIT
-    FROM (
-    SELECT PERIOD,CARD_ID,CREDIT_LIMIT,
-    ROW_NUMBER() OVER (PARTITION BY CARD_ID ORDER BY PERIOD desc) rw
-    FROM ${gcp_proyect}.${schema}.VW_I_UNICARD_CARD_STATUS
-    WHERE CARD_ID IN (SELECT CARD_ID
-    FROM ${gcp_proyect}.${schema}.VW_I_UNICARD_CARD
-    WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
-    AND PERIOD <= ${periodo}
-    AND CREDIT_LIMIT > 1
-    ) t
-    WHERE rw = 1
-    )
-    SELECT UC.CUSTOMER_ID CUSTOMER_KEY,
-    UC.CARD_ID,
-    UC.SUBSCRIPTION_DATE,
-    UC.ACTIVATION_DATE,
-    UC.TERMINATION_DATE,
-    T.PERIOD PERIODO,
-    CASE
-        WHEN CL.CREDIT_LIMIT IS NULL THEN UC.CREDIT_LIMIT
-        ELSE CL.CREDIT_LIMIT
-    END AS CREDIT_LIMIT
-    FROM ${gcp_proyect}.${schema}.VW_I_UNICARD_CARD UC
-    LEFT JOIN TARJETAS T ON UC.CARD_ID = T.CARD_ID
-    LEFT JOIN CREDIT_LIMIT CL ON UC.CARD_ID = CL.CARD_ID
-    WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
+    SUBSCRIPTION_DATE,
+    ACTIVATION_DATE,
+    TERMINATION_DATE,
+    PERIODO,
+    CREDIT_LIMIT
+    FROM ${gcp_proyect}.${schema}.TMP_DATA_LIFECYCLE_UNIPAY_CARDS
     """,
 
     # Estado ciclo de vida unipay en el periodo
@@ -146,7 +111,7 @@ SQL_QUERIES = QueryDict({
     STATUS,
     MONTHID
     FROM ${gcp_proyect}.${schema}.LIFECYCLE_UNIPAY_STATUS
-    WHERE MONTHID = ${periodo_n1}
+    WHERE MONTHID = CAST(${periodo_n1} AS STRING)
     AND STATUS != 'closed'
     """
 })
@@ -254,8 +219,8 @@ def main():
         )
 
     tarjetas = readBigQuery(SQL_QUERIES['tarjetas_unipay'].substitute(
-    gcp_proyect = 'cl-cda-unidata-prod',
-    schema = 'DS_PROD_UNI_SSFF',
+    gcp_proyect = 'cl-bigdata-analytics-preprod',
+    schema = 'TMP',
     fecha_fin = fecha_fin,
     periodo = periodo
     ),
@@ -295,6 +260,9 @@ def main():
 
     compras['TOT_SALE_AMT'] = compras['TOT_SALE_AMT'].astype('int64')
     compras_unipay['TOT_SALE_AMT'] = compras_unipay['TOT_SALE_AMT'].astype('int64')
+
+    compras['DATE_VALUE'] = pd.to_datetime(compras['DATE_VALUE'])
+    compras_unipay['DATE_VALUE'] = pd.to_datetime(compras_unipay['DATE_VALUE'])
 
     tarjetas_copy = tarjetas.copy()
     tarjetas_copy['SUBSCRIPTION_DATE'] = pd.to_datetime(tarjetas_copy['SUBSCRIPTION_DATE'])
@@ -361,8 +329,6 @@ def main():
         'CREDIT_LIMIT',
         'AUX']
     ]
-
-    compras_unipay['DATE_VALUE'] = pd.to_datetime(compras_unipay['DATE_VALUE'])
 
     # Asignar la compra a la tarjeta que esta activa en ese periodo
     # al dataframe compras
@@ -456,12 +422,18 @@ def main():
     tarjetas_revision = tarjetas_ajust.query('ACTIVATION_DATE.isna()')
 
     tarjetas_revision = tarjetas_revision.merge(
-        activacion_tarjeta[['CUSTOMER_KEY',
-                            'CARD_ID',
-                            'DATE_VALUE']],
-        on=['CUSTOMER_KEY','CARD_ID'],
-        how='inner'
+    activacion_tarjeta[['CUSTOMER_KEY',
+                        'CARD_ID',
+                        'DATE_VALUE']],
+    on=['CUSTOMER_KEY','CARD_ID'],
+    how='inner'
     )
+
+    tarjetas_revision['DIAS'] = tarjetas_revision['DATE_VALUE'] - \
+        tarjetas_revision['SUBSCRIPTION_DATE']
+
+    tarjetas_revision = tarjetas_revision[
+        tarjetas_revision['DIAS'] <= pd.Timedelta(days=365)]
 
     fechas_dict = tarjetas_revision.set_index('CARD_ID')['DATE_VALUE'].to_dict()
 
@@ -527,21 +499,6 @@ def main():
 
     tarjetas_ajust = tarjetas_ajust.drop(columns=['DATE_VALUE'])
 
-    tarjetas_ajust['ACTIVATION_DATE'] = pd.to_datetime(
-        np.where(tarjetas_ajust['ACTIVATION_DATE'].dt.strftime('%Y%m') > \
-                 str(periodo),pd.NaT,tarjetas_ajust['ACTIVATION_DATE'])
-        )
-    tarjetas_ajust['CLOSED_DATE'] = pd.to_datetime(
-        np.where(tarjetas_ajust['CLOSED_DATE'].dt.strftime('%Y%m') > \
-                 str(periodo),pd.NaT,tarjetas_ajust['CLOSED_DATE'])
-        )
-
-    tarjetas_ajust['DIAS'] = np.where(
-        pd.isna(tarjetas_ajust['ACTIVATION_DATE']),
-        (pd.Timestamp(fecha_ini) + MonthEnd(0) - tarjetas_ajust['SUBSCRIPTION_DATE']).dt.days,
-        0
-    )
-
     logging.info(' ')
     logging.info('--------------------')
     logging.info('Termina el proceso del ajuste de la activacion y cierre de las tarjetas')
@@ -553,6 +510,21 @@ def main():
     logging.info('--------------------')
 
     if periodo == periodo_inicio:
+        tarjetas_ajust['ACTIVATION_DATE'] = pd.to_datetime(
+            np.where(tarjetas_ajust['ACTIVATION_DATE'].dt.strftime('%Y%m') > \
+                    str(periodo),pd.NaT,tarjetas_ajust['ACTIVATION_DATE'])
+            )
+        tarjetas_ajust['CLOSED_DATE'] = pd.to_datetime(
+            np.where(tarjetas_ajust['CLOSED_DATE'].dt.strftime('%Y%m') > \
+                    str(periodo),pd.NaT,tarjetas_ajust['CLOSED_DATE'])
+            )
+
+        tarjetas_ajust['DIAS'] = np.where(
+            pd.isna(tarjetas_ajust['ACTIVATION_DATE']),
+            (pd.Timestamp(fecha_ini) + MonthEnd(0) - tarjetas_ajust['SUBSCRIPTION_DATE']).dt.days,
+            0
+        )
+
         conditions = [
             (tarjetas_ajust['CLOSED_DATE'].dt.strftime('%Y%m') == str(periodo)), #closed
 
@@ -588,13 +560,13 @@ def main():
             choices,
             default='sin_estado')
 
-        tarjetas_ajust['PERIODO'] = str(periodo)
+        tarjetas_ajust['MONTHID'] = str(periodo)
 
         estado_clientes = tarjetas_ajust[[
             'CUSTOMER_KEY',
             'CARD_ID',
             'STATUS',
-            'PERIODO']]
+            'MONTHID']]
 
         createTableFromJSON(
             table_ddl_json_path = os.path.join('gbq_objects', 'lifecycle_unipay_tmp.json'),
@@ -609,11 +581,11 @@ def main():
 
         tarjetas_ajust_copy['ACTIVATION_DATE'] = pd.to_datetime(
             np.where(tarjetas_ajust_copy['ACTIVATION_DATE'].dt.strftime('%Y%m') > \
-                     periodo_n1,pd.NaT,tarjetas_ajust_copy['ACTIVATION_DATE']))
+                     str(periodo),pd.NaT,tarjetas_ajust_copy['ACTIVATION_DATE']))
 
         tarjetas_ajust_copy['CLOSED_DATE'] = pd.to_datetime(
             np.where(tarjetas_ajust_copy['CLOSED_DATE'].dt.strftime('%Y%m') > \
-                     periodo_n1,pd.NaT,tarjetas_ajust_copy['CLOSED_DATE']))
+                     str(periodo),pd.NaT,tarjetas_ajust_copy['CLOSED_DATE']))
 
         tarjetas_ajust_copy['CLOSED_DATE_YYYYMM'] = \
             tarjetas_ajust_copy['CLOSED_DATE'].dt.strftime('%Y%m')
@@ -699,7 +671,7 @@ def main():
                 on=['CUSTOMER_KEY','CARD_ID'],
                 how='left')
             mask = (
-                ciclo['ULTIMA_COMPRA'].dt.strftime('%Y%m') == periodo
+                ciclo['ULTIMA_COMPRA'].dt.strftime('%Y%m') == str(periodo)
             ) & (
                 ciclo['STATUS'] == 'grow'
             ) & (
@@ -715,7 +687,7 @@ def main():
         # Si el cliente no compro con UNIPAY el mes anterior al mes actual
         # el CICLO queda como 500.0
         ciclo['CICLO'] = np.where(
-            (pd.to_datetime(ciclo['ULTIMA_COMPRA']).dt.strftime('%Y%m') == periodo),
+            (pd.to_datetime(ciclo['ULTIMA_COMPRA']).dt.strftime('%Y%m') == str(periodo)),
             (ciclo['ULTIMA_COMPRA'] - ciclo['PENULTIMA_COMPRA']).dt.days,500.0
         )
 
@@ -756,8 +728,8 @@ def main():
         riesgo['STATUS'] = riesgo['STATUS'].fillna('sin_estado')
 
         # Tarjetas que se cerraron en el periodo calculado
-        tarjetas_cerradas = tarjetas_ajust_copy.query(
-            'CLOSED_DATE_YYYYMM == @periodo').reset_index(drop = True)
+        tarjetas_cerradas = tarjetas_ajust_copy[
+            tarjetas_ajust_copy['CLOSED_DATE_YYYYMM'] == str(periodo)]
 
         # Obtenemos las tarjetas que no se cerraron en el mes anterior
         tarjetas_clientes = riesgo[~riesgo['CARD_ID'].isin(tarjetas_cerradas['CARD_ID'])]
@@ -890,25 +862,19 @@ def main():
         # Tarjetas cerradas
         tarjetas_cerradas['STATUS_NEW'] = 'closed'
 
-        # Creamos un Dataframe vacio, para guardar
-        # el cliente, tarjeta, estado y periodo
-        estado_clientes = pd.DataFrame(
-            columns = [
-                'CUSTOMER_KEY',
-                'CARD_ID',
-                'STATUS',
-                'MONTHID'
-            ]
-        )
-
         estado_clientes = pd.concat(
             [tarjetas_clientes,tarjetas_cerradas], ignore_index=True
         )
 
+        # Tabla con los estados del periodo en cuestion
         estado_clientes = estado_clientes[[
             'CUSTOMER_KEY',
             'CARD_ID',
-            'STATUS']]
+            'STATUS_NEW']]
+
+        estado_clientes = estado_clientes.rename(
+            columns={'STATUS_NEW': 'STATUS'})
+
         estado_clientes['MONTHID'] = periodo
 
     logging.info(' ')
@@ -918,7 +884,7 @@ def main():
 
 
     uploadFrame(
-    estado_clientes[['CUSTOMER_KEY','CARD_ID','STATUS','PERIODO']],
+    estado_clientes[['CUSTOMER_KEY','CARD_ID','STATUS','MONTHID']],
     table_ddl_json_path=os.path.join('gbq_objects','lifecycle_unipay_tmp.json'),
     project=proyecto,
     gbq_client=gbq_client,

@@ -16,16 +16,16 @@
             "description": "Identificador único de la tarjeta del cliente"
         },
         {
-            "name": "MONTHID",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "Periodo de referencia en formato YYYYMM (año y mes)."
-        },
-        {
             "name": "STATUS",
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Estado ciclo de vida del cliente"
+        },
+        {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Periodo de referencia en formato YYYYMM (año y mes)."
         }
         
     ],
