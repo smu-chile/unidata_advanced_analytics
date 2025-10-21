@@ -31,7 +31,7 @@ dag_args = {
     'dag_id': 'margins_fuentes_manuales_misc_diario',
     'schedule_interval': '00 8 * * *',
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': [PROJECT_NAME, 'csotob'],
