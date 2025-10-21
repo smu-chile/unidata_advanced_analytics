@@ -599,7 +599,7 @@ def main():
             'MONTHID']]
 
         createTableFromJSON(
-            table_ddl_json_path = os.path.join('gbq_objects', 'lifecycle_unipay_tmp.json'),
+            table_ddl_json_path = os.path.join('gbq_objects', 'lifecycle_unipay.json'),
             project = proyecto,
             gbq_client = gbq_client,
             if_exists = 'ignore'
@@ -916,7 +916,7 @@ def main():
 
     uploadFrame(
     estado_clientes[['CUSTOMER_KEY','CARD_ID','STATUS','MONTHID']],
-    table_ddl_json_path=os.path.join('gbq_objects','lifecycle_unipay_tmp.json'),
+    table_ddl_json_path=os.path.join('gbq_objects','lifecycle_unipay.json'),
     project=proyecto,
     gbq_client=gbq_client,
     if_exists='append')
