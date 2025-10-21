@@ -413,11 +413,9 @@ def main():
         ignore_index=True
     )
 
-    idx = compras_unipay_ajust.groupby([
-        'CUSTOMER_KEY',
-        'CARD_ID'])['DATE_VALUE'].idxmin()
-
-    activacion_tarjeta = compras_unipay_ajust.loc[idx]
+    activacion_tarjeta = compras_unipay_ajust.sort_values(
+        by=['CARD_ID','DATE_VALUE'],
+        ascending=False).groupby(['CUSTOMER_KEY','CARD_ID']).tail(1).copy()
 
     tarjetas_revision = tarjetas_ajust.query('ACTIVATION_DATE.isna()')
 
@@ -445,11 +443,9 @@ def main():
 
     tarjetas_ajust = tarjetas_ajust.drop(columns=['AUX'])
 
-    # Actualizacion de ACTIVATION_DATE
-    # para las tarjetas que salen activadas,
-    # pero no tienen un registro de compra de unipay
-    # solo para las tarjetas con SUBSCRIPCION_DATE >= 2023-01-01
-    # debido a la fecha minima en la tabla FACT_PAYMENT
+    # Verificar si un cliente activo la tarjeta con compras o
+    # si la activo con prestamos, etc. Esto se hace para calcular su
+    # estado de ciclo de vida
 
     compras_unipay_ajust_copy = compras_unipay_ajust.copy()
 
@@ -470,32 +466,66 @@ def main():
     )
 
     conditions = [
-        (tarjetas_ajust['ACTIVATION_DATE'] < fecha_ini),
-
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
         (tarjetas_ajust['ACTIVATION_DATE'] >= fecha_fin),
 
-        (tarjetas_ajust['ACTIVATION_DATE'] >= fecha_ini) &
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] >= '2023-01-01') &
         (tarjetas_ajust['ACTIVATION_DATE'] < fecha_fin) &
-        (~tarjetas_ajust['ACTIVATION_DATE'].isna()) &
+        (tarjetas_ajust['ACTIVATION_DATE'] == tarjetas_ajust['DATE_VALUE']),
+
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] < fecha_fin) &
         (tarjetas_ajust['DATE_VALUE'].isna()),
 
-        (tarjetas_ajust['ACTIVATION_DATE'] >= fecha_ini) &
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] >= '2023-01-01') &
         (tarjetas_ajust['ACTIVATION_DATE'] < fecha_fin) &
-        (tarjetas_ajust['ACTIVATION_DATE'] != tarjetas_ajust['DATE_VALUE'])
+        (~tarjetas_ajust['DATE_VALUE'].isna()) &
+        (tarjetas_ajust['ACTIVATION_DATE'] != tarjetas_ajust['DATE_VALUE']) &
+        (tarjetas_ajust['DATE_VALUE'] - tarjetas_ajust['SUBSCRIPTION_DATE'] <= \
+         pd.Timedelta(days=365)),
+
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] < fecha_fin) &
+        (~tarjetas_ajust['DATE_VALUE'].isna()) &
+        (tarjetas_ajust['ACTIVATION_DATE'] != tarjetas_ajust['DATE_VALUE']) &
+        (tarjetas_ajust['DATE_VALUE'] - tarjetas_ajust['SUBSCRIPTION_DATE'] > \
+         pd.Timedelta(days=365)),
+
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'].isna()) &
+        (~tarjetas_ajust['DATE_VALUE'].isna()) &
+        (tarjetas_ajust['DATE_VALUE'] - tarjetas_ajust['SUBSCRIPTION_DATE'] > \
+         pd.Timedelta(days=365)),
+
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'].isna()) &
+        (~tarjetas_ajust['DATE_VALUE'].isna()) &
+        (tarjetas_ajust['DATE_VALUE'] - tarjetas_ajust['SUBSCRIPTION_DATE'] <= \
+         pd.Timedelta(days=365)),
     ]
 
     choices = [
         tarjetas_ajust['ACTIVATION_DATE'],
         tarjetas_ajust['ACTIVATION_DATE'],
         tarjetas_ajust['DATE_VALUE'],
+        tarjetas_ajust['DATE_VALUE'],
+        pd.NaT,
+        tarjetas_ajust['ACTIVATION_DATE'],
         tarjetas_ajust['DATE_VALUE']
     ]
 
-    tarjetas_ajust['ACTIVATION_DATE'] = np.select(
+    tarjetas_ajust['FECHA_ESTADO'] = np.select(
         conditions,
         choices,
         default=tarjetas_ajust['ACTIVATION_DATE']
     )
+
+    tarjetas_ajust['FECHA_ESTADO'] = pd.to_datetime(
+        tarjetas_ajust['FECHA_ESTADO'])
 
     tarjetas_ajust = tarjetas_ajust.drop(columns=['DATE_VALUE'])
 
@@ -510,9 +540,9 @@ def main():
     logging.info('--------------------')
 
     if periodo == periodo_inicio:
-        tarjetas_ajust['ACTIVATION_DATE'] = pd.to_datetime(
-            np.where(tarjetas_ajust['ACTIVATION_DATE'].dt.strftime('%Y%m') > \
-                    str(periodo),pd.NaT,tarjetas_ajust['ACTIVATION_DATE'])
+        tarjetas_ajust['FECHA_ESTADO'] = pd.to_datetime(
+            np.where(tarjetas_ajust['FECHA_ESTADO'].dt.strftime('%Y%m') > \
+                    str(periodo),pd.NaT,tarjetas_ajust['FECHA_ESTADO'])
             )
         tarjetas_ajust['CLOSED_DATE'] = pd.to_datetime(
             np.where(tarjetas_ajust['CLOSED_DATE'].dt.strftime('%Y%m') > \
@@ -520,7 +550,7 @@ def main():
             )
 
         tarjetas_ajust['DIAS'] = np.where(
-            pd.isna(tarjetas_ajust['ACTIVATION_DATE']),
+            pd.isna(tarjetas_ajust['FECHA_ESTADO']),
             (pd.Timestamp(fecha_ini) + MonthEnd(0) - tarjetas_ajust['SUBSCRIPTION_DATE']).dt.days,
             0
         )
@@ -529,20 +559,20 @@ def main():
             (tarjetas_ajust['CLOSED_DATE'].dt.strftime('%Y%m') == str(periodo)), #closed
 
             (tarjetas_ajust['SUBSCRIPTION_DATE'].dt.strftime('%Y%m') == str(periodo)) &
-            (tarjetas_ajust['ACTIVATION_DATE'].dt.strftime('%Y%m') == str(periodo)), #grow
+            (tarjetas_ajust['FECHA_ESTADO'].dt.strftime('%Y%m') == str(periodo)), #grow
 
             (tarjetas_ajust['SUBSCRIPTION_DATE'].dt.strftime('%Y%m') == str(periodo)) &
-            (pd.isna(tarjetas_ajust['ACTIVATION_DATE'])), #onboard
+            (pd.isna(tarjetas_ajust['FECHA_ESTADO'])), #onboard
 
             (tarjetas_ajust['SUBSCRIPTION_DATE'].dt.strftime('%Y%m') < str(periodo)) &
-            (tarjetas_ajust['ACTIVATION_DATE'].dt.strftime('%Y%m') <= str(periodo)), #grow
+            (tarjetas_ajust['FECHA_ESTADO'].dt.strftime('%Y%m') <= str(periodo)), #grow
 
             (tarjetas_ajust['SUBSCRIPTION_DATE'].dt.strftime('%Y%m') < str(periodo)) &
-            (pd.isna(tarjetas_ajust['ACTIVATION_DATE'])) &
+            (pd.isna(tarjetas_ajust['FECHA_ESTADO'])) &
             (tarjetas_ajust['DIAS'] <= 28), #onboard
 
             (tarjetas_ajust['SUBSCRIPTION_DATE'].dt.strftime('%Y%m') < str(periodo)) &
-            (pd.isna(tarjetas_ajust['ACTIVATION_DATE'])) &
+            (pd.isna(tarjetas_ajust['FECHA_ESTADO'])) &
             (tarjetas_ajust['DIAS'] > 28) #never_activated
         ]
 
@@ -579,9 +609,9 @@ def main():
         # Tarjetas UNIPAY
         tarjetas_ajust_copy = tarjetas_ajust.copy()
 
-        tarjetas_ajust_copy['ACTIVATION_DATE'] = pd.to_datetime(
-            np.where(tarjetas_ajust_copy['ACTIVATION_DATE'].dt.strftime('%Y%m') > \
-                     str(periodo),pd.NaT,tarjetas_ajust_copy['ACTIVATION_DATE']))
+        tarjetas_ajust_copy['FECHA_ESTADO'] = pd.to_datetime(
+            np.where(tarjetas_ajust_copy['FECHA_ESTADO'].dt.strftime('%Y%m') > \
+                     str(periodo),pd.NaT,tarjetas_ajust_copy['FECHA_ESTADO']))
 
         tarjetas_ajust_copy['CLOSED_DATE'] = pd.to_datetime(
             np.where(tarjetas_ajust_copy['CLOSED_DATE'].dt.strftime('%Y%m') > \
@@ -591,7 +621,7 @@ def main():
             tarjetas_ajust_copy['CLOSED_DATE'].dt.strftime('%Y%m')
 
         tarjetas_ajust_copy['DIAS'] = np.where(
-        pd.isna(tarjetas_ajust_copy['ACTIVATION_DATE']),
+        pd.isna(tarjetas_ajust_copy['FECHA_ESTADO']),
         (pd.Timestamp(fecha_ini) + MonthEnd(0) - tarjetas_ajust_copy['SUBSCRIPTION_DATE']).dt.days,
          0
         )
@@ -719,6 +749,7 @@ def main():
             'CARD_ID',
             'SUBSCRIPTION_DATE',
             'ACTIVATION_DATE',
+            'FECHA_ESTADO',
             'STATUS',
             'SOW',
             'CICLO',
@@ -815,15 +846,15 @@ def main():
              (tarjetas_clientes['SOW'] == 0.0)).astype(bool), #never_activated
 
             ((tarjetas_clientes['STATUS'] == 'onboard') &
-             (pd.isna(tarjetas_clientes['ACTIVATION_DATE'])) &
+             (pd.isna(tarjetas_clientes['FECHA_ESTADO'])) &
              (tarjetas_clientes['DIAS'] <= 28)).astype(bool), #onboard
 
             ((tarjetas_clientes['STATUS'] == 'onboard') &
-             (pd.isna(tarjetas_clientes['ACTIVATION_DATE'])) &
+             (pd.isna(tarjetas_clientes['FECHA_ESTADO'])) &
              (tarjetas_clientes['DIAS'] > 28)).astype(bool), #never_activated
 
             ((tarjetas_clientes['STATUS'] == 'onboard') &
-             (~pd.isna(tarjetas_clientes['ACTIVATION_DATE']))).astype(bool), #grow
+             (~pd.isna(tarjetas_clientes['FECHA_ESTADO']))).astype(bool), #grow
 
             ((tarjetas_clientes['STATUS'] == 'sin_estado') &
              (tarjetas_clientes['SOW'] == 0.0)).astype(bool), #onboard
