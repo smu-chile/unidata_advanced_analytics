@@ -211,7 +211,7 @@ def main():
     if periodo > periodo_inicio:
         estados_n1 = readBigQuery(SQL_QUERIES['estados'].substitute(
         gcp_proyect = 'cl-bigdata-analytics-preprod',
-        schema = 'TMP',
+        schema = 'UNIPAY',
         periodo_n1 = periodo_n1
         ),
         user = usuario,
