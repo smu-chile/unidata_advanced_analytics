@@ -20,12 +20,12 @@ with open(
 
 PROJECT_NAME = 'market_share_forecasting'
 dag_args = {
-    'dag_id': 'monthly_prophet_sales_forecasting',
-    'schedule_interval': '0 1 1 * *',
+    'dag_id': 'market_share_forecasting',
+    'schedule_interval': '0 1 * * FRI',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
-    'concurrency': 1,
+    'concurrency': 2,
     'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
@@ -47,18 +47,17 @@ with DAG(**dag_args) as dag:
     # ---------------------------------------------------------------------
     # Week forecasting
     # ---------------------------------------------------------------------
-    month_forecasting = DataprocCreateBatchOperator(
-        task_id = 'month_forecasting',
+    week_forecasting = DataprocCreateBatchOperator(
+        task_id = 'week_forecasting',
 
         batch = {
             'pyspark_batch': {
                 # Main file to run in the dataproc pod
                 'main_python_file_uri': (
                     f'gs://{dag_env_config["scripts_gcs"]}/'
-                    'consulting/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'month_prophet_sales_forecasting.py'
+                    'week_compute_market_share.py'
                 ),
                 # Common files
                 'python_file_uris': [
@@ -68,9 +67,8 @@ with DAG(**dag_args) as dag:
                     ),
                     (
                         f'gs://{dag_env_config["scripts_gcs"]}/'
-                        'consulting/'
                         f'{PROJECT_NAME}/'
-                        'gbq_objects/'
+                        'gbq_objects'
                     )
                 ],
                 # For Google Big Query read/write
@@ -100,7 +98,75 @@ with DAG(**dag_args) as dag:
                     'service_account': dag_env_config['g_service_account'],
                     'network_uri': dag_env_config['network'],
                     'subnetwork_uri': dag_env_config['subnetwork'],
-                    'ttl': '21600s',
+                    'ttl': '43200s',
+                },
+            },
+        },
+
+        # Leaves Airflow Trigger to track the status of the Dataproc batch
+        deferrable=True,
+
+        # Batch ID
+        batch_id = 'batch-{{ macros.uuid.uuid4() }}',
+        project_id = dag_env_config['project_id'],
+    )
+
+
+    # ---------------------------------------------------------------------
+    # Day forecasting
+    # ---------------------------------------------------------------------
+    day_forecasting = DataprocCreateBatchOperator(
+        task_id = 'day_forecasting',
+
+        batch = {
+            'pyspark_batch': {
+                # Main file to run in the dataproc pod
+                'main_python_file_uri': (
+                    f'gs://{dag_env_config["scripts_gcs"]}/'
+                    f'{PROJECT_NAME}/'
+                    'scripts/'
+                    'day_compute_market_share.py'
+                ),
+                # Common files
+                'python_file_uris': [
+                    (
+                        f'gs://{dag_env_config["scripts_gcs"]}/'
+                        'common/'
+                    ),
+                    (
+                        f'gs://{dag_env_config["scripts_gcs"]}/'
+                        f'{PROJECT_NAME}/'
+                        'gbq_objects'
+                    )
+                ],
+                # For Google Big Query read/write
+                'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
+                # Main file arguments
+                'args': [
+                    '--project_name', PROJECT_NAME,
+                    '--gcp_project', dag_env_config['project_id'],
+                    '--execution_date', EXECUTION_DATE,
+                ],
+            },
+
+            # Docker image to be used in the dataproc pod
+            'runtime_config': {
+                'version': '2.2',
+                'container_image': (
+                    'us-east1-docker.pkg.dev/'
+                    f'{dag_env_config["project_id"]}/'
+                    'dataproc-worker-images/'
+                    f"{PROJECT_NAME.replace('_', '-')}:latest"
+                ),
+            },
+
+            # Privileges config
+            'environment_config': {
+                'execution_config': {
+                    'service_account': dag_env_config['g_service_account'],
+                    'network_uri': dag_env_config['network'],
+                    'subnetwork_uri': dag_env_config['subnetwork'],
+                    'ttl': '14400s',
                 },
             },
         },
@@ -113,3 +179,5 @@ with DAG(**dag_args) as dag:
         project_id=dag_env_config['project_id'],
     )
 
+
+[week_forecasting, day_forecasting]  # noqa: B018
