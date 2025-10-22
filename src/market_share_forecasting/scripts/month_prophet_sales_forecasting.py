@@ -51,16 +51,16 @@ SQL_QUERIES = QueryDict({
         FORMAT_DATE('%Y-%m', transaction_date) AS fin_periodo,
         category_description,
         SUM(CASE
-            WHEN store_banner = 'Unimarc' THEN value ELSE 0
+            WHEN store_banner = 'Unimarc' THEN value - tax_amount ELSE 0
         END) AS unimarc,
         SUM(CASE
-            WHEN store_banner = 'Alvi' THEN value ELSE 0
+            WHEN store_banner = 'Alvi' THEN value - tax_amount ELSE 0
         END) AS alvi,
         SUM(CASE
-            WHEN store_banner = 'Super 10' THEN value ELSE 0
+            WHEN store_banner = 'Super 10' THEN value - tax_amount ELSE 0
         END) AS s10,
         SUM(CASE
-            WHEN store_banner = 'Mayorista' THEN value ELSE 0
+            WHEN store_banner = 'Mayorista' THEN value - tax_amount ELSE 0
         END) AS m10
 
     FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
