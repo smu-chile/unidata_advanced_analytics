@@ -1672,7 +1672,7 @@ def main() -> None:  # noqa: D103
     # Nombres de columnas a minusculas
     df_lc.columns = df_lc.columns.str.lower()
 
-
+    logging.info('Termina la consulta de los últimos 13 meses de la tabla de LC...')
     #----------------------------------------------------------------------
     # ENDREGION
 
@@ -1682,19 +1682,31 @@ def main() -> None:  # noqa: D103
 
     fig1 = grafico_torta_estado_mes(df_lc, monthid=last_monthid,
                                     considerar_gasto=False, show=False)
+    
+    logging.info('Fig1 lista')
     fig2 = grafico_torta_estado_mes(df_lc, monthid=prev_monthid,
                                     considerar_gasto=True,
                                     mostrar_monto_ventas=False, umbral_pct_inside=3.0, show=False)
+    
+    logging.info('Fig2 lista')
     fig3 = resumen_clientes_ciclo_extendido(df_lc, monthid=prev_monthid)
+
+    logging.info('Fig3 lista')
 
     fig4 = matriz_status_vs_nivel_graficos(df_lc, last_monthid, modo_porcentaje='fila',
                                         considerar_gasto=False)
+    
+    logging.info('Fig4 lista')
     fig5 = matriz_status_vs_nivel_graficos(df_lc, prev_monthid, modo_porcentaje='fila',
                                         considerar_gasto=True)
 
+    logging.info('Fig5 lista')
     fig6 = grafico_clientes_por_estado(df_lc, n_meses=6, tipo=1)
+    
+    logging.info('Fig6 lista')
     fig7 = grafico_lineas_clientes_por_estado(df_lc, 12)
 
+    logging.info('Fig7 lista')
     #----------------------------------------------------------------------
     # ENDREGION
 
@@ -1704,7 +1716,7 @@ def main() -> None:  # noqa: D103
 
     # 2) Construyes el PDF agregando texto/figuras/saltos
     doc = PDFDoc(ruta_salida=f'{nombre_pdf}.pdf', titulo_doc='')
-
+    logging.info('Documento vacio creado')
     #-----
     # Primera página: Última segmentación
     #-----
@@ -1789,9 +1801,12 @@ def main() -> None:  # noqa: D103
     doc.add_spacer(2)
     doc.add_figure(fig7, dpi=220, max_ancho=330)
 
+    logging.info('Se agrega contenido.')
 
     # 3) En memoria (BytesIO)
     pdf_buf = doc.build_buffer()
+
+    logging.info('Se crea el BytesIO.')
     pdf_buf.seek(0)  # por si acaso SharePoint lo requiere en posición 0
 
 
@@ -1812,6 +1827,7 @@ def main() -> None:  # noqa: D103
         )
     ).upload(pdf_buf)
 
+    logging.info('Se manda pdf a SharePoint.')
     #----------------------------------------------------------------------
     # ENDREGION
 
