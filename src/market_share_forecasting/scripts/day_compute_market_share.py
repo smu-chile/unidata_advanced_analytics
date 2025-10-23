@@ -50,7 +50,7 @@ SQL_QUERIES = QueryDict({
     """
     SELECT
         transaction_date AS fin_periodo,
-        SUM(value) AS venta_unimarc
+        SUM(value - tax_amount) AS venta_unimarc
 
     FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
 

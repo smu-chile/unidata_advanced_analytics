@@ -76,14 +76,14 @@ def main() -> None:  # noqa: D103
 
     #table definitions jsons
     jsons = {
-    'Bounces' : 'CRM_TMP_DATA_SF_EMAIL_BOUNCE.json',
-    'Clicks': 'CRM_TMP_DATA_SF_EMAIL_CLICK.json',
-    'Complaints' : 'CRM_TMP_DATA_SF_EMAIL_COMPLAINTS.json',
-    'NotSent' : 'CRM_TMP_DATA_SF_EMAIL_NOTSENT.json',
-    'Opens': 'CRM_TMP_DATA_SF_EMAIL_OPEN.json',
-    'SendJobs' : 'CRM_TMP_DATA_SF_EMAIL_JOBS.json',
-    'Sent' : 'CRM_TMP_DATA_SF_EMAIL_SEND.json',
-    'Unsubs' : 'CRM_TMP_DATA_SF_EMAIL_UNSUBSCRIBE.json'
+    'Bounces' : 'CRM_DATA_SF_EMAIL_BOUNCE.json',
+    'Clicks': 'CRM_DATA_SF_EMAIL_CLICK.json',
+    'Complaints' : 'CRM_DATA_SF_EMAIL_COMPLAINTS.json',
+    'NotSent' : 'CRM_DATA_SF_EMAIL_NOTSENT.json',
+    'Opens': 'CRM_DATA_SF_EMAIL_OPEN.json',
+    'SendJobs' : 'CRM_DATA_SF_EMAIL_JOBS.json',
+    'Sent' : 'CRM_DATA_SF_EMAIL_SEND.json',
+    'Unsubs' : 'CRM_DATA_SF_EMAIL_UNSUBSCRIBE.json'
     }
     for formato in formatos:
         logging.info(f'Starting extraction of Reporte General {formato} from SFTP Marketing Cloud')
@@ -133,8 +133,8 @@ def main() -> None:  # noqa: D103
                 )
 
             logging.info('Delete from table so that data is not duplicated')
-            schema = 'TMP'
-            table = jsons[file].removeprefix('CRM_').split('.')[0]
+            schema = 'CRM'
+            table = jsons[file].split('.')[0]
             table_ref = f'{gcp_project_id}.{schema}.{table}'
             gbq_extended.deleteFromTable(table_ref= table_ref,
                                          where_clause=f"""(FECHA_CARGA=parse_date('%Y%m%d',"{execution_date}")

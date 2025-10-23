@@ -66,7 +66,7 @@ def main() -> None:  # noqa: D103
     #input files
 
     #table definitions jsons
-    json = 'CRM_TMP_FACT_EVENTS_SMS_SALESFORCE.json'
+    json = 'CRM_FACT_EVENTS_SMS_SALESFORCE.json'
     for formato in formatos:
         logging.info(f'Starting extraction of Reporte SMS {formato} from SFTP Marketing Cloud')
         sftp_secret = secretmanager.getSecret('salesforce_sftp_credentials',project=gcp_project_id)
@@ -129,8 +129,8 @@ def main() -> None:  # noqa: D103
                 )
 
         logging.info('Delete from table so that data is not duplicated')
-        schema = 'TMP'
-        table = json.removeprefix('CRM_').split('.')[0]
+        schema = 'CRM'
+        table = json.split('.')[0]
         table_ref = f'{gcp_project_id}.{schema}.{table}'
         gbq_extended.deleteFromTable(table_ref= table_ref,
                                      where_clause=f"""(FECHA_CARGA=parse_date('%Y%m%d',"{execution_date}")

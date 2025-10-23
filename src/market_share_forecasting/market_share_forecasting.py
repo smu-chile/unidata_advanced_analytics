@@ -55,7 +55,6 @@ with DAG(**dag_args) as dag:
                 # Main file to run in the dataproc pod
                 'main_python_file_uri': (
                     f'gs://{dag_env_config["scripts_gcs"]}/'
-                    'consulting/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
                     'week_compute_market_share.py'
@@ -68,7 +67,6 @@ with DAG(**dag_args) as dag:
                     ),
                     (
                         f'gs://{dag_env_config["scripts_gcs"]}/'
-                        'consulting/'
                         f'{PROJECT_NAME}/'
                         'gbq_objects'
                     )
@@ -125,7 +123,6 @@ with DAG(**dag_args) as dag:
                 # Main file to run in the dataproc pod
                 'main_python_file_uri': (
                     f'gs://{dag_env_config["scripts_gcs"]}/'
-                    'consulting/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
                     'day_compute_market_share.py'
@@ -138,7 +135,6 @@ with DAG(**dag_args) as dag:
                     ),
                     (
                         f'gs://{dag_env_config["scripts_gcs"]}/'
-                        'consulting/'
                         f'{PROJECT_NAME}/'
                         'gbq_objects'
                     )

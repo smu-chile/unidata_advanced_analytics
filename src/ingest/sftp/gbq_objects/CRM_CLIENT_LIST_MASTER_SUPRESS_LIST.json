@@ -1,6 +1,6 @@
 {
-    "schema": "TMP",
-    "table": "TMP_CLIENT_LIST_MASTER_SUPRESS_LIST",
+    "schema": "CRM",
+    "table": "CRM_CLIENT_LIST_MASTER_SUPRESS_LIST",
 
     "columns": [
         {

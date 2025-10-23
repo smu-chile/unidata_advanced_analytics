@@ -1,6 +1,6 @@
 {
-    "schema": "TMP",
-    "table": "TMP_DATA_SF_EMAIL_CLICK",
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_EMAIL_BOUNCE",
 
     "columns": [
         {
@@ -24,12 +24,12 @@
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
-         {
+        {
             "name": "SUBSCRIBERID",
             "field_type": "INTEGER",
             "mode": "NULLABLE"
         },
-        {
+         {
             "name": "LISTID",
             "field_type": "INTEGER",
             "mode": "NULLABLE"
@@ -47,33 +47,23 @@
             "description": "Tipo de Evento"
         },
         {
-            "name": "SENDURL_ID",
-            "field_type": "INTEGER",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "URL_ID",
-            "field_type": "INTEGER",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "URL",
+            "name": "BOUNCECATEGORY",
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
-            "name": "ALIAS",
+            "name": "SMTPCODE",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "BOUNCEREASON",
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
             "name": "BATCHID",
             "field_type": "INTEGER",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "ISUNIQUE",
-            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
