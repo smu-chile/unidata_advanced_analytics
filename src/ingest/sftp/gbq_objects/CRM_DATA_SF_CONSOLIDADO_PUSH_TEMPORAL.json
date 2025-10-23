@@ -1,0 +1,154 @@
+
+{
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_CONSOLIDADO_PUSH_TEMPORAL",
+
+    "columns":  [
+  {
+    "name": "ORGANIZATION_ID",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "TIPO_AUDIENCIA",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "FORMATO",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "TIPO_COMUNICACION",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "TIPO_CAMPANA",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "CAMPANA",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "MESSAGE_ID",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "MESSAGE_NAME",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "ENVIADO",
+    "mode": "NULLABLE",
+    "type": "TIMESTAMP"
+
+  },
+  {
+    "name": "BASE_ENVIOS",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "SENT_ANDROID",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "SENT_IOS",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "OPEN_ANDROID",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "OPEN_IOS",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "TOTAL_OPEN",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "SUCCESS_ANDROID",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "SUCCESS_IOS",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "TOTAL_SUCCESS",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "FAILED_ANDROID",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "FAILED_IOS",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "TOTAL_FAILED",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "OR %",
+    "mode": "NULLABLE",
+    "type": "FLOAT"
+
+  },
+  {
+    "name": "TS %",
+    "mode": "NULLABLE",
+    "type": "FLOAT"
+
+  },
+  {
+    "name": "TF%",
+    "mode": "NULLABLE",
+    "type": "FLOAT"
+
+  }
+]
+}
+
+

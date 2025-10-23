@@ -1,0 +1,94 @@
+
+{
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_CONSOLIDADO_EMAIL_TEMPORAL",
+
+    "columns":  [
+  {
+    "name": "CANAL",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "ORGANIZATION_ID",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "TIPO_AUDIENCIA",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "FORMATO",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "TIPO_COMUNICACION",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "TIPO_CAMPANA",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "CAMPANA",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "SMS_NAME",
+    "mode": "NULLABLE",
+    "type": "STRING"
+
+  },
+  {
+    "name": "ENVIADO",
+    "mode": "NULLABLE",
+    "type": "TIMESTAMP"
+
+  },
+  {
+    "name": "BASE",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "DELIVERED",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "UNDELIVERED",
+    "mode": "NULLABLE",
+    "type": "INTEGER"
+
+  },
+  {
+    "name": "TD %",
+    "mode": "NULLABLE",
+    "type": "FLOAT"
+
+  },
+  {
+    "name": "TU %",
+    "mode": "NULLABLE",
+    "type": "FLOAT"
+
+  }
+]
+}
+
+
