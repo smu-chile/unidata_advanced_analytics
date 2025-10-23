@@ -393,10 +393,10 @@ def deleteFromTable(
     ----------
     table_ref : str
         Table from which the data will be deleted. It must be either:
-          - Path to the JSON DDL of the table, in which case project must be
-            also provided.
-          - Table ref ID that includes project ID, dataset ID, and table ID,
-            each separated by ``.``. For example:
+          - Path to the JSON DDL of the table, in which case project must
+            be also provided.
+          - Table ref ID that includes project ID, dataset ID, and table
+            ID, each separated by ``.``. For example:
             `your-project.your_dataset.your_table`
     where_clause : str
         Comparisons inside the WHERE clause for the columns to be deleted.
