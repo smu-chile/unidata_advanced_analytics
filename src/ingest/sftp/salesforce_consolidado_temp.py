@@ -68,7 +68,7 @@ with DAG(**dag_args) as dag:
                     f'{PROJECT_NAME}/'
                     f'{SUBPROJECT_NAME}/'
                     'scripts/'
-                    'salesforce_consolidado_tempsalesforce_consolidado_temp.py'
+                    'salesforce_consolidado_temp.py'
                 ),
                 # Common files
                 'python_file_uris': [
