@@ -1659,7 +1659,7 @@ def main() -> None:  # noqa: D103
                                                 formato = formato,
                                                 formato_id = formato_id,
                                                 last_monthid = last_monthid)
-
+    logging.info('Parte el proceso...')
     logging.info('Inicia la consulta de los últimos 13 meses de la tabla de LC...')
 
     # Se realiza la consulta
