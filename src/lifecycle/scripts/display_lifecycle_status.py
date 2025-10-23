@@ -1682,12 +1682,12 @@ def main() -> None:  # noqa: D103
 
     fig1 = grafico_torta_estado_mes(df_lc, monthid=last_monthid,
                                     considerar_gasto=False, show=False)
-    
+
     logging.info('Fig1 lista')
     fig2 = grafico_torta_estado_mes(df_lc, monthid=prev_monthid,
                                     considerar_gasto=True,
                                     mostrar_monto_ventas=False, umbral_pct_inside=3.0, show=False)
-    
+
     logging.info('Fig2 lista')
     fig3 = resumen_clientes_ciclo_extendido(df_lc, monthid=prev_monthid)
 
@@ -1695,14 +1695,14 @@ def main() -> None:  # noqa: D103
 
     fig4 = matriz_status_vs_nivel_graficos(df_lc, last_monthid, modo_porcentaje='fila',
                                         considerar_gasto=False)
-    
+
     logging.info('Fig4 lista')
     fig5 = matriz_status_vs_nivel_graficos(df_lc, prev_monthid, modo_porcentaje='fila',
                                         considerar_gasto=True)
 
     logging.info('Fig5 lista')
     fig6 = grafico_clientes_por_estado(df_lc, n_meses=6, tipo=1)
-    
+
     logging.info('Fig6 lista')
     fig7 = grafico_lineas_clientes_por_estado(df_lc, 12)
 
