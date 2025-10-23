@@ -1,0 +1,56 @@
+{
+    "schema": "REPORTE_MARGEN",
+    "table": "REPORTE_MARGEN_ADICIONAL_AL_MARGEN_UNIMARC",
+
+    "columns": [
+        {
+            "name": "MES",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED",
+            "description": "Mes"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria"
+        },
+        {
+            "name": "MATERIAL",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Material PLU"
+        },
+        {
+            "name": "DESC_MATERIAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Descripcion de Material"
+        },
+        {
+            "name": "SELL_OUT",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Sell Out"
+        },
+        {
+            "name": "CONCEPTO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Concepto"
+        },
+        {
+            "name": "CATEGORIA_REPORTE",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria Reporte"
+        },
+        {
+            "name": "NEGOCIO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Negocio"
+        }
+
+    ]
+}
