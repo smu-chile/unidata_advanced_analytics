@@ -36,19 +36,19 @@ parser.add_argument(
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(formato,df):
-    print('Before cleaning:', df)
+    logging.info('Before cleaning:', df)
     if formato == 'unimarc':
         df = df.iloc[:, :26]  # noqa: PD901
         df = df.replace('|', '', regex=True)  # noqa: PD901
         df['Solo 1 barra por linea'] = df['Solo 1 barra por linea'].astype('Float64').astype('Int64')  # noqa: E501
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     if formato == 's10':
         df.columns = df.iloc[5,]
         df = df.iloc[6:, :25]  # noqa: PD901
         df = df.replace('|', '', regex=True)  # noqa: PD901
         df['Solo 1 barra por linea'] = df['Solo 1 barra por linea'].astype('Float64').astype('Int64')  # noqa: E501
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     if formato == 'm10':
         df.columns = df.iloc[5,]
@@ -56,7 +56,7 @@ def cleaning_func(formato,df):
         df = df.iloc[:, :22]  # noqa: PD901
         df = df.replace('|', '', regex=True)  # noqa: PD901
         df['Solo 1 barra por linea'] = df['Solo 1 barra por linea'].astype('Float64').astype('Int64')  # noqa: E501
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     return df
 
