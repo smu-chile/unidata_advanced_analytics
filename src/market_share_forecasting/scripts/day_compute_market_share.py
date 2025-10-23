@@ -168,6 +168,16 @@ def main():
 
     target_values = ['venta_unimarc']
 
+    # Remove past projections for this date if reprocessing
+    logging.info('Deleting past run of this projection')
+    gbq_extended.deleteFromTable(
+        table_ref=os.path.join('gbq_objects', 'day_prophet_sales_forecasting.json'),
+        where_clause=f"projection_date = CAST('{execution_date}' AS DATE)",
+        project=gcp_project,
+        gbq_client=gbq_client,
+    )
+
+
     for target_value in target_values:
         print(f'Trainning {target_value} regressor')
         regressor = Prophet(
@@ -274,6 +284,7 @@ def main():
         axis=0,
         ignore_index=True
     )
+    final_pred['projection_date'] = execution_date
 
     logging.info('Trainning ended')
 
@@ -323,14 +334,16 @@ def main():
                     f'{target_value}_proyectado_max'
                 )
             ],
-            'fin_periodo'
+            'fin_periodo',
+            'projection_date'
         ]].astype({
             'fin_periodo': 'string',
+            'projection_date': 'string'
         }),
         table_ddl_json_path=os.path.join('gbq_objects', 'day_prophet_sales_forecasting.json'),
         project=gcp_project,
         gbq_client=gbq_client,
-        if_exists='replace',
+        if_exists='append',
     )
 
 

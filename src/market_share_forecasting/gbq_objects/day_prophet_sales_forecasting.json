@@ -32,6 +32,16 @@
             "field_type": "DATE",
             "mode": "REQUIRED",
             "description": "Day on which the sales are made"
+        },
+        {
+            "name": "projection_date",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Date in which the projection was made"
         }
-    ]
+    ],
+    "time_partitioning": {
+        "field": "projection_date",
+        "type_": "DAY"
+    }
 }

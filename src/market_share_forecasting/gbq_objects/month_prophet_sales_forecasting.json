@@ -2,31 +2,96 @@
     "schema": "MARKET_SHARE",
     "table": "MONTH_PROPHET_SALES_FORECASTING",
     "columns": [
-        {"name": "category_description", "field_type": "STRING"},
-        {"name": "venta_unimarc", "field_type": "FLOAT64"},
-        {"name": "venta_unimarc_proyectado", "field_type": "FLOAT64"},
-        {"name": "venta_unimarc_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "venta_unimarc_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "venta_alvi", "field_type": "FLOAT64"},
-        {"name": "venta_alvi_proyectado", "field_type": "FLOAT64"},
-        {"name": "venta_alvi_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "venta_alvi_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "venta_s10", "field_type": "FLOAT64"},
-        {"name": "venta_s10_proyectado", "field_type": "FLOAT64"},
-        {"name": "venta_s10_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "venta_s10_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "venta_m10", "field_type": "FLOAT64"},
-        {"name": "venta_m10_proyectado", "field_type": "FLOAT64"},
-        {"name": "venta_m10_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "venta_m10_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "inicio_periodo", "field_type": "DATE"},
-        {"name": "fin_periodo", "field_type": "DATE"}
+        {
+            "name": "category_description",
+            "field_type": "STRING"
+        },
+        {
+            "name": "venta_unimarc",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_unimarc_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_unimarc_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_unimarc_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_alvi",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_alvi_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_alvi_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_alvi_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_s10",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_s10_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_s10_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_s10_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_m10",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_m10_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_m10_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "venta_m10_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "inicio_periodo",
+            "field_type": "DATE"
+        },
+        {
+            "name": "fin_periodo",
+            "field_type": "DATE"
+        },
+        {
+            "name": "projection_date",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Date in which the projection was made"
+        }
     ],
-
     "time_partitioning": {
-        "field": "inicio_periodo",
+        "field": "projection_date",
         "type_": "DAY"
     },
-
-    "clustering_fields": ["category_description"]
+    "clustering_fields": [
+        "inicio_periodo",
+        "fin_periodo",
+        "category_description"
+    ]
 }
