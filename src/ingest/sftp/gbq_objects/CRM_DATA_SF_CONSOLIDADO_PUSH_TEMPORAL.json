@@ -7,145 +7,145 @@
   {
     "name": "ORGANIZATION_ID",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "TIPO_AUDIENCIA",
     "mode": "NULLABLE",
-    "type": "STRING"
+    "field_type": "STRING"
 
   },
   {
     "name": "FORMATO",
     "mode": "NULLABLE",
-    "type": "STRING"
+    "field_type": "STRING"
 
   },
   {
     "name": "TIPO_COMUNICACION",
     "mode": "NULLABLE",
-    "type": "STRING"
+    "field_type": "STRING"
 
   },
   {
     "name": "TIPO_CAMPANA",
     "mode": "NULLABLE",
-    "type": "STRING"
+    "field_type": "STRING"
 
   },
   {
     "name": "CAMPANA",
     "mode": "NULLABLE",
-    "type": "STRING"
+    "field_type": "STRING"
 
   },
   {
     "name": "MESSAGE_ID",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "MESSAGE_NAME",
     "mode": "NULLABLE",
-    "type": "STRING"
+    "field_type": "STRING"
 
   },
   {
     "name": "ENVIADO",
     "mode": "NULLABLE",
-    "type": "TIMESTAMP"
+    "field_type": "TIMESTAMP"
 
   },
   {
     "name": "BASE_ENVIOS",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "SENT_ANDROID",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "SENT_IOS",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "OPEN_ANDROID",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "OPEN_IOS",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "TOTAL_OPEN",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "SUCCESS_ANDROID",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "SUCCESS_IOS",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "TOTAL_SUCCESS",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "FAILED_ANDROID",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "FAILED_IOS",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "TOTAL_FAILED",
     "mode": "NULLABLE",
-    "type": "INTEGER"
+    "field_type": "INTEGER"
 
   },
   {
     "name": "OR %",
     "mode": "NULLABLE",
-    "type": "FLOAT"
+    "field_type": "FLOAT"
 
   },
   {
     "name": "TS %",
     "mode": "NULLABLE",
-    "type": "FLOAT"
+    "field_type": "FLOAT"
 
   },
   {
     "name": "TF%",
     "mode": "NULLABLE",
-    "type": "FLOAT"
+    "field_type": "FLOAT"
 
   }
 ]
