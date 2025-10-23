@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 # Default
+import os
 import json
 from typing import TYPE_CHECKING, Literal
 
@@ -384,15 +385,19 @@ def uploadFrame(
 def deleteFromTable(
         table_ref: str, where_clause: str, gbq_client: bigquery.Client,
         if_not_exists: Literal['raise', 'ignore'] = 'ignore',
+        project: str =  '', json_encoding: str = 'utf8'
     ) -> None:
     """Delete data from a table filtering by a specific column value.
 
     Parameters
     ----------
     table_ref : str
-        Table from which the data will be deleted. The value must included
-        a project ID, dataset ID, and table ID, each separated by ``.``.
-        For example: `your-project.your_dataset.your_table`
+        Table from which the data will be deleted. It must be either:
+          - Path to the JSON DDL of the table, in which case project must be
+            also provided.
+          - Table ref ID that includes project ID, dataset ID, and table ID,
+            each separated by ``.``. For example:
+            `your-project.your_dataset.your_table`
     where_clause : str
         Comparisons inside the WHERE clause for the columns to be deleted.
         For example: `column_a = date('1998-08-30')`
@@ -400,11 +405,28 @@ def deleteFromTable(
         Client used for making the queries
     if_not_exists: ['raise', 'ignore'], default='raise'
         Behavior to take if the table does not exist.
+    project : str
+        Project ID in which the table is located. Unused if the table ref
+        ID is given.
+    json_encoding : str, default='utf8'
+        Encoding of the JSON file with the DDL. Only used if table_ref is a
+        path.
 
     See Also
     --------
     :func:`~verifyTableExistence`
     """
+    # If a table ref is a path to the json ddl, extract from there
+    if os.path.isfile(table_ref):
+        with open(table_ref, encoding=json_encoding) as f:
+            ddl_config = json.load(f)
+        table_ref = (
+            project + '.'
+            + ddl_config['schema'] + '.'
+            + ddl_config['table']
+        )
+
+    # Build default delete query job
     sql_query = QueryDict({
         'delete_query':
         """
@@ -412,6 +434,8 @@ def deleteFromTable(
         WHERE ${where_clause}
         """
     })
+
+    # Send deletion job
     if verifyTableExistence(
         table_ref=table_ref,
         gbq_client=gbq_client,
