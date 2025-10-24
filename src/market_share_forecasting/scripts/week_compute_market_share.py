@@ -227,12 +227,13 @@ def main():
     logging.getLogger('prophet').setLevel(logging.WARNING)
     logging.getLogger('cmdstanpy').disabled = True
 
-    logging.info('Removing previous table from GCP')
-    gbq_extended.createTableFromJSON(
-        table_ddl_json_path=os.path.join('gbq_objects', 'week_prophet_sales_forecasting.json'),  # noqa: E501
+    # Remove past projections for this date if reprocessing
+    logging.info('Deleting past run of this projection from GCP')
+    gbq_extended.deleteFromTable(
+        table_ref=os.path.join('gbq_objects', 'week_prophet_sales_forecasting.json'),
+        where_clause=f"projection_date = CAST('{execution_date}' AS DATE)",
         project=gcp_project,
         gbq_client=gbq_client,
-        if_exists='rebuild',
     )
 
 
@@ -401,6 +402,7 @@ def main():
         )
 
         final_pred['inicio_periodo'] = final_pred['fin_periodo'] + pd.to_timedelta(-7, 'days')
+        final_pred['projection_date'] = execution_date
 
         logging.info('Updating temporal tables to AWS')
         for category_name in category_names:
@@ -460,12 +462,13 @@ def main():
                             f'{target_value}_proyectado_max'
                         )
                     ],
-                    'inicio_periodo', 'fin_periodo', 'p_week'
+                    'inicio_periodo', 'fin_periodo', 'p_week', 'projection_date'
                 ]].astype({
                     'cl_xc_categoria': 'string',
                     'inicio_periodo': 'string',
                     'fin_periodo': 'string',
                     'p_week': 'string',
+                    'projection_date': 'string',
                 }),
                 table_ddl_json_path=os.path.join('gbq_objects', 'week_prophet_sales_forecasting.json'),  # noqa: E501
                 project=gcp_project,

@@ -88,7 +88,12 @@ def main() -> None:  # noqa: D103
         #get file
         logging.info(f'Getting file CONSOLIDADO_{archivo}_{execution_date}')
         excel_name = f'CONSOLIDADO_{archivo}_{execution_date}.xls'
-        ftp.get(f'/Import/CONSOLIDADO/{excel_name}',excel_name)
+        try:
+            ftp.get(f'/Import/CONSOLIDADO/{excel_name}',excel_name)
+        except FileNotFoundError:
+            logging.info (f'Archivo {excel_name} no encontrado')
+            if archivo in ('PUSH', 'SMS') :
+                continue
 
         logging.info(F'Getting {excel_name} into Dataframe')
         df_file = pd.read_excel(f'{excel_name}')

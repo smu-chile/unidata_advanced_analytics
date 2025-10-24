@@ -1,6 +1,5 @@
 import os
 import re
-import json
 import logging
 import argparse
 from logging import config
@@ -96,17 +95,12 @@ def main() -> None:  # noqa: D103
     )
 
     # Remove registers from the same year
-    with open(os.path.join('gbq_objects', 'dim_holidays.json')) as f:
-        tbl_config = json.load(f)
-        deleteFromTable(
-            table_ref=(
-                gcp_project
-                + '.' + tbl_config['schema']
-                + '.' + tbl_config['table']
-            ),
-            where_clause=f'EXTRACT(YEAR FROM date) = {execution_date.year}',
-            gbq_client=gbq_client
-        )
+    deleteFromTable(
+        table_ref=os.path.join('gbq_objects', 'dim_holidays.json'),
+        where_clause=f'EXTRACT(YEAR FROM date) = {execution_date.year}',
+        project=gcp_project,
+        gbq_client=gbq_client,
+    )
 
     # Upload to GBQ
     uploadFrame(
