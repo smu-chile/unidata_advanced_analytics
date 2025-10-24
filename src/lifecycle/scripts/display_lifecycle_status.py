@@ -1776,11 +1776,11 @@ def main() -> None:  # noqa: D103
 
 
     doc.add_figure(fig2, dpi=dpi)
-    
+
     plt.close(fig2)
     del fig2
     gc.collect()
-    
+
     logging.info('Fig3 lista')
 
     doc.add_spacer(10)
