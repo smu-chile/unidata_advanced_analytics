@@ -1,7 +1,7 @@
 
 {
     "schema": "CRM",
-    "table": "CRM_DATA_SF_CONSOLIDADO_EMAIL_TEMPORAL",
+    "table": "CRM_DATA_SF_CONSOLIDADO_SMS_TEMPORAL",
 
     "columns":  [
   {
