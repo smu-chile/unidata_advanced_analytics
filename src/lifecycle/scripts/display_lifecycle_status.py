@@ -1307,7 +1307,6 @@ def resumen_clientes_ciclo_extendido(df_lc: pd.DataFrame, monthid: str):
 
         ax.axis('off')
 
-    plt.show()
     return fig
 
 
@@ -1724,7 +1723,7 @@ def main() -> None:  # noqa: D103
 
     # 2) Construyes el PDF agregando texto / figuras / saltos
     doc = PDFDoc(ruta_salida=f'{nombre_pdf}.pdf', titulo_doc='')
-    logging.info('Documento vacío creado')
+    logging.info('Documento vacío creado...')
 
     # ------------------------------------------------------------------
     # Primera página: Última segmentación
