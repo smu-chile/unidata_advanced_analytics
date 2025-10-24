@@ -201,11 +201,13 @@ def main():
 
     target_values = ['unimarc', 'alvi', 's10', 'm10']
 
-    gbq_extended.createTableFromJSON(
-        table_ddl_json_path=os.path.join('gbq_objects', 'month_prophet_sales_forecasting.json'),  # noqa: E501
+    # Remove past projections for this date if reprocessing
+    logging.info('Deleting past run of this projection')
+    gbq_extended.deleteFromTable(
+        table_ref=os.path.join('gbq_objects', 'month_prophet_sales_forecasting.json'),
+        where_clause=f"projection_date = CAST('{execution_date}' AS DATE)",
         project=gcp_project,
         gbq_client=gbq_client,
-        if_exists='rebuild',
     )
 
     for category_names in batchList(
@@ -349,6 +351,7 @@ def main():
 
 
         final_pred['inicio_periodo'] = final_pred['fin_periodo'].astype(str).str[:8] + '01'
+        final_pred['projection_date'] = execution_date
 
         logging.info('Updating table to GCP')
         logging.info(', '.join(final_pred['category_description'].unique().tolist()))
@@ -372,7 +375,8 @@ def main():
                 'm10_proyectado_min',
                 'm10_proyectado_max',
                 'inicio_periodo',
-                'fin_periodo'
+                'fin_periodo',
+                'projection_date'
             ]],
             table_ddl_json_path=os.path.join('gbq_objects', 'month_prophet_sales_forecasting.json'),  # noqa: E501
             project=gcp_project,

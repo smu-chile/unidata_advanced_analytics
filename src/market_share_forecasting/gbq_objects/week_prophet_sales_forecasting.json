@@ -2,67 +2,236 @@
     "schema": "MARKET_SHARE",
     "table": "WEEK_PROPHET_SALES_FORECASTING",
     "columns": [
-        {"name": "departamento", "field_type": "STRING"},
-        {"name": "cl_xc_categoria", "field_type": "STRING"},
-        {"name": "negocio", "field_type": "STRING"},
-        {"name": "total_mercado_vtas_valor", "field_type": "FLOAT64"},
-        {"name": "total_mercado_vtas_valor_proyectado", "field_type": "FLOAT64"},
-        {"name": "total_mercado_vtas_valor_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "total_mercado_vtas_valor_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "total_mercado_vtas_unit", "field_type": "FLOAT64"},
-        {"name": "total_mercado_vtas_unit_proyectado", "field_type": "FLOAT64"},
-        {"name": "total_mercado_vtas_unit_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "total_mercado_vtas_unit_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "unimarc_vtas_valor", "field_type": "FLOAT64"},
-        {"name": "unimarc_vtas_valor_proyectado", "field_type": "FLOAT64"},
-        {"name": "unimarc_vtas_valor_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "unimarc_vtas_valor_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "unimarc_vtas_unit", "field_type": "FLOAT64"},
-        {"name": "unimarc_vtas_unit_proyectado", "field_type": "FLOAT64"},
-        {"name": "unimarc_vtas_unit_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "unimarc_vtas_unit_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "m10s10_vtas_valor", "field_type": "FLOAT64"},
-        {"name": "m10s10_vtas_valor_proyectado", "field_type": "FLOAT64"},
-        {"name": "m10s10_vtas_valor_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "m10s10_vtas_valor_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "m10s10_vtas_unit", "field_type": "FLOAT64"},
-        {"name": "m10s10_vtas_unit_proyectado", "field_type": "FLOAT64"},
-        {"name": "m10s10_vtas_unit_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "m10s10_vtas_unit_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "unimarc_internet_vtas_valor", "field_type": "FLOAT64"},
-        {"name": "unimarc_internet_vtas_valor_proyectado", "field_type": "FLOAT64"},
-        {"name": "unimarc_internet_vtas_valor_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "unimarc_internet_vtas_valor_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "unimarc_internet_vtas_unit", "field_type": "FLOAT64"},
-        {"name": "unimarc_internet_vtas_unit_proyectado", "field_type": "FLOAT64"},
-        {"name": "unimarc_internet_vtas_unit_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "unimarc_internet_vtas_unit_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "total_internet_vtas_valor", "field_type": "FLOAT64"},
-        {"name": "total_internet_vtas_valor_proyectado", "field_type": "FLOAT64"},
-        {"name": "total_internet_vtas_valor_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "total_internet_vtas_valor_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "total_internet_vtas_unit", "field_type": "FLOAT64"},
-        {"name": "total_internet_vtas_unit_proyectado", "field_type": "FLOAT64"},
-        {"name": "total_internet_vtas_unit_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "total_internet_vtas_unit_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "total_mercado_internet_vtas_valor", "field_type": "FLOAT64"},
-        {"name": "total_mercado_internet_vtas_valor_proyectado", "field_type": "FLOAT64"},
-        {"name": "total_mercado_internet_vtas_valor_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "total_mercado_internet_vtas_valor_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "total_mercado_internet_vtas_unit", "field_type": "FLOAT64"},
-        {"name": "total_mercado_internet_vtas_unit_proyectado", "field_type": "FLOAT64"},
-        {"name": "total_mercado_internet_vtas_unit_proyectado_min", "field_type": "FLOAT64"},
-        {"name": "total_mercado_internet_vtas_unit_proyectado_max", "field_type": "FLOAT64"},
-        {"name": "inicio_periodo", "field_type": "DATE"},
-        {"name": "fin_periodo", "field_type": "DATE"},
-        {"name": "p_week", "field_type": "STRING"}
-
+        {
+            "name": "departamento",
+            "field_type": "STRING"
+        },
+        {
+            "name": "cl_xc_categoria",
+            "field_type": "STRING"
+        },
+        {
+            "name": "negocio",
+            "field_type": "STRING"
+        },
+        {
+            "name": "total_mercado_vtas_valor",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_vtas_valor_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_vtas_valor_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_vtas_valor_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_vtas_unit",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_vtas_unit_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_vtas_unit_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_vtas_unit_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_vtas_valor",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_vtas_valor_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_vtas_valor_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_vtas_valor_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_vtas_unit",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_vtas_unit_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_vtas_unit_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_vtas_unit_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "m10s10_vtas_valor",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "m10s10_vtas_valor_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "m10s10_vtas_valor_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "m10s10_vtas_valor_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "m10s10_vtas_unit",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "m10s10_vtas_unit_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "m10s10_vtas_unit_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "m10s10_vtas_unit_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_internet_vtas_valor",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_internet_vtas_valor_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_internet_vtas_valor_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_internet_vtas_valor_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_internet_vtas_unit",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_internet_vtas_unit_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_internet_vtas_unit_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "unimarc_internet_vtas_unit_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_internet_vtas_valor",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_internet_vtas_valor_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_internet_vtas_valor_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_internet_vtas_valor_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_internet_vtas_unit",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_internet_vtas_unit_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_internet_vtas_unit_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_internet_vtas_unit_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_internet_vtas_valor",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_internet_vtas_valor_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_internet_vtas_valor_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_internet_vtas_valor_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_internet_vtas_unit",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_internet_vtas_unit_proyectado",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_internet_vtas_unit_proyectado_min",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "total_mercado_internet_vtas_unit_proyectado_max",
+            "field_type": "FLOAT64"
+        },
+        {
+            "name": "inicio_periodo",
+            "field_type": "DATE"
+        },
+        {
+            "name": "fin_periodo",
+            "field_type": "DATE"
+        },
+        {
+            "name": "p_week",
+            "field_type": "STRING"
+        },
+        {
+            "name": "projection_date",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Date in which the projection was made"
+        }
     ],
-
     "time_partitioning": {
-        "field": "inicio_periodo",
+        "field": "projection_date",
         "type_": "DAY"
     },
-
-    "clustering_fields": ["cl_xc_categoria", "p_week"]
+    "clustering_fields": [
+        "inicio_periodo",
+        "cl_xc_categoria",
+        "p_week"
+    ]
 }

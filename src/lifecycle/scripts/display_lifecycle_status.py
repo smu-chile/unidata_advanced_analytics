@@ -1676,138 +1676,182 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
     # ENDREGION
 
+    import gc
+
+    import matplotlib as mpl
+    mpl.use('Agg')     # backend no interactivo (importante en servidores)
+    import matplotlib.pyplot as plt
+    plt.ioff()                # modo no interactivo (evita buffers innecesarios)
 
     # REGION: Creacion de graficos
     #----------------------------------------------------------------------
 
-    fig1 = grafico_torta_estado_mes(df_lc, monthid=last_monthid,
-                                    considerar_gasto=False, show=False)
 
-    logging.info('Fig1 lista')
-    fig2 = grafico_torta_estado_mes(df_lc, monthid=prev_monthid,
-                                    considerar_gasto=True,
-                                    mostrar_monto_ventas=False, umbral_pct_inside=3.0, show=False)
 
-    logging.info('Fig2 lista')
-    fig3 = resumen_clientes_ciclo_extendido(df_lc, monthid=prev_monthid)
 
-    logging.info('Fig3 lista')
 
-    fig4 = matriz_status_vs_nivel_graficos(df_lc, last_monthid, modo_porcentaje='fila',
-                                        considerar_gasto=False)
 
-    logging.info('Fig4 lista')
-    fig5 = matriz_status_vs_nivel_graficos(df_lc, prev_monthid, modo_porcentaje='fila',
-                                        considerar_gasto=True)
 
-    logging.info('Fig5 lista')
-    fig6 = grafico_clientes_por_estado(df_lc, n_meses=6, tipo=1)
 
-    logging.info('Fig6 lista')
-    fig7 = grafico_lineas_clientes_por_estado(df_lc, 12)
 
-    logging.info('Fig7 lista')
+
+
+
+
+
+
+
+
+
     #----------------------------------------------------------------------
     # ENDREGION
 
+    dpi = 40
 
     # REGION: Creacion del documento
     #----------------------------------------------------------------------
 
-    # 2) Construyes el PDF agregando texto/figuras/saltos
+    # --- Helper para insertar figura y liberar memoria ---
+    def _add_fig(doc, fig, *, dpi: int, max_ancho: int | None = 320,
+                nombre_log: str = '') -> None:
+        doc.add_figure(fig, dpi=dpi, max_ancho=max_ancho)
+        plt.close(fig)
+        del fig
+        gc.collect()
+        if nombre_log:
+            logging.info('%s lista', nombre_log)
+
+
+    # 2) Construyes el PDF agregando texto / figuras / saltos
     doc = PDFDoc(ruta_salida=f'{nombre_pdf}.pdf', titulo_doc='')
-    logging.info('Documento vacio creado')
-    #-----
+    logging.info('Documento vacío creado')
+
+    # ------------------------------------------------------------------
     # Primera página: Última segmentación
-    #-----
+    # ------------------------------------------------------------------
     doc.add_text('<b>Resultados de la última segmentación</b>', estilo='titulo')
 
     doc.add_text('<b>Distribución de clientes</b>', estilo='subtitulo')
     doc.add_text(
-        'A continuación se presenta la distribución de clientes por estado de ciclo de vida, '
-        'correspondiente a la última ejecución de la segmentación.'
+        'A continuación se presenta la distribución de clientes por estado de '
+        'ciclo de vida, correspondiente a la última ejecución de la segmentación.'
     )
     doc.add_spacer(2)
-    doc.add_figure(fig1, dpi=220, max_ancho=320)
+
+    # fig1: torta últimos resultados (conteos)
+    fig1 = grafico_torta_estado_mes(
+        df_lc, monthid=last_monthid, considerar_gasto=False, show=False
+    )
+    _add_fig(doc, fig1, dpi=dpi, max_ancho=320, nombre_log='Fig1')
 
     doc.add_spacer(10)
 
     doc.add_text('<b>Matriz Ciclo de Vida vs. Niveles</b>', estilo='subtitulo')
     doc.add_text(
-        'El cruce entre los estados de ciclo de vida y '
-        'los niveles del programa muestra la siguiente matriz. '
-        'Las etiquetas incluyen totales por eje, '
+        'El cruce entre los estados de ciclo de vida y los niveles del programa '
+        'muestra la siguiente matriz. Las etiquetas incluyen totales por eje, '
         'y cada celda presenta el valor y su porcentaje relativo.'
     )
     doc.add_spacer(2)
-    doc.add_figure(fig4, dpi=200, max_ancho=320)
+
+    # fig2: matriz últimos resultados (conteos)
+    fig2 = matriz_status_vs_nivel_graficos(
+        df_lc, last_monthid, modo_porcentaje='fila', considerar_gasto=False
+    )
+    _add_fig(doc, fig2, dpi=dpi, max_ancho=320, nombre_log='Fig2')
 
     doc.add_page_break()
 
-    #-----
+    # ------------------------------------------------------------------
     # Segunda página: KPI segmentación anterior
-    #-----
+    # ------------------------------------------------------------------
     doc.add_text('<b>Resultados del ciclo anterior</b>', estilo='titulo')
 
     doc.add_text('<b>Distribución de clientes y ventas</b>', estilo='subtitulo')
     doc.add_text(
-        'Se presenta la distribución de clientes y su participación en ventas correspondiente '
-        'al mes inmediatamente anterior.'
+        'Se presenta la distribución de clientes y su participación en ventas '
+        'correspondiente al mes inmediatamente anterior.'
     )
     doc.add_spacer(2)
-    doc.add_figure(fig2, dpi=220)
+
+    # fig3: torta ciclo anterior (clientes y ventas)
+    fig3 = grafico_torta_estado_mes(
+        df_lc, monthid=prev_monthid, considerar_gasto=True,
+        mostrar_monto_ventas=False, umbral_pct_inside=3.0, show=False
+    )
+    _add_fig(doc, fig3, dpi=dpi, max_ancho=320, nombre_log='Fig3')
 
     doc.add_spacer(10)
 
     doc.add_text('<b>Matriz Ciclo de Vida vs. Niveles</b>', estilo='subtitulo')
     doc.add_text(
-        'La matriz siguiente resume el cruce de estados '
-        'de ciclo de vida con niveles para el ciclo anterior, '
-        'considerando las ventas de cada uno de los segmentos.'
+        'La matriz siguiente resume el cruce de estados de ciclo de vida con '
+        'niveles para el ciclo anterior, considerando las ventas de cada segmento.'
     )
     doc.add_spacer(2)
-    doc.add_figure(fig5, dpi=200)
+
+    # fig4: matriz ciclo anterior (ventas)
+    fig4 = matriz_status_vs_nivel_graficos(
+        df_lc, prev_monthid, modo_porcentaje='fila', considerar_gasto=True
+    )
+    _add_fig(doc, fig4, dpi=dpi, max_ancho=320, nombre_log='Fig4')
 
     doc.add_page_break()
 
+    # ------------------------------------------------------------------
+    # Sección: Variaciones de clientes constantes
+    # ------------------------------------------------------------------
     doc.add_text('<b>Variaciones de clientes constantes</b>', estilo='subtitulo')
     doc.add_text(
         'Los clientes <i>crecientes</i>, <i>estables</i> y <i>decrecientes</i> '
-        'son aquellos que han realizado compras superiores a $10.000 en, '
-        'al menos, 3 de los últimos 4 meses. '
-        'A continuación, se muestran las variaciones en número de '
-        'clientes, canastas y ventas para dichos segmentos.'
+        'son aquellos que han realizado compras superiores a $10.000 en, al menos, '
+        '3 de los últimos 4 meses. A continuación, se muestran las variaciones en '
+        'número de clientes, canastas y ventas para dichos segmentos.'
     )
-    doc.add_figure(fig3, dpi=200)
+    doc.add_spacer(2)
+
+    # fig5: resumen variaciones (mes anterior)
+    fig5 = resumen_clientes_ciclo_extendido(df_lc, monthid=prev_monthid)
+    _add_fig(doc, fig5, dpi=dpi, max_ancho=320, nombre_log='Fig5')
 
     doc.add_page_break()
 
-    #-----
+    # ------------------------------------------------------------------
     # Tercera página: Análisis en el tiempo
-    #-----
+    # ------------------------------------------------------------------
     doc.add_text('<b>Resultados en el tiempo</b>', estilo='titulo')
 
     doc.add_text('<b>Resultados en el <u>mediano plazo</u></b>', estilo='subtitulo')
-    doc.add_text('Evolución de la distribución de clientes '
-                'por estado durante los últimos 6 meses.')
+    doc.add_text(
+        'Evolución de la distribución de clientes por estado durante los últimos '
+        '6 meses.'
+    )
     doc.add_spacer(2)
-    doc.add_figure(fig6, dpi=220, max_ancho=330)
+
+    # fig6: evolución 6 meses
+    fig6 = grafico_clientes_por_estado(df_lc, n_meses=6, tipo=1)
+    _add_fig(doc, fig6, dpi=dpi, max_ancho=330, nombre_log='Fig6')
 
     doc.add_spacer(10)
 
     doc.add_text('<b>Resultados en el <u>largo plazo</u></b>', estilo='subtitulo')
-    doc.add_text('Evolución de la distribución de clientes '
-                'por estado durante los últimos 12 meses.')
+    doc.add_text(
+        'Evolución de la distribución de clientes por estado durante los últimos '
+        '12 meses.'
+    )
     doc.add_spacer(2)
-    doc.add_figure(fig7, dpi=220, max_ancho=330)
+
+    # fig7: evolución 12 meses
+    fig7 = grafico_lineas_clientes_por_estado(df_lc, 12)
+    _add_fig(doc, fig7, dpi=dpi, max_ancho=330, nombre_log='Fig7')
 
     logging.info('Se agrega contenido.')
 
     # 3) En memoria (BytesIO)
     pdf_buf = doc.build_buffer()
-
     logging.info('Se crea el BytesIO.')
     pdf_buf.seek(0)  # por si acaso SharePoint lo requiere en posición 0
+
 
 
     gcp_project_id = 'cl-bigdata-analytics-preprod'
