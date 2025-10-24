@@ -1676,40 +1676,36 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
     # ENDREGION
 
-
+    import gc
     # REGION: Creacion de graficos
     #----------------------------------------------------------------------
 
-    fig1 = grafico_torta_estado_mes(df_lc, monthid=last_monthid,
-                                    considerar_gasto=False, show=False)
+
+
 
     logging.info('Fig1 lista')
-    fig2 = grafico_torta_estado_mes(df_lc, monthid=prev_monthid,
-                                    considerar_gasto=True,
-                                    mostrar_monto_ventas=False, umbral_pct_inside=3.0, show=False)
+
 
     logging.info('Fig2 lista')
-    fig3 = resumen_clientes_ciclo_extendido(df_lc, monthid=prev_monthid)
+
 
     logging.info('Fig3 lista')
 
-    fig4 = matriz_status_vs_nivel_graficos(df_lc, last_monthid, modo_porcentaje='fila',
-                                        considerar_gasto=False)
 
     logging.info('Fig4 lista')
-    fig5 = matriz_status_vs_nivel_graficos(df_lc, prev_monthid, modo_porcentaje='fila',
-                                        considerar_gasto=True)
+
 
     logging.info('Fig5 lista')
-    fig6 = grafico_clientes_por_estado(df_lc, n_meses=6, tipo=1)
+
 
     logging.info('Fig6 lista')
-    fig7 = grafico_lineas_clientes_por_estado(df_lc, 12)
+
 
     logging.info('Fig7 lista')
     #----------------------------------------------------------------------
     # ENDREGION
 
+    dpi = 40
 
     # REGION: Creacion del documento
     #----------------------------------------------------------------------
@@ -1728,7 +1724,18 @@ def main() -> None:  # noqa: D103
         'correspondiente a la última ejecución de la segmentación.'
     )
     doc.add_spacer(2)
-    doc.add_figure(fig1, dpi=220, max_ancho=320)
+
+
+    fig1 = grafico_torta_estado_mes(df_lc, monthid=last_monthid,
+                                    considerar_gasto=False, show=False)
+
+    doc.add_figure(fig1, dpi=dpi, max_ancho=320)
+
+    plt.close(fig1)
+    del fig1
+    gc.collect()
+
+
 
     doc.add_spacer(10)
 
@@ -1740,7 +1747,16 @@ def main() -> None:  # noqa: D103
         'y cada celda presenta el valor y su porcentaje relativo.'
     )
     doc.add_spacer(2)
-    doc.add_figure(fig4, dpi=200, max_ancho=320)
+
+
+    fig4 = matriz_status_vs_nivel_graficos(df_lc, last_monthid, modo_porcentaje='fila',
+                                        considerar_gasto=False)
+    doc.add_figure(fig4, dpi=dpi, max_ancho=320)
+
+    plt.close(fig4)
+    del fig4
+    gc.collect()
+
 
     doc.add_page_break()
 
@@ -1755,7 +1771,15 @@ def main() -> None:  # noqa: D103
         'al mes inmediatamente anterior.'
     )
     doc.add_spacer(2)
-    doc.add_figure(fig2, dpi=220)
+
+    fig2 = grafico_torta_estado_mes(df_lc, monthid=prev_monthid,
+                                    considerar_gasto=True,
+                                    mostrar_monto_ventas=False, umbral_pct_inside=3.0, show=False)
+
+
+    doc.add_figure(fig2, dpi=dpi)
+
+
 
     doc.add_spacer(10)
 
@@ -1766,7 +1790,16 @@ def main() -> None:  # noqa: D103
         'considerando las ventas de cada uno de los segmentos.'
     )
     doc.add_spacer(2)
-    doc.add_figure(fig5, dpi=200)
+
+
+    fig5 = matriz_status_vs_nivel_graficos(df_lc, prev_monthid, modo_porcentaje='fila',
+                                        considerar_gasto=True)
+
+    doc.add_figure(fig5, dpi=dpi)
+
+    plt.close(fig5)
+    del fig5
+    gc.collect()
 
     doc.add_page_break()
 
@@ -1778,7 +1811,16 @@ def main() -> None:  # noqa: D103
         'A continuación, se muestran las variaciones en número de '
         'clientes, canastas y ventas para dichos segmentos.'
     )
-    doc.add_figure(fig3, dpi=200)
+
+
+    fig3 = resumen_clientes_ciclo_extendido(df_lc, monthid=prev_monthid)
+
+    doc.add_figure(fig3, dpi=dpi)
+
+    plt.close(fig3)
+    del fig3
+    gc.collect()
+
 
     doc.add_page_break()
 
@@ -1791,7 +1833,14 @@ def main() -> None:  # noqa: D103
     doc.add_text('Evolución de la distribución de clientes '
                 'por estado durante los últimos 6 meses.')
     doc.add_spacer(2)
-    doc.add_figure(fig6, dpi=220, max_ancho=330)
+
+    fig6 = grafico_clientes_por_estado(df_lc, n_meses=6, tipo=1)
+
+    doc.add_figure(fig6, dpi=dpi, max_ancho=330)
+
+    plt.close(fig6)
+    del fig6
+    gc.collect()
 
     doc.add_spacer(10)
 
@@ -1799,7 +1848,14 @@ def main() -> None:  # noqa: D103
     doc.add_text('Evolución de la distribución de clientes '
                 'por estado durante los últimos 12 meses.')
     doc.add_spacer(2)
-    doc.add_figure(fig7, dpi=220, max_ancho=330)
+
+    fig7 = grafico_lineas_clientes_por_estado(df_lc, 12)
+
+    doc.add_figure(fig7, dpi=dpi, max_ancho=330)
+
+    plt.close(fig7)
+    del fig7
+    gc.collect()
 
     logging.info('Se agrega contenido.')
 
