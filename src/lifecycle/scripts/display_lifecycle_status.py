@@ -1683,25 +1683,20 @@ def main() -> None:  # noqa: D103
 
 
 
-    logging.info('Fig1 lista')
 
 
-    logging.info('Fig2 lista')
 
 
-    logging.info('Fig3 lista')
 
 
-    logging.info('Fig4 lista')
 
 
-    logging.info('Fig5 lista')
 
 
-    logging.info('Fig6 lista')
 
 
-    logging.info('Fig7 lista')
+
+
     #----------------------------------------------------------------------
     # ENDREGION
 
@@ -1735,6 +1730,7 @@ def main() -> None:  # noqa: D103
     del fig1
     gc.collect()
 
+    logging.info('Fig1 lista')
 
 
     doc.add_spacer(10)
@@ -1757,6 +1753,8 @@ def main() -> None:  # noqa: D103
     del fig4
     gc.collect()
 
+    logging.info('Fig2 lista')
+
 
     doc.add_page_break()
 
@@ -1778,8 +1776,12 @@ def main() -> None:  # noqa: D103
 
 
     doc.add_figure(fig2, dpi=dpi)
-
-
+    
+    plt.close(fig2)
+    del fig2
+    gc.collect()
+    
+    logging.info('Fig3 lista')
 
     doc.add_spacer(10)
 
@@ -1800,6 +1802,9 @@ def main() -> None:  # noqa: D103
     plt.close(fig5)
     del fig5
     gc.collect()
+
+    logging.info('Fig4 lista')
+
 
     doc.add_page_break()
 
@@ -1822,6 +1827,10 @@ def main() -> None:  # noqa: D103
     gc.collect()
 
 
+
+    logging.info('Fig5 lista')
+
+
     doc.add_page_break()
 
     #-----
@@ -1841,7 +1850,7 @@ def main() -> None:  # noqa: D103
     plt.close(fig6)
     del fig6
     gc.collect()
-
+    logging.info('Fig6 lista')
     doc.add_spacer(10)
 
     doc.add_text('<b>Resultados en el <u>largo plazo</u></b>', estilo='subtitulo')
@@ -1856,7 +1865,7 @@ def main() -> None:  # noqa: D103
     plt.close(fig7)
     del fig7
     gc.collect()
-
+    logging.info('Fig7 lista')
     logging.info('Se agrega contenido.')
 
     # 3) En memoria (BytesIO)
