@@ -160,9 +160,9 @@ SQL_QUERIES = QueryDict({
     FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD_STATUS`
     WHERE CARD_ID IN (SELECT CARD_ID
     FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD`
-    WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
+    WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
     AND PERIOD <= ${periodo}
-    AND CREDIT_LIMIT > 1)
+    AND CREDIT_LIMIT > 1
     ) t
     WHERE rw = 1
     )
