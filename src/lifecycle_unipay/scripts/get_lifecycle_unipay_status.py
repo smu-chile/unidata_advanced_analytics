@@ -66,40 +66,119 @@ SQL_QUERIES = QueryDict({
     # por los clientes con tarjeta unipay
     'compras':
     """
+    WITH TEMP AS (
+    SELECT DISTINCT CUSTOMER_ID
+    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD`
+    WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
+    )
     SELECT MARKET_BASKET_KEY,
     CUSTOMER_KEY,
+    DATE_VALUE,
     TNDR_TP_ID,
-    TOT_SALE_AMT,
-    DATE_VALUE
-    FROM `${gcp_proyect}.${schema}.TMP_DATA_LIFECYCLE_UNIPAY_SALES_ALL`
-    WHERE DATE_VALUE >= '${fecha_ini}'
-    AND DATE_VALUE < '${fecha_fin}'
+    TOT_SALE_AMT
+    FROM (SELECT A.MARKET_BASKET_KEY,
+    P.CUSTOMER_KEY,
+    T.TNDR_TP_ID,
+    P.TOT_SALE_AMT,
+    P.DATE_VALUE,
+    RANK() OVER(
+        PARTITION BY A.MARKET_BASKET_KEY ORDER BY A.PYMT_AMT DESC,T.TNDR_TP_ID ASC
+        ) AS RANKING
+    FROM `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_PAYMENT` A
+    INNER JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_TENDER_TYPE` T
+        ON A.TNDR_TP_KEY = T.TENDER_TYPE_KEY
+    INNER JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_MKT_BSKT` P
+        USING(MARKET_BASKET_KEY)
+    WHERE P.FNC_DOC_TP_DSC IN (
+        'TN','TF','BX','B','BE','F','NC','NE','FX','FE'
+        )
+    AND P.ITM_TXN_FCN_TP_DSC = 'V'
+    AND P.DATE_VALUE >= '${fecha_ini}'
+    AND P.DATE_VALUE < '${fecha_fin}'
+    )a
+    WHERE RANKING = 1
+    AND CUSTOMER_KEY IN (SELECT CUSTOMER_ID FROM TEMP)
     """,
 
     # Transacciones mediante la tarjeta unipay
     # realizadas por los clientes
     'compras_unipay':
     """
+    WITH TEMP AS (
+    SELECT DISTINCT CUSTOMER_ID
+    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD`
+    WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
+    )
     SELECT MARKET_BASKET_KEY,
     CUSTOMER_KEY,
+    DATE_VALUE,
     TNDR_TP_ID,
-    TOT_SALE_AMT,
-    DATE_VALUE
-    FROM `${gcp_proyect}.${schema}.TMP_DATA_LIFECYCLE_UNIPAY_SALES_UNIPAY`
-    WHERE DATE_VALUE < '${fecha_fin}'
+    TOT_SALE_AMT
+    FROM (SELECT A.MARKET_BASKET_KEY,
+    P.CUSTOMER_KEY,
+    T.TNDR_TP_ID,
+    P.TOT_SALE_AMT,
+    P.DATE_VALUE,
+    RANK() OVER(
+        PARTITION BY A.MARKET_BASKET_KEY ORDER BY A.PYMT_AMT DESC,T.TNDR_TP_ID ASC
+        ) AS RANKING
+    FROM `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_PAYMENT` A
+    INNER JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_TENDER_TYPE` T
+        ON A.TNDR_TP_KEY = T.TENDER_TYPE_KEY
+    INNER JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_MKT_BSKT` P
+        USING(MARKET_BASKET_KEY)
+    WHERE P.FNC_DOC_TP_DSC IN ('TN','TF','BX','B','BE','F','NC','NE','FX','FE')
+    AND T.TNDR_TP_ID IN ('35','68','78')
+    AND P.ITM_TXN_FCN_TP_DSC = 'V'
+    AND P.DATE_VALUE < '${fecha_fin}'
+    ) a
+    WHERE CUSTOMER_KEY IN (SELECT CUSTOMER_ID FROM TEMP)
+    AND RANKING = 1
     """,
 
     # Clientes con tarjeta unipay en el periodo establecido
     'tarjetas_unipay':
     """
-    SELECT CUSTOMER_KEY,
-    CARD_ID,
-    SUBSCRIPTION_DATE,
-    ACTIVATION_DATE,
-    TERMINATION_DATE,
-    PERIODO,
-    CREDIT_LIMIT
-    FROM ${gcp_proyect}.${schema}.TMP_DATA_LIFECYCLE_UNIPAY_CARDS
+    WITH TARJETAS AS (
+    SELECT *
+    FROM (
+    SELECT PERIOD,CARD_ID,CREDIT_LIMIT,
+    ROW_NUMBER() OVER (PARTITION BY CARD_ID ORDER BY PERIOD desc) rw
+    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD_STATUS`
+    WHERE CARD_ID IN (SELECT CARD_ID
+    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD`
+    WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
+    ) t
+    WHERE rw = 1
+    )
+    ,
+    CREDIT_LIMIT AS (
+    SELECT *
+    FROM (
+    SELECT PERIOD,CARD_ID,CREDIT_LIMIT,
+    ROW_NUMBER() OVER (PARTITION BY CARD_ID ORDER BY PERIOD desc) rw
+    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD_STATUS`
+    WHERE CARD_ID IN (SELECT CARD_ID
+    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD`
+    WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
+    AND PERIOD <= ${periodo}
+    AND CREDIT_LIMIT > 1)
+    ) t
+    WHERE rw = 1
+    )
+    SELECT UC.CUSTOMER_ID,UC.CARD_ID,
+    UC.SUBSCRIPTION_DATE,
+    UC.ACTIVATION_DATE,
+    UC.TERMINATION_DATE,
+    T.PERIOD PERIODO,
+    CASE
+        WHEN CL.CREDIT_LIMIT IS NULL THEN UC.CREDIT_LIMIT
+        ELSE CL.CREDIT_LIMIT
+    END AS CREDIT_LIMIT
+    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD` UC
+    LEFT JOIN TARJETAS T ON UC.CARD_ID = T.CARD_ID
+    LEFT JOIN CREDIT_LIMIT CL ON UC.CARD_ID = CL.CARD_ID
+    WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
     """,
 
     # Estado ciclo de vida unipay en el periodo
