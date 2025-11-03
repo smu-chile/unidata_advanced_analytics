@@ -109,7 +109,8 @@ def main() -> None:  # noqa: D103
     reference_files = ['ppto','ppto_mg1', 'cat_h',
                        'est_com','est_com_alvi',
                        'ila','ila_m10','ila_s10',
-                       'admg','admg_alvi','admg_m10','admg_s10']
+                       'admg','admg_alvi','admg_m10','admg_s10',
+                       'zonas_precio']
 
     #Default: tomar todo
     if 'all' in load_files:
@@ -136,7 +137,9 @@ def main() -> None:  # noqa: D103
             'admg': f'{site}/Unimarc/Fuentes datos manuales/Adicional al Margen/Adicional al margen.xlsx',  # noqa: E501
             'admg_alvi' : f'{site}/Alvi/Fuentes manuales de informacion/Adicional al margen/Adicional al margen Alvi.xlsx',  # noqa: E501
             'admg_m10' : f'{site}/M10/Fuentes manuales de informacion/Adicional al margen/Adicional al margen M10.xlsx',  # noqa: E501
-            'admg_s10': f'{site}/S10/Fuentes manuales de informacion/Adicional al margen/Adicional al margen S10.xlsx'  # noqa: E501
+            'admg_s10': f'{site}/S10/Fuentes manuales de informacion/Adicional al margen/Adicional al margen S10.xlsx',  # noqa: E501
+            'zonas_precio' : f'{site}/Unimarc/Reporte Unimarc Sala/Fuente informacion Manual/Zonas de Precio/Zonas Unimarc.xlsx'  # noqa: E501
+
             }
     #table definitions jsons
     jsons = {
@@ -151,7 +154,8 @@ def main() -> None:  # noqa: D103
         'admg' : 'adicional_al_margen_unimarc.json',
         'admg_alvi' : 'adicional_al_margen_alvi.json',
         'admg_m10' : 'adicional_al_margen_m10.json',
-        'admg_s10' : 'adicional_al_margen_s10.json'
+        'admg_s10' : 'adicional_al_margen_s10.json',
+        'zonas_precio' : 'zonas_precio_unimarc.json'
 
     }
 

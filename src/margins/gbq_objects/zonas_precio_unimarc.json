@@ -1,0 +1,31 @@
+{
+    "schema": "REPORTE_MARGEN",
+    "table": "REPORTE_MARGEN_ZONAS_PRECIO_UNIMARC",
+
+    "columns": [
+        {
+            "name": "TIENDA",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED",
+            "description": "Tienda"
+        },
+        {
+            "name": "ID_TIENDA",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED",
+            "description": "ID Tienda"
+        },
+        {
+            "name": "NOMBRE_LOCAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre Local"
+        },
+        {
+            "name": "ZONA_NUEVA",
+            "field_type": "STRING",
+            "mode": "NULLALE",
+            "description": "Zona de precio"
+        }
+    ]
+}
