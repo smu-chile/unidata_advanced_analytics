@@ -43,8 +43,8 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(df,mes_carga):
-    print('Before cleaning:', df)
+def cleaning_func(df:pd.DataFrame,mes_carga:str)->pd.DataFrame:
+    logging.info('Before cleaning:', df)
     mes = df.columns[1].split(' ')[3]
     #Drop first 2 rows and last 4 columns
     df = df[2:]  # noqa: PD901
@@ -67,7 +67,7 @@ def cleaning_func(df,mes_carga):
     #Agregar mes
     df['mes'] = mes
     df['mes_carga'] = pd.to_datetime(mes_carga,format='%Y%m')
-    print('After cleaning:', df)
+    logging.info('After cleaning:', df)
     return df
 
 # -------------------------------------------------------------------------

@@ -56,7 +56,7 @@ ppto_year = '2025' #sorry about this, will think of something, thx
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(file,df):
-    print('Before cleaning:', df)
+    logging.info('Before cleaning:', df)
     if file == 'ppto':
         float_columns = 	['Venta_Neta',
                     'Costo_Neto',
@@ -69,7 +69,7 @@ def cleaning_func(file,df):
         df['año'] = ppto_year
         df['Mes'] = df['año'] + df['Mes'].map(month_dict)
         df['año'] = df['año'].astype('Int64')
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     if file == 'ppto_mg1':
         df.columns = ['Mes', 'Formato', 'Categoria', 'ppto_venta_neta',
@@ -83,18 +83,18 @@ def cleaning_func(file,df):
         df['año'] = ppto_year
         df['Mes'] =  pd.to_datetime(df['Mes'], format='%Y-%m-%d').dt.strftime('%Y%m')
         df['año'] = df['año'].astype('Int64')
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     if file.startswith('admg'):
         df['MES'] = df['MES'].astype('Int64')
         df['Material'] = df['Material'].astype('Int64')
         df['SELLOUT'] = df['SELLOUT'].astype('Float64')
         df = df.dropna(axis=0,subset=['MES'])  # noqa: PD901
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     if file == 'est_com_alvi':
         df = df.replace('#N/D', '')  # noqa: PD901
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     return df
 
