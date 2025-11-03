@@ -47,8 +47,8 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(df,mes,semana_carga):
-    print('Before cleaning:', df)
+def cleaning_func(df:pd.DataFrame,mes:str,semana_carga:str)->pd.DataFrame:
+    logging.info('Before cleaning:', df)
     #Drop first 2 rows and last 4 columns
     df = df[2:]  # noqa: PD901
     df = df.iloc[:, :17]  # noqa: PD901
@@ -70,7 +70,7 @@ def cleaning_func(df,mes,semana_carga):
     #Agregar semana carga y mes datos
     df['mes'] = pd.to_datetime(mes,format='%Y%m')
     df['semana_carga'] = semana_carga
-    print('After cleaning:', df)
+    logging.info('After cleaning:', df)
     return df
 
 # -------------------------------------------------------------------------
@@ -128,7 +128,7 @@ def main() -> None:  # noqa: D103
                     gbq_client=gbq_client,
                     if_exists='ignore',
                 )
-        where_clause=f'semana_carga="{execution_week}"'  # noqa: E501
+        where_clause=f'semana_carga="{execution_week}"'
         #Delete from table so that data is not duplicated
         logging.info('Delete from to avoid duplicates')
         gbq_extended.deleteFromTable(table_ref=table_ref,

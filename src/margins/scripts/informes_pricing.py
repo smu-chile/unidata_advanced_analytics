@@ -4,6 +4,8 @@ import logging
 import argparse
 from logging import config
 
+import pandas as pd
+
 # pip
 from google.cloud import bigquery
 
@@ -35,7 +37,7 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(formato,df):
+def cleaning_func(formato: str,df: pd.DataFrame) -> pd.DataFrame:
     logging.info('Before cleaning:', df)
     if formato == 'unimarc':
         df = df.iloc[:, :26]  # noqa: PD901

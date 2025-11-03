@@ -4,6 +4,8 @@ import logging
 import argparse
 from logging import config
 
+import pandas as pd
+
 # pip
 from google.cloud import bigquery
 
@@ -53,14 +55,14 @@ month_dict = {
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(file,df):
-    print('Before cleaning:', df)
+def cleaning_func(file: str,df: pd.DataFrame) -> pd.DataFrame:
+    logging.info('Before cleaning:', df)
     if file.startswith('admg'):
         df['MES'] = df['MES'].astype('Int64')
         df['Material'] = df['Material'].astype('Int64')
         df['SELLOUT'] = df['SELLOUT'].astype('Float64')
         df = df.dropna(axis=0,subset=['MES'])  # noqa: PD901
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     return df
 

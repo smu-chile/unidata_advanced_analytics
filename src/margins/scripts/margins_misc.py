@@ -56,7 +56,7 @@ ppto_year = '2025' #sorry about this, will think of something, thx
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(file,df):
-    print('Before cleaning:', df)
+    logging.info('Before cleaning:', df)
     if file == 'ppto':
         float_columns = 	['Venta_Neta',
                     'Costo_Neto',
@@ -69,7 +69,7 @@ def cleaning_func(file,df):
         df['año'] = ppto_year
         df['Mes'] = df['año'] + df['Mes'].map(month_dict)
         df['año'] = df['año'].astype('Int64')
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     if file == 'ppto_mg1':
         df.columns = ['Mes', 'Formato', 'Categoria', 'ppto_venta_neta',
@@ -83,18 +83,18 @@ def cleaning_func(file,df):
         df['año'] = ppto_year
         df['Mes'] =  pd.to_datetime(df['Mes'], format='%Y-%m-%d').dt.strftime('%Y%m')
         df['año'] = df['año'].astype('Int64')
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     if file.startswith('admg'):
         df['MES'] = df['MES'].astype('Int64')
         df['Material'] = df['Material'].astype('Int64')
         df['SELLOUT'] = df['SELLOUT'].astype('Float64')
         df = df.dropna(axis=0,subset=['MES'])  # noqa: PD901
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     if file == 'est_com_alvi':
         df = df.replace('#N/D', '')  # noqa: PD901
-        print('After cleaning:', df)
+        logging.info('After cleaning:', df)
         return df
     return df
 
@@ -136,7 +136,7 @@ def main() -> None:  # noqa: D103
             'admg': f'{site}/Unimarc/Fuentes datos manuales/Adicional al Margen/Adicional al margen.xlsx',  # noqa: E501
             'admg_alvi' : f'{site}/Alvi/Fuentes manuales de informacion/Adicional al margen/Adicional al margen Alvi.xlsx',  # noqa: E501
             'admg_m10' : f'{site}/M10/Fuentes manuales de informacion/Adicional al margen/Adicional al margen M10.xlsx',  # noqa: E501
-            'admg_s10': f'{site}/S10/Fuentes manuales de informacion/Adicional al margen/Adicional al margen S10.xlsx'  # noqa: E501
+            'admg_s10': f'{site}/S10/Fuentes manuales de informacion/Adicional al margen/Adicional al margen S10.xlsx',  # noqa: E501
             }
     #table definitions jsons
     jsons = {
@@ -151,7 +151,7 @@ def main() -> None:  # noqa: D103
         'admg' : 'adicional_al_margen_unimarc.json',
         'admg_alvi' : 'adicional_al_margen_alvi.json',
         'admg_m10' : 'adicional_al_margen_m10.json',
-        'admg_s10' : 'adicional_al_margen_s10.json'
+        'admg_s10' : 'adicional_al_margen_s10.json',
 
     }
 
