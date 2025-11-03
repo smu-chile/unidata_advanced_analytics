@@ -1,2 +1,33 @@
-#!/usr/bin/env bash
-ruff check --config lint/dev_ruff.toml --quiet --no-cache
+#!/usr/bin/env sh
+
+# Verify no files have been modified after staging
+FILES_STAGED_AND_CHANGED=$(git status --porcelain | awk '$1 ~ /^(MM|AM|RM|CM)$/ {print $2}')
+
+if [ -n "$FILES_STAGED_AND_CHANGED" ]; then
+    echo "Rejected commit: The following files have staged changes and further unstaged changes:"
+    for file in $FILES_STAGED_AND_CHANGED; do
+        echo -e "\t $file"
+    done
+    echo "Please stage your latest changes or stash them before committing."
+    exit 1
+fi
+
+# Get filepaths of the files to be commited
+STAGED_FILES=$(git diff --cached --name-only)
+
+# Get only python files
+LINT_FILES=()
+# Iterate through the original array
+for file in $STAGED_FILES; do
+    if [[ $file == *".py" || $file == *".ipynb" ]]; then
+        LINT_FILES+=("$file")
+    fi
+done
+
+# Warn if linting all codebase
+if [[ ${#LINT_FILES[@]} -eq 0 ]]; then
+    echo "Lint skipped"
+else
+    # Lint using Ruff
+    ruff check --config lint/main_ruff.toml --quiet --no-cache ${LINT_FILES[@]};
+fi
