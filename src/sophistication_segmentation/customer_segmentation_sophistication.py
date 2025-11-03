@@ -51,8 +51,10 @@ with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
     computing_lifecycle_status = [DataprocCreateBatchOperator(
-        task_id = f"computing_customer_segmentation_sophistication_{
-            store_banner.replace(' ', '_').lower()}",
+        task_id=(
+            f"computing_customer_segmentation_sophistication_"
+            f"{store_banner.replace(' ', '_').lower()}"
+        ),
 
         batch = {
             'pyspark_batch': {
