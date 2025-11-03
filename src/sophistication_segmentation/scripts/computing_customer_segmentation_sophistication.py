@@ -647,10 +647,6 @@ def main() -> None:  # noqa: D103
     # REGION: Query  principal
     #----------------------------------------------------------------------
 
-    logging.info(' ')
-    logging.info('--------------------')
-    logging.info(f'Se inicia el proceso para {formato_mayusculas}')
-    logging.info('--------------------')
     logging.info(f'Año y mes inicial: {año_mes_inicial}')
     logging.info(f'Año y mes final: {año_mes_final}')
 
