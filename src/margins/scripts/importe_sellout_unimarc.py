@@ -1,3 +1,4 @@
+"""Script Carga Semanal Sellout Unimarc"""
 # Default
 import os
 import logging
@@ -48,6 +49,17 @@ parser.add_argument(
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(df:pd.DataFrame,mes:str,semana_carga:str)->pd.DataFrame:
+    """Transform Dataframe into expected format for uploading into BQ
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame to transform.
+    mes : str
+        Data month to be added as a new field.
+    semana_carga : str
+        Upload week to be added as new field
+    """
     logging.info('Before cleaning:', df)
     #Drop first 2 rows and last 4 columns
     df = df[2:]  # noqa: PD901
@@ -90,8 +102,6 @@ def main() -> None:  # noqa: D103
     gbq_client = bigquery.Client()
     #input files
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Pricing/SellOut'
-    #TODO(csotob): Cambiar nombre de input:file y la logica de renombrar a
-    # 'Procesado-' en GCP cuando se depreque en aws, eventualmente
     input_file =  f'{file_site}/SellOut ID_0 Unimarc/PROCESADO-Sellout_{execution_month}.xlsx'
     #table definitions jsons
     json = 'sellout_unimarc.json'

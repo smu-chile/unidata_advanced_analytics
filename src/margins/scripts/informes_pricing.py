@@ -1,3 +1,4 @@
+"""Script Carga Informe Pricing"""
 # Default
 import os
 import logging
@@ -38,6 +39,15 @@ parser.add_argument(
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(formato: str,df: pd.DataFrame) -> pd.DataFrame:
+    """Transform Dataframe into expected format for uploading into BQ
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame to transform.
+    formato : str
+        Business format to be added as a new field.
+    """
     logging.info('Before cleaning:', df)
     if formato == 'unimarc':
         df = df.iloc[:, :26]  # noqa: PD901
