@@ -20,7 +20,7 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'sophisticaction_segmentation'#
+PROJECT_NAME = 'sophistication_segmentation'#
 dag_args = {
     'dag_id': 'customer_segmentation_sophisticaction',
     'schedule_interval': '0 12 2 * *',
