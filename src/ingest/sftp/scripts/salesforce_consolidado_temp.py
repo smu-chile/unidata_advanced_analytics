@@ -96,7 +96,7 @@ def main() -> None:  # noqa: D103
                 continue
 
         logging.info(F'Getting {excel_name} into Dataframe')
-        df_file = pd.read_excel(f'{excel_name}')
+        df_file = pd.read_excel(f'{excel_name}', engine  = 'xlrd')
 
         df_file = cleaning_func(df_file)
         # Upload data
