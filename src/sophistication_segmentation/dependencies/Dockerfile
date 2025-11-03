@@ -39,7 +39,7 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
 #
 # Use mamba to install packages quickly.
 RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
-    && ${CONDA_HOME}/bin/micromamba install -y -c conda-forge\
+    && ${CONDA_HOME}/bin/micromamba install -y -c conda-forge \
       conda \
       cython \
       fastavro \
@@ -63,6 +63,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       nltk \
       numba \
       numpy \
+      office365-rest-python-client \
       openblas \
       orc \
       pandas \
@@ -75,7 +76,6 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       scikit-learn \
       scipy \
       sqlalchemy \
-      sklearn \
       sympy \
       pendulum \
       pandas-gbq \
