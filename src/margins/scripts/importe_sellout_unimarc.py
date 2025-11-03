@@ -1,3 +1,4 @@
+"""Script Carga Semanal Sellout Unimarc"""
 # Default
 import os
 import logging
@@ -48,6 +49,17 @@ parser.add_argument(
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(df:pd.DataFrame,mes:str,semana_carga:str)->pd.DataFrame:
+    """Transform Dataframe into expected format for uploading into BQ
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame to transform.
+    mes : str
+        Data month to be added as a new field.
+    semana_carga : str
+        Upload week to be added as new field
+    """
     logging.info('Before cleaning:', df)
     #Drop first 2 rows and last 4 columns
     df = df[2:]  # noqa: PD901

@@ -1,3 +1,5 @@
+"""Script Carga On-Demand de Fuentes Manuales
+para Reporte de Margen (SharePoint)"""
 # Default
 import os
 import logging
@@ -55,7 +57,16 @@ ppto_year = '2025' #sorry about this, will think of something, thx
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(file,df):
+def cleaning_func(file: str,df: pd.DataFrame) -> pd.DataFrame :
+    """Transform Dataframe into expected format for uploading into BQ
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame to transform.
+    file : str
+        Short name of the type of file associated to the dataframe
+    """
     logging.info('Before cleaning:', df)
     if file == 'ppto':
         float_columns = 	['Venta_Neta',

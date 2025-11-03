@@ -1,3 +1,4 @@
+"""Script Carga Menaual Consolidado Sellout M10/S10 """
 # Default
 import os
 import logging
@@ -44,6 +45,15 @@ parser.add_argument(
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(df:pd.DataFrame,mes_carga:str)->pd.DataFrame:
+    """Transform Dataframe into expected format for uploading into BQ
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame to transform.
+    mes_carga : str
+        Upload month to be added as a new field.
+    """
     logging.info('Before cleaning:', df)
     mes = df.columns[1].split(' ')[3]
     #Drop first 2 rows and last 4 columns

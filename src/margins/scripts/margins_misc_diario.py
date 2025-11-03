@@ -1,3 +1,5 @@
+"""Script Carga Diaria de Fuentes Manuales
+para Reporte de Margen (SharePoint)"""
 # Default
 import os
 import logging
@@ -56,6 +58,15 @@ month_dict = {
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(file: str,df: pd.DataFrame) -> pd.DataFrame:
+    """Transform Dataframe into expected format for uploading into BQ
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame to transform.
+    file : str
+        Short name of the type of file associated to the dataframe
+    """
     logging.info('Before cleaning:', df)
     if file.startswith('admg'):
         df['MES'] = df['MES'].astype('Int64')
