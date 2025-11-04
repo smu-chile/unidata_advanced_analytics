@@ -1,3 +1,4 @@
+"""DAG Carga Menaual Consolidado Sellout M10/S10."""
 # Default
 import json
 from datetime import timedelta

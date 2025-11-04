@@ -1,3 +1,4 @@
+"""DAG Carga Diaria Fuentes Manuales Reporte de Margen (SharePoint)."""
 # Default
 import json
 from datetime import timedelta

@@ -1,5 +1,4 @@
-"""Script Carga Diaria de Fuentes Manuales
-para Reporte de Margen (SharePoint)"""
+"""Script Carga Diaria Fuentes Manuales Reporte de Margen (SharePoint)."""
 # Default
 import os
 import logging
@@ -58,7 +57,7 @@ month_dict = {
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(file: str,df: pd.DataFrame) -> pd.DataFrame:
-    """Transform Dataframe into expected format for uploading into BQ
+    """Transform Dataframe into expected format for uploading into BQ.
 
     Parameters
     ----------
