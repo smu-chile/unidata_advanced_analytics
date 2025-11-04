@@ -1,3 +1,4 @@
+"""DAG Carga Semanal Sellout Unimarc."""
 # Default
 import json
 from datetime import timedelta
