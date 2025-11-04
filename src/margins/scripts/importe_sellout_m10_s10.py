@@ -1,4 +1,4 @@
-"""Script Carga Menaual Consolidado Sellout M10/S10 """
+"""Script Carga Menaual Consolidado Sellout M10/S10."""
 # Default
 import os
 import logging
@@ -45,7 +45,7 @@ parser.add_argument(
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(df:pd.DataFrame,mes_carga:str)->pd.DataFrame:
-    """Transform Dataframe into expected format for uploading into BQ
+    """Transform Dataframe into expected format for uploading into BQ.
 
     Parameters
     ----------
@@ -100,7 +100,7 @@ def main() -> None:  # noqa: D103
         '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
         'Pricing/SellOut/SellOut Consolidado/'
     )
-    #TODO(csotob): Cambiar nombre de input:file y la logica de renombrar a
+    #Cambiar nombre de input:file y la logica de renombrar a
     # 'Procesado-' en GCP cuando se depreque en aws, eventualmente
     input_files = {
         's10': f'{file_site}/S10/PROCESADO-Sellout_S10_{execution_month}.xlsx',
