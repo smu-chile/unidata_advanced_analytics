@@ -29,6 +29,6 @@ if [[ ${#LINT_FILES[@]} -eq 0 ]]; then
     echo "Lint skipped"
 else
     # Lint using Ruff
-    ruff check --config lint/dev_ruff.toml --quiet --no-cache ${LINT_FILES[@]};
+    ruff check --config lint/main_ruff.toml --quiet --no-cache ${LINT_FILES[@]};
 fi
 

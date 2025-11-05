@@ -25,7 +25,7 @@
         "g_service_account": "125582050147-compute@developer.gserviceaccount.com"
     },
 
-    "prod": {
+    "main": {
         "project_id": "cl-bigdata-analytics-prod",
         "region": "us-east1",
         "default_email": [
