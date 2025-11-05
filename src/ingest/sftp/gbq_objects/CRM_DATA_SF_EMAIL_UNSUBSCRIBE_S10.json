@@ -1,0 +1,23 @@
+{
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_EMAIL_UNSUBSCRIBE_S10",
+
+    "columns": [
+        {
+            "name": "RUTHASH",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "FECHA",
+            "field_type": "DATETIME",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "NULLABLE"
+        }
+       
+    ]
+}
