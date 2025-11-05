@@ -1,3 +1,5 @@
+"""Script ingesta de archivo de contactabilidad Alvi en sftp
+Salesforce hacia BigQuery."""
 # Default
 import os
 import logging
@@ -37,15 +39,24 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(df_file, execution_date):
-    print('Before cleaning:', df_file)
+def cleaning_func(df_file: pd.DataFrame, execution_date: str) -> pd.DataFrame:
+    """Transform Dataframe into expected format for uploading into BQ.
+
+    Parameters
+    ----------
+    df_file : pd.DataFrame
+        Input DataFrame to transform.
+    execution_date : str
+        Execution date to be added as a new field.
+    """
+    logging.info('Before cleaning:', df_file)
 
     campos_fechas = ['FechaRegistro', 'FechaValidacionEmail', 'FechaValidacionWhatsapp']
     for campo in campos_fechas:
         df_file[campo] = pd.to_datetime(df_file[campo],format='ISO8601', dayfirst= True)
 
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
-    print('After cleaning:', df_file)
+    logging.info('After cleaning:', df_file)
 
 
     return df_file
