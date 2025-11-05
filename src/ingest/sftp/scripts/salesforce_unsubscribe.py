@@ -1,5 +1,7 @@
-"""Script ingesta de archivos de clientes desuscritos en sftp
-Salesforce hacia BigQuery."""
+"""Script ingesta SFTP.
+
+Archivos de clientes desuscritos en sftp Salesforce hacia BigQuery.
+"""
 # Default
 import os
 import logging
@@ -52,7 +54,6 @@ def cleaning_func(df_file:pd.DataFrame, execution_date:str) -> pd.DataFrame:
     logging.info('Before cleaning:', df_file)
     if 'FECHA_UNSUBSCRIBE' in df_file.columns:
         df_file = df_file.rename(columns={'FECHA_UNSUBSCRIBE': 'FECHA'})
-    #TODO(csotob): Averiguar formato para ms y arreglar estop
     df_file['FECHA'] = pd.to_datetime(df_file['FECHA'], format='ISO8601', dayfirst= True)
 
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')

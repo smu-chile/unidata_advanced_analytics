@@ -1,5 +1,7 @@
-"""Script ingesta de archivos de campañas de Email en sftp
-Salesforce hacia BigQuery."""
+"""Script ingesta SFTP.
+
+Archivos de campañas de Email en sftp Salesforce hacia BigQuery.
+"""
 # Default
 import os
 import logging
