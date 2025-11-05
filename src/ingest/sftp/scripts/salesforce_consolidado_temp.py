@@ -1,7 +1,7 @@
 """Script ingesta temporal.
 
- Archivos consolidados en sftpSalesforce hacia BigQuery.
- """
+Archivos consolidados en sftpSalesforce hacia BigQuery.
+"""
 # Default
 import os
 import logging
