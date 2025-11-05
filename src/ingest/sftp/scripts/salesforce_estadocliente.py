@@ -1,5 +1,7 @@
-"""Script ingesta de archivos de estado de cliente en sftp
-Salesforce hacia BigQuery."""
+"""Script ingesta SFTP.
+
+Archivos de estado de cliente en sftp Salesforce hacia BigQuery.
+"""
 # Default
 import os
 import logging

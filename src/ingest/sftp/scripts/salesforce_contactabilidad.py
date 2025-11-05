@@ -1,5 +1,7 @@
-"""Script ingesta de archivo de contactabilidad Alvi en sftp
-Salesforce hacia BigQuery."""
+"""Script ingesta SFTP.
+
+Archivo de contactabilidad Alvi en sftp Salesforce hacia BigQuery.
+"""
 # Default
 import os
 import logging
