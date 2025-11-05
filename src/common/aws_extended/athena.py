@@ -1,3 +1,4 @@
+"""Usefull functions that extend AWS Wrangler functionality for Athena."""
 # pip
 import pandas as pd
 import awswrangler as wr

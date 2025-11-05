@@ -260,7 +260,7 @@ def verifyTableExistence(
         gbq_client: bigquery.Client,
         if_not_exists: Literal['raise', 'ignore'] = 'raise',
     ) -> bool:
-    """Verifies table existence.
+    """Verify table existence.
 
     Returns True if the table exists. If it doesn't the behavior depends on
     the value of `if_not_exists`.
@@ -303,7 +303,7 @@ def uploadFrame(
         json_encoding: str = 'utf8',
         **kwargs
     ) -> None:
-    """Uploads a Pandas DataFrame to a table in Google BigQuery.
+    """Upload a Pandas DataFrame to a table in Google BigQuery.
 
     Parameters
     ----------
@@ -431,7 +431,7 @@ def setTableExpiration(
         gbq_client: bigquery.Client,
         partition_colum_name: str = '',
     ) -> None:
-    """Sets an expiration BigQuery table or partition.
+    """Set an expiration BigQuery table or partition.
 
     When ``partition_column_name`` is not given then ``expiration`` must be
     a datetime in which the whole table will expire. If given, then
