@@ -1,0 +1,124 @@
+{
+    "schema": "REPORTE_MARGEN",
+    "table": "REPORTE_MARGEN_INFORME_PRICING_M10",
+
+    "columns": [
+        {
+            "name": "CODIGO_SAP_SMU",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Material PLU"
+        },
+        {
+            "name": "SOLO_1_BARRA_POR_LINEA",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DESCRIPCION",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Descripcion de Material"
+        },
+        {
+            "name": "FORMATO_VENTA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Unidad de Medida"
+        },
+        {
+            "name": "MARCA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Marca"
+        },
+        {
+            "name": "PRECIO_NORMAL",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Precio"
+        },
+        {
+            "name": "PRECIO_OFERTA",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FACTOR",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "PRECIO_OFERTA_POR_FACTOR",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "OFERTA",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ID_ACTUAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ID_NUEVA",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "BONIFICACION",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "LISTA_DE_PRODUCTOS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "LISTA_DE_LOCALES",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "NOMBRE_PROVEEDOR",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "RUT_PROVEEDOR",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "IMPORTE_SELL_OUT",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description" : "Importe Sell Out de promoción"
+        },
+        {
+            "name": "FINANCIAMIENTO",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_INICIO",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_TERMINO",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ID_WORKFLOW",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        }
+
+    ]
+}

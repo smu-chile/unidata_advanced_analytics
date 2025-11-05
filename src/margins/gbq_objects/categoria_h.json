@@ -1,0 +1,19 @@
+{
+    "schema": "REPORTE_MARGEN",
+    "table": "REPORTE_MARGEN_CATEGORIA_H_ESTRUCTURA_COMERCIAL",
+
+    "columns": [
+        {
+            "name": "CATEGORIA_SAP",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoria SAP"
+        },
+        {
+            "name": "CATEGORIA_H",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoria H"
+        }
+    ]
+}

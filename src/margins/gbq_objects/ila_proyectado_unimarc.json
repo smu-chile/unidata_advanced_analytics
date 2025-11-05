@@ -1,0 +1,26 @@
+{
+    "schema": "REPORTE_MARGEN",
+    "table": "REPORTE_MARGEN_ILA_PROYECTADO_UNIMARC",
+
+    "columns": [
+        {
+            "name": "year",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED",
+            "description": "Year for which the ILA is projected"
+        },
+        {
+            "name": "monthnumber",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED",
+            "description": "Month number for which the ILA is projected"
+        },
+        {
+            "name": "ila_proyectado",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Projected ILA for the given time period"
+        }
+
+    ]
+}

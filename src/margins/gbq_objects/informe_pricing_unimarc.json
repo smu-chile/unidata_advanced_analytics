@@ -1,0 +1,144 @@
+{
+    "schema": "REPORTE_MARGEN",
+    "table": "REPORTE_MARGEN_INFORME_PRICING_UNIMARC",
+
+    "columns": [
+        {
+            "name": "CODIGO_SAP_SMU",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Material PLU"
+        },
+        {
+            "name": "SOLO_1_BARRA_POR_LINEA",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DESCRIPCION",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Descripcion de Material"
+        },
+        {
+            "name": "FORMATO_VENTA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Unidad de Medida"
+        },
+        {
+            "name": "MARCA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Marca"
+        },
+        {
+            "name": "PRECIO_NORMAL",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Precio"
+        },
+        {
+            "name": "PRECIO_OFERTA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FACTOR",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "OFERTA",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "PACK_VIRTUAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ID_1",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ID_2",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "BONIFICACION",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "LISTA_DE_PRODUCTOS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "LISTA_DE_LOCALES",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DESCRIPCION_LS_SELL_OUT",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "NOMBRE_PROVEEDOR",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "RUT_PROVEEDOR",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "IMPORTE_SELL_OUT",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description" : "Importe Sell Out de promoción"
+        },
+        {
+            "name": "FINANCIAMIENTO",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "INICIO",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "TERMINO",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_INCORPORACION",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ID_ALTERNATIVO_WF",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "NUMERO_CABECERA",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "TIPO_PROMOCION",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        }
+
+    ]
+}

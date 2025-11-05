@@ -1,0 +1,122 @@
+{
+    "schema": "REPORTE_MARGEN",
+    "table": "REPORTE_MARGEN_SELLOUT_UNIMARC",
+
+    "columns": [
+        {
+            "name": "id",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "ID Material 0"
+        },
+        {
+            "name": "nombre_proveedor",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre Proveedor"
+        },
+        {
+            "name": "proveedor",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Rut Proveedor"
+        },
+        {
+            "name": "n_cabecera",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Numero de cabecera promoción"
+        },
+        {
+            "name": "tipo_evento",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Tipo de Evento"
+        },
+        {
+            "name": "fecha_inicio",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Fecha inicio promoción"
+        },
+        {
+            "name": "fecha_termino",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Fecha fin promoción"
+        },
+        {
+            "name": "articulo",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED",
+            "description": "Material PLU"
+        },
+        {
+            "name": "ean",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "EAN"
+        },
+        {
+            "name": "descripcion",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Descripción material"
+        },
+        {
+            "name": "umv",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Unidad de Medida"
+        },
+        {
+            "name": "importe_sell_out",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Importe SellOut"
+        },
+        {
+            "name": "id_promocion",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "promocion",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre de promoción"
+        },
+        {
+            "name": "pvp_normal",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "factor",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "locales",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "mes",
+            "field_type": "DATE",
+            "mode": "NULLABLE",
+            "description": "Mes al que corresponde el registro"
+        },
+        {
+            "name": "semana_carga",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Semana en el que se carga el registro"
+        }
+    ],
+    "time_partitioning": {
+        "field": "mes",
+        "type_": "MONTH"
+    }
+    
+}

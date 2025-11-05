@@ -1,0 +1,55 @@
+{
+    "schema": "REPORTE_MARGEN",
+    "table": "REPORTE_MARGEN_ESTRUCTURA_COMERCIAL",
+
+    "columns": [
+        {
+            "name": "CATEGORIA_H",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoria H"
+        },
+        {
+            "name": "NEGOCIO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Negocio"
+        },
+        {
+            "name": "SECCION",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Seccion"
+        },
+        {
+            "name": "LINEA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Linea"
+        },
+        {
+            "name": "GERENTE_DE_NEGOCIO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Gerente de Negocio"
+        },
+        {
+            "name": "SUBGERENTE_COMERCIAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Subgerente Comercial"
+        },
+        {
+            "name": "CATEGORY",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "GERENTE_COMERCIAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Gerente Comercial"
+        }
+
+    ]
+}
