@@ -1,0 +1,202 @@
+
+{
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_CONSOLIDADO_EMAIL_TEMPORAL",
+
+    "columns":  [
+  {
+    "name": "REPORT_ID",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "MAILING_ID",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "CANAL",
+    "mode": "NULLABLE",
+    "field_type": "STRING"
+
+  },
+  {
+    "name": "ORGANIZATION_ID",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "TIPO_AUDIENCIA",
+    "mode": "NULLABLE",
+    "field_type": "STRING"
+
+  },
+  {
+    "name": "FORMATO",
+    "mode": "NULLABLE",
+    "field_type": "STRING"
+
+  },
+  {
+    "name": "TIPO_COMUNICACION",
+    "mode": "NULLABLE",
+    "field_type": "STRING"
+
+  },
+  {
+    "name": "TIPO_CAMPANA",
+    "mode": "NULLABLE",
+    "field_type": "STRING"
+
+  },
+  {
+    "name": "CAMPANA",
+    "mode": "NULLABLE",
+    "field_type": "STRING"
+
+  },
+  {
+    "name": "MAILING_NAME",
+    "mode": "NULLABLE",
+    "field_type": "STRING"
+
+  },
+  {
+    "name": "ENVIADO",
+    "mode": "NULLABLE",
+    "field_type": "TIMESTAMP"
+
+  },
+  {
+    "name": "MAILING_SUBJECT",
+    "mode": "NULLABLE",
+    "field_type": "STRING"
+
+  },
+  {
+    "name": "BASE",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "SUPPRESSED",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "TS %",
+    "mode": "NULLABLE",
+    "field_type": "FLOAT"
+
+  },
+  {
+    "name": "SENT",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "HARD_BOUNCE",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "SOFT_BOUNCE",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "REPLY",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "DELIVERED",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "TB %",
+    "mode": "NULLABLE",
+    "field_type": "FLOAT"
+
+  },
+  {
+    "name": "OPEN",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "OR %",
+    "mode": "NULLABLE",
+    "field_type": "FLOAT"
+
+  },
+  {
+    "name": "OPEN_UNICO",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "ORU %",
+    "mode": "NULLABLE",
+    "field_type": "FLOAT"
+
+  },
+  {
+    "name": "CLICK",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "UNSUBSCRIBE",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "TCO %",
+    "mode": "NULLABLE",
+    "field_type": "FLOAT"
+
+  },
+  {
+    "name": "TCS %",
+    "mode": "NULLABLE",
+    "field_type": "FLOAT"
+
+  },
+  {
+    "name": "CLICK_UNICO",
+    "mode": "NULLABLE",
+    "field_type": "INTEGER"
+
+  },
+  {
+    "name": "TCOU %",
+    "mode": "NULLABLE",
+    "field_type": "FLOAT"
+
+  },
+  {
+    "name": "TCSU %",
+    "mode": "NULLABLE",
+    "field_type": "FLOAT"
+
+  }
+]
+}
+
+

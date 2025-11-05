@@ -1,0 +1,23 @@
+{
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_SMS_UNSUBSCRIBE_ALVI",
+
+    "columns": [
+        {
+            "name": "MOBILE",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "FECHA",
+            "field_type": "DATETIME",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "NULLABLE"
+        }
+       
+    ]
+}

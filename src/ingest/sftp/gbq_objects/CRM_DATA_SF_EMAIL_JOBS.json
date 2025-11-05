@@ -1,0 +1,95 @@
+{
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_EMAIL_JOBS",
+
+    "columns": [
+        {
+            "name": "CLIENT_ID",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SEND_ID",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FROMNAME",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FROMEMAIL",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+         {
+            "name": "SCHEDTIME",
+            "field_type": "DATETIME",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SENTTIME",
+            "field_type": "DATETIME",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SUBJECT",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Fecha evento"
+        },
+        {
+            "name": "EMAILNAME",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "TRIGGERKEY",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SENDKEY",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "JOBSTATUS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "PREVIEWURL",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ISMULTIPART",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ADDITIONAL",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "BUSINESS_UNIT",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "NULLABLE"
+        }
+       
+    ],
+    "time_partitioning": {
+        "field": "FECHA_CARGA",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": ["BUSINESS_UNIT"]
+}
