@@ -88,8 +88,8 @@ with DAG(**dag_args) as dag:
                 'properties' : {
                     # Executor instances
                     'spark.executor.instances': '2',
-                    'spark.executor.cores': '1',
-                    'spark.executor.memory': '1024m',
+                    'spark.executor.cores': '4',
+                    'spark.executor.memory': '4096m',
                     # Dirver instances
                     'spark.driver.cores': '4',
                     'spark.driver.memory': '20g',
