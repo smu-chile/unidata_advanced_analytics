@@ -88,11 +88,11 @@ with DAG(**dag_args) as dag:
                 'properties' : {
                     # Executor instances
                     # (0 as PySpark capabilities are not being used)
-                    'dataproc:dataproc.runtime.migration.config.executor.allocation.policy': 'NO_EXECUTORS',  # noqa: E501
+                    'spark.dynamicAllocation.enabled': 'false',
                     'spark.executor.instances': '0',
                     # Dirver instances
                     'spark.driver.cores': '4',
-                    'spark.driver.memory': '8g',
+                    'spark.driver.memory': '20g',
                 },
             },
 
