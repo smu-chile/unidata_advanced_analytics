@@ -87,9 +87,9 @@ with DAG(**dag_args) as dag:
                 # Executor hardware config
                 'properties' : {
                     # Executor instances
-                    # (0 as PySpark capabilities are not being used)
-                    'spark.dynamicAllocation.enabled': 'false',
-                    'spark.executor.instances': '0',
+                    'spark.executor.instances': '2',
+                    'spark.executor.cores': '1',
+                    'spark.executor.memory': '1024m',
                     # Dirver instances
                     'spark.driver.cores': '4',
                     'spark.driver.memory': '20g',
