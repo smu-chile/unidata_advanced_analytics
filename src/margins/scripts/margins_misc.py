@@ -1,5 +1,4 @@
-"""Script Carga On-Demand de Fuentes Manuales
-para Reporte de Margen (SharePoint)"""
+"""Script Carga On-Demand Fuentes Manuales Reporte de Margen (SP)."""
 # Default
 import os
 import logging
@@ -58,7 +57,7 @@ ppto_year = '2025' #sorry about this, will think of something, thx
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(file: str,df: pd.DataFrame) -> pd.DataFrame :
-    """Transform Dataframe into expected format for uploading into BQ
+    """Transform Dataframe into expected format for uploading into BQ.
 
     Parameters
     ----------
@@ -137,13 +136,13 @@ def main() -> None:  # noqa: D103
     )
     input_files = {
             'ppto' :f'{site}/Unimarc/Fuentes datos manuales/Presupuesto/2025 V2/PPTO FORMATOS SELLOUT RECUPERO 2025.xlsx',  # noqa: E501
-            'ppto_mg1' : f'{site}/Unimarc/Reporte Unimarc MMPP/PPTO/PPTO 2025.xlsx',  # noqa: E501
+            'ppto_mg1' : f'{site}/Unimarc/Reporte Unimarc MMPP/PPTO/PPTO 2025.xlsx',
             'cat_h' : f'{site}/Unimarc/Fuentes datos manuales/Categoria H/Categoria_H_Estructura_Comercial.xlsx',  # noqa: E501
             'est_com' : f'{site}/Unimarc/Fuentes datos manuales/Estructura comercial/Estructura Comercial.xlsx',  # noqa: E501
             'est_com_alvi' : f'{site}/Alvi/Fuentes manuales de informacion/Estructura Comercial/Estructura Comercial Alvi.xlsx',  # noqa: E501
-            'ila' : f'{site}/Unimarc/Fuentes datos manuales/ILA/ILA_UNIMARC.xlsx',  # noqa: E501
-            'ila_m10': f'{site}/M10/Fuentes manuales de informacion/ILA/ILA_M10.xlsx' ,  # noqa: E501
-            'ila_s10' : f'{site}/S10/Fuentes manuales de informacion/ILA/ILA_S10.xlsx',  # noqa: E501
+            'ila' : f'{site}/Unimarc/Fuentes datos manuales/ILA/ILA_UNIMARC.xlsx',
+            'ila_m10': f'{site}/M10/Fuentes manuales de informacion/ILA/ILA_M10.xlsx' ,
+            'ila_s10' : f'{site}/S10/Fuentes manuales de informacion/ILA/ILA_S10.xlsx',
             'admg': f'{site}/Unimarc/Fuentes datos manuales/Adicional al Margen/Adicional al margen.xlsx',  # noqa: E501
             'admg_alvi' : f'{site}/Alvi/Fuentes manuales de informacion/Adicional al margen/Adicional al margen Alvi.xlsx',  # noqa: E501
             'admg_m10' : f'{site}/M10/Fuentes manuales de informacion/Adicional al margen/Adicional al margen M10.xlsx',  # noqa: E501

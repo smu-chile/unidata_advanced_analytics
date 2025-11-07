@@ -1,3 +1,4 @@
+"""DAG Carga Diaria (Temporal) Consolidado Campañas."""
 # Default
 import json
 from datetime import timedelta

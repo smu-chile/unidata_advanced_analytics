@@ -1,4 +1,4 @@
-"""Script Carga Menaual Consolidado Sellout M10/S10 """
+"""Script Carga Menaual Consolidado Sellout M10/S10."""
 # Default
 import os
 import logging
@@ -45,7 +45,7 @@ parser.add_argument(
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(df:pd.DataFrame,mes_carga:str)->pd.DataFrame:
-    """Transform Dataframe into expected format for uploading into BQ
+    """Transform Dataframe into expected format for uploading into BQ.
 
     Parameters
     ----------

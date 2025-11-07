@@ -1,4 +1,4 @@
-"""Script Carga Informe Pricing"""
+"""Script Carga Informe Pricing."""
 # Default
 import os
 import logging
@@ -39,7 +39,7 @@ parser.add_argument(
 # Cleaning Func
 # -------------------------------------------------------------------------
 def cleaning_func(formato: str,df: pd.DataFrame) -> pd.DataFrame:
-    """Transform Dataframe into expected format for uploading into BQ
+    """Transform Dataframe into expected format for uploading into BQ.
 
     Parameters
     ----------

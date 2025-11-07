@@ -83,6 +83,15 @@ with DAG(**dag_args) as dag:
             'runtime_config': {
                 'version': '2.2',
                 'container_image': '{{ var.value.develop_smu_unidata_docker_image }}',
+
+                # Executor hardware config
+                # Executor instances
+                # (0 as PySpark capabilities are not being used)
+                'spark.executor.instances': '0',
+                # Dirver
+                'spark.driver.cores': '4',
+                'spark.driver.memory': '24g',
+                'dataproc:dataproc.driver.machine.type': 'n1-highmem-4',
             },
 
             # Privileges config

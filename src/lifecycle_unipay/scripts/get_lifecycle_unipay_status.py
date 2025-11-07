@@ -68,7 +68,7 @@ SQL_QUERIES = QueryDict({
     """
     WITH TEMP AS (
     SELECT DISTINCT CUSTOMER_ID
-    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD`
+    FROM `${gcp_proyect_1}.${schema_1}.VW_I_UNICARD_CARD`
     WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
     )
     SELECT MARKET_BASKET_KEY,
@@ -84,10 +84,10 @@ SQL_QUERIES = QueryDict({
     RANK() OVER(
         PARTITION BY A.MARKET_BASKET_KEY ORDER BY A.PYMT_AMT DESC,T.TNDR_TP_ID ASC
         ) AS RANKING
-    FROM `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_PAYMENT` A
-    INNER JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_TENDER_TYPE` T
+    FROM `${gcp_proyect_2}.${schema_2}.DW_VW_FACT_PAYMENT` A
+    INNER JOIN `${gcp_proyect_2}.${schema_2}.DW_VW_DIM_TENDER_TYPE` T
         ON A.TNDR_TP_KEY = T.TENDER_TYPE_KEY
-    INNER JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_MKT_BSKT` P
+    INNER JOIN `${gcp_proyect_2}.${schema_2}.DW_VW_FACT_MKT_BSKT` P
         USING(MARKET_BASKET_KEY)
     WHERE P.FNC_DOC_TP_DSC IN (
         'TN','TF','BX','B','BE','F','NC','NE','FX','FE'
@@ -106,7 +106,7 @@ SQL_QUERIES = QueryDict({
     """
     WITH TEMP AS (
     SELECT DISTINCT CUSTOMER_ID
-    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD`
+    FROM `${gcp_proyect_1}.${schema_1}.VW_I_UNICARD_CARD`
     WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
     )
     SELECT MARKET_BASKET_KEY,
@@ -122,10 +122,10 @@ SQL_QUERIES = QueryDict({
     RANK() OVER(
         PARTITION BY A.MARKET_BASKET_KEY ORDER BY A.PYMT_AMT DESC,T.TNDR_TP_ID ASC
         ) AS RANKING
-    FROM `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_PAYMENT` A
-    INNER JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_TENDER_TYPE` T
+    FROM `${gcp_proyect_2}.${schema_2}.DW_VW_FACT_PAYMENT` A
+    INNER JOIN `${gcp_proyect_2}.${schema_2}.DW_VW_DIM_TENDER_TYPE` T
         ON A.TNDR_TP_KEY = T.TENDER_TYPE_KEY
-    INNER JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_MKT_BSKT` P
+    INNER JOIN `${gcp_proyect_2}.${schema_2}.DW_VW_FACT_MKT_BSKT` P
         USING(MARKET_BASKET_KEY)
     WHERE P.FNC_DOC_TP_DSC IN ('TN','TF','BX','B','BE','F','NC','NE','FX','FE')
     AND T.TNDR_TP_ID IN ('35','68','78')
@@ -144,9 +144,9 @@ SQL_QUERIES = QueryDict({
     FROM (
     SELECT PERIOD,CARD_ID,CREDIT_LIMIT,
     ROW_NUMBER() OVER (PARTITION BY CARD_ID ORDER BY PERIOD desc) rw
-    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD_STATUS`
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD_STATUS`
     WHERE CARD_ID IN (SELECT CARD_ID
-    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD`
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD`
     WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
     ) t
     WHERE rw = 1
@@ -157,9 +157,9 @@ SQL_QUERIES = QueryDict({
     FROM (
     SELECT PERIOD,CARD_ID,CREDIT_LIMIT,
     ROW_NUMBER() OVER (PARTITION BY CARD_ID ORDER BY PERIOD desc) rw
-    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD_STATUS`
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD_STATUS`
     WHERE CARD_ID IN (SELECT CARD_ID
-    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD`
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD`
     WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
     AND PERIOD <= ${periodo}
     AND CREDIT_LIMIT > 1
@@ -176,7 +176,7 @@ SQL_QUERIES = QueryDict({
         WHEN CL.CREDIT_LIMIT IS NULL THEN UC.CREDIT_LIMIT
         ELSE CL.CREDIT_LIMIT
     END AS CREDIT_LIMIT
-    FROM `cl-cda-unidata-prod.DS_PROD_UNI_SSFF.VW_I_UNICARD_CARD` UC
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD` UC
     LEFT JOIN TARJETAS T ON UC.CARD_ID = T.CARD_ID
     LEFT JOIN CREDIT_LIMIT CL ON UC.CARD_ID = CL.CARD_ID
     WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
@@ -299,8 +299,8 @@ def main():
         )
 
     tarjetas = readBigQuery(SQL_QUERIES['tarjetas_unipay'].substitute(
-    gcp_proyect = 'cl-bigdata-analytics-preprod',
-    schema = 'TMP',
+    gcp_proyect = 'cl-cda-unidata-prod',
+    schema = 'cl-cda-prod',
     fecha_fin = fecha_fin,
     periodo = periodo
     ),
@@ -309,8 +309,10 @@ def main():
     )
 
     compras = readBigQuery(SQL_QUERIES['compras'].substitute(
-    gcp_proyect = 'cl-bigdata-analytics-preprod',
-    schema = 'TMP',
+    gcp_proyect_1 = 'cl-cda-unidata-prod',
+    gcp_proyect_2 = 'cl-cda-prod',
+    schema_1 = 'DS_PROD_UNI_SSFF',
+    schema_2 = 'DS_CDA_VW_SMU',
     fecha_ini = fecha_ini,
     fecha_fin = fecha_fin
     ),
@@ -319,8 +321,10 @@ def main():
     )
 
     compras_unipay = readBigQuery(SQL_QUERIES['compras_unipay'].substitute(
-    gcp_proyect = 'cl-bigdata-analytics-preprod',
-    schema = 'TMP',
+    gcp_proyect_1 = 'cl-cda-unidata-prod',
+    gcp_proyect_2 = 'cl-cda-prod',
+    schema_1 = 'DS_PROD_UNI_SSFF',
+    schema_2 = 'DS_CDA_VW_SMU',
     fecha_fin = fecha_fin
     ),
     user = usuario,

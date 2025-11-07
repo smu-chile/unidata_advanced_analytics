@@ -1,3 +1,7 @@
+"""Script ingesta SFTP.
+
+Archivos de campañas de Email en sftp Salesforce hacia BigQuery.
+"""
 # Default
 import os
 import logging
@@ -38,8 +42,23 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(df_file, execution_date,archivo,formato):
-    print('Before cleaning:', df_file)
+def cleaning_func(df_file: pd.DataFrame, execution_date:str,
+                  archivo:str,formato:str) -> pd.DataFrame:
+    """Transform Dataframe into expected format for uploading into BQ.
+
+    Parameters
+    ----------
+    df_file : pd.DataFrame
+        Input DataFrame to transform.
+    execution_date : str
+        Execution date to be added as a new field.
+    archivo : str
+        Name of the type of file corresponding to the dataframe used to
+        filter some of the transformations.
+    formato : str
+        Name of the business unit to be added as a new field.
+    """
+    logging.info('Before cleaning:', df_file)
     if 'TriggeredSendExternalKey' in df_file.columns and archivo != 'SendJobs':
         df_file = df_file.drop(columns=['TriggeredSendExternalKey'])
     if 'EventDate' in df_file.columns:
@@ -53,7 +72,7 @@ def cleaning_func(df_file, execution_date,archivo,formato):
                                               format='%m/%d/%Y %I:%M:%S %p')
     df_file['BUSINESS_UNIT'] = formato
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
-    print('After cleaning:', df_file)
+    logging.info('After cleaning:', df_file)
 
 
     return df_file

@@ -1,3 +1,4 @@
+"""DAG Carga Diaria Archivos Campaña PUSH."""
 # Default
 import json
 from datetime import timedelta

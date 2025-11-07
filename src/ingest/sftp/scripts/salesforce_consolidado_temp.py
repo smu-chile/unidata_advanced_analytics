@@ -1,3 +1,7 @@
+"""Script ingesta temporal.
+
+Archivos consolidados en sftpSalesforce hacia BigQuery.
+"""
 # Default
 import os
 import logging
@@ -37,12 +41,19 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(df_file):
-    print('Before cleaning:', df_file)
+def cleaning_func(df_file:pd.DataFrame) -> pd.DataFrame:
+    """Transform Dataframe into expected format for uploading into BQ.
+
+    Parameters
+    ----------
+    df_file : pd.DataFrame
+        Input DataFrame to transform.
+    """
+    logging.info('Before cleaning:', df_file)
     df_file['ENVIADO'] = pd.to_datetime(df_file['ENVIADO'],
                                               format='%Y/%m/%d %H:%M:%S')
 
-    print('After cleaning:', df_file)
+    logging.info('After cleaning:', df_file)
 
 
     return df_file

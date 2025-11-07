@@ -149,7 +149,7 @@ class SharePointFile:
 
 
 def unpackPFXCredentials(pfx_path: str, pfx_password: str) -> tuple[str, str]:
-    """Unpack `.pfx` file with SharePoint credentials into `.pem` files
+    """Unpack `.pfx` file with SharePoint credentials into `.pem` files.
 
     Takes the path to a `.pfx` file and creates two `.pem` files with the
     same name as the original with the suffix:
