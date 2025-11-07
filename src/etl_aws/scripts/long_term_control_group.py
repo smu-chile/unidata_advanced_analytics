@@ -86,3 +86,7 @@ def main() -> None:  # noqa: D103
         gbq_client=Client(),
         if_exists='replace',
     )
+
+
+if __name__ == '__main__':
+    main()

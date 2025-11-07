@@ -63,6 +63,11 @@ with DAG(**dag_args) as dag:
                         f'gs://{dag_env_config["scripts_gcs"]}/'
                         'common/'
                     ),
+                    (
+                        f'gs://{dag_env_config["scripts_gcs"]}/'
+                        f'{PROJECT_NAME}/'
+                        'gbq_objects/'
+                    ),
                 ],
                 # For Google Big Query read/write
                 'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
