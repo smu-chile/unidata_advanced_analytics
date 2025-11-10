@@ -84,6 +84,11 @@
             "mode": "NULLABLE"
         },
         {
+            "name": "ESTADO_PERSONA",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
             "name": "FECHA_CARGA",
             "field_type": "DATE",
             "mode": "NULLABLE"
