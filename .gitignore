@@ -171,3 +171,6 @@ credentials.py
 # Data dirs 
 data
 backup
+
+# GCP Utilities
+gcrane.exe
