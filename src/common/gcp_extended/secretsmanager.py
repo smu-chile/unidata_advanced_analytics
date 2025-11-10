@@ -65,8 +65,8 @@ def getSecret(secret_name: str, project: str = 'cl-bigdata-analytics') -> dict:
     )
 
 
-def createSecret(secret: str, secret_name: str, project: str) -> None:
-    """Create secret on GCP Secrets Manager.
+def setSecret(secret: str, secret_name: str, project: str) -> None:
+    """Set secret on GCP Secrets Manager, creating them if needed.
 
     Parameters
     ----------
