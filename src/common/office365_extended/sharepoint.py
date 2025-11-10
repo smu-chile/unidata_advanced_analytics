@@ -197,6 +197,53 @@ def unpackPFXCredentials(pfx_path: str, pfx_password: str) -> tuple[str, str]:
     return pk_path, sk_path
 
 
+class SharePointFolder:
+    """Sharepoint file.
+
+    Parameters
+    ----------
+    tenant : str,
+        Tenant name. Also known as directory ID when creating the `.pfx`
+        certificate
+    client_id : str,
+        The OAuth client id of the calling application. Also known as
+        API ID when creating the `.pfx` certificate
+    thumbprint : str,
+        Hex encoded thumbprint of the certificate
+    private_key : str,
+        A PEM encoded certificate private key
+    server_relative_folder : str
+        Relative path to the folder in Sharepoint e.g.
+        `/sites/SiteName/SPDirectory1/SPDirectory2`
+    """
+
+    _sharepoint_server = 'https://corpsmu.sharepoint.com'
+
+    def __init__(self, tenant: str, client_id: str, thumbprint: str,
+                 private_key: str, server_relative_folder: str):
+        self.server_relative_folder = server_relative_folder.rstrip(posixpath.sep)
+        self.site_url = posixpath.join(
+            self._sharepoint_server,
+            *server_relative_folder.split(posixpath.sep)[:3]
+        )
+        self._client_context = ClientContext(
+            self.site_url + posixpath.sep
+        ).with_client_certificate(
+            tenant=tenant,
+            client_id=client_id,
+            thumbprint=thumbprint,
+            private_key=private_key,
+        )
+
+    def fileList(self) -> list[str]:
+        """Retorna una lista con los nombres de los archivos en carpeta."""
+        folder = self._client_context.web.get_folder_by_server_relative_url(
+            self.server_relative_folder
+        )
+        folder.expand(['Files']).get().execute_query()
+        return [f.name for f in folder.files]
+
+
 if __name__ == '__main__':
     err_msg = 'This file is only meant to be imported.'
     raise Exception(err_msg)
