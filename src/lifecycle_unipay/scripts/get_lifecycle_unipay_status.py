@@ -300,7 +300,7 @@ def main():
 
     tarjetas = readBigQuery(SQL_QUERIES['tarjetas_unipay'].substitute(
     gcp_proyect = 'cl-cda-unidata-prod',
-    schema = 'cl-cda-prod',
+    schema = 'DS_PROD_UNI_SSFF',
     fecha_fin = fecha_fin,
     periodo = periodo
     ),
