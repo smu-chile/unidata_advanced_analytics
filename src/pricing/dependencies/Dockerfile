@@ -40,6 +40,7 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
 # Use mamba to install packages quickly.
 RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
     && ${CONDA_HOME}/bin/micromamba install -y -c conda-forge \
+      awswrangler \
       boto3 \
       conda \
       cython \
