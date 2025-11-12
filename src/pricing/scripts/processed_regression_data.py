@@ -78,7 +78,7 @@ WITH distinct_products AS (
       PARTITION BY SKU_PRODUCT, UNIDAD_DE_MEDIDA
       ORDER BY CASE WHEN INDIC_EAN_PPAL = 'X' THEN 0 ELSE 1 END, EAN
     ) AS ean_default
-  FROM `cl-bigdata-analytics.ML_LAB.VW_DIM_PRODUCT`
+  FROM `${proyecto}.ML_LAB.VW_DIM_PRODUCT`
 )
 
 -- Consulta principal
@@ -102,7 +102,7 @@ SELECT
 FROM `${proyecto}.ML_LAB.VW_SALES_ITEM` A
 INNER JOIN distinct_products P
   ON A.EAN = P.EAN
-INNER JOIN `cl-bigdata-analytics.ML_LAB.VW_DIM_STORE` D
+INNER JOIN `${proyecto}.ML_LAB.VW_DIM_STORE` D
   ON A.STORE_ID = D.STORE_ID
 WHERE
   A.TRANSACTION_DATE >= DATE('${fecha_inicial}')
