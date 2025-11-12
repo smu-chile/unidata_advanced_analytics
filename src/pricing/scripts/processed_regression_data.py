@@ -99,7 +99,7 @@ SELECT
   CAST(P.CONTENIDO_BRUTO AS NUMERIC) * CAST(P.sales_unit AS INTEGER) AS WEIGHT_UPC,
   CAST(A.WEIGHT AS NUMERIC) AS SALE_WEIGHT,
   A.TRANSACTION_DATE AS P_DATE
-FROM `cl-bigdata-analytics-prod.ML_LAB.VW_SALES_ITEM` A
+FROM `${proyecto}.ML_LAB.VW_SALES_ITEM` A
 INNER JOIN distinct_products P
   ON A.EAN = P.EAN
 INNER JOIN `cl-bigdata-analytics.ML_LAB.VW_DIM_STORE` D
@@ -493,7 +493,8 @@ def main() -> None:  # noqa: D103
         fecha_inicial = fecha_inicial,
         fecha_final = fecha_final,
         cant_meses = cant_meses,
-        store_banner = store_banner
+        store_banner = store_banner,
+        proyecto = proyecto
     )
 
     createTableAsSelect(query = query_master_table,
