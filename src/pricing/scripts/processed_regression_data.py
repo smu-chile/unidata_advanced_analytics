@@ -1,7 +1,7 @@
 # Default
 from __future__ import annotations
 
-import os  # noqa: F401
+import os
 import logging
 import argparse
 from logging import config
@@ -12,22 +12,20 @@ import numpy as np
 import pandas as pd
 import pendulum
 from boto3 import Session
-from google.cloud import bigquery  # noqa: F401
 from google.cloud.bigquery import Client
 from dateutil.relativedelta import relativedelta
 from src.common.gcp_extended.secretsmanager import getSecret
 
 # Own
-import common.gcp_extended.bigquery as gbq_extended  # noqa: F401
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.aws_extended.athena import (
     readAthenaQuery,
 )
-from common.gcp_extended.bigquery import (  # noqa: E402
-    uploadFrame,  # noqa: F401
+from common.gcp_extended.bigquery import (
+    uploadFrame,
     readBigQuery,
-    deleteFromTable,  # noqa: F401
+    deleteFromTable,
     createTableAsSelect,
 )
 
@@ -104,8 +102,8 @@ INNER JOIN distinct_products P
 INNER JOIN `cl-bigdata-analytics.ML_LAB.VW_DIM_STORE` D
   ON A.STORE_ID = D.STORE_ID
 WHERE
-  A.TRANSACTION_DATE >= DATE('${fecha_inicial_ano}')
-  AND A.TRANSACTION_DATE < DATE_ADD(DATE('${fecha_inicial_ano}'), INTERVAL ${cant_meses} MONTH)
+  A.TRANSACTION_DATE >= DATE('${fecha_inicial}')
+  AND A.TRANSACTION_DATE <= DATE('${fecha_final}')
   AND A.SKU_PRODUCT IS NOT NULL
   AND A.SKU_PRODUCT != 'None'
   AND A.TRANSACTION_TYPE IN ('BX', 'BE', 'TF')
@@ -482,13 +480,14 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     logging.info(f'Fecha inicial: {fecha_inicial}')
-    logging.info(f'Fecha final: {fecha_ejecucion}')
+    logging.info(f'Fecha final: {fecha_final}')
 
 
 
     # Se crea la query
     query_master_table = SQL_QUERIES['query_master_table'].substitute(
-        fecha_inicial_ano = fecha_inicial,
+        fecha_inicial = fecha_inicial,
+        fecha_final = fecha_final,
         cant_meses = cant_meses,
         store_banner = store_banner
     )
@@ -500,10 +499,13 @@ def main() -> None:  # noqa: D103
 
     logging.info('Tabla auxiliar/maestra creada')
 
-    # Se realiza la query en caso de no existir
 
+    # Se realiza la query en caso de no existir
+    query_principal = SQL_QUERIES['query_principal'].substitute(
+        table_master = tmp_path_table_aux
+    )
     df_datos = readBigQuery(
-            query=query_master_table,
+            query=query_principal,
             user=usuario,
             gbq_client=gbq_client
         )
@@ -833,6 +835,225 @@ def main() -> None:  # noqa: D103
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # # ENDREGION
 
+
+
+
+
+    # REGION: Agregar APOTEOSICOS
+    #--------------------------------------------------------------------------
+
+    if store_banner == 'Unimarc':
+
+        # Query
+        query_apo = SQL_QUERIES['query_apoteosico'].substitute(
+                            store_banner_codigo=1000,
+                            cant_meses = cant_meses,
+                            fecha_inicial_ano = '2023-02-01')
+
+
+        print('Inicia la consulta de apoteosicos ...')
+
+        df_apo = readBigQuery(
+            query=query_apo,
+            user=usuario,
+            gbq_client=gbq_client
+        )
+
+        df_apo.columns = df_apo.columns.str.lower()
+
+        # Asegurarte que las fechas están como datetime
+        df_apo['fecha_inicio_de_promocion'] = pd.to_datetime(df_apo['fecha_inicio_de_promocion'])
+        df_apo['fecha_fin_de_promocion'] = pd.to_datetime(df_apo['fecha_fin_de_promocion'])
+
+        # Crear lista para guardar las expansiones
+        filas_expandidas = []
+
+        # Iterar sobre cada fila de df_apo
+        for _, fila in df_apo.iterrows():
+            material = fila['material']
+            fecha_inicio = fila['fecha_inicio_de_promocion']
+            fecha_fin = fila['fecha_fin_de_promocion']
+
+            # Crear rango de fechas (incluyendo el último día)
+            rango_fechas = pd.date_range(start=fecha_inicio, end=fecha_fin)
+
+            # Crear un pequeño dataframe temporal para este material
+            temp = pd.DataFrame({
+                'material': material,
+                'p_date': rango_fechas
+            })
+            filas_expandidas.append(temp)
+
+        # Unir todo en un solo dataframe
+        df_material_p_date = pd.concat(filas_expandidas, ignore_index=True).drop_duplicates()
+
+
+        # Primero nos aseguramos que ambas columnas tengan los mismos tipos
+        df_material_p_date['material'] = df_material_p_date['material'].astype(
+            df_datos['material'].dtype)
+        df_material_p_date['p_date'] = pd.to_datetime(df_material_p_date['p_date'])
+
+        # Crear una clave combinada material + p_date en ambos dataframes
+        df_datos['clave'] = list(zip(df_datos['material'], df_datos['p_date']))
+        df_material_p_date['clave'] = list(zip(df_material_p_date['material'],
+                                            df_material_p_date['p_date']))
+
+        # Crear la columna 'apo'
+        df_datos['apo'] = df_datos['clave'].isin(df_material_p_date['clave']).astype(int)
+
+        # Finalmente eliminar la columna auxiliar 'clave' si no la quieres
+        df_datos = df_datos.drop(columns=['clave'])
+
+
+    else:
+        df_datos['apo'] = 0
+
+
+    logging.info('Se agregan los apoteosicos')
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ENDREGION
+
+
+    # REGION: Eliminar dias que no se vendieron al menos 5 unidades
+    #--------------------------------------------------------------------------
+
+
+    # Filtrar filas eliminando aquellas que tienen cantidad_total < 3,
+    # pero solo si su unidad de medida (sales_uom) NO es 'KG' o 'KGV'.
+    # Se mantienen todas las filas con 'KG' o 'KGV',
+    # sin importar la cantidad.
+    df_datos = df_datos[(df_datos['sales_uom'].isin(['KG', 'KGV'])) |
+                        (df_datos['cantidad_total'] >= 3)]
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ENDREGION
+
+    # REGION: Eliminar aquellos productos que no se venden hace 1 año
+    #--------------------------------------------------------------------------
+
+    cantidad_inicial = df_datos['ean'].nunique()
+
+    # Paso 1: obtener el último p_date del dataframe
+    fecha_maxima = df_datos['p_date'].max()
+
+    # Paso 2: calcular el p_date máximo por ean
+    fecha_maxima_por_ean = df_datos.groupby('ean')['p_date'].max()
+
+    # Paso 3: eans que tienen su última venta dentro del último año
+    eans_validos = fecha_maxima_por_ean[
+        fecha_maxima_por_ean >= (fecha_maxima - pd.DateOffset(years=1))].index
+
+    # Paso 4: filtrar el dataframe original
+    df_datos = df_datos[df_datos['ean'].isin(eans_validos)].copy()
+
+    cantidad_final = df_datos['ean'].nunique()
+    cantidad_eliminados = cantidad_inicial-cantidad_final
+
+    logging.info(
+        f'Se eliminan los productos que no se han vendido hace 1 año {cantidad_eliminados}')
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ENDREGION
+
+    # REGION: Reordenación de dataframe principal
+    #--------------------------------------------------------------------------
+
+
+
+
+    # Lista de columnas deseadas
+    columnas_deseadas = [
+        'store_banner',
+        'category_description', 'sub_category_description', 'material', 'product_description',
+        'ean', 'sales_uom', 'sales_unit', 'p_date', 'p_week', 'p_month',
+        'ventas_totales_producto', 'cantidad_total', 'precio_promedio',
+        'primer_dia_mes', 'ultimo_dia_mes',
+        'multiplicador_x05', 'apo', 'proporcion_categoria',
+        'ean_sustituto_1', 'ean_sustituto_2', 'ean_sustituto_3',
+        'ean_sustituto_4', 'ean_sustituto_5',
+        'variacion_porcentual_subcategoria',
+        'variacion_top1_sustituto', 'variacion_top3_sustitutos'
+    ]
+
+
+    # Filtrar solo las columnas que existen en df_datos
+    columnas_existentes = [col for col in columnas_deseadas if col in df_datos.columns]
+
+    # Crear el nuevo dataframe
+    df_final = df_datos[columnas_existentes].copy()
+
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ENDREGION
+
+    # REGION: Ordenar EAN por ventas
+    #--------------------------------------------------------------------------
+
+    # Paso 1: Calcular la suma de ventas por material
+    suma_ventas_por_material = df_final.groupby('ean')['ventas_totales_producto'].sum()
+
+    # Paso 2: Crear una columna temporal con la suma de ventas y ordenar
+    df_final['suma_ventas'] = df_final['ean'].map(suma_ventas_por_material)
+    df_final = df_final.sort_values(by='suma_ventas', ascending=False)
+
+    #Eliminar la columna temporal si no la necesitas más
+    df_final = df_final.drop('suma_ventas', axis=1)
+
+
+    logging.info('Se limpia y reordena por ventas el dataframe')
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ENDREGION
+
+    # REGION: Eliminar inicio frio
+    #--------------------------------------------------------------------------
+    # Se elimina el primer mes de cada material, ya que en estos meses no
+    # tendrá sustitutos.
+
+    # Paso 1: obtener el primer p_month por material
+    primer_p_month_por_material = (
+        df_final.groupby('material', as_index=False)['p_month']
+        .min()
+        .rename(columns={'p_month': 'primer_p_month'})
+    )
+
+    # Paso 2: merge con el primer p_month de cada material
+    df_final = df_final.merge(primer_p_month_por_material, on='material', how='left')
+
+    # Paso 3: filtrar filas donde p_month != primer_p_month
+    df_final = df_final.loc[df_final['p_month'] != df_final['primer_p_month']]
+
+    # Paso 4: eliminar la columna auxiliar
+    df_final = df_final.drop(columns=['primer_p_month'])
+
+    logging.info('Se elimina inicio frio')
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ENDREGION
+
+
+    # REGION: Se sube la tabla a BIG QUERY
+    #--------------------------------------------------------------------------
+
+
+
+    deleteFromTable(
+    table_ref=tmp_path_table,
+    where_clause=f"store_banner = '{store_banner}'",
+    gbq_client=gbq_client,
+    )
+
+
+    uploadFrame(
+        df_final,
+        table_ddl_json_path=os.path.join('gbq_objects',
+                                         nombre_json),
+        project=proyecto,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ENDREGION
 
 
 if __name__ == '__main__':

@@ -20,12 +20,22 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'sophistication_segmentation'#
+PROJECT_NAME = 'pricing'
+dag_id = 'forecast_processed_data'
+schedule_interval = '0 9 1,15 * *'
+catchup = False
+start_date = [2025, 6 , 20]
+
+# Task 1
+script1 = 'processed_regression_data'
+use = 'FORECAST'
+store_banner_list = ['Unimarc']
+
 dag_args = {
-    'dag_id': 'customer_segmentation_sophisticaction',
-    'schedule_interval': '0 9 1,15 * *',
+    'dag_id': dag_id,
+    'schedule_interval': schedule_interval,
     'dagrun_timeout': None,
-    'catchup': False,
+    'catchup': catchup,
     'max_active_runs': 1,
     'concurrency': 4,
     'tags': [PROJECT_NAME, 'bmolinab'],
@@ -35,11 +45,11 @@ dag_args = {
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['bmolinab@unidata.cl'],
         'start_date': pendulum.datetime(
-            2025, 6 , 20,
+            start_date[0], start_date[1] , start_date[2],
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
-        'catchup': False,
+        'catchup': catchup,
         'email_on_failure': True,
         'email_on_retry': False,
         'retries': 0,
@@ -50,9 +60,9 @@ dag_args = {
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
-    computing_customer_segmentation_sophistication = [DataprocCreateBatchOperator(
+    processed_regression_data = [DataprocCreateBatchOperator(
         task_id=(
-            f"computing_customer_segmentation_sophistication_"
+            f"{script1}_"
             f"{store_banner.replace(' ', '_').lower()}"
         ),
 
@@ -63,7 +73,7 @@ with DAG(**dag_args) as dag:
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'computing_customer_segmentation_sophistication.py'
+                    f'{script1}.py'
                 ),
                 # Common files
                 'python_file_uris': [
@@ -83,7 +93,8 @@ with DAG(**dag_args) as dag:
                 'args': [
                     '--project_id', dag_env_config['project_id'],
                     '--execution_date', EXECUTION_DATE,
-                    '--store_banner', store_banner
+                    '--store_banner', store_banner,
+                    '--use',use
                 ],
             },
 
@@ -116,13 +127,8 @@ with DAG(**dag_args) as dag:
         project_id=dag_env_config['project_id'],
     )
 
-        for store_banner in [
-            'Unimarc',
-            'Mayorista',
-            'Alvi',
-            'Super 10'
-        ]
+        for store_banner in store_banner_list
 
     ]
 
-chain(computing_customer_segmentation_sophistication)
+chain(processed_regression_data)
