@@ -394,6 +394,7 @@ def main() -> None:  # noqa: D103
     store_banner:str = args['store_banner']
     use:str = args['use']
     logging.info(f'execution_date: {execution_date}')
+    logging.info(f'proyecto: {proyecto}')
 
 
     # Set gbq client for all subsequent queries
