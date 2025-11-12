@@ -402,7 +402,7 @@ def main() -> None:  # noqa: D103
 
     # Sesion aws
     boto3_session = Session(**getSecret(
-        project='cl-bigdata-analytics',
+        project=proyecto,
         secret_name='bdaa_aws_credentials'  # noqa: S106
     ))
 
@@ -454,7 +454,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     # Cantidad de meses
-    cant_meses = 29
+    cant_meses = 12
 
     # Convertir fecha de ejecución
     fecha_ejecucion = pendulum.parse(execution_date)
