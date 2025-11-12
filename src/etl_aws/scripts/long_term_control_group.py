@@ -1,15 +1,18 @@
 # Default
+import os
 import logging
 import argparse
 from logging import config
 
 # pip
-import awswrangler as wr
 from boto3 import Session
+from google.cloud.bigquery import Client
 
 # Own
-import common.office365_extended.sharepoint as sp_extended
+import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG
+from common.databases.queries import QueryDict
+from common.aws_extended.athena import readAthenaQuery
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -31,57 +34,58 @@ parser.add_argument(
 
 
 # -------------------------------------------------------------------------
+#  Config
+# -------------------------------------------------------------------------
+SQL_QUERIES = QueryDict({
+    'ltcg_data': """
+    SELECT
+        ORGANIZATION_ID AS ORG_IP_ID,
+        CUSTOMER_ID AS CUSTOMER_KEY,
+        INICIO_PERIODO,
+        FIN_PERIODO,
+        INICIO_VIGENCIA,
+        FIN_VIGENCIA,
+        FECHA_CARGA,
+        SUBSTR(P_WEEK, 1, 4) AS P_YEAR
+    FROM dev_perm.long_term_control_group
+    WHERE p_week LIKE '${year}%'
+    """,
+})
+
+# -------------------------------------------------------------------------
 # Main function
 # -------------------------------------------------------------------------
 def main() -> None:  # noqa: D103
     # Parameters
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
+    execution_date: str = args['execution_date']
 
     # Load data from SharePoint to pandas DataFrame
     logging.info('Load the file to DataFrame')
-    sp_file = sp_extended.SharePointFile(
-        **getSecret(
-            'bdaa_sharepoint_credentials',
-            gcp_project_id,
-        ),
-        server_relative_path=(
-            '/sites/'
-            'BigDatayAdvancedAnalytics/'
-            'Documentos%20compartidos/'
-            'Pricing/'
-            'Evaluacion%20Promociones/'
-            'promotions_to_evaluate.xlsx'
-        )
-    ).toFrame()
 
-    # Clean the file
-    logging.info('Cleanning the file')
-    sp_file = sp_file.fillna(method='ffill', axis=0)
-
-    # Data to AWS
-    logging.info('Uploading to AWS')
-    wr.s3.to_csv(
-        sp_file,
-        path=(
-            's3://smu-datalake-test-landing/'
-            'views/'
-            'datascience/'
-            'TMP_LAB_SMU_DIM_PROMOTIONS_TO_EVALUATE/'
-            'TMP_LAB_SMU_DIM_PROMOTIONS_TO_EVALUATE.csv.gz'
+    ltcg_data = readAthenaQuery(
+        query=SQL_QUERIES['ltcg_data'].substitute(
+            year=execution_date[:4]
         ),
-        header=False,
-        index=False,
-        sep='|',
-        compression='gzip',
+        user='ecastrot',
+        database='dev_temp',
+        workgroup='smu-datalake-test-workgroup',
         boto3_session=Session(
             **getSecret(
                 project=gcp_project_id,
                 secret_name='bdaa_aws_credentials'  # noqa: S106
             )
-        )
+        ),
     )
-    logging.info('Done! :)')
+
+    gbq_extended.uploadFrame(
+        ltcg_data,
+        table_ddl_json_path=os.path.join('gbq_objects', 'long_term_control_group.json'),
+        project=gcp_project_id,
+        gbq_client=Client(),
+        if_exists='replace',
+    )
 
 
 if __name__ == '__main__':

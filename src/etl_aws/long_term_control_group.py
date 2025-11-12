@@ -20,10 +20,10 @@ with open(
 
 PROJECT_NAME = 'etl_aws'
 dag_args = {
-    'dag_id': 'etl_aws_halo_efect_promotions',
-    'schedule_interval': None,
+    'dag_id': 'etl_aws_long_term_control_group',
+    'schedule_interval': '00 10 * * 1',
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': [PROJECT_NAME, 'ecastrot'],
@@ -43,10 +43,10 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
+    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
-    move_sharepoint_file = DataprocCreateBatchOperator(
-        task_id = 'move_sharepoint_file',
+    move_long_term_control_group = DataprocCreateBatchOperator(
+        task_id = 'move_long_term_control_group',
 
         batch = {
             'pyspark_batch': {
@@ -55,13 +55,18 @@ with DAG(**dag_args) as dag:
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'halo_efect_promotions.py'
+                    'long_term_control_group.py'
                 ),
                 # Common files
                 'python_file_uris': [
                     (
                         f'gs://{dag_env_config["scripts_gcs"]}/'
                         'common/'
+                    ),
+                    (
+                        f'gs://{dag_env_config["scripts_gcs"]}/'
+                        f'{PROJECT_NAME}/'
+                        'gbq_objects/'
                     ),
                 ],
                 # For Google Big Query read/write
