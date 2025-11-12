@@ -49,7 +49,10 @@ parser.add_argument(
     '--store_banner', type=str,
     help='Store banner'
 )
-
+parser.add_argument(
+    '--use', type=str,
+    help='Forecast or elasticity'
+)
 
 # -------------------------------------------------------------------------
 #  SQL Queries
