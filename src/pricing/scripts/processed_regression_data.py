@@ -14,7 +14,6 @@ import pendulum
 from boto3 import Session
 from google.cloud.bigquery import Client
 from dateutil.relativedelta import relativedelta
-from src.common.gcp_extended.secretsmanager import getSecret
 
 # Own
 from common.constants import LOGGING_CONFIG
@@ -28,6 +27,7 @@ from common.gcp_extended.bigquery import (
     deleteFromTable,
     createTableAsSelect,
 )
+from common.gcp_extended.secretsmanager import getSecret
 
 
 # -------------------------------------------------------------------------
