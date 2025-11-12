@@ -32,7 +32,7 @@ use = 'FORECAST'
 store_banner_list = ['Unimarc']
 
 dag_args = {
-    'dag_id': dag_id,
+    'dag_id': 'forecast_processed_data',
     'schedule_interval': schedule_interval,
     'dagrun_timeout': None,
     'catchup': catchup,
