@@ -462,7 +462,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     # Cantidad de meses
-    cant_meses = 12
+    cant_meses = 29
 
     # Convertir fecha de ejecución
     fecha_ejecucion = pendulum.parse(execution_date)
