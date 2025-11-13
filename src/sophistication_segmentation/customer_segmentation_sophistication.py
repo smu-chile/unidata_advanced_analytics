@@ -96,6 +96,16 @@ with DAG(**dag_args) as dag:
                     'dataproc-worker-images/'
                     f"{PROJECT_NAME.replace('_', '-')}:latest"
                 ),
+                # Executor hardware config
+                'properties' : {
+                    # Executor instances
+                    'spark.executor.instances': '2',
+                    'spark.executor.cores': '4',
+                    'spark.executor.memory': '4096m',
+                    # Dirver instances
+                    'spark.driver.cores': '4',
+                    'spark.driver.memory': '20g',
+                },
             },
 
             # Privileges config
