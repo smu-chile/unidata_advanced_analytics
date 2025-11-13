@@ -25,6 +25,7 @@ from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
     deleteFromTable,
+    setTableExpiration,
     createTableAsSelect,
 )
 from common.gcp_extended.secretsmanager import getSecret
@@ -508,8 +509,19 @@ def main() -> None:  # noqa: D103
                         table_ref=tmp_path_table_aux,
                         use_legacy_sql=False)
 
-    logging.info('Tabla auxiliar/maestra creada')
+    logging.info('Tabla auxiliar/maestra creada...')
 
+    minutos = 15
+    segundos = minutos * 60
+    milisegundos = segundos *1000
+
+    setTableExpiration(
+        table_ref = tmp_path_table_aux,
+        expiration = milisegundos,
+        gbq_client= gbq_client
+    )
+
+    logging.info('Se setea la expiracion de la tabla maestra...')
 
     # Se realiza la query en caso de no existir
     query_principal = SQL_QUERIES['query_principal'].substitute(
@@ -682,7 +694,7 @@ def main() -> None:  # noqa: D103
         right_on=['ean', 'p_month_ref']
     ).drop(columns='p_month_ref')
 
-    logging.info('Se calcula precio de los meses anteriores')
+    logging.info('Se calcula precio de los meses anteriores...')
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -705,7 +717,7 @@ def main() -> None:  # noqa: D103
     # Filtrar el dataframe eliminando esos p_month
     df_datos = df_datos[~df_datos['p_month'].isin(primeros_tres)].copy()
 
-    logging.info('Se obtiene la variacion porcentual del precio respecto al pasado')
+    logging.info('Se obtiene la variacion porcentual del precio respecto al pasado...')
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -742,7 +754,7 @@ def main() -> None:  # noqa: D103
     df_datos['variacion_porcentual_subcategoria'] = (
         df_datos['variacion_porcentual_subcategoria'].round(2))
 
-    logging.info('Se obtiene la variacion porcentual del precio de la subcategoria')
+    logging.info('Se obtiene la variacion porcentual del precio de la subcategoria...')
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -804,7 +816,7 @@ def main() -> None:  # noqa: D103
             how='left'
         )
 
-    logging.info('Se terminan de agregar los sustitutos')
+    logging.info('Se terminan de agregar los sustitutos...')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
@@ -842,7 +854,7 @@ def main() -> None:  # noqa: D103
     df_datos['variacion_top1_sustituto'] = top1.round(2)
     df_datos['variacion_top3_sustitutos'] = top3.round(2)
 
-    logging.info('Se terminan de agregar variables combinadas de sustitutos sustitutos')
+    logging.info('Se terminan de agregar variables combinadas de sustitutos sustitutos...')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # # ENDREGION
 
@@ -862,7 +874,7 @@ def main() -> None:  # noqa: D103
                             fecha_inicial_ano = '2023-02-01')
 
 
-        print('Inicia la consulta de apoteosicos ...')
+        logging.info('Inicia la consulta de apoteosicos ...')
 
         df_apo = readBigQuery(
             query=query_apo,
@@ -920,7 +932,7 @@ def main() -> None:  # noqa: D103
         df_datos['apo'] = 0
 
 
-    logging.info('Se agregan los apoteosicos')
+    logging.info('Se agregan los apoteosicos...')
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -962,7 +974,7 @@ def main() -> None:  # noqa: D103
     cantidad_eliminados = cantidad_inicial-cantidad_final
 
     logging.info(
-        f'Se eliminan los productos que no se han vendido hace 1 año {cantidad_eliminados}')
+        f'Se eliminan los productos que no se han vendido hace 1 año: {cantidad_eliminados}...')
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -1012,7 +1024,7 @@ def main() -> None:  # noqa: D103
     df_final = df_final.drop('suma_ventas', axis=1)
 
 
-    logging.info('Se limpia y reordena por ventas el dataframe')
+    logging.info('Se limpia y reordena por ventas el dataframe...')
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -1038,7 +1050,7 @@ def main() -> None:  # noqa: D103
     # Paso 4: eliminar la columna auxiliar
     df_final = df_final.drop(columns=['primer_p_month'])
 
-    logging.info('Se elimina inicio frio')
+    logging.info('Se elimina inicio frio...')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
@@ -1054,6 +1066,7 @@ def main() -> None:  # noqa: D103
     gbq_client=gbq_client,
     )
 
+    logging.info(f'Se elimina info anterior del formato {store_banner}...')
 
     uploadFrame(
         df_final,
@@ -1063,6 +1076,8 @@ def main() -> None:  # noqa: D103
         gbq_client=gbq_client,
         if_exists='append'
     )
+
+    logging.info(f'Se sube info actualizada del formato {store_banner}...')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
