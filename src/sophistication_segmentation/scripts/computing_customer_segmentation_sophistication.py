@@ -847,6 +847,12 @@ def main() -> None:  # noqa: D103
             clasificar_clientes_kmeans(df_clasificacion_categorias))
 
 
+    # Eliminar el dataframe original
+    del df_clasificacion_categorias
+
+    # Limpieza de memoria
+    gc.collect()
+
     df_clasificacion_clientes=  df_clasificacion_clientes[[
     'customer_key','category_description',
     'clasificacion_cliente','clasificacion_categoria','indice_cliente']].copy()
