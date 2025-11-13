@@ -437,7 +437,13 @@ def main() -> None:  # noqa: D103
 
 
     # Nombre archivo Json
-    nombre_json = 'ingest_regression_processed_data.json'
+    if use == 'FORECAST':
+        nombre_json = 'ingest_regression_processed_data_forecast.json'
+    elif use == 'ELASTICITY':
+        nombre_json = 'ingest_regression_processed_data_elasticity.json'
+    else:
+        msg = f"Valor inválido para 'use': {use}"
+        raise ValueError(msg)
 
     #----------------------------------------------------------------------
     # ENDREGION

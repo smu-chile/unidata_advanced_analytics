@@ -1,6 +1,6 @@
 {
     "schema": "TMP",
-    "table": "REGRESSION_PROCESSED_DATA",
+    "table": "REGRESSION_PROCESSED_DATA_FORECAST",
 
     "columns": [
         {
