@@ -460,7 +460,7 @@ def main() -> None:  # noqa: D103
     # Convertir fecha de ejecución
     fecha_ejecucion = pendulum.parse(execution_date)
     fecha_final = fecha_ejecucion.subtract(days=1)
-    fecha_inicial = fecha_final.subtract(months=cant_meses)
+    fecha_inicial = fecha_final.subtract(months=cant_meses).add(days=1)
 
     # Monthid respectivos
     monthid_final = fecha_final.format('YYYYMM')
@@ -550,7 +550,7 @@ def main() -> None:  # noqa: D103
     df_datos = df_datos[df_datos['cantidad_total'] > 0]
     df_datos['weight_upc'] = df_datos['weight_upc'].astype(float)
 
-    logging.info('Consulta productos realizada.')
+    logging.info('Limpieza inicial realizada...')
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -560,16 +560,16 @@ def main() -> None:  # noqa: D103
 
     # Extraer el año y guardarlo en una nueva columna
     df_datos['p_year'] = df_datos['p_date'].dt.year.astype(str)
-    logging.info('Agregados p_year')
+    logging.info('Agregados p_year...')
 
     # Crear la columna 'p_month' formateando 'p_date' como 'YYYYMM'
     df_datos['p_month'] = df_datos['p_date'].dt.strftime('%Y%m').astype(int)
-    logging.info('Agregados p_month')
+    logging.info('Agregados p_month...')
 
     # Crear la columna 'p_week' con el store_banner año y semana ISO juntos
     df_datos['p_week'] = df_datos['p_date'].apply(
         lambda x: int(f'{x.isocalendar()[0]}{x.isocalendar()[1]:02}'))
-    logging.info('Agregados p_week')
+    logging.info('Agregados p_week...')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
@@ -612,7 +612,7 @@ def main() -> None:  # noqa: D103
     df_datos = df_datos.drop(columns=['multiplicador'])
 
 
-    logging.info('Se agregan DUMMY dias especiales (x0.5, x1.5, x2 o x3)')
+    logging.info('Se agregan DUMMY dias especiales (x0.5, x1.5, x2 o x3)....')
 
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -628,7 +628,7 @@ def main() -> None:  # noqa: D103
     # Dummy: primer día del mes
     df_datos['primer_dia_mes'] = df_datos['p_date'].dt.is_month_start.astype(int)
 
-    logging.info('Se agregan DUMMIES: primer y último día del mes')
+    logging.info('Se agregan DUMMIES: primer y último día del mes...')
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
