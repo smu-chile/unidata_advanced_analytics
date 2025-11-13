@@ -511,13 +511,13 @@ def main() -> None:  # noqa: D103
 
     logging.info('Tabla auxiliar/maestra creada...')
 
-    minutos = 15
-    segundos = minutos * 60
-    milisegundos = segundos *1000
+
+    ahora = pendulum.now()
+    expiration = ahora.add(minutes=20)
 
     setTableExpiration(
         table_ref = tmp_path_table_aux,
-        expiration = milisegundos,
+        expiration = expiration,
         gbq_client= gbq_client
     )
 
