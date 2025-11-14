@@ -478,6 +478,8 @@ def clasificar_clientes_kmeans(df: pd.DataFrame) -> pd.DataFrame:
     # Clasificar y mapear las etiquetas de los clusters
     mediana_kmeans = df_indices_kmeans.groupby('grupo_kmeans_final')[
                                                       'indice_cliente'].median()
+
+    logging.info('Medianas agrupadas')
     orden_grupos_kmeans = mediana_kmeans.sort_values().index
     mapeo_kmeans = {
         old_label: (
@@ -487,13 +489,20 @@ def clasificar_clientes_kmeans(df: pd.DataFrame) -> pd.DataFrame:
         )
         for new_label, old_label in enumerate(orden_grupos_kmeans)
     }
+    logging.info('Mapeo configurado')
+
+
     df_indices_kmeans['clasificacion_cliente'] = df_indices_kmeans[
                                         'grupo_kmeans_final'].map(mapeo_kmeans)
+
+    logging.info('Mapeo aplicado')
 
     # Unir la clasificación con el DataFrame original
     df_resultado = df_resultado.merge(df_indices[['customer_key',
                                                   'indice_cliente']],
                                                   on='customer_key', how='left')
+
+    logging.info('Merge 1 listo')
     df_resultado = df_resultado.merge(df_indices_kmeans[['customer_key',
                                                   'clasificacion_cliente']],
                                                   on='customer_key', how='left')
