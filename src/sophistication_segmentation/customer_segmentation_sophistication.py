@@ -62,6 +62,7 @@ with DAG(**dag_args) as dag:
 
     for store_banner in store_banners:
         driver_cores = '8' if store_banner == 'Unimarc' else '4'
+        driver_memory = '35g' if store_banner == 'Unimarc' else '20g'
 
         task = DataprocCreateBatchOperator(
             task_id=(
@@ -121,7 +122,7 @@ with DAG(**dag_args) as dag:
                         'spark.executor.memory': '4096m',
                         # Driver config (dinámico por banner)
                         'spark.driver.cores': driver_cores,
-                        'spark.driver.memory': '20g',
+                        'spark.driver.memory': driver_memory,
                     },
                 },
                 # Privileges config
