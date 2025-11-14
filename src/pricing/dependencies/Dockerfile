@@ -69,6 +69,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       openblas \
       orc \
       pandas \
+      posixpath \
       pyarrow \
       pytables \
       python \
@@ -78,6 +79,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       scikit-learn \
       scipy \
       sqlalchemy \
+      statsmodels \
       sympy \
       pendulum \
       pandas-gbq \
