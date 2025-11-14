@@ -22,7 +22,7 @@ with open(
 
 PROJECT_NAME = 'pricing'
 dag_id = 'forecast_processed_data'
-schedule_interval = '0 9 1 * *'
+schedule_interval = '0 10 1,14 * *'
 catchup = False
 start_date = [2025, 6 , 20]
 
