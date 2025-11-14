@@ -468,13 +468,13 @@ def clasificar_clientes_kmeans(df: pd.DataFrame) -> pd.DataFrame:
     # Filtrar los clientes elegibles para KMeans
     df_indices_kmeans = df_indices[df_indices['customer_key'].isin(customers_to_keep)].copy()
 
-
+    logging.info('Preprocesamiento del Kmeans listo')
     # Aplicar KMeans
     kmeans = KMeans(n_clusters=n_clusters, random_state=42)
     df_indices_kmeans['grupo_kmeans_final'] = kmeans.fit_predict(
                     df_indices_kmeans[['indice_cliente']  # noqa: PD011
                                       ].values.reshape(-1, 1))
-
+    logging.info('Kmeans listo')
     # Clasificar y mapear las etiquetas de los clusters
     mediana_kmeans = df_indices_kmeans.groupby('grupo_kmeans_final')[
                                                       'indice_cliente'].median()
