@@ -69,7 +69,6 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       openblas \
       orc \
       pandas \
-      posixpath \
       pyarrow \
       pytables \
       python \
