@@ -67,6 +67,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       numpy \
       office365-rest-python-client \
       openblas \
+      openpyxl \
       orc \
       pandas \
       pyarrow \
