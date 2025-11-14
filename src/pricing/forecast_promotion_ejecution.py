@@ -28,7 +28,7 @@ start_date = [2025, 6 , 20]
 store_banner_list = ['Unimarc']
 
 # Task 1
-script1 = 'forecast_promotion_ejecution'
+script1 = 'forecast_promotion'
 
 
 # Argumentos
@@ -106,7 +106,17 @@ with DAG(**dag_args) as dag:
                     f'{dag_env_config["project_id"]}/'
                     'dataproc-worker-images/'
                     f"{PROJECT_NAME.replace('_', '-')}:latest"
-                )},
+                ),
+                # Executor hardware config
+                'properties' : {
+                    # Executor instances
+                    'spark.executor.instances': '2',
+                    'spark.executor.cores': '4',
+                    'spark.executor.memory': '4096m',
+                    # Dirver instances
+                    'spark.driver.cores': '4',
+                    'spark.driver.memory': '20g',
+                }},
 
             # Privileges config
             'environment_config': {
