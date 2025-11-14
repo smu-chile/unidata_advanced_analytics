@@ -1202,6 +1202,8 @@ def main() -> None:  # noqa: D103
             user=usuario,
             gbq_client=gbq_client
     )
+
+    logging.info('Query principal lista')
     #----------------------------------------------------------------------
     # ENDREGION
 
