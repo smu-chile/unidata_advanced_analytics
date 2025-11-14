@@ -1,7 +1,6 @@
 # Default
 from __future__ import annotations
 
-import gc
 import os
 import logging
 import argparse
@@ -780,11 +779,7 @@ def main() -> None:  # noqa: D103
     df_clasificacion_categorias = clasificar_categorias_kmeans(
                                                             df_valores_clientes)
 
-    # Eliminar el dataframe original
-    del df_valores_clientes
 
-    # Limpieza de memoria
-    gc.collect()
 
     #----------------------------------------------------------------------
     # ENDREGION
@@ -856,11 +851,6 @@ def main() -> None:  # noqa: D103
             clasificar_clientes_kmeans(df_clasificacion_categorias))
 
 
-    # Eliminar el dataframe original
-    del df_clasificacion_categorias
-
-    # Limpieza de memoria
-    gc.collect()
 
     df_clasificacion_clientes=  df_clasificacion_clientes[[
     'customer_key','category_description',
