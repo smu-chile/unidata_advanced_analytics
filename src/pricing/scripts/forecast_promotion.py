@@ -1180,7 +1180,7 @@ def generarDataFrame(store_banner: str,
                      categorias: str,
                      gbq_client: Client,
                     path_table: str,
-                    usuario: str = 'pricing'):
+                    usuario: str = 'pricing') -> pd.DataFrame:
 
     query_datos = SQL_QUERIES['query_data_procesada'].substitute(store_banner = store_banner,
                                                                 path_table = path_table,
@@ -1446,6 +1446,8 @@ def generarDataFrame(store_banner: str,
 
     df_final = df_final.astype(dtypes_dict)
     logging.info('Se asigna correctamente el tipo de cada campo')
+
+    return df_final
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
