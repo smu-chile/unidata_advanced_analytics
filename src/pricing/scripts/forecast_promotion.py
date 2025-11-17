@@ -51,8 +51,16 @@ parser.add_argument(
 SQL_QUERIES = QueryDict({
     'query_data_procesada':
     """
+    with categorias as (
+        select distinct desc_categoria
+        from `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WORKFLOW`
+        where registro_valido = 'X'
+        and n_promocion in (${categorias})
+        )
+
     SELECT * FROM `${path_table}`
     Where store_banner = '${store_banner}'
+    and CATEGORY_DESCRIPTION in (select desc_categoria from categorias)
     """,
     'query_promos_forecasting':
 """
@@ -633,11 +641,11 @@ def obtenerDfDefaultProyeccion(
 
 def calcular_forecast(
     gcp_project_id: str,
+    store_banner: str,
     file_site: str,
     secret_name: str,
     gbq_client: Client,
-    df_final : pd.DataFrame,
-    fecha_inicial_entrenamiento: str,
+    path_table : str,
     considerar_venta_incremental: bool = True,
 ) -> pd.DataFrame:
     """Genera el forecast para promociones desde SharePoint.
@@ -650,14 +658,16 @@ def calcular_forecast(
     ----------
     gcp_project_id : str
         Proyecto de Google Cloud usado para credenciales y acceso.
+    store_banner: str
+        Formato al que pertenece el análisis.
     file_site : str
         Ruta del sitio SharePoint donde están los archivos.
     secret_name : str
         Nombre del secreto con las credenciales de SharePoint.
     gbq_client : Cliente
         Cliente de gcp
-    df_final: pd.Dataframe
-        Dataframe con la info de los productos
+    path_table: str
+        Ruta de la tabla con información materiales
     fecha_inicial_entrenamiento : str
         Fecha de inicio de entrenamiento
     considerar_venta_incremental : bool, optional
@@ -761,6 +771,16 @@ def calcular_forecast(
     string_promos = ','.join(lista_promos)
 
     # ---------------- Consulta principal ---------------------
+
+    df_final = generarDataFrame(categorias=string_promos,
+                                gbq_client=gbq_client,
+                                path_table= path_table,
+                                usuario='pricing',
+                                store_banner = store_banner)
+
+    fecha_inicial_entrenamiento = df_final['p_date'].min().strftime('%Y-%m-%d')
+
+    # ---------------- Consulta promos ---------------------
     query_promos_forecasting = SQL_QUERIES[
         'query_promos_forecasting'
     ].substitute(string_promos=string_promos)
@@ -1152,50 +1172,15 @@ def calcular_forecast(
     print(f'Archivo subido correctamente a SharePoint: {output_remote_path}')
     return df_resumen_proyeccion
 
-
-# -------------------------------------------------------------------------
-# Main function
-# -------------------------------------------------------------------------
-def main() -> None:  # noqa: D103
-
-
-    # Parse input variables
-    args = vars(parser.parse_args())
-    execution_date: str = args['execution_date']
-    proyecto: str = args['project_id']  # noqa: F841
-    store_banner:str = args['store_banner']
-    logging.info(f'execution_date: {execution_date}')
-    logging.info(f'proyecto: {proyecto}')
-
-
-    # Set gbq client for all subsequent queries
-    gbq_client = Client()
-
-
-    # REGION: Configuracion inicial
-    #----------------------------------------------------------------------
-
-    #---
-    # Principales
-    #---
-
-    # Usuario
-    usuario = 'pricing'
-
-
-
-    #----------------------------------------------------------------------
-    # ENDREGION
-
-
-    # REGION: Inputs del proceso
-    #----------------------------------------------------------------------
-    esquema = 'TMP'
-    tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
-    path_table = f'{proyecto}.{esquema}.{tabla}'
+def generarDataFrame(store_banner: str,
+                     categorias: str,
+                     gbq_client: Client,
+                    path_table: str,
+                    usuario: str = 'pricing'):
 
     query_datos = SQL_QUERIES['query_data_procesada'].substitute(store_banner = store_banner,
-                                                                path_table = path_table)
+                                                                path_table = path_table,
+                                                                categorias = categorias)
 
     df_final = readBigQuery(
             query=query_datos,
@@ -1229,12 +1214,12 @@ def main() -> None:  # noqa: D103
     df_final['product_description_ean'] = df_final['product_description'] + ' - ' + df_final['ean']
     df_final['multiplicador_x05'] = df_final['multiplicador_x05'].astype(int)
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
 
     # REGION: Fin de semana
-    #--------------------------------------------------------------------------
+    #----------------------------------------------------------------------
 
     # Crear la columna 'fds' basado en si es viernes, sábado o domingo
     df_final['fds'] = df_final['p_date'].dt.dayofweek.apply(
@@ -1273,16 +1258,17 @@ def main() -> None:  # noqa: D103
                                                     lambda x: 1 if x == 6 else 0)
 
 
-    logging.info('Se agregan DUMMY de dia de la semana (l_m_w, jueves, viernes, sábado o domingo)')
+    logging.info(
+        'Se agregan DUMMY de dia de la semana (l_m_w, jueves, viernes, sábado o domingo)')
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
 
 
 
     # REGION: Agregar DUMMY de meses del año
-    #--------------------------------------------------------------------------
+    #----------------------------------------------------------------------
 
     # Extraer el número de mes desde 'p_month'
     df_final['mes'] = df_final['p_month'].astype(str).str[4:].astype(int)
@@ -1299,13 +1285,13 @@ def main() -> None:  # noqa: D103
     df_final = df_final.drop(columns='mes')
 
     logging.info('Se agregan DUMMY meses del año')
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
 
 
     # REGION: Agregar FERIADOS
-    #--------------------------------------------------------------------------
+    #----------------------------------------------------------------------
 
     # Se deja como funcion ya que se usa el mismo codigo mas adelante para
     # agregar feriados a las proyecciones
@@ -1314,12 +1300,12 @@ def main() -> None:  # noqa: D103
     df_final = agregarFeriados(df_final)
     logging.info('Se agregan los feriados')
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
 
     # REGION: Reordenación de dataframe principal
-    #--------------------------------------------------------------------------
+    #----------------------------------------------------------------------
 
     # Lista de columnas deseadas
     columnas_deseadas = [
@@ -1356,11 +1342,11 @@ def main() -> None:  # noqa: D103
 
     logging.info('Se limpia y reordena por ventas el dataframe')
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
     # REGION: Ordenar EAN por ventas
-    #--------------------------------------------------------------------------
+    #----------------------------------------------------------------------
 
     # Paso 1: Calcular la suma de ventas por material
     suma_ventas_por_material = df_final.groupby('ean')['ventas_totales_producto'].sum()
@@ -1375,11 +1361,11 @@ def main() -> None:  # noqa: D103
 
     logging.info('Se ordena por ventas')
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
     # REGION: Se asignan tipos correctos en los campos
-    #--------------------------------------------------------------------------
+    #----------------------------------------------------------------------
 
     dtypes_dict = {
         'category_description': 'string',
@@ -1454,16 +1440,40 @@ def main() -> None:  # noqa: D103
 
     df_final = df_final.astype(dtypes_dict)
     logging.info('Se asigna correctamente el tipo de cada campo')
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ENDREGION
+
+
+
+# -------------------------------------------------------------------------
+# Main function
+# -------------------------------------------------------------------------
+def main() -> None:  # noqa: D103
+
+
+    # Parse input variables
+    args = vars(parser.parse_args())
+    execution_date: str = args['execution_date']
+    proyecto: str = args['project_id']  # noqa: F841
+    store_banner:str = args['store_banner']
+    logging.info(f'execution_date: {execution_date}')
+    logging.info(f'proyecto: {proyecto}')
+
+
+    # Set gbq client for all subsequent queries
+    gbq_client = Client()
+
+
+    # REGION: Inputs del proceso
+    #----------------------------------------------------------------------
+    esquema = 'TMP'
+    tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
+    path_table = f'{proyecto}.{esquema}.{tabla}'
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
-    # REGION: Otros inputs necesarios
-    #--------------------------------------------------------------------------
-
-    fecha_inicial_entrenamiento = df_final['p_date'].min().strftime('%Y-%m-%d')
-
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    # ENDREGION
 
     # REGION: Llamada de función principal
     #--------------------------------------------------------------------------
@@ -1475,9 +1485,9 @@ def main() -> None:  # noqa: D103
     _df_resultado = calcular_forecast(
         gcp_project_id = 'cl-bigdata-analytics-preprod',
         file_site = file_site,
-        df_final=df_final,
+        path_table = path_table,
+        store_banner = store_banner,
         considerar_venta_incremental = True,
-        fecha_inicial_entrenamiento = fecha_inicial_entrenamiento,
         secret_name = 'bdaa_sharepoint_credentials',  # noqa: S106
         gbq_client = gbq_client,
         )
