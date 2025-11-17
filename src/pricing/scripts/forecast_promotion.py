@@ -771,6 +771,7 @@ def calcular_forecast(
     string_promos = ','.join(lista_promos)
 
     # ---------------- Consulta principal ---------------------
+    logging.info('Empieza el calculo de df_final')
 
     df_final = generarDataFrame(categorias=string_promos,
                                 gbq_client=gbq_client,
@@ -780,6 +781,7 @@ def calcular_forecast(
 
     fecha_inicial_entrenamiento = df_final['p_date'].min().strftime('%Y-%m-%d')
 
+    logging.info('Termina el calculo de df_final')
     # ---------------- Consulta promos ---------------------
     query_promos_forecasting = SQL_QUERIES[
         'query_promos_forecasting'
