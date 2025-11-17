@@ -69,8 +69,8 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
                     '--project_name', PROJECT_NAME,
                     '--project_id', dag_env_config['project_id'],
                     '--execution_date', EXECUTION_DATE,
-                    '--star_date', "{{ dag_run.conf.get('star_date', '2023-01-01') }}",
-                    '--end_date', "{{ dag_run.conf.get('end_date', '2023-02-01') }}"
+                    '--star_date', "{{ dag_run.conf.get('star_date', '2025-01-01') }}",
+                    '--end_date', "{{ dag_run.conf.get('end_date', '2025-02-01') }}"
 
                 ],
             },

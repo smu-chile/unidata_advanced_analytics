@@ -366,10 +366,10 @@ class GraficadorProductosHermanos:  # noqa: F811
     def obtener_hermanos_confirmados(self):
     # Obtener la lista de hermanos confirmados
         if self.hermanos_confirmados:
-            df = pd.DataFrame(self.hermanos_confirmados)
-            if 'category' in df.columns:
-                df = df.sort_values(['category', 'sub_category', 'brand_desc'])
-            return df
+            hermanos_df = pd.DataFrame(self.hermanos_confirmados)
+            if 'category' in hermanos_df.columns:
+                hermanos_df = hermanos_df.sort_values(['category', 'sub_category', 'brand_desc'])
+            return hermanos_df
         else:  # noqa: RET505
             return pd.DataFrame()
 
