@@ -309,7 +309,7 @@ jobs:
             echo "No Dockefiles changes detected in 'src/'."
           fi
 
-      - id: auth_gcp
+      - id: auth
         name: Auth with GCP
         uses: google-github-actions/auth@v2
         if: steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES_FLAG == 'true'
