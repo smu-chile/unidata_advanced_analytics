@@ -312,7 +312,6 @@ jobs:
       - id: auth
         name: Auth with GCP
         uses: google-github-actions/auth@v2
-        if: steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES_FLAG == 'true'
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
