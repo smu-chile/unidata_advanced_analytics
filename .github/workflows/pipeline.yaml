@@ -265,9 +265,11 @@ jobs:
 
   docker_image_build:
     needs: [secret_scanning, set_env_vars]
-    if: ${{ github.event_name == 'push' }}
     name: Build docker image
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     steps:
       - id: 'checkout'
         name: Checkout code
@@ -309,7 +311,7 @@ jobs:
             echo "No Dockefiles changes detected in 'src/'."
           fi
 
-      - id: auth_gcp
+      - id: auth
         name: Auth with GCP
         uses: google-github-actions/auth@v2
         if: steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES_FLAG == 'true'
@@ -322,8 +324,8 @@ jobs:
         if: steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES_FLAG == 'true'
         run: gcloud auth configure-docker us-east1-docker.pkg.dev --quiet
 
-      - id: build_upload_images
-        name: Build and upload images
+      - id: build_docker_images
+        name: Build Docker images
         if: steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES_FLAG == 'true'
         run: |-
           # Assing variables
@@ -333,10 +335,27 @@ jobs:
             DOCKER_PROJECT_NAME=$(echo "$CHANGED_DOCKERFILE" | grep -oP '(?<=src/).*(?=/dependencies)' | sed 's/[^A-Za-z1-9]/-/g')
             DOCKERFILE_PATH=$(dirname "$CHANGED_DOCKERFILE")
 
-            echo "Building ${DOCKER_PROJECT_NAME} image using ${CHANGED_DOCKERFILE} file"
             IMAGE_TAG="us-east1-docker.pkg.dev/${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}/dataproc-worker-images/${DOCKER_PROJECT_NAME}:latest"
+
+            echo "Building ${DOCKER_PROJECT_NAME} image using ${CHANGED_DOCKERFILE} file"
             docker build -q -t $IMAGE_TAG $DOCKERFILE_PATH
+          done
+          
+          echo "$(docker image ls)"
+
+      - id: push_docker_images
+        name: Push Docker image
+        if: github.event_name == 'push' && steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES_FLAG == 'true'
+        run: |-
+          # Assing variables
+          CHANGED_DOCKERFILES="${{ steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES }}"
+
+          for CHANGED_DOCKERFILE in $CHANGED_DOCKERFILES; do
+            DOCKER_PROJECT_NAME=$(echo "$CHANGED_DOCKERFILE" | grep -oP '(?<=src/).*(?=/dependencies)' | sed 's/[^A-Za-z1-9]/-/g')
+            DOCKERFILE_PATH=$(dirname "$CHANGED_DOCKERFILE")
+
+            IMAGE_TAG="us-east1-docker.pkg.dev/${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}/dataproc-worker-images/${DOCKER_PROJECT_NAME}:latest"
 
             echo "Pushing ${DOCKER_PROJECT_NAME} image"
-            docker push $IMAGE_TAG
+            docker push -q $IMAGE_TAG
           done
