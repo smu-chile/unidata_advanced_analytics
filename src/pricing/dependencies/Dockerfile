@@ -84,6 +84,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       pendulum \
       pandas-gbq \
       virtualenv \
+      xlsxwriter \
     && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
 # (Optional) Install additional requirements
