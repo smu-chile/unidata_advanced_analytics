@@ -341,5 +341,5 @@ jobs:
             docker build -q -t $IMAGE_TAG $DOCKERFILE_PATH
 
             echo "Pushing ${DOCKER_PROJECT_NAME} image"
-            docker push $IMAGE_TAG
+            docker push -q $IMAGE_TAG
           done
