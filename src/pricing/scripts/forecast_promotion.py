@@ -985,7 +985,8 @@ def calcular_forecast(
                 fecha_inicial_proyeccion=fecha_inicio,
                 fecha_final_proyeccion=fecha_fin,
                 fecha_limite=fecha_limite,
-                considerar_feriados=True
+                considerar_feriados=True,
+                fecha_inicial_entrenamiento=fecha_inicial_entrenamiento
             )
             df_pre['apo'] = 1 if 'apo' in \
                 df_ean['descripcion_evento_promocional'].iloc[0].lower() else 0
@@ -1186,7 +1187,7 @@ def generarDataFrame(store_banner: str,
                                                                 path_table = path_table,
                                                                 categorias = categorias)
 
-    logging.info(f'La query principal es {query_datos}')
+    logging.info(f'La query principal es \n{query_datos}')
 
     df_final = readBigQuery(
             query=query_datos,
