@@ -107,6 +107,7 @@ jobs:
           args: "check -q --config ${{ env.RUFF_CONFIG_PATH }}"
           version: "0.12.12"
 
+# ------------------------------------------------------------------
 
   gcs_upload_scripts:
     needs: [secret_scanning, check_lint, set_env_vars]
@@ -165,30 +166,6 @@ jobs:
           destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
           path: src
           glob: '*/gbq_objects/**'
-          gzip: false
-          parent: false
-          process_gcloudignore: false
-
-      - name: Upload consulting scripts to GCS
-        uses: google-github-actions/upload-cloud-storage@v2
-        with:
-          project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
-          destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
-          path: src
-          glob: 'consulting/*/scripts/*.py'
-          gzip: false
-          parent: false
-          process_gcloudignore: false
-          headers: |-
-            content-type: text/x-python
-
-      - name: Upload consulting GBQ objects to GCS
-        uses: google-github-actions/upload-cloud-storage@v2
-        with:
-          project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
-          destination: ${{ needs.set_env_vars.outputs.SCRIPTS_GCS }}
-          path: src
-          glob: 'consulting/*/gbq_objects/**'
           gzip: false
           parent: false
           process_gcloudignore: false
@@ -269,23 +246,6 @@ jobs:
       dag_gcs: ${{ needs.set_env_vars.outputs.DAG_GCS }}
 
 
-  gcs_upload_consulting_dags:
-    needs: [secret_scanning, check_lint, set_env_vars]
-    if: ${{ github.event_name == 'push' }}
-    name: Upload consulting DAGs to GCS
-    uses: smu-chile/unidata_advanced_analytics/.github/workflows/gcs_dag_upload.yaml@main
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    secrets:
-      gcp_service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-      gcp_workload_identity: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
-    with:
-      glob_expression: 'consulting/*/*.py'
-      dag_project_id: ${{ needs.set_env_vars.outputs.DAG_PROJECT_ID }}
-      dag_gcs: ${{ needs.set_env_vars.outputs.DAG_GCS }}
-
-
   gcs_upload_ingest_dags:
     needs: [secret_scanning, check_lint, set_env_vars]
     if: ${{ github.event_name == 'push' }}
@@ -301,3 +261,101 @@ jobs:
       glob_expression: 'ingest/*/*.py'
       dag_project_id: ${{ needs.set_env_vars.outputs.DAG_PROJECT_ID }}
       dag_gcs: ${{ needs.set_env_vars.outputs.DAG_GCS }}
+
+
+  docker_image_build:
+    needs: [secret_scanning, set_env_vars]
+    name: Build docker image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - id: 'checkout'
+        name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: find_modified_dockerfiles
+        name: Find modified Dockefiles
+        run: |-
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.sha }} -- src/)
+
+          # Get only dockerfiles and its project_names
+          CHANGED_DOCKERFILES=()
+          # Iterate through the changed files
+          for file in $CHANGED_FILES; do
+              if [[ -e $file && $file == *"Dockerfile" ]]; then
+                  CHANGED_DOCKERFILES+=("$file")
+              fi
+          done
+
+          # Check if the list is NOT empty
+          if [ -n "$CHANGED_DOCKERFILES" ]; then
+            echo "Detected changes in these dockerfiles:"
+            for x in ${CHANGED_DOCKERFILES[@]}; do
+              echo " - $x"
+            done
+
+            # Output list
+            {
+              echo "CHANGED_DOCKERFILES<<EOF"
+              printf "%s\n" "${CHANGED_DOCKERFILES[@]}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            # Output flag
+            echo "CHANGED_DOCKERFILES_FLAG=true" >> $GITHUB_OUTPUT
+
+          else
+            echo "No Dockefiles changes detected in 'src/'."
+          fi
+
+      - id: auth
+        name: Auth with GCP
+        uses: google-github-actions/auth@v2
+        if: steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES_FLAG == 'true'
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - id: auth_docker
+        name: Auth Docker with GCP
+        if: steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES_FLAG == 'true'
+        run: gcloud auth configure-docker us-east1-docker.pkg.dev --quiet
+
+      - id: build_docker_images
+        name: Build Docker images
+        if: steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES_FLAG == 'true'
+        run: |-
+          # Assing variables
+          CHANGED_DOCKERFILES="${{ steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES }}"
+
+          for CHANGED_DOCKERFILE in $CHANGED_DOCKERFILES; do
+            DOCKER_PROJECT_NAME=$(echo "$CHANGED_DOCKERFILE" | grep -oP '(?<=src/).*(?=/dependencies)' | sed 's/[^A-Za-z1-9]/-/g')
+            DOCKERFILE_PATH=$(dirname "$CHANGED_DOCKERFILE")
+
+            IMAGE_TAG="us-east1-docker.pkg.dev/${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}/dataproc-worker-images/${DOCKER_PROJECT_NAME}:latest"
+
+            echo "Building ${DOCKER_PROJECT_NAME} image using ${CHANGED_DOCKERFILE} file"
+            docker build -q -t $IMAGE_TAG $DOCKERFILE_PATH
+          done
+          
+          echo "$(docker image ls)"
+
+      - id: push_docker_images
+        name: Push Docker image
+        if: github.event_name == 'push' && steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES_FLAG == 'true'
+        run: |-
+          # Assing variables
+          CHANGED_DOCKERFILES="${{ steps.find_modified_dockerfiles.outputs.CHANGED_DOCKERFILES }}"
+
+          for CHANGED_DOCKERFILE in $CHANGED_DOCKERFILES; do
+            DOCKER_PROJECT_NAME=$(echo "$CHANGED_DOCKERFILE" | grep -oP '(?<=src/).*(?=/dependencies)' | sed 's/[^A-Za-z1-9]/-/g')
+            DOCKERFILE_PATH=$(dirname "$CHANGED_DOCKERFILE")
+
+            IMAGE_TAG="us-east1-docker.pkg.dev/${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}/dataproc-worker-images/${DOCKER_PROJECT_NAME}:latest"
+
+            echo "Pushing ${DOCKER_PROJECT_NAME} image"
+            docker push -q $IMAGE_TAG
+          done
