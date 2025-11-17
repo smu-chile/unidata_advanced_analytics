@@ -770,6 +770,8 @@ def calcular_forecast(
 
     string_promos = ','.join(lista_promos)
 
+    logging.info(f'Las categorias son: {string_promos}')
+
     # ---------------- Consulta principal ---------------------
     logging.info('Empieza el calculo de df_final')
 
@@ -1183,6 +1185,8 @@ def generarDataFrame(store_banner: str,
     query_datos = SQL_QUERIES['query_data_procesada'].substitute(store_banner = store_banner,
                                                                 path_table = path_table,
                                                                 categorias = categorias)
+
+    logging.info(f'La query principal es {query_datos}')
 
     df_final = readBigQuery(
             query=query_datos,
