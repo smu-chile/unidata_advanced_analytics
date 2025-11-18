@@ -109,8 +109,6 @@ with DAG(**dag_args) as dag:
                         EXECUTION_DATE,
                         '--store_banner',
                         store_banner,
-                        '--use',
-                        'ELASTICITY',
                     ],
                 },
                 # Docker image to be used in the dataproc pod
@@ -181,6 +179,8 @@ with DAG(**dag_args) as dag:
                         EXECUTION_DATE,
                         '--store_banner',
                         store_banner,
+                        '--use',
+                        'ELASTICITY',
                     ],
                 },
                 'runtime_config': {
