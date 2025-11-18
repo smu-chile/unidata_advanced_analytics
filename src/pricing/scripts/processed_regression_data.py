@@ -464,15 +464,25 @@ def main() -> None:  # noqa: D103
     # Cantidad de meses
     cant_meses = 29
 
-    # Convertir fecha de ejecución
-    fecha_ejecucion = pendulum.parse(execution_date)
-    fecha_final = fecha_ejecucion.subtract(days=1)
-    fecha_inicial = fecha_final.subtract(months=cant_meses).add(days=1)
+    if use == 'FORECAST':
+        # Convertir fecha de ejecución
+        fecha_ejecucion = pendulum.parse(execution_date)
+        fecha_final = fecha_ejecucion.subtract(days=1)
+        fecha_inicial = fecha_final.subtract(months=cant_meses).add(days=1)
 
-    # Monthid respectivos
-    monthid_final = fecha_final.format('YYYYMM')
-    monthid_inicial = fecha_inicial.format('YYYYMM')
+        # Monthid respectivos
+        monthid_final = fecha_final.format('YYYYMM')
+        monthid_inicial = fecha_inicial.format('YYYYMM')
 
+    elif use == 'ELASTICITY':
+        # Convertir fecha de ejecución
+        fecha_ejecucion = pendulum.parse(execution_date)
+        fecha_final = fecha_ejecucion.start_of('month').subtract(days=1)
+        fecha_inicial = fecha_final.subtract(months=cant_meses).add(days=1)
+
+        # Monthid respectivos
+        monthid_final = fecha_final.format('YYYYMM')
+        monthid_inicial = fecha_inicial.format('YYYYMM')
 
 
 
