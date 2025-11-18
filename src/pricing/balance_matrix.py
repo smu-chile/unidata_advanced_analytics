@@ -28,7 +28,7 @@ start_date = [2025, 6, 20]
 # Task 1
 script1 = 'product_sensibility'
 # Task 2
-script2 = 'forecast_processed_data'
+script2 = 'processed_regression_data'
 
 store_banner_list = ['Unimarc', 'Alvi']
 
