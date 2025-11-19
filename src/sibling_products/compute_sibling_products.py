@@ -69,9 +69,6 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
                     '--project_name', PROJECT_NAME,
                     '--project_id', dag_env_config['project_id'],
                     '--execution_date', EXECUTION_DATE,
-                    '--start_date', '2023-01-01',
-                    '--end_date', '2024-12-31',
-
                 ],
             },
             # Docker image to be used in the dataproc pod

@@ -589,8 +589,9 @@ def main() -> None:
     user: str = args['project_name']
     gcp_project: str = args['project_id']
     execution_date: str = args['execution_date']
-    start_date: str = args['start_date']  # noqa: F841
-    end_date: str = args['end_date']  # noqa: F841
+    start_date = '2023-01-01'  # noqa: F841
+    #end_date: str = args['end_date']  # noqa: F841
+    end_date = execution_date
 
     # BigQuery client
     gbq_client = Client()
