@@ -233,7 +233,7 @@ jobs:
     needs: [secret_scanning, check_lint, set_env_vars]
     if: ${{ github.event_name == 'push' }}
     name: Upload DAGs
-    uses: smu-chile/unidata_advanced_analytics/.github/workflows/gcs_dag_upload.yaml@main
+    uses: smu-chile/unidata_advanced_analytics/.github/workflows/gcs_dag_upload.yaml@prod
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -250,7 +250,7 @@ jobs:
     needs: [secret_scanning, check_lint, set_env_vars]
     if: ${{ github.event_name == 'push' }}
     name: Upload ingest DAGs to GCS
-    uses: smu-chile/unidata_advanced_analytics/.github/workflows/gcs_dag_upload.yaml@main
+    uses: smu-chile/unidata_advanced_analytics/.github/workflows/gcs_dag_upload.yaml@prod
     permissions:
       contents: 'read'
       id-token: 'write'
