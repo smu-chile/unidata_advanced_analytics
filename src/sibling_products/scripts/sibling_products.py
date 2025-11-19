@@ -586,7 +586,7 @@ class GraficadorProductosHermanos:  # noqa: F811
 def main() -> None:
     # Parse input variables
     args = vars(parser.parse_args())
-    user: str = args['project_name'] + '_siblings'
+    user: str = args['project_name']
     gcp_project: str = args['project_id']
     execution_date: str = args['execution_date']
     start_date: str = args['start_date']  # noqa: F841
