@@ -1,0 +1,54 @@
+{
+    "schema": "CONOCIMIENTO_CLIENTE",
+    "table": "LONG_TERM_CONTROL_GROUP",
+    "columns": [
+        {
+            "name": "org_ip_id",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "customer_key",
+            "field_type": "BIGNUMERIC",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "inicio_periodo",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "fin_periodo",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "inicio_vigencia",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "fin_vigencia",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "fecha_carga",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "p_year",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+    ]
+}
