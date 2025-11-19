@@ -459,7 +459,7 @@ def main() -> None:  # noqa: D103
         store_banner = store_banner)
 
 
-    print('Inicia la consulta de principal ...')
+    logging.info('Inicia la consulta de principal ...')
     df_datos = readBigQuery(
         query=query_principal,
         user=usuario,
@@ -787,7 +787,7 @@ def main() -> None:  # noqa: D103
 
             # imprimir solo si supera el siguiente 10%
             if pct >= meta_avance:
-                print(f'Avance: {pct:.1f}%  ({procesados:,}/{total_eanes:,})')
+                logging.info(f'Avance: {pct:.1f}%  ({procesados:,}/{total_eanes:,})')
                 meta_avance += 10
 
     df_resultados = pd.DataFrame(resultados)
@@ -854,9 +854,9 @@ def main() -> None:  # noqa: D103
     ventas_total = df_resultados['ventas_ean'].sum()
     porcentaje_sin_elasticidad = ventas_sin_elasticidad / ventas_total * 100
 
-    print('TANDA 0 - VENTAS SIN ELASTICIDAD ORIGINAL:')
-    print(f'Ventas sin elasticidad: ${ventas_sin_elasticidad:,.0f}')
-    print(f'Porcentaje del total: {porcentaje_sin_elasticidad:.2f}%\n')
+    logging.info('TANDA 0 - VENTAS SIN ELASTICIDAD ORIGINAL:')
+    logging.info(f'Ventas sin elasticidad: ${ventas_sin_elasticidad:,.0f}')
+    logging.info(f'Porcentaje del total: {porcentaje_sin_elasticidad:.2f}%\n')
 
     # ---------------------------------------------------------------------
     # TANDA 1: CONTAGIO MEJOR SUSTITUTO (usando similitud peso_total_ean)
@@ -912,7 +912,7 @@ def main() -> None:  # noqa: D103
     despues_tanda1 = int(df_resultados['elasticidad_contagiada'].notna().sum())
     contagiados_tanda1 = despues_tanda1 - (len(df_resultados) - antes_tanda1)
     faltantes_tanda1 = len(df_resultados) - despues_tanda1
-    print(f'TANDA 1 - SUSTITUTO: {contagiados_tanda1} contagiados,'
+    logging.info(f'TANDA 1 - SUSTITUTO: {contagiados_tanda1} contagiados,'
         f' {faltantes_tanda1} aún sin elasticidad')
 
     # ---------------------------------------------------------------------
@@ -939,7 +939,7 @@ def main() -> None:  # noqa: D103
     despues_tanda2 = int(df_resultados['elasticidad_contagiada'].notna().sum())
     contagiados_tanda2 = despues_tanda2 - despues_tanda1
     faltantes_tanda2 = len(df_resultados) - despues_tanda2
-    print(f'TANDA 2 - SUBCATEGORÍA: {contagiados_tanda2} contagiados,'
+    logging.info(f'TANDA 2 - SUBCATEGORÍA: {contagiados_tanda2} contagiados,'
         f' {faltantes_tanda2} aún sin elasticidad')
 
     # ---------------------------------------------------------------------
@@ -966,7 +966,7 @@ def main() -> None:  # noqa: D103
     despues_tanda3 = df_resultados['elasticidad_contagiada'].notna().sum()
     contagiados_tanda3 = despues_tanda3 - despues_tanda2
     faltantes_tanda3 = len(df_resultados) - despues_tanda3
-    print(f'TANDA 3 - CATEGORÍA: {contagiados_tanda3} contagiados,'
+    logging.info(f'TANDA 3 - CATEGORÍA: {contagiados_tanda3} contagiados,'
         f' {faltantes_tanda3} aún sin elasticidad')
 
     # ---------------------------------------------------------------------
@@ -976,7 +976,7 @@ def main() -> None:  # noqa: D103
     df_resultados['elasticidad_contagiada'] = df_resultados[
         'elasticidad_contagiada'].fillna(-1)
 
-    print(f'TANDA 4 - DEFAULT: {faltantes_tanda3} filas rellenadas con -1')
+    logging.info(f'TANDA 4 - DEFAULT: {faltantes_tanda3} filas rellenadas con -1')
 
 
     # ---------------------------------------------------------------------
@@ -990,7 +990,7 @@ def main() -> None:  # noqa: D103
     # RESUMEN FINAL
     # ---------------------------------------------------------------------
 
-    print('\nRESUMEN FINAL DE ELASTICIDAD_CONTAGIADA:')
+    logging.info('\nRESUMEN FINAL DE ELASTICIDAD_CONTAGIADA:')
     print(df_resultados['elasticidad_contagiada'].describe())
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1078,7 +1078,7 @@ def main() -> None:  # noqa: D103
         if_exists='append'
     )
 
-    print('Se sube la tabla a GCP')
+    logging.info('Se sube la tabla a GCP')
 
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
