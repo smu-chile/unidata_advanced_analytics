@@ -44,8 +44,7 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', " \
-    " dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501, ISC002
+    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
     compute_sibling_products_task = DataprocCreateBatchOperator(
         task_id='compute_sibling_products_task',
