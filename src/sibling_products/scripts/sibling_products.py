@@ -17,6 +17,7 @@ from google.cloud.bigquery import Client
 import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG
 from sibling_products import GraficadorProductosHermanos
+from common.databases.queries import QueryDict
 
 
 # Logging config
@@ -26,123 +27,83 @@ config.dictConfig(LOGGING_CONFIG)
 parser = argparse.ArgumentParser()
 parser.add_argument('--project_name', type=str,
                     help='Name of the Advanced Analytics project executed')
+
 parser.add_argument('--project_id', type=str,
                     help='GCP project in which the script will be executed')
+
 parser.add_argument('--execution_date', type=str, help='DAG execution date')
+
 parser.add_argument('--start_date', type=str,
                     help='Fecha inicial para filtrar datos (YYYY-MM-DD)')
+
 parser.add_argument('--end_date', type=str, help='Fecha final para filtrar datos (YYYY-MM-DD)')
 
 # -------------------------------------------------------------------------
-# SQL Queries
+# SQL Querie
 # -------------------------------------------------------------------------
-WORKFLOW_QUERIES = {
+WORKFLOW_QUERIES = QueryDict({
     'nuevos_productos': """
-SELECT
-    A.SKU_PRODUCT AS SKU,
-    A.transaction_date AS fecha,
-    P.UNIDAD_DE_MEDIDA,
-    P.EAN,
-    P.NM,
-    P.CAT_DSC,
-    P.GRUPO_DSC,
-    P.BRAND_DESC,
-    P.CONTENIDO_BRUTO,
-    ENVA.descripcion AS tipo_envase,
-    COUNT(DISTINCT A.TXN_KEY) AS cantidad_transacciones
-FROM `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_SALES_ITEM` A
-JOIN (
-  SELECT DISTINCT
-    SKU_PRODUCT,
-    EAN,
-    UNIDAD_DE_MEDIDA,
-    NM,
-    CAT_DSC,
-    GRUPO_DSC,
-    BRAND_DESC,
-    CONTENIDO_BRUTO
-  FROM `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_DIM_PRODUCT`
-) P ON A.EAN = P.EAN
-JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_SKU_ATTR` ATTR ON A.SKU_PRODUCT = REPLACE(ATTR.SKU_NK,'SKU^CL^SMC^','')
-JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_ENVASE` ENVA ON ATTR.envase = ENVA.codigo
-WHERE
-    A.transaction_date BETWEEN {start_date} AND {end_date}
-    AND A.SKU_PRODUCT <> 'None'
-    AND A.transaction_type IN ('BX', 'BE', 'TF')
-    AND A.itm_txn_fcn_tp_dsc = 'V'
-    AND A.unit_price > 0
-    AND A.value > 0
-GROUP BY
-    A.SKU_PRODUCT,
-    A.TRANSACTION_DATE,
-    P.NM,
-    P.UNIDAD_DE_MEDIDA,
-    P.EAN,
-    P.CAT_DSC,
-    P.GRUPO_DSC,
-    P.BRAND_DESC,
-    P.CONTENIDO_BRUTO,
-    ENVA.descripcion
-ORDER BY
-    A.TRANSACTION_DATE,
-    A.SKU_PRODUCT
-    """  # noqa: E501
-}
+    SELECT
+        A.SKU_PRODUCT AS SKU,
+        A.transaction_date AS fecha,
+        P.UNIDAD_DE_MEDIDA,
+        P.EAN,
+        P.NM,
+        P.CAT_DSC,
+        P.GRUPO_DSC,
+        P.BRAND_DESC,
+        P.CONTENIDO_BRUTO,
+        ENVA.descripcion AS tipo_envase,
+        COUNT(DISTINCT A.TXN_KEY) AS cantidad_transacciones
+    FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` A
+    JOIN (
+    SELECT DISTINCT
+        SKU_PRODUCT,
+        EAN,
+        UNIDAD_DE_MEDIDA,
+        NM,
+        CAT_DSC,
+        GRUPO_DSC,
+        BRAND_DESC,
+        CONTENIDO_BRUTO
+    FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
+    ) P ON A.EAN = P.EAN
+    JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_SKU_ATTR` ATTR ON A.SKU_PRODUCT = REPLACE(ATTR.SKU_NK,'SKU^CL^SMC^','')
+    JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_ENVASE` ENVA ON ATTR.envase = ENVA.codigo
+    WHERE
+        A.transaction_date BETWEEN {start_date} AND {end_date}
+        AND A.SKU_PRODUCT <> 'None'
+        AND A.transaction_type IN ('BX', 'BE', 'TF')
+        AND A.itm_txn_fcn_tp_dsc = 'V'
+        AND A.unit_price > 0
+        AND A.value > 0
+    GROUP BY
+        A.SKU_PRODUCT,
+        A.TRANSACTION_DATE,
+        P.NM,
+        P.UNIDAD_DE_MEDIDA,
+        P.EAN,
+        P.CAT_DSC,
+        P.GRUPO_DSC,
+        P.BRAND_DESC,
+        P.CONTENIDO_BRUTO,
+        ENVA.descripcion
+    ORDER BY
+        A.TRANSACTION_DATE,
+        A.SKU_PRODUCT
+        """, # noqa: E501
+
+    'extraer_confirmados': """
+    SELECT
+        SKU_ANTIGUO,
+        SKU_NUEVO
+    FROM `${gcp_project}.DATOS_GENERALES.SIBLING_PRODUCTS`
+    """
+})
 
 # -------------------------------------------------------------------------
-# Main function
+# Algoritmo de productos hermanos
 # -------------------------------------------------------------------------
-def main() -> None:
-    # Parse input variables
-    args = vars(parser.parse_args())
-    user: str = args['project_name'] + '_siblings'
-    gcp_project: str = args['project_id']
-    execution_date: str = args['execution_date']
-    start_date: str = args['start_date']  # noqa: F841
-    end_date: str = args['end_date']  # noqa: F841
-
-    # BigQuery client
-    gbq_client = Client()
-    logging.info(f'Execution date: {execution_date}')
-
-    # 1. Leer datos desde BigQuery
-    logging.info('Reading ventas data from BigQuery...')
-    ventas_df = gbq_extended.readBigQuery(
-        query=WORKFLOW_QUERIES['ventas_data'].format(
-            gcp_project=gcp_project,
-            start_date=args['start_date'],
-            end_date=args['end_date']
-        ),
-        user=user,
-        gbq_client=gbq_client,
-    )
-
-    # 2. Ejecutar algoritmo de hermanos
-    logging.info('Ejecutando algoritmo de productos hermanos...')
-    graficador = GraficadorProductosHermanos(ventas_df)
-    graficador.ejecutar_modo_automatico()
-
-    # 3. Exportar DataFrame final
-    logging.info('Preparando DataFrame final para BigQuery...')
-    df_confirmados_final = graficador.exportar_hermanos_confirmados()
-
-    if df_confirmados_final.empty:
-        logging.warning('No se generaron hermanos confirmados')
-        return
-
-    # 4. Subir resultado a BigQuery
-    logging.info('Subiendo tabla SIBLING_PRODUCTS a BigQuery...')
-    gbq_extended.uploadFrame(
-        df=df_confirmados_final,
-        table_ddl_json_path=os.path.join('gbq_objects', 'sibling_products.json'),
-        project=gcp_project,
-        if_exists='append',
-        gbq_client=gbq_client,
-    )
-    logging.info('Proceso completado con éxito!')
-
-
-
 class GraficadorProductosHermanos:  # noqa: F811
     def __init__(self, df_ventas: pd.DataFrame, hermanos_confirmados_df: pd.DataFrame |
                  None = None, diferencia_peso_maxima: float = 0.25):
@@ -414,9 +375,9 @@ class GraficadorProductosHermanos:  # noqa: F811
             # Orden final
             column_order = [
                 'SKU_ANTIGUO', 'SKU_NUEVO', 'NOMBRE_ANTIGUO', 'NOMBRE_NUEVO',
-                'CATEGORIA', 'SUB_CATEGORIA', 'MARCA',
+                'CATEGORIA', 'SUB_CATEGORIA',
                 'PESO_ANTIGUO', 'PESO_NUEVO', 'DIFF_PESO',
-                'FECHA_CONFIRMACION', 'FECHA_INTRODUCCION', 'TIPO_ENVASE'
+                'FECHA_CONFIRMACION', 'FECHA_INTRODUCCION'
             ]
             existing_columns = [col for col in column_order if col in confirmados_df.columns]
             confirmados_df = confirmados_df.reindex(columns=existing_columns)
@@ -618,6 +579,64 @@ class GraficadorProductosHermanos:  # noqa: F811
                 self.exportar_hermanos_confirmados()
         else:
             print('No se confirmaron hermanos automáticamente')
+
+# -------------------------------------------------------------------------
+# Main function
+# -------------------------------------------------------------------------
+def main() -> None:
+    # Parse input variables
+    args = vars(parser.parse_args())
+    user: str = args['project_name'] + '_siblings'
+    gcp_project: str = args['project_id']
+    execution_date: str = args['execution_date']
+    start_date: str = args['start_date']  # noqa: F841
+    end_date: str = args['end_date']  # noqa: F841
+
+    # BigQuery client
+    gbq_client = Client()
+    logging.info(f'Execution date: {execution_date}')
+
+    # 1. Leer datos desde BigQuery
+    logging.info('Reading ventas data from BigQuery...')
+    ventas_df = gbq_extended.readBigQuery(
+        query=WORKFLOW_QUERIES['nuevos_productos'].format(
+            gcp_project=gcp_project,
+            start_date=args['start_date'],
+            end_date=args['end_date']
+        ),
+        user=user,
+        gbq_client=gbq_client,
+    )
+
+    # 2. Leer hermanos confirmados existentes
+    confirmados_df = gbq_extended.readBigQuery(
+        query=WORKFLOW_QUERIES['extraer_confirmados'].format(gcp_project=gcp_project),
+        user=user,
+        gbq_client=gbq_client,
+    )
+
+    # 3. Ejecutar algoritmo con confirmados previos
+    graficador = GraficadorProductosHermanos(ventas_df, hermanos_confirmados_df=confirmados_df)
+    graficador.ejecutar_modo_automatico()
+
+    # 4. Exportar DataFrame final
+    logging.info('Preparando DataFrame final para BigQuery...')
+    df_confirmados_final = graficador.exportar_hermanos_confirmados()
+
+    if df_confirmados_final.empty:
+        logging.warning('No se generaron hermanos confirmados')
+        return
+
+    # 4. Subir resultado a BigQuery
+    logging.info('Subiendo tabla SIBLING_PRODUCTS a BigQuery...')
+    gbq_extended.uploadFrame(
+        df=df_confirmados_final,
+        table_ddl_json_path=os.path.join('gbq_objects', 'sibling_products.json'),
+        project=gcp_project,
+        if_exists='append',
+        gbq_client=gbq_client,
+    )
+    logging.info('Proceso completado con éxito!')
 
 if __name__ == '__main__':
     main()

@@ -1,6 +1,6 @@
 # Default
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 # Airflow
 from airflow.models import DAG
@@ -33,7 +33,7 @@ dag_args = {
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['bescalanter@unidata.cl'],
-        'start_date': None,
+        'start_date': datetime(2023, 1, 1),  # noqa: DTZ001
         'depends_on_past': False,
         'catchup': False,
         'email_on_failure': True,
@@ -51,30 +51,30 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
         task_id='compute_sibling_products_task',
         batch={
             'pyspark_batch': {
-                # Script principal en GCS
+                # Main file to run in the dataproc pod
                 'main_python_file_uri': (
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/scripts/'
                     'sibling_products.py'
                 ),
-                # Dependencias comunes
+                # Common files
                 'python_file_uris': [
                     f'gs://{dag_env_config["scripts_gcs"]}/common/',
                     f'gs://{dag_env_config["scripts_gcs"]}/{PROJECT_NAME}/gbq_objects/'
                 ],
-                # Conector BigQuery para Spark
+                # For Google Big Query read/write
                 'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
                 # Argumentos para el script
                 'args': [
                     '--project_name', PROJECT_NAME,
                     '--project_id', dag_env_config['project_id'],
                     '--execution_date', EXECUTION_DATE,
-                    '--star_date', "{{ dag_run.conf.get('star_date', '2025-01-01') }}",
-                    '--end_date', "{{ dag_run.conf.get('end_date', '2025-02-01') }}"
+                    '--start_date', '2023-01-01',
+                    '--end_date', '2024-12-31',
 
                 ],
             },
-            # Configuración de imagen Docker
+            # Docker image to be used in the dataproc pod
             'runtime_config': {
                 'version': '2.2',
                 'container_image': (
@@ -84,7 +84,7 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
                     f'{PROJECT_NAME.replace("_", "-")}:latest'
                 ),
             },
-            # Configuración de privilegios
+            # Privileges config
             'environment_config': {
                 'execution_config': {
                     'service_account': dag_env_config['g_service_account'],
