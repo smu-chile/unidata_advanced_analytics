@@ -250,8 +250,7 @@ with DAG(**dag_args) as dag:
                         EXECUTION_DATE,
                         '--store_banner',
                         store_banner,
-                        '--use',
-                        'ELASTICITY',
+
                     ],
                 },
                 'runtime_config': {
