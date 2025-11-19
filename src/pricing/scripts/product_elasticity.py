@@ -434,7 +434,7 @@ def main() -> None:  # noqa: D103
 
     # Sesion aws
     boto3_session = Session(**getSecret(
-        project='cl-bigdata-analytics',
+        project=proyecto,
         secret_name='bdaa_aws_credentials'  # noqa: S106
     ))
 
