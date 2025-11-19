@@ -23,7 +23,7 @@ def main() -> None:
         ['git', 'symbolic-ref', '--short', 'HEAD'],
         stdout=subprocess.PIPE
     ).stdout.decode().strip()
-    new_branch = new_branch if new_branch in ['dev', 'main'] else 'dev'
+    new_branch = new_branch if (not 'preprod' in new_branch) and ('prod' in new_branch) else 'dev'
 
     # Replace text in VSC config
     with open(vsc_config_filepath) as configfile:
@@ -35,9 +35,9 @@ def main() -> None:
     # Replace text in pre-commit hook
     with open(pre_commit_filepath, 'r+') as configfile:
         if new_branch == 'dev':
-            txt = configfile.read().replace('/main_', '/dev_')
+            txt = configfile.read().replace('/prod_', '/dev_')
         else:
-            txt = configfile.read().replace('/dev_', '/main_')
+            txt = configfile.read().replace('/dev_', '/prod_')
         configfile.seek(0)
         configfile.write(txt)
 
