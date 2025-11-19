@@ -44,9 +44,9 @@ jobs:
       - name: Remove common dir
         run: rm -rf src/common
 
-      # Removes examples dir when branch is main or preprod
+      # Removes examples dir when branch is prod or preprod
       - name: Remove examples dir
-        if: ${{ (github.ref_name == 'main') || (github.ref_name == 'preprod') }}
+        if: ${{ (github.ref_name == 'prod') || (github.ref_name == 'preprod') }}
         run: rm -rf src/examples
 
       - name: "Added Prefix to tags and DagID"
