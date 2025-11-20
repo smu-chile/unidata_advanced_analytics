@@ -1,0 +1,84 @@
+{
+    "schema": "DATOS_GENERALES",
+    "table": "SIBLING_PRODUCTS",
+    "columns": [
+        {
+            "name": "SKU_ANTIGUO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "SKU del producto original"
+        },
+        {
+            "name": "SKU_NUEVO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "SKU del producto nuevo"
+        },
+        {
+            "name": "NOMBRE_ANTIGUO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre del producto original"
+        },
+        {
+            "name": "NOMBRE_NUEVO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre del producto nuevo"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoría principal"
+        },
+        {
+            "name": "SUB_CATEGORIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Subcategoría del producto"
+        },
+        {
+            "name": "MARCA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Marca del producto"
+        },
+        {
+            "name": "PESO_ANTIGUO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Peso del producto original"
+        },
+        {
+            "name": "PESO_NUEVO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Peso del producto nuevo"
+        },
+        {
+            "name": "DIFF_PESO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Diferencia porcentual de peso entre los productos"
+        },
+        {
+            "name": "FECHA_CONFIRMACION",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha en que se confirmó la relación"
+        },
+        {
+            "name": "FECHA_INTRODUCCION",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha de introducción del producto nuevo"
+        },
+        {
+            "name": "TIPO_ENVASE",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Tipo de envase"
+        }
+    ]
+}

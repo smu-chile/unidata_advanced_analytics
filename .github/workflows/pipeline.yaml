@@ -2,9 +2,9 @@ name: Deployment Pipeline
 
 on:
   push:
-    branches: [main, preprod, dev]
+    branches: [prod, preprod, dev]
   pull_request:
-    branches: [main, preprod, dev]
+    branches: [prod, preprod, dev]
     types: [opened, synchronize]
 
 jobs:
@@ -52,7 +52,7 @@ jobs:
             branch=$(echo ${{ github.ref_name }} | tr / -)
           fi
 
-          if [ $branch = "main" ]; then 
+          if [ $branch = "prod" ]; then 
             scripts_project_id="cl-bigdata-analytics-prod";
             scripts_gcs="cl-bigdata-analytics-prod-us-dataproc-scripts";
             dag_project_id="cl-orquestador-prod";
@@ -95,8 +95,8 @@ jobs:
             branch=$(echo ${{ github.ref_name }} | tr / -)
           fi
 
-          if [ $branch = "main" ]; then 
-              echo "RUFF_CONFIG_PATH=lint/main_ruff.toml" >> $GITHUB_ENV
+          if [ $branch = "prod" ]; then 
+              echo "RUFF_CONFIG_PATH=lint/prod_ruff.toml" >> $GITHUB_ENV
           else
               echo "RUFF_CONFIG_PATH=lint/dev_ruff.toml" >> $GITHUB_ENV
           fi
@@ -132,7 +132,7 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Remove examples dir
-        if: ${{ github.ref_name == 'main' }}
+        if: ${{ github.ref_name == 'prod' }}
         run: rm -rf src/examples
 
       - name: Upload python commons to GCS
@@ -233,7 +233,7 @@ jobs:
     needs: [secret_scanning, check_lint, set_env_vars]
     if: ${{ github.event_name == 'push' }}
     name: Upload DAGs
-    uses: smu-chile/unidata_advanced_analytics/.github/workflows/gcs_dag_upload.yaml@main
+    uses: smu-chile/unidata_advanced_analytics/.github/workflows/gcs_dag_upload.yaml@prod
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -250,7 +250,7 @@ jobs:
     needs: [secret_scanning, check_lint, set_env_vars]
     if: ${{ github.event_name == 'push' }}
     name: Upload ingest DAGs to GCS
-    uses: smu-chile/unidata_advanced_analytics/.github/workflows/gcs_dag_upload.yaml@main
+    uses: smu-chile/unidata_advanced_analytics/.github/workflows/gcs_dag_upload.yaml@prod
     permissions:
       contents: 'read'
       id-token: 'write'
