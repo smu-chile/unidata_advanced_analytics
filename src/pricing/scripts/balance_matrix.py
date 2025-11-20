@@ -140,6 +140,7 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client)
 
     df_sensibilidad.columns = df_sensibilidad.columns.str.lower()
+    logging.info('Consulta de sensibilidad lista')
 
     # ELASTICIDAD
 
@@ -153,6 +154,7 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client)
 
     df_elasticidad.columns = df_elasticidad.columns.str.lower()
+    logging.info('Consulta de elasticidad lista')
 
     # VENTAS
 
@@ -166,7 +168,7 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client)
 
     df_ventas.columns = df_ventas.columns.str.lower()
-
+    logging.info('Consulta de ventas lista')
 
     #----------------------------------------------------------------------
     # ENDREGION
@@ -182,6 +184,8 @@ def main() -> None:  # noqa: D103
 
     df_balance_matrix = df_balance_matrix.merge(df_ventas[['ean','ventas_totales']],
                                                 on = 'ean', how='left')
+
+    logging.info('Merge de tablas listo')
 
     #----------------------------------------------------------------------
     # ENDREGION
@@ -201,7 +205,7 @@ def main() -> None:  # noqa: D103
     # Aplicar la función al dataframe
     df_balance_matrix['segmento_bm'] = df_balance_matrix.apply(asignar_segmento_bm, axis=1)
 
-
+    logging.info('Parámetros adicionales listos')
     #----------------------------------------------------------------------
     # ENDREGION
 
@@ -240,6 +244,8 @@ def main() -> None:  # noqa: D103
     })
 
     df_balance_matrix_sp.sort_values(by='Categoria')
+
+    logging.info('Cambio de nombres para Excel listo')
     #----------------------------------------------------------------------
     # ENDREGION
 
@@ -305,7 +311,7 @@ def main() -> None:  # noqa: D103
             f'Balance_Matrix_AA_{store_banner}.xlsx'
         )
     ).upload(buffer)
-
+    logging.info('Tabla subida en GCP')
 
 
 if __name__ == '__main__':

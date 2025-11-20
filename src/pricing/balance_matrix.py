@@ -287,7 +287,7 @@ with DAG(**dag_args) as dag:
         )
 
 
-        # ---------- Task script3: balance_matrix ----------
+        # ---------- Task script4: balance_matrix ----------
         bm_task = DataprocCreateBatchOperator(
             task_id=f'{script4}_{banner_suffix}',
             batch={
