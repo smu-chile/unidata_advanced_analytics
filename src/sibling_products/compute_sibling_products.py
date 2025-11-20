@@ -1,11 +1,11 @@
 # Default
-import json
+import json  # noqa: I001
 from datetime import datetime, timedelta
 
 # Airflow
-from airflow.models import DAG
-from airflow.configuration import conf
-from airflow.providers.google.cloud.operators.dataproc import (
+from airflow.models import DAG # type: ignore  # noqa: PGH003
+from airflow.configuration import conf # type: ignore  # noqa: PGH003
+from airflow.providers.google.cloud.operators.dataproc import ( # type: ignore  # noqa: PGH003
     DataprocCreateBatchOperator,
 )
 
