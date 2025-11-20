@@ -984,6 +984,13 @@ def main() -> None:  # noqa: D103
                                             'formato':'store_banner'})
 
 
+    # Se limpian nombres del store_banner por si hay error humano
+    for col in df_forzados.select_dtypes(include='object'):
+        df_forzados[col] = df_forzados[col].str.strip()
+
+    df_forzados['store_banner'] = df_forzados['store_banner'].replace(
+                                                            {'S10': 'Super 10'})
+
 
     # Nos quedamos solo con las columnas necesarias de df_forzados
     # y evitamos duplicados
@@ -1002,6 +1009,8 @@ def main() -> None:  # noqa: D103
 
     # Limpiamos la columna auxiliar
     df_final = df_final.drop(columns=['KVI_forzado'])
+
+    print('Se fuerzan los productos señalados por equipo de Pricing')
 
     #----------------------------------------------------------------------
     # ENDREGION
