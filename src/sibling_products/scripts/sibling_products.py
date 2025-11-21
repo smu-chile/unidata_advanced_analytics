@@ -16,7 +16,6 @@ from google.cloud.bigquery import Client
 # Own
 import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG
-from sibling_products import GraficadorProductosHermanos
 from common.databases.queries import QueryDict
 
 
