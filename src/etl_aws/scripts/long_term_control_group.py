@@ -2,12 +2,18 @@
 import os
 import logging
 import argparse
+import platform
 from logging import config
 
 # pip
 from boto3 import Session
 from google.cloud.bigquery import Client
 
+
+# Local testing support
+if 'windows' in platform.platform().lower():
+    import sys
+    sys.path.append(os.path.join(os.path.abspath(__file__), '..', '..', '..'))
 # Own
 import common.gcp_extended.bigquery as gbq_extended
 from common.constants import LOGGING_CONFIG

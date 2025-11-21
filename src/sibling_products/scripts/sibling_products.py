@@ -91,14 +91,7 @@ WORKFLOW_QUERIES = QueryDict({
     ORDER BY
         A.TRANSACTION_DATE,
         A.SKU_PRODUCT
-        """, # noqa: E501
-
-    'extraer_confirmados': """
-    SELECT
-        SKU_ANTIGUO,
-        SKU_NUEVO
-    FROM `${gcp_project}.DATOS_GENERALES.SIBLING_PRODUCTS`
-    """
+        """# noqa: E501
 })
 
 # -------------------------------------------------------------------------
@@ -369,7 +362,9 @@ class GraficadorProductosHermanos:  # noqa: F811
                 'peso_1': 'PESO_ANTIGUO',
                 'peso_2': 'PESO_NUEVO',
                 'diferencia_peso_%': 'DIFF_PESO',
-                'tipo_envase': 'TIPO_ENVASE'
+                'tipo_envase': 'TIPO_ENVASE',
+                'fecha_confirmacion': 'FECHA_CONFIRMACION',
+                'fecha_introduccion': 'FECHA_INTRODUCCION'
             }, inplace=True)  # noqa: PD002
 
             # Orden final
@@ -414,8 +409,11 @@ class GraficadorProductosHermanos:  # noqa: F811
         fin_analisis = fecha_introduccion + timedelta(days=ventana_dias)
 
         # Preparar datos agrupados por fecha
-        df_agrupado = self.df.groupby(['fecha', 'SKU'])
-        ['ventas_estandarizadas'].sum().reset_index()
+        df_agrupado = (
+            self.df.groupby(['fecha', 'SKU'])['ventas_estandarizadas']
+            .sum()
+            .reset_index()
+        )
 
         # Filtrar y completar datos
         datos_original = df_agrupado[(df_agrupado['SKU'] == sku_original) &
@@ -613,15 +611,8 @@ def main() -> None:
         gbq_client=gbq_client,
     )
 
-    # 2. Leer hermanos confirmados existentes
-    confirmados_df = gbq_extended.readBigQuery(
-        query=WORKFLOW_QUERIES['extraer_confirmados'].substitute(gcp_project=gcp_project),
-        user=user,
-        gbq_client=gbq_client,
-    )
-
     # 3. Ejecutar algoritmo con confirmados previos
-    graficador = GraficadorProductosHermanos(ventas_df, hermanos_confirmados_df=confirmados_df)
+    graficador = GraficadorProductosHermanos(ventas_df)
     graficador.ejecutar_modo_automatico()
 
     # 4. Exportar DataFrame final

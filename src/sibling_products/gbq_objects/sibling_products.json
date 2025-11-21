@@ -67,12 +67,6 @@
             "field_type": "DATE",
             "mode": "REQUIRED",
             "description": "Fecha de introducción del producto nuevo"
-        },
-        {
-            "name": "TIPO_ENVASE",
-            "field_type": "STRING",
-            "mode": "NULLABLE",
-            "description": "Tipo de envase"
         }
     ]
 }
