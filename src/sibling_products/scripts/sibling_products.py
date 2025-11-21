@@ -362,7 +362,9 @@ class GraficadorProductosHermanos:  # noqa: F811
                 'peso_1': 'PESO_ANTIGUO',
                 'peso_2': 'PESO_NUEVO',
                 'diferencia_peso_%': 'DIFF_PESO',
-                'tipo_envase': 'TIPO_ENVASE'
+                'tipo_envase': 'TIPO_ENVASE',
+                'fecha_confirmacion': 'FECHA_CONFIRMACION',
+                'fecha_introduccion': 'FECHA_INTRODUCCION'
             }, inplace=True)  # noqa: PD002
 
             # Orden final
