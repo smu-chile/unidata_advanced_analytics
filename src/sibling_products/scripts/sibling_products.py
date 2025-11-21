@@ -596,12 +596,18 @@ def main() -> None:
 
     # 1. Leer datos desde BigQuery
     logging.info('Reading ventas data from BigQuery...')
-    ventas_df = gbq_extended.readBigQuery(
+
+    query1 = gbq_extended.readBigQuery(
         query=WORKFLOW_QUERIES['nuevos_productos'].substitute(
             gcp_project=gcp_project,
             start_date=start_date,
             end_date=execution_date
-        ),
+        ))
+
+    logging.info(query1)
+
+    ventas_df = gbq_extended.readBigQuery(
+        query=query1,
         user=user,
         gbq_client=gbq_client,
     )
