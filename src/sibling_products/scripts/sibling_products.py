@@ -11,6 +11,7 @@ import numpy as np
 
 # pip
 import pandas as pd
+import pendulum
 from google.cloud.bigquery import Client
 
 # Own
@@ -589,6 +590,7 @@ def main() -> None:
     gcp_project: str = args['project_id']
     execution_date: str = args['execution_date']
     start_date = '2023-01-01'  # noqa: F841
+    end_date = pendulum.parse(execution_date).format('YYYY-MM-DD')
 
     # BigQuery client
     gbq_client = Client()
@@ -597,12 +599,11 @@ def main() -> None:
     # 1. Leer datos desde BigQuery
     logging.info('Reading ventas data from BigQuery...')
 
-    query1 = gbq_extended.readBigQuery(
-        query=WORKFLOW_QUERIES['nuevos_productos'].substitute(
+    query1 = WORKFLOW_QUERIES['nuevos_productos'].substitute(
             gcp_project=gcp_project,
             start_date=start_date,
-            end_date=execution_date
-        ))
+            end_date=end_date
+        )
 
     logging.info(query1)
 
