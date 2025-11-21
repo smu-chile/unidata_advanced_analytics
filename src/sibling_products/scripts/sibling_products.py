@@ -407,8 +407,11 @@ class GraficadorProductosHermanos:  # noqa: F811
         fin_analisis = fecha_introduccion + timedelta(days=ventana_dias)
 
         # Preparar datos agrupados por fecha
-        df_agrupado = self.df.groupby(['fecha', 'SKU'])
-        ['ventas_estandarizadas'].sum().reset_index()
+        df_agrupado = (
+            self.df.groupby(['fecha', 'SKU'])['ventas_estandarizadas']
+            .sum()
+            .reset_index()
+        )
 
         # Filtrar y completar datos
         datos_original = df_agrupado[(df_agrupado['SKU'] == sku_original) &
