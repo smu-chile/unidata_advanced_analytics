@@ -39,12 +39,6 @@
             "description": "Subcategoría del producto"
         },
         {
-            "name": "MARCA",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "Marca del producto"
-        },
-        {
             "name": "PESO_ANTIGUO",
             "field_type": "FLOAT",
             "mode": "REQUIRED",
