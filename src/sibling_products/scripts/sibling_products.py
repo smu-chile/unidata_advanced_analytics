@@ -590,7 +590,6 @@ def main() -> None:
     gcp_project: str = args['project_id']
     execution_date: str = args['execution_date']
     start_date = '2023-01-01'  # noqa: F841
-    end_date = execution_date
 
     # BigQuery client
     gbq_client = Client()
@@ -602,7 +601,7 @@ def main() -> None:
         query=WORKFLOW_QUERIES['nuevos_productos'].format(
             gcp_project=gcp_project,
             start_date=start_date,
-            end_date=end_date
+            end_date=execution_date
         ),
         user=user,
         gbq_client=gbq_client,
