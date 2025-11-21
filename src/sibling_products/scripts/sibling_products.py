@@ -597,7 +597,7 @@ def main() -> None:
     # 1. Leer datos desde BigQuery
     logging.info('Reading ventas data from BigQuery...')
     ventas_df = gbq_extended.readBigQuery(
-        query=WORKFLOW_QUERIES['nuevos_productos'].format(
+        query=WORKFLOW_QUERIES['nuevos_productos'].substitute(
             gcp_project=gcp_project,
             start_date=start_date,
             end_date=execution_date
@@ -608,7 +608,7 @@ def main() -> None:
 
     # 2. Leer hermanos confirmados existentes
     confirmados_df = gbq_extended.readBigQuery(
-        query=WORKFLOW_QUERIES['extraer_confirmados'].format(gcp_project=gcp_project),
+        query=WORKFLOW_QUERIES['extraer_confirmados'].substitute(gcp_project=gcp_project),
         user=user,
         gbq_client=gbq_client,
     )
