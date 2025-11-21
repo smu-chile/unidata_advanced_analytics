@@ -71,7 +71,7 @@ WORKFLOW_QUERIES = QueryDict({
     JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_SKU_ATTR` ATTR ON A.SKU_PRODUCT = REPLACE(ATTR.SKU_NK,'SKU^CL^SMC^','')
     JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_ENVASE` ENVA ON ATTR.envase = ENVA.codigo
     WHERE
-        A.transaction_date BETWEEN ${start_date} AND ${end_date}
+        A.transaction_date BETWEEN '${start_date}' AND '${end_date}'
         AND A.SKU_PRODUCT <> 'None'
         AND A.transaction_type IN ('BX', 'BE', 'TF')
         AND A.itm_txn_fcn_tp_dsc = 'V'
