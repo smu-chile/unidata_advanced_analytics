@@ -484,7 +484,8 @@ class GraficadorProductosHermanos:  # noqa: F811
         'datos_original': datos_original_completo,
         'datos_nuevo': datos_nuevo_completo,
         'ventas_promedio': ventas_promedio,
-        'ventas_combinadas_despues': ventas_combinadas_despues
+        'ventas_combinadas_despues': ventas_combinadas_despues,
+        'sku_original': sku_original
         }
 
     def determinar_si_son_hermanos(self, analisis_ventas):
@@ -496,6 +497,15 @@ class GraficadorProductosHermanos:  # noqa: F811
         ventas_despues_nuevo = analisis_ventas.get('ventas_despues_nuevo', 0)
         ventas_despues_original = analisis_ventas.get('ventas_despues_original', 0)
         correlacion = analisis_ventas.get('correlacion', 0)
+        fecha_introduccion = analisis_ventas.get('fecha_introduccion')
+
+        # Regla: verificar historial previo del producto antiguo (mínimo 60 días)  # noqa: W505
+        fecha_inicio_original = self.df[self.df['SKU'] == analisis_ventas.get(
+            'sku_original', '')]['fecha'].min()
+        dias_historial = (fecha_introduccion - fecha_inicio_original).days if pd.notna(
+            fecha_inicio_original) else 0
+        if dias_historial < 60:  # menos de 2 meses de historial
+            return False
 
         # Calcular diferencia porcentual entre promedios
         diferencia_porcentual = ((ventas_despues_nuevo - ventas_antes)
