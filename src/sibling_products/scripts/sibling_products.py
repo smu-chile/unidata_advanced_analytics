@@ -91,13 +91,7 @@ WORKFLOW_QUERIES = QueryDict({
     ORDER BY
         A.TRANSACTION_DATE,
         A.SKU_PRODUCT
-        """,# noqa: E501
-    'extraer_confirmados': """
-    SELECT
-        SKU_ANTIGUO,
-        SKU_NUEVO
-    FROM `${gcp_project}.DATOS_GENERALES.SIBLING_PRODUCTS`
-    """
+        """ # noqa: E501
 })
 
 # -------------------------------------------------------------------------
@@ -500,11 +494,18 @@ class GraficadorProductosHermanos:  # noqa: F811
         # Extraer métricas
         ventas_antes = analisis_ventas.get('ventas_antes', 0)
         ventas_despues_nuevo = analisis_ventas.get('ventas_despues_nuevo', 0)
+        ventas_despues_original = analisis_ventas.get('ventas_despues_original', 0)
         correlacion = analisis_ventas.get('correlacion', 0)
 
         # Calcular diferencia porcentual entre promedios
         diferencia_porcentual = ((ventas_despues_nuevo - ventas_antes)
                                  / ventas_antes) * 100 if ventas_antes > 0 else 0
+
+        # Nueva regla: reducción del 50% en ventas del producto antiguo
+        if ventas_antes > 0:
+            reduccion = ((ventas_antes - ventas_despues_original) / ventas_antes) * 100
+            if reduccion >= 50:
+                return True
 
         # Regla 1: Si el nuevo vende más del doble que el viejo NO hermanos
         if diferencia_porcentual >= 100:
@@ -617,15 +618,8 @@ def main() -> None:
         gbq_client=gbq_client,
     )
 
-    # 2. Leer hermanos confirmados existentes
-    confirmados_df = gbq_extended.readBigQuery(
-        query=WORKFLOW_QUERIES['extraer_confirmados'].substitute(gcp_project=gcp_project),
-        user=user,
-        gbq_client=gbq_client,
-    )
-
     # 3. Ejecutar algoritmo con confirmados previos
-    graficador = GraficadorProductosHermanos(ventas_df, hermanos_confirmados_df=confirmados_df)
+    graficador = GraficadorProductosHermanos(ventas_df)
     graficador.ejecutar_modo_automatico()
 
     # 4. Exportar DataFrame final
@@ -642,7 +636,7 @@ def main() -> None:
         df=df_confirmados_final,
         table_ddl_json_path=os.path.join('gbq_objects', 'sibling_products.json'),
         project=gcp_project,
-        if_exists='append',
+        if_exists='replace',
         gbq_client=gbq_client,
     )
     logging.info('Proceso completado con éxito!')
