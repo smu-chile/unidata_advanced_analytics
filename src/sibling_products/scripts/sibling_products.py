@@ -91,7 +91,13 @@ WORKFLOW_QUERIES = QueryDict({
     ORDER BY
         A.TRANSACTION_DATE,
         A.SKU_PRODUCT
-        """# noqa: E501
+        """,# noqa: E501
+    'extraer_confirmados': """
+    SELECT
+        SKU_ANTIGUO,
+        SKU_NUEVO
+    FROM `${gcp_project}.DATOS_GENERALES.SIBLING_PRODUCTS`
+    """
 })
 
 # -------------------------------------------------------------------------
@@ -611,8 +617,15 @@ def main() -> None:
         gbq_client=gbq_client,
     )
 
+    # 2. Leer hermanos confirmados existentes
+    confirmados_df = gbq_extended.readBigQuery(
+        query=WORKFLOW_QUERIES['extraer_confirmados'].substitute(gcp_project=gcp_project),
+        user=user,
+        gbq_client=gbq_client,
+    )
+
     # 3. Ejecutar algoritmo con confirmados previos
-    graficador = GraficadorProductosHermanos(ventas_df)
+    graficador = GraficadorProductosHermanos(ventas_df, hermanos_confirmados_df=confirmados_df)
     graficador.ejecutar_modo_automatico()
 
     # 4. Exportar DataFrame final
