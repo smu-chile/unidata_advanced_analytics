@@ -504,10 +504,10 @@ class GraficadorProductosHermanos:  # noqa: F811
         # Nueva regla: reducción del 50% en ventas del producto antiguo
         if ventas_antes > 0:
             reduccion = ((ventas_antes - ventas_despues_original) / ventas_antes) * 100
-            if reduccion >= 50:
-                return True
+            if reduccion < 50:
+                return False
 
-        # Regla 1: Si el nuevo vende más del doble que el viejo NO hermanos
+        # Regla 1: Si el nuevo vende más del doble que el antiguo NO hermanos  # noqa: W505
         if diferencia_porcentual >= 100:
             return False
 
