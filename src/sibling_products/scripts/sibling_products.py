@@ -239,7 +239,6 @@ class GraficadorProductosHermanos:  # noqa: F811
                 nombres = group.set_index('SKU')['NM'].to_dict()
                 pesos = group.set_index('SKU')['CONTENIDO_BRUTO'].to_dict()
                 categorias = group.set_index('SKU')['CAT_DSC'].to_dict()
-                envases = group.set_index('SKU')['tipo_envase'].to_dict()
 
                 for i in range(len(skus)):
                     for j in range(i + 1, len(skus)):
@@ -253,13 +252,6 @@ class GraficadorProductosHermanos:  # noqa: F811
                         if peso_i == 0 or peso_j == 0:
                             continue
                         diferencia = abs(peso_i - peso_j) / min(peso_i, peso_j)
-
-                        # Verificar igualdad de envase
-                        envase_i = envases.get(sku_i, '')
-                        envase_j = envases.get(sku_j, '')
-
-                        if envase_i != envase_j:
-                            continue
 
                         # Solo emparejar si son pesos diferentes
                         pesos_son_diferentes = peso_i != peso_j
@@ -295,8 +287,7 @@ class GraficadorProductosHermanos:  # noqa: F811
                                 'peso_original': peso_i,
                                 'peso_nuevo': peso_j,
                                 'diferencia_peso_%': round(diferencia * 100, 1),
-                                'mismo_peso' : peso_i == peso_j,
-                                'tipo_envase' : envase_i == envase_j
+                                'mismo_peso' : peso_i == peso_j
                             })
 
         print(f'Encontrados {len(candidatos)} pares válidos')
@@ -675,7 +666,7 @@ def main() -> None:
         df=df_confirmados_final,
         table_ddl_json_path=os.path.join('gbq_objects', 'sibling_products.json'),
         project=gcp_project,
-        if_exists='append',
+        if_exists='replace',
         gbq_client=gbq_client,
     )
     logging.info('Proceso completado con éxito!')
