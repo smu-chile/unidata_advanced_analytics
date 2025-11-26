@@ -47,6 +47,7 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 SQL_QUERIES = QueryDict({
     'sales_item': """
+    SELECT
     MARKET_BASKET_KEY AS MARKET_BASKET_KEY_GCP,
     TXN_KEY AS BASKET_ID,
     NULL AS MARKET_BASKET_KEY,
