@@ -69,7 +69,7 @@ SQL_QUERIES = QueryDict({
     QUANTITY_SU
     FROM cl-bigdata-analytics-preprod.CDA_VISTAS.VW_SALES_ITEM
     left join cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID id using (customer_key)
-    WHERE TRANSACTION_DATE = '${execution_date}%'
+    WHERE TRANSACTION_DATE = '${execution_date}'
     """,
 })
 
