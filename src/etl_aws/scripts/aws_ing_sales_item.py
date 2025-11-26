@@ -102,6 +102,8 @@ def main() -> None:  # noqa: D103
                     f'list is {len(column_types)}')
         raise Exception(err_msg)
     # Formatting
+    logging.info(sales_item)
+    logging.info(sales_item.columns)
     sales_item = sales_item.astype(dict(zip(sales_item.columns, column_types)))
 
     landing_bucket = 'smu-datalake-test-landing'
