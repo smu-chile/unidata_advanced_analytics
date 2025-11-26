@@ -92,7 +92,7 @@ def main() -> None:  # noqa: D103
         user='csotob',
         gbq_client = Client()
     )
-    column_types = ['str', 'Int64', 'str', 'str', 'str', 'str', 'str',
+    column_types = ['str', 'str', 'Int64', 'str', 'str', 'str', 'str', 'str',
                     'str', 'float', 'float', 'float', 'float', 'str', 'str',
                     'Int64', 'str', 'float', 'float']
     if sales_item.shape[1] != len(column_types):
