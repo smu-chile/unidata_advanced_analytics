@@ -68,7 +68,8 @@ WORKFLOW_QUERIES = QueryDict({
         CONTENIDO_BRUTO
     FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
     ) P ON A.EAN = P.EAN
-    JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_SKU_ATTR` ATTR ON A.SKU_PRODUCT = REPLACE(ATTR.SKU_NK,'SKU^CL^SMC^','')
+    JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_SKU_ATTR` ATTR ON A.SKU_PRODUCT =
+        REPLACE(ATTR.SKU_NK,'SKU^CL^SMC^','')
     JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_ENVASE` ENVA ON ATTR.envase = ENVA.codigo
     WHERE
         A.transaction_date BETWEEN '${start_date}' AND '${end_date}'
@@ -91,7 +92,13 @@ WORKFLOW_QUERIES = QueryDict({
     ORDER BY
         A.TRANSACTION_DATE,
         A.SKU_PRODUCT
-        """ # noqa: E501
+        """,
+    'extraer_confirmados': """
+    SELECT
+        SKU_ANTIGUO,
+        SKU_NUEVO
+    FROM `${gcp_project}.DATOS_GENERALES.SIBLING_PRODUCTS`
+    """ # noqa: E501
 })
 
 # -------------------------------------------------------------------------
@@ -628,8 +635,15 @@ def main() -> None:
         gbq_client=gbq_client,
     )
 
+    # 2. Leer hermanos confirmados existentes
+    confirmados_df = gbq_extended.readBigQuery(
+        query=WORKFLOW_QUERIES['extraer_confirmados'].substitute(gcp_project=gcp_project),
+        user=user,
+        gbq_client=gbq_client,
+    )
+
     # 3. Ejecutar algoritmo con confirmados previos
-    graficador = GraficadorProductosHermanos(ventas_df)
+    graficador = GraficadorProductosHermanos(ventas_df, hermanos_confirmados_df=confirmados_df)
     graficador.ejecutar_modo_automatico()
 
     # 4. Exportar DataFrame final
