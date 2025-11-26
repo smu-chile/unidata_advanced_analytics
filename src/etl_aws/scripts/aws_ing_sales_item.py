@@ -17,7 +17,7 @@ if 'windows' in platform.platform().lower():
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.gcp_extended.secretsmanager import readBigQuery
+from common.gcp_extended.bigquery import readBigQuery
 
 
 # -------------------------------------------------------------------------
