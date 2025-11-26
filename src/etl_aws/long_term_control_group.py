@@ -21,7 +21,7 @@ with open(
 PROJECT_NAME = 'etl_aws'
 dag_args = {
     'dag_id': 'etl_aws_long_term_control_group',
-    'schedule_interval': '00 10 * * 1',
+    'schedule_interval': '00 11 * * 1',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
