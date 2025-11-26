@@ -119,10 +119,19 @@ class GraficadorProductosHermanos:  # noqa: F811
         # Cargar confirmados desde DataFrame si se proporciona
         if hermanos_confirmados_df is not None and not hermanos_confirmados_df.empty:
             hermanos_confirmados_df.rename(columns={
-                    'SKU_ANTIGUO': 'sku_1',
-                    'SKU_NUEVO': 'sku_2',
-                    'NOMBRE_ANTIGUO': 'producto_1',
-                    'NOMBRE_NUEVO': 'producto_2'
+                'SKU_ANTIGUO': 'sku_1',
+                'SKU_NUEVO': 'sku_2',
+                'NOMBRE_ANTIGUO': 'producto_1',
+                'NOMBRE_NUEVO': 'producto_2',
+                'CATEGORIA': 'category',
+                'SUB_CATEGORIA': 'sub_category',
+                'MARCA': 'brand_desc',
+                'PESO_ANTIGUO': 'peso_1',
+                'PESO_NUEVO': 'peso_2',
+                'DIFF_PESO': 'diferencia_peso_%',
+                'TIPO_ENVASE': 'tipo_envase',
+                'FECHA_CONFIRMACION': 'fecha_confirmacion',
+                'FECHA_INTRODUCCION': 'fecha_introduccion'
                 }, inplace=True)  # noqa: PD002
             self.hermanos_confirmados = hermanos_confirmados_df.to_dict('records')
             print(f'Subidos {len(self.hermanos_confirmados)} hermanos confirmados desde DataFrame')
