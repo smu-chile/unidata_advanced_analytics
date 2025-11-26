@@ -118,6 +118,12 @@ class GraficadorProductosHermanos:  # noqa: F811
 
         # Cargar confirmados desde DataFrame si se proporciona
         if hermanos_confirmados_df is not None and not hermanos_confirmados_df.empty:
+            hermanos_confirmados_df.rename(columns={
+                    'SKU_ANTIGUO': 'sku_1',
+                    'SKU_NUEVO': 'sku_2',
+                    'NOMBRE_ANTIGUO': 'producto_1',
+                    'NOMBRE_NUEVO': 'producto_2'
+                }, inplace=True)  # noqa: PD002
             self.hermanos_confirmados = hermanos_confirmados_df.to_dict('records')
             print(f'Subidos {len(self.hermanos_confirmados)} hermanos confirmados desde DataFrame')
         else:
@@ -660,7 +666,7 @@ def main() -> None:
         df=df_confirmados_final,
         table_ddl_json_path=os.path.join('gbq_objects', 'sibling_products.json'),
         project=gcp_project,
-        if_exists='replace',
+        if_exists='append',
         gbq_client=gbq_client,
     )
     logging.info('Proceso completado con éxito!')
