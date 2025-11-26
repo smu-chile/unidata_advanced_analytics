@@ -92,7 +92,13 @@ WORKFLOW_QUERIES = QueryDict({
     ORDER BY
         A.TRANSACTION_DATE,
         A.SKU_PRODUCT
-        """
+        """,
+    'extraer_confirmados': """
+    SELECT
+        SKU_ANTIGUO,
+        SKU_NUEVO
+    FROM `${gcp_project}.DATOS_GENERALES.SIBLING_PRODUCTS`
+    """
 })
 
 # -------------------------------------------------------------------------
@@ -255,10 +261,6 @@ class GraficadorProductosHermanos:  # noqa: F811
                             self.limpiar_nombre(nombres.get(sku_i, '')))
                         nombre_j_limpio = self.ordenar_palabras(
                             self.limpiar_nombre(nombres.get(sku_j, '')))
-
-                        # Comparación exacta de nombres normalizados
-                        if nombre_i_limpio != nombre_j_limpio:
-                            continue  # descartar si no son iguales después de limpiar y ordenar
 
                         # Comparación exacta de nombres normalizados
                         if nombre_i_limpio != nombre_j_limpio:
@@ -603,7 +605,7 @@ class GraficadorProductosHermanos:  # noqa: F811
 # Main function
 # -------------------------------------------------------------------------
 def main() -> None:
-    # Parse input variables
+    # 1. Parse input variables
     args = vars(parser.parse_args())
     user: str = args['project_name']
     gcp_project: str = args['project_id']
@@ -611,11 +613,11 @@ def main() -> None:
     start_date = '2023-01-01'  # noqa: F841
     end_date = pendulum.parse(execution_date).format('YYYY-MM-DD')
 
-    # BigQuery client
+    # 2. BigQuery client
     gbq_client = Client()
     logging.info(f'Execution date: {execution_date}')
 
-    # 1. Leer datos desde BigQuery
+    # 3. Leer datos desde BigQuery
     logging.info('Reading ventas data from BigQuery...')
 
     query1 = WORKFLOW_QUERIES['nuevos_productos'].substitute(
@@ -632,27 +634,55 @@ def main() -> None:
         gbq_client=gbq_client,
     )
 
-    # 3. Ejecutar algoritmo con confirmados previos
+    # 4. Ejecutar algoritmo con confirmados previos
     graficador = GraficadorProductosHermanos(ventas_df)
     graficador.ejecutar_modo_automatico()
 
-    # 4. Exportar DataFrame final
-    logging.info('Preparando DataFrame final para BigQuery...')
-    df_confirmados_final = graficador.exportar_hermanos_confirmados()
 
-    if df_confirmados_final.empty:
+# 5. Exportar confirmados nuevos
+    df_confirmados = graficador.exportar_hermanos_confirmados()
+    if df_confirmados.empty:
         logging.warning('No se generaron hermanos confirmados')
         return
 
-    # 4. Subir resultado a BigQuery
-    logging.info('Subiendo tabla SIBLING_PRODUCTS a BigQuery...')
-    gbq_extended.uploadFrame(
-        df=df_confirmados_final,
-        table_ddl_json_path=os.path.join('gbq_objects', 'sibling_products.json'),
-        project=gcp_project,
-        if_exists='replace',
+    # 6. Leer confirmados existentes en BigQuery
+    logging.info('Leyendo hermanos confirmados existentes...')
+    query_existentes = WORKFLOW_QUERIES['extraer_confirmados'].substitute(gcp_project=gcp_project)
+    confirmados_existentes_df = gbq_extended.readBigQuery(
+        query=query_existentes,
+        user=user,
         gbq_client=gbq_client,
     )
+
+    # 7. Crear set de pares existentes (normalizados)
+    pares_existentes = set(  # noqa: C401
+        tuple(sorted([row['SKU_ANTIGUO'], row['SKU_NUEVO']]))
+        for _, row in confirmados_existentes_df.iterrows()
+        )
+
+    # 8. Filtrar nuevos confirmados para evitar duplicados
+    nuevos_confirmados_filtrados = []
+    for _, row in df_confirmados.iterrows():
+        par_normalizado = tuple(sorted([row['SKU_ANTIGUO'], row['SKU_NUEVO']]))
+        if par_normalizado not in pares_existentes:
+            nuevos_confirmados_filtrados.append(row)
+
+    df_final = pd.DataFrame(nuevos_confirmados_filtrados)
+
+    if df_final.empty:
+        logging.info('No hay nuevos pares para subir (todos eran duplicados)')
+        return
+
+    # 9. Subir resultado a BigQuery con append
+    logging.info(f'Subiendo {len(df_final)} nuevos pares a BigQuery...')
+    gbq_extended.uploadFrame(
+        df=df_final,
+        table_ddl_json_path=os.path.join('gbq_objects', 'sibling_products.json'),
+        project=gcp_project,
+        if_exists='append',
+        gbq_client=gbq_client,
+    )
+
     logging.info('Proceso completado con éxito!')
 
 if __name__ == '__main__':
