@@ -307,8 +307,7 @@ class GraficadorProductosHermanos:  # noqa: F811
                 'peso_1': peso_1,
                 'peso_2': peso_2,
                 'diferencia_peso_%': dif_peso,
-                'fecha_confirmacion': datetime.now().strftime('%Y-%m-%d'),  # noqa: DTZ005
-                'tipo_envase': row.get('tipo_envase', None)
+                'fecha_confirmacion': datetime.now().strftime('%Y-%m-%d')  # noqa: DTZ005
             }
 
             # Evitar duplicados
@@ -369,7 +368,6 @@ class GraficadorProductosHermanos:  # noqa: F811
                 'peso_1': 'PESO_ANTIGUO',
                 'peso_2': 'PESO_NUEVO',
                 'diferencia_peso_%': 'DIFF_PESO',
-                'tipo_envase': 'TIPO_ENVASE',
                 'fecha_confirmacion': 'FECHA_CONFIRMACION',
                 'fecha_introduccion': 'FECHA_INTRODUCCION'
             }, inplace=True)  # noqa: PD002
@@ -588,8 +586,7 @@ class GraficadorProductosHermanos:  # noqa: F811
                     'peso_1': row['peso_original'],
                     'peso_2': row['peso_nuevo'],
                     'diferencia_peso_%': row['diferencia_peso_%'],
-                    'fecha_confirmacion': datetime.now().strftime('%Y-%m-%d'),  # noqa: DTZ005
-                    'tipo_envase': row['tipo_envase']
+                    'fecha_confirmacion': datetime.now().strftime('%Y-%m-%d')  # noqa: DTZ005
                 })
 
         if confirmados:
