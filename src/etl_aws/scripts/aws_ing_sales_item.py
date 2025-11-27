@@ -5,9 +5,13 @@ import argparse
 import platform
 from logging import config
 
-# pip
 import boto3
+
+# pip
+import awswrangler as wr
 from google.cloud.bigquery import Client
+
+from common.gcp_extended.secretsmanager import getSecret
 
 
 # Local testing support
@@ -79,6 +83,7 @@ SQL_QUERIES = QueryDict({
 def main() -> None:  # noqa: D103
     # Parameters
     args = vars(parser.parse_args())
+    gcp_project_id: str = args['gcp_project_id']
     execution_date: str = args['execution_date']
     partition_value: str = args['partition_value']
 
@@ -110,17 +115,21 @@ def main() -> None:  # noqa: D103
     landing_path = 'views/datascience'
     table_name = 'TMP_LAB_SMU_SALES_ITEM_GCP'
 
-    sales_item.to_csv(f'{table_name}_{partition_value}.csv.gz',
-                        header=False, index=False, sep='|', compression='gzip',
-                        mode='w')
-
     # Upload to S3
-    s3_client = boto3.client('s3')
-    landing_uri = f'{landing_path}/{table_name}/{table_name}_{partition_value}.csv.gz'
-    s3_client.upload_file(f'{table_name}_{partition_value}.csv.gz',
-                              landing_bucket, landing_uri)
+    boto3_session=boto3.Session(
+            **getSecret(
+                project=gcp_project_id,
+                secret_name='bdaa_aws_credentials'  # noqa: S106
+            )
+        )
+
+    landing_uri = f's3://{landing_bucket}/{landing_path}/{table_name}/{table_name}_{partition_value}.csv.gz'
+    wr.s3.to_csv(sales_item,path=landing_uri,header=False,
+                 index=False,sep='|',compression='gzip',boto3_session =boto3_session)
+
+
     logging.info(f'File successfully uploaded to: {landing_uri}')
-    os.remove(f'{table_name}_{partition_value}.csv.gz')
+
 
 
 if __name__ == '__main__':

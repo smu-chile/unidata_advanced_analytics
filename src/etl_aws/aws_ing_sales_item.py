@@ -44,7 +44,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    PARTITION_VALUE =  "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y%m%d')) }}"  # noqa: E501
+    PARTITION_VALUE =  "{{ dag_run.conf.get('partition_value', dag.timezone.convert(data_interval_start).strftime('%Y%m%d')) }}"  # noqa: E501
     aws_ing_sales_item = DataprocCreateBatchOperator(
         task_id = 'aws_ing_sales_item',
 
