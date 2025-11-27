@@ -83,7 +83,7 @@ SQL_QUERIES = QueryDict({
 def main() -> None:  # noqa: D103
     # Parameters
     args = vars(parser.parse_args())
-    gcp_project_id: str = args['gcp_project_id']
+    gcp_project_id: str = args['project_id']
     execution_date: str = args['execution_date']
     partition_value: str = args['partition_value']
 
