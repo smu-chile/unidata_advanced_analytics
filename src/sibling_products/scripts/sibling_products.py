@@ -506,6 +506,14 @@ class GraficadorProductosHermanos:  # noqa: F811
         correlacion = analisis_ventas.get('correlacion', 0)
         fecha_introduccion = analisis_ventas.get('fecha_introduccion')
 
+        # Si el producto nuevo tiene menos de 4 meses desde su introducción
+        # entonces no puede ser hermano
+        if pd.notna(fecha_introduccion):
+            dias_desde_introduccion = (pendulum.parse(self.execution_date)
+                                       - fecha_introduccion).days
+            if dias_desde_introduccion < 120:  # 4 meses ≈ 120 días
+                return False
+
         # Regla: verificar historial previo del producto antiguo (mínimo 60 días)  # noqa: W505
         fecha_inicio_original = self.df[self.df['SKU'] == analisis_ventas.get(
             'sku_original', '')]['fecha'].min()
