@@ -78,11 +78,7 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
                 # Main file arguments
                 'args': [
                     '--project_id', dag_env_config['project_id'],
-                    '--execution_date', EXECUTION_DATE,
-                    '--periodo', "{{ dag_run.conf.get('periodo', 202301) }}",
-                    '--periodo_n1', "{{ dag_run.conf.get('periodo_n1', 202301) }}",
-                    '--fecha_ini', "{{ dag_run.conf.get('fecha_ini', '2023-01-01') }}",
-                    '--fecha_fin', "{{ dag_run.conf.get('fecha_fin', '2023-02-01') }}"
+                    '--execution_date', EXECUTION_DATE
                 ],
             },
 

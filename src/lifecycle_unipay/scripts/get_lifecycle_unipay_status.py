@@ -21,6 +21,7 @@ from common.databases.queries import QueryDict  # noqa: F401
 from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
+    deleteFromTable,  # noqa: F401
     createTableFromJSON,
 )
 
@@ -40,23 +41,6 @@ parser.add_argument(
     '--execution_date', type=str,
     help='DAG execution date'
 )
-parser.add_argument(
-    '--periodo', type=int,
-    help='period to calculate'
-)
-parser.add_argument(
-    '--periodo_n1', type=int,
-    help='period to get last status'
-)
-parser.add_argument(
-    '--fecha_ini', type=str,
-    help='initial date'
-)
-parser.add_argument(
-    '--fecha_fin', type=str,
-    help='final date'
-)
-
 
 # -------------------------------------------------------------------------
 #  SQL Queries
@@ -262,10 +246,6 @@ def main():
     args = vars(parser.parse_args())
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']  # noqa: F841
-    periodo: int = args['periodo']
-    periodo_n1: int = args['periodo_n1']
-    fecha_ini: str = args['fecha_ini']
-    fecha_fin: str = args['fecha_fin']
     logging.info(f'execution_date: {execution_date}')
 
     # Set gbq client for all subsequent queries
@@ -273,6 +253,13 @@ def main():
 
     # Periodo inicial ciclo vida unipay
     periodo_inicio = 202301
+
+    # Variables de tiempo relacionadas a las queries
+    fecha = pendulum.parse(execution_date)
+    periodo = fecha.subtract(months=1).strftime('%Y%m')
+    periodo_n1 = fecha.subtract(months=2).strftime('%Y%m')
+    fecha_ini = fecha.subtract(months=1).start_of('month').strftime('%Y-%m-%d')
+    fecha_fin = fecha.start_of('month').strftime('%Y-%m-%d')
 
     logging.info(' ')
     logging.info('--------------------')
@@ -996,6 +983,14 @@ def main():
     logging.info('--------------------')
     logging.info('Termina el proceso del calculo de estado')
     logging.info('--------------------')
+
+
+    deleteFromTable(
+    table_ref='cl-bigdata-analytics-preprod.UNIPAY.LIFECYCLE_UNIPAY_STATUS',
+    where_clause=f"monthid = '{periodo}'",
+    gbq_client=gbq_client,
+    )
+    logging.info(f'Se borra la partición actual de {periodo}')
 
 
     uploadFrame(
