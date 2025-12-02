@@ -718,8 +718,6 @@ def main() -> None:  # noqa: D103
 
 
 
-
-
     # Si el mes anterior no es el mes0, entonces hay que obtener la
     # segmentación anterior.
     else:

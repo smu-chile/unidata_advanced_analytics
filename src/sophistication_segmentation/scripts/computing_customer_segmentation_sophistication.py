@@ -268,6 +268,7 @@ def calcular_año_mes_final(año_mes_inicial: str) -> str:
     # Convertir la fecha final de vuelta a string
     return fecha_final.strftime('%Y-%m')
 
+
 def calcular_año_mes_inicial(año_mes_final: str) -> str:
     """Calcula fecha inicial retrocediendo 12 meses desde una fecha final.
 
