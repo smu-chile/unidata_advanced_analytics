@@ -428,7 +428,7 @@ def main() -> None:  # noqa: D103
 
     # Tabla temporal aux
     esquema = 'TMP'
-    tabla = f'TMP_REGRESSION_DATA_{use}_aux'
+    tabla = f'TMP_REGRESSION_DATA_{use}_aux_{store_banner}'
     tmp_path_table_aux = f'{proyecto}.{esquema}.{tabla}'
 
     # Tabla temporal final
@@ -523,7 +523,7 @@ def main() -> None:  # noqa: D103
 
 
     ahora = pendulum.now()
-    expiration = ahora.add(minutes=20)
+    expiration = ahora.add(minutes=200)
 
     setTableExpiration(
         table_ref = tmp_path_table_aux,
