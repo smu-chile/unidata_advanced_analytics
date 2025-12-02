@@ -116,7 +116,7 @@ def moveDataframeToS3(
         landing_bucket: str, landing_path: str = 'views/datascience',
         table_name: str = 'T_DATASOURCE',
         partition_value: str = pendulum.today().strftime('%Y%m%d'),
-        column_types: [str] | None = None, boto3_session: Session = None, **kwargs
+        column_types: list[str] | None = None, boto3_session: Session = None, **kwargs
     ) -> None:
     """Move a dataframe into a csv file in S3 in order to
      facilitate the creation of an external table.
@@ -160,7 +160,7 @@ def moveDataframeToS3(
     wr.s3.to_csv(df_file,
                  path=landing_uri,
                  boto3_session =boto3_session,
-                 header=False, index=False, sep='|', compression='gzip'
+                 header=False, index=False, sep='|', compression='gzip',
                  **kwargs)
 
 if __name__ == '__main__':
