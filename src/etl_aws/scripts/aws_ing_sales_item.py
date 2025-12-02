@@ -8,7 +8,6 @@ from logging import config
 import boto3
 
 # pip
-import awswrangler as wr
 from google.cloud.bigquery import Client
 
 from common.gcp_extended.secretsmanager import getSecret
@@ -21,6 +20,7 @@ if 'windows' in platform.platform().lower():
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
+from common.aws_extended.athena import moveDataframeToS3
 from common.gcp_extended.bigquery import readBigQuery
 
 
@@ -87,6 +87,8 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     partition_value: str = args['partition_value']
 
+    landing_bucket = 'smu-datalake-test-landing'
+    landing_path = 'views/datascience'
     # Load data from SharePoint to pandas DataFrame
     logging.info('Load the file to DataFrame')
 
@@ -100,19 +102,7 @@ def main() -> None:  # noqa: D103
     column_types = ['str', 'str', 'Int64', 'str', 'str', 'str', 'str', 'str',
                     'str', 'float', 'float', 'float', 'float', 'str', 'str',
                     'Int64', 'str', 'float', 'float']
-    if sales_item.shape[1] != len(column_types):
-        err_msg = ("Enforced column types list doesn't have "
-                    'the same column size than DataFrame. '
-                    f'df col lenght is {sales_item.shape[1]} while type '
-                    f'list is {len(column_types)}')
-        raise Exception(err_msg)
-    # Formatting
-    logging.info(sales_item)
-    logging.info(sales_item.columns)
-    sales_item = sales_item.astype(dict(zip(sales_item.columns, column_types)))
 
-    landing_bucket = 'smu-datalake-test-landing'
-    landing_path = 'views/datascience'
     table_name = 'TMP_LAB_SMU_SALES_ITEM_GCP'
 
     # Upload to S3
@@ -122,13 +112,16 @@ def main() -> None:  # noqa: D103
                 secret_name='bdaa_aws_credentials'  # noqa: S106
             )
         )
+    moveDataframeToS3(df_file=sales_item,
+                      landing_bucket=landing_bucket,
+                      landing_path=landing_path,
+                      table_name=table_name,
+                      partition_value=partition_value,
+                      column_types=column_types,
+                      boto3_session=boto3_session
+                      )
 
-    landing_uri = f's3://{landing_bucket}/{landing_path}/{table_name}/{table_name}_{partition_value}.csv.gz'
-    wr.s3.to_csv(sales_item,path=landing_uri,header=False,
-                 index=False,sep='|',compression='gzip',boto3_session =boto3_session)
-
-
-    logging.info(f'File successfully uploaded to: {landing_uri}')
+    logging.info(f'File successfully uploaded to: {landing_bucket}/{landing_path}')
 
 
 

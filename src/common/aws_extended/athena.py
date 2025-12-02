@@ -1,6 +1,8 @@
 """Usefull functions that extend AWS Wrangler functionality for Athena."""
 # pip
+
 import pandas as pd
+import pendulum
 import awswrangler as wr
 from boto3 import Session
 
@@ -108,6 +110,58 @@ def createTableAsSelect(
     )
     return s3_table_output, delete_table_response, ctas_response
 
+
+def moveDataframeToS3(
+        df_file : pd.DataFrame,
+        landing_bucket: str, landing_path: str = 'views/datascience',
+        table_name: str = 'T_DATASOURCE',
+        partition_value: str = pendulum.today().strftime('%Y%m%d'),
+        column_types: [str] | None = None, boto3_session: Session = None, **kwargs
+    ) -> None:
+    """Move a dataframe into a csv file in S3 in order to
+     facilitate the creation of an external table.
+
+    Parameters
+    ----------
+    df_file : pd.Dataframe
+        Dataframe to be transformed into a csv to be uploaded
+    landing_bucket : str
+        Bucket name in which the file will be dumped
+    landing_path : str, defaults = 'views/datascience'
+        Path to dir inside the bucket in which the file will be dumped
+    table_name : str, defaults = 'T_DATASOURCE'
+        Name of the Athena table. The same name is used for the file name
+        inside the bucket
+    partition_value : str, defaults todays date
+        Date of the query to be used in the file name as the Athena table
+        partition
+    column_types : str, optional
+        Types in which the columns will be formated if passed
+    boto3_session : Session, optional
+        Custom Boto3 session to connect to s3
+    **kwargs
+        Arguments passed on to the ``wr.athena.create_ctas_table`` function
+
+    Returns
+    -------
+    s3_table_output : str
+        S3 URI with the table content otuput
+    """
+    if column_types :
+    #Check if columns fit the shape od dataframe
+        if df_file.shape[1] != len(column_types):
+            err_msg = ("Enforced column types list doesn't have "
+                        'the same column size than DataFrame. '
+                        f'df col lenght is {df_file.shape[1]} while type '
+                        f'list is {len(column_types)}')
+            raise Exception(err_msg)
+        df_file = df_file.astype(dict(zip(df_file.columns, column_types)))
+    landing_uri = f's3://{landing_bucket}/{landing_path}/{table_name}/{table_name}_{partition_value}.csv.gz'
+    wr.s3.to_csv(df_file,
+                 path=landing_uri,
+                 boto3_session =boto3_session,
+                 header=False, index=False, sep='|', compression='gzip'
+                 **kwargs)
 
 if __name__ == '__main__':
     err_msg = 'This file is only meant to be imported.'
