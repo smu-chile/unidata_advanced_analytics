@@ -20,18 +20,18 @@ with open(
 
 PROJECT_NAME = 'etl_aws'
 dag_args = {
-    'dag_id': 'etl_aws_long_term_control_group',
-    'schedule_interval': '00 11 * * 1',
+    'dag_id': 'etl_aws_ing_sales_item',
+    'schedule_interval': '0 8 * * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME, 'ecastrot'],
+    'tags': [PROJECT_NAME, 'csotob'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
-        'email': ['ecastrot@unidata.cl'],
+        'email': ['csotob@unidata.cl'],
         'start_date': None,
         'depends_on_past': False,
         'catchup': False,
@@ -43,10 +43,10 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-
-    move_long_term_control_group = DataprocCreateBatchOperator(
-        task_id = 'move_long_term_control_group',
+    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
+    PARTITION_VALUE =  "{{ dag_run.conf.get('partition_value', dag.timezone.convert(data_interval_start).strftime('%Y%m%d')) }}"  # noqa: E501
+    aws_ing_sales_item = DataprocCreateBatchOperator(
+        task_id = 'aws_ing_sales_item',
 
         batch = {
             'pyspark_batch': {
@@ -55,7 +55,7 @@ with DAG(**dag_args) as dag:
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'long_term_control_group.py'
+                    'aws_ing_sales_item.py'
                 ),
                 # Common files
                 'python_file_uris': [
@@ -75,6 +75,7 @@ with DAG(**dag_args) as dag:
                 'args': [
                     '--project_id', dag_env_config['project_id'],
                     '--execution_date', EXECUTION_DATE,
+                    '--partition_value', PARTITION_VALUE,
                 ],
             },
 

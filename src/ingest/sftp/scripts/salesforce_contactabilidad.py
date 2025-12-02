@@ -53,9 +53,11 @@ def cleaning_func(df_file: pd.DataFrame, execution_date: str) -> pd.DataFrame:
     """
     logging.info('Before cleaning:', df_file)
 
-    campos_fechas = ['FechaRegistro', 'FechaValidacionEmail', 'FechaValidacionWhatsapp']
+    campos_fechas = ['FechaRegistro', 'FechaValidacionEmail',
+                     'FechaValidacionWhatsapp','FechaNacimiento']
     for campo in campos_fechas:
-        df_file[campo] = pd.to_datetime(df_file[campo],format='ISO8601', dayfirst= True)
+        if campo in df_file.columns:
+            df_file[campo] = pd.to_datetime(df_file[campo],format='ISO8601', dayfirst= True)
 
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
     logging.info('After cleaning:', df_file)
@@ -71,7 +73,7 @@ def main() -> None:  # noqa: D103
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
     execution_date: str = args['execution_date']
-    formatos = ['alvi']
+    formatos = ['alvi', 'm10s10']
 
     # Set all clients
 
@@ -95,6 +97,7 @@ def main() -> None:  # noqa: D103
         ftp = paramiko.SFTPClient.from_transport(
             ssh_session
         )
+        formato = formato.replace('m10','')
         formato_name = formato.upper()
         #table definitions jsons
         json = f'CRM_DATA_SF_CONTACTABILIDAD_{formato_name}.json'

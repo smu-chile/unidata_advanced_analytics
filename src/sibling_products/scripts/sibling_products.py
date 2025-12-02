@@ -68,7 +68,8 @@ WORKFLOW_QUERIES = QueryDict({
         CONTENIDO_BRUTO
     FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
     ) P ON A.EAN = P.EAN
-    JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_SKU_ATTR` ATTR ON A.SKU_PRODUCT = REPLACE(ATTR.SKU_NK,'SKU^CL^SMC^','')
+    JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_SKU_ATTR` ATTR ON A.SKU_PRODUCT =
+        REPLACE(ATTR.SKU_NK,'SKU^CL^SMC^','')
     JOIN `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_ENVASE` ENVA ON ATTR.envase = ENVA.codigo
     WHERE
         A.transaction_date BETWEEN '${start_date}' AND '${end_date}'
@@ -91,7 +92,13 @@ WORKFLOW_QUERIES = QueryDict({
     ORDER BY
         A.TRANSACTION_DATE,
         A.SKU_PRODUCT
-        """# noqa: E501
+        """,
+    'extraer_confirmados': """
+    SELECT
+        SKU_ANTIGUO,
+        SKU_NUEVO
+    FROM `${gcp_project}.DATOS_GENERALES.SIBLING_PRODUCTS`
+    """
 })
 
 # -------------------------------------------------------------------------
@@ -111,6 +118,21 @@ class GraficadorProductosHermanos:  # noqa: F811
 
         # Cargar confirmados desde DataFrame si se proporciona
         if hermanos_confirmados_df is not None and not hermanos_confirmados_df.empty:
+            hermanos_confirmados_df.rename(columns={
+                'SKU_ANTIGUO': 'sku_1',
+                'SKU_NUEVO': 'sku_2',
+                'NOMBRE_ANTIGUO': 'producto_1',
+                'NOMBRE_NUEVO': 'producto_2',
+                'CATEGORIA': 'category',
+                'SUB_CATEGORIA': 'sub_category',
+                'MARCA': 'brand_desc',
+                'PESO_ANTIGUO': 'peso_1',
+                'PESO_NUEVO': 'peso_2',
+                'DIFF_PESO': 'diferencia_peso_%',
+                'TIPO_ENVASE': 'tipo_envase',
+                'FECHA_CONFIRMACION': 'fecha_confirmacion',
+                'FECHA_INTRODUCCION': 'fecha_introduccion'
+                }, inplace=True)  # noqa: PD002
             self.hermanos_confirmados = hermanos_confirmados_df.to_dict('records')
             print(f'Subidos {len(self.hermanos_confirmados)} hermanos confirmados desde DataFrame')
         else:
@@ -217,7 +239,6 @@ class GraficadorProductosHermanos:  # noqa: F811
                 nombres = group.set_index('SKU')['NM'].to_dict()
                 pesos = group.set_index('SKU')['CONTENIDO_BRUTO'].to_dict()
                 categorias = group.set_index('SKU')['CAT_DSC'].to_dict()
-                envases = group.set_index('SKU')['tipo_envase'].to_dict()
 
                 for i in range(len(skus)):
                     for j in range(i + 1, len(skus)):
@@ -232,13 +253,6 @@ class GraficadorProductosHermanos:  # noqa: F811
                             continue
                         diferencia = abs(peso_i - peso_j) / min(peso_i, peso_j)
 
-                        # Verificar igualdad de envase
-                        envase_i = envases.get(sku_i, '')
-                        envase_j = envases.get(sku_j, '')
-
-                        if envase_i != envase_j:
-                            continue
-
                         # Solo emparejar si son pesos diferentes
                         pesos_son_diferentes = peso_i != peso_j
 
@@ -247,10 +261,6 @@ class GraficadorProductosHermanos:  # noqa: F811
                             self.limpiar_nombre(nombres.get(sku_i, '')))
                         nombre_j_limpio = self.ordenar_palabras(
                             self.limpiar_nombre(nombres.get(sku_j, '')))
-
-                        # Comparación exacta de nombres normalizados
-                        if nombre_i_limpio != nombre_j_limpio:
-                            continue  # descartar si no son iguales después de limpiar y ordenar
 
                         # Comparación exacta de nombres normalizados
                         if nombre_i_limpio != nombre_j_limpio:
@@ -273,8 +283,7 @@ class GraficadorProductosHermanos:  # noqa: F811
                                 'peso_original': peso_i,
                                 'peso_nuevo': peso_j,
                                 'diferencia_peso_%': round(diferencia * 100, 1),
-                                'mismo_peso' : peso_i == peso_j,
-                                'tipo_envase' : envase_i == envase_j
+                                'mismo_peso' : peso_i == peso_j
                             })
 
         print(f'Encontrados {len(candidatos)} pares válidos')
@@ -300,8 +309,7 @@ class GraficadorProductosHermanos:  # noqa: F811
                 'peso_1': peso_1,
                 'peso_2': peso_2,
                 'diferencia_peso_%': dif_peso,
-                'fecha_confirmacion': datetime.now().strftime('%Y-%m-%d'),  # noqa: DTZ005
-                'tipo_envase': row.get('tipo_envase', None)
+                'fecha_confirmacion': datetime.now().strftime('%Y-%m-%d')  # noqa: DTZ005
             }
 
             # Evitar duplicados
@@ -362,7 +370,6 @@ class GraficadorProductosHermanos:  # noqa: F811
                 'peso_1': 'PESO_ANTIGUO',
                 'peso_2': 'PESO_NUEVO',
                 'diferencia_peso_%': 'DIFF_PESO',
-                'tipo_envase': 'TIPO_ENVASE',
                 'fecha_confirmacion': 'FECHA_CONFIRMACION',
                 'fecha_introduccion': 'FECHA_INTRODUCCION'
             }, inplace=True)  # noqa: PD002
@@ -484,7 +491,8 @@ class GraficadorProductosHermanos:  # noqa: F811
         'datos_original': datos_original_completo,
         'datos_nuevo': datos_nuevo_completo,
         'ventas_promedio': ventas_promedio,
-        'ventas_combinadas_despues': ventas_combinadas_despues
+        'ventas_combinadas_despues': ventas_combinadas_despues,
+        'sku_original': sku_original
         }
 
     def determinar_si_son_hermanos(self, analisis_ventas):
@@ -494,13 +502,37 @@ class GraficadorProductosHermanos:  # noqa: F811
         # Extraer métricas
         ventas_antes = analisis_ventas.get('ventas_antes', 0)
         ventas_despues_nuevo = analisis_ventas.get('ventas_despues_nuevo', 0)
+        ventas_despues_original = analisis_ventas.get('ventas_despues_original', 0)
         correlacion = analisis_ventas.get('correlacion', 0)
+        fecha_introduccion = analisis_ventas.get('fecha_introduccion')
+
+        # Si el producto nuevo tiene menos de 4 meses desde su introducción
+        # entonces no puede ser hermano
+        if pd.notna(fecha_introduccion):
+            dias_desde_introduccion = (pendulum.parse(self.execution_date)
+                                       - fecha_introduccion).days
+            if dias_desde_introduccion < 120:  # 4 meses ≈ 120 días
+                return False
+
+        # Regla: verificar historial previo del producto antiguo (mínimo 60 días)  # noqa: W505
+        fecha_inicio_original = self.df[self.df['SKU'] == analisis_ventas.get(
+            'sku_original', '')]['fecha'].min()
+        dias_historial = (fecha_introduccion - fecha_inicio_original).days if pd.notna(
+            fecha_inicio_original) else 0
+        if dias_historial < 60:  # menos de 2 meses de historial
+            return False
 
         # Calcular diferencia porcentual entre promedios
         diferencia_porcentual = ((ventas_despues_nuevo - ventas_antes)
                                  / ventas_antes) * 100 if ventas_antes > 0 else 0
 
-        # Regla 1: Si el nuevo vende más del doble que el viejo NO hermanos
+        # Nueva regla: reducción del 50% en ventas del producto antiguo
+        if ventas_antes > 0:
+            reduccion = ((ventas_antes - ventas_despues_original) / ventas_antes) * 100
+            if reduccion < 50:
+                return False
+
+        # Regla 1: Si el nuevo vende más del doble que el antiguo NO hermanos  # noqa: W505
         if diferencia_porcentual >= 100:
             return False
 
@@ -564,8 +596,7 @@ class GraficadorProductosHermanos:  # noqa: F811
                     'peso_1': row['peso_original'],
                     'peso_2': row['peso_nuevo'],
                     'diferencia_peso_%': row['diferencia_peso_%'],
-                    'fecha_confirmacion': datetime.now().strftime('%Y-%m-%d'),  # noqa: DTZ005
-                    'tipo_envase': row['tipo_envase']
+                    'fecha_confirmacion': datetime.now().strftime('%Y-%m-%d')  # noqa: DTZ005
                 })
 
         if confirmados:
@@ -582,7 +613,7 @@ class GraficadorProductosHermanos:  # noqa: F811
 # Main function
 # -------------------------------------------------------------------------
 def main() -> None:
-    # Parse input variables
+    # 1. Parse input variables
     args = vars(parser.parse_args())
     user: str = args['project_name']
     gcp_project: str = args['project_id']
@@ -590,11 +621,11 @@ def main() -> None:
     start_date = '2023-01-01'  # noqa: F841
     end_date = pendulum.parse(execution_date).format('YYYY-MM-DD')
 
-    # BigQuery client
+    # 2. BigQuery client
     gbq_client = Client()
     logging.info(f'Execution date: {execution_date}')
 
-    # 1. Leer datos desde BigQuery
+    # 3. Leer datos desde BigQuery
     logging.info('Reading ventas data from BigQuery...')
 
     query1 = WORKFLOW_QUERIES['nuevos_productos'].substitute(
@@ -611,27 +642,55 @@ def main() -> None:
         gbq_client=gbq_client,
     )
 
-    # 3. Ejecutar algoritmo con confirmados previos
+    # 4. Ejecutar algoritmo con confirmados previos
     graficador = GraficadorProductosHermanos(ventas_df)
     graficador.ejecutar_modo_automatico()
 
-    # 4. Exportar DataFrame final
-    logging.info('Preparando DataFrame final para BigQuery...')
-    df_confirmados_final = graficador.exportar_hermanos_confirmados()
 
-    if df_confirmados_final.empty:
+# 5. Exportar confirmados nuevos
+    df_confirmados = graficador.exportar_hermanos_confirmados()
+    if df_confirmados.empty:
         logging.warning('No se generaron hermanos confirmados')
         return
 
-    # 4. Subir resultado a BigQuery
-    logging.info('Subiendo tabla SIBLING_PRODUCTS a BigQuery...')
+    # 6. Leer confirmados existentes en BigQuery
+    logging.info('Leyendo hermanos confirmados existentes...')
+    query_existentes = WORKFLOW_QUERIES['extraer_confirmados'].substitute(gcp_project=gcp_project)
+    confirmados_existentes_df = gbq_extended.readBigQuery(
+        query=query_existentes,
+        user=user,
+        gbq_client=gbq_client,
+    )
+
+    # 7. Crear set de pares existentes (normalizados)
+    pares_existentes = set(  # noqa: C401
+        tuple(sorted([row['SKU_ANTIGUO'], row['SKU_NUEVO']]))
+        for _, row in confirmados_existentes_df.iterrows()
+        )
+
+    # 8. Filtrar nuevos confirmados para evitar duplicados
+    nuevos_confirmados_filtrados = []
+    for _, row in df_confirmados.iterrows():
+        par_normalizado = tuple(sorted([row['SKU_ANTIGUO'], row['SKU_NUEVO']]))
+        if par_normalizado not in pares_existentes:
+            nuevos_confirmados_filtrados.append(row)
+
+    df_final = pd.DataFrame(nuevos_confirmados_filtrados)
+
+    if df_final.empty:
+        logging.info('No hay nuevos pares para subir (todos eran duplicados)')
+        return
+
+    # 9. Subir resultado a BigQuery con append
+    logging.info(f'Subiendo {len(df_final)} nuevos pares a BigQuery...')
     gbq_extended.uploadFrame(
-        df=df_confirmados_final,
+        df=df_final,
         table_ddl_json_path=os.path.join('gbq_objects', 'sibling_products.json'),
         project=gcp_project,
         if_exists='append',
         gbq_client=gbq_client,
     )
+
     logging.info('Proceso completado con éxito!')
 
 if __name__ == '__main__':

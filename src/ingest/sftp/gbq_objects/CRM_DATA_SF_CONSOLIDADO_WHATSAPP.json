@@ -1,0 +1,81 @@
+{
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_CONSOLIDADO_WHATSAPP",
+
+    "columns": [
+        {
+            "name": "ORGANIZATION_ID",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED",
+            "description" : "ID Organización/Formato."
+        },
+        {
+            "name": "FORMATO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description" : "Nombre Formato."
+        },
+        {
+            "name": "CHANNEL_TYPE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description" : "Canal (i.e, WhatsApp)."
+        },
+        {
+            "name": "CHANNEL_ID",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "ASSET_ID",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ACTIVITY_NAME",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SENDS",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Número de envíos."
+        },
+        {
+            "name": "DELIVERIES",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description" : "Número de entregas."
+        },
+        {
+            "name": "BOUNCES",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Número de rebotes."
+        },
+        {
+            "name": "OPENS",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description" : "Número de aperturas."
+        },
+        {
+            "name": "DATE",
+            "field_type": "DATE",
+            "mode": "NULLABLE",
+            "description" : "Fecha de evento."
+        },
+        {
+            "name": "TIME",
+            "field_type": "TIME",
+            "mode": "NULLABLE",
+            "description" : "Tiempo de evento."
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "NULLABLE"
+        }       
+    ]
+}
