@@ -54,12 +54,16 @@ def cleaning_func(df:pd.DataFrame,mes_carga:str)->pd.DataFrame:
     mes_carga : str
         Upload month to be added as a new field.
     """
-    logging.info('Before cleaning:', df)
-    mes = df.columns[1].split(' ')[3]
+    logging.info(f'Before cleaning: {df}')
+    try:
+        mes = df.columns[1].split(' ')[3]
+    except IndexError:
+        mes = df.iloc[0,1].split(' ')[3]
+
     #Drop first 2 rows and last 4 columns
     df = df[2:]  # noqa: PD901
     df = df.iloc[:, :17]  # noqa: PD901
-    logging.info('shape: %s', df.shape)
+    logging.info(f'shape: {df.shape}')
     #rename columns
     df.columns = ['id','nombre_proveedor', 'proveedor','n_cabecera','tipo_evento',
                   'fecha_inicio','fecha_termino','articulo','ean','descripcion',
@@ -74,10 +78,11 @@ def cleaning_func(df:pd.DataFrame,mes_carga:str)->pd.DataFrame:
 
     df['importe_sell_out'] = df['importe_sell_out'].astype('Float64').astype('Int64')
     df['factor'] = df['factor'].astype('Float64').astype('Int64')
+    df['ean'] = df['ean'].astype('Float64').astype('Int64')
     #Agregar mes
     df['mes'] = mes
     df['mes_carga'] = pd.to_datetime(mes_carga,format='%Y%m')
-    logging.info('After cleaning:', df)
+    logging.info(f'After cleaning: {df}')
     return df
 
 # -------------------------------------------------------------------------
@@ -100,8 +105,7 @@ def main() -> None:  # noqa: D103
         '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
         'Pricing/SellOut/SellOut Consolidado/'
     )
-    #Cambiar nombre de input:file y la logica de renombrar a
-    # 'Procesado-' en GCP cuando se depreque en aws, eventualmente
+
     input_files = {
         's10': f'{file_site}/S10/PROCESADO-Sellout_S10_{execution_month}.xlsx',
         'm10': f'{file_site}/M10/PROCESADO-Sellout_M10_{execution_month}.xlsx',

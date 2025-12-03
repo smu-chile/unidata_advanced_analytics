@@ -102,8 +102,7 @@ def main() -> None:  # noqa: D103
     gbq_client = bigquery.Client()
     #input files
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Pricing/SellOut'
-    #Cambiar nombre de input:file y la logica de renombrar a
-    # 'Procesado-' en GCP cuando se depreque en aws, eventualmente
+
     input_file =  f'{file_site}/SellOut ID_0 Unimarc/PROCESADO-Sellout_{execution_month}.xlsx'
     #table definitions jsons
     json = 'sellout_unimarc.json'
