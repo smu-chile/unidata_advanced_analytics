@@ -19,7 +19,6 @@ if 'windows' in platform.platform().lower():
     sys.path.append(os.path.join(os.path.abspath(__file__), '..', '..', '..'))
 # Own
 from common.constants import LOGGING_CONFIG
-from common.databases.queries import QueryDict
 from common.aws_extended.athena import moveDataframeToS3
 from common.gcp_extended.bigquery import readBigQuery
 
@@ -46,7 +45,7 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 #  Config
 # -------------------------------------------------------------------------
-SQL_QUERIES = QueryDict({
+SQL_QUERIES = {
     'dim_campaign_dh': """
     SELECT
     ORGANIZATION_ID,
@@ -248,7 +247,7 @@ SQL_QUERIES = QueryDict({
     SUPPLIER_NM
     FROM cl-bigdata-analytics-preprod.CDA_VISTAS.VW_DIM_SUPPLIER
     """
-})
+}
 
 # -------------------------------------------------------------------------
 # Main function

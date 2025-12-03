@@ -19,6 +19,7 @@ if 'windows' in platform.platform().lower():
     sys.path.append(os.path.join(os.path.abspath(__file__), '..', '..', '..'))
 # Own
 from common.constants import LOGGING_CONFIG
+from common.databases.queries import QueryDict
 from common.aws_extended.athena import moveDataframeToS3
 from common.gcp_extended.bigquery import readBigQuery
 
@@ -48,7 +49,7 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 #  Config
 # -------------------------------------------------------------------------
-SQL_QUERIES = {
+SQL_QUERIES = QueryDict({
     'sales_item': """
     SELECT
     TO_BASE64(MARKET_BASKET_KEY) AS MARKET_BASKET_KEY_GCP,
@@ -74,7 +75,7 @@ SQL_QUERIES = {
     left join cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID id using (customer_key)
     WHERE TRANSACTION_DATE = '${execution_date}'
     """,
-}
+})
 
 # -------------------------------------------------------------------------
 # Main function
