@@ -71,7 +71,7 @@ SQL_QUERIES = QueryDict({    # Region: Explicación de query
     'query_pesos':
     """
     SELECT distinct ean,
-                    CAST(CONT_CONV_UMB AS float64) * CAST(CONT_CONV_UMB AS int) as peso_total_ean
+                    CAST(CONTENIDO_BRUTO AS float64) * CAST(CONT_CONV_UMB AS int) as peso_total_ean
     FROM `${proyecto}.CDA_VISTAS.VW_DIM_PRODUCT`
     """
 })
