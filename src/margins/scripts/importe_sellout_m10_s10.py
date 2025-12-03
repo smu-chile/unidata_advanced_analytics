@@ -74,6 +74,7 @@ def cleaning_func(df:pd.DataFrame,mes_carga:str)->pd.DataFrame:
 
     df['importe_sell_out'] = df['importe_sell_out'].astype('Float64').astype('Int64')
     df['factor'] = df['factor'].astype('Float64').astype('Int64')
+    df['ean'] = df['ean'].astype('Float64').astype('Int64')
     #Agregar mes
     df['mes'] = mes
     df['mes_carga'] = pd.to_datetime(mes_carga,format='%Y%m')
