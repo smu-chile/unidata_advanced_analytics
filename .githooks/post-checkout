@@ -24,7 +24,7 @@ def main() -> None:
         stdout=subprocess.PIPE
     ).stdout.decode().strip()
     new_branch = 'prod' if (
-        (not 'preprod' in new_branch) and ('prod_' in new_branch)
+        (not 'preprod' in new_branch) and ('prod' in new_branch)
     ) else 'dev'
 
     # Replace text in VSC config
