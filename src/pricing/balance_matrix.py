@@ -269,8 +269,8 @@ with DAG(**dag_args) as dag:
                         'spark.executor.instances': '2',
                         'spark.executor.cores': '4',
                         'spark.executor.memory': '4096m',
-                        'spark.driver.cores': '4',
-                        'spark.driver.memory': '20g',
+                        'spark.driver.cores': '8',
+                        'spark.driver.memory': '40g',
                     },
                 },
                 'environment_config': {
