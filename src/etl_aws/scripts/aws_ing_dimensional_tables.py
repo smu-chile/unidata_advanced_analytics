@@ -270,7 +270,7 @@ def main() -> None:  # noqa: D103
         'dim_campaign_dh' : ['int', 'int', 'str', 'str', 'str', 'str', 'str', 'str', 'str'],
         'dim_date' :  ['str', 'str', 'Int64', 'Int64', 'Int64', 'int', 'str', 'str', 'Int64',
                        'str', 'str', 'Int64', 'str', 'Int64', 'str', 'Int64', 'int',
-                       'Int64', 'Int64'],
+                       'str', 'str'],
         'dim_fin_doc_tp_type' : ['str', 'str', 'str'],
         'dim_product' : ['str', 'str', 'str', 'float', 'float', 'float', 'float',
                          'float', 'str', 'str', 'str', 'str', 'str', 'str', 'str',
