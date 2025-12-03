@@ -61,7 +61,7 @@ SQL_QUERIES = {
     """,
     'dim_date' : """
     SELECT
-    TO_BASE65(DATE_KEY),
+    TO_BASE64(DATE_KEY),
     DATE_VALUE,
     CALENDAR_DAY_OF_MONTH,
     CALENDAR_DAY_OF_QUARTER,
