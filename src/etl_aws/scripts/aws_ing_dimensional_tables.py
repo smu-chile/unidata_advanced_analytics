@@ -88,7 +88,7 @@ SQL_QUERIES = {
     FNC_DOC_TP_DSC,
     FNC_DOC_TP_TXT
     FROM cl-bigdata-analytics-preprod.CDA_VISTAS.VW_DIM_FIN_DOC_TP_TYPE""",
-    'dim_product': """"
+    'dim_product': """
     SELECT
       EAN AS UPC,
       NM AS PRODUCT_DESCRIPTION,
