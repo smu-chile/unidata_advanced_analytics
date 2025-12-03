@@ -78,8 +78,8 @@ SQL_QUERIES = {
     SEMESTER_TXT,
     CALENDAR_YEAR,
     WEEK_NUMBER,
-    CALENDAR_YEAR_MONTH_KEY,
-    CALENDAR_YEAR_WEEK_KEY
+    TO_BASE64(CALENDAR_YEAR_MONTH_KEY),
+    TO_BASE64(CALENDAR_YEAR_WEEK_KEY)
     FROM cl-bigdata-analytics-preprod.CDA_VISTAS.VW_DIM_DATE
     WHERE WEEKDAY_NUMBER is not null""",
     'dim_fin_doc_tp_type' : """
