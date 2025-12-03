@@ -80,7 +80,8 @@ SQL_QUERIES = {
     WEEK_NUMBER,
     CALENDAR_YEAR_MONTH_KEY,
     CALENDAR_YEAR_WEEK_KEY
-    FROM cl-bigdata-analytics-preprod.CDA_VISTAS.VW_DIM_DATE""",
+    FROM cl-bigdata-analytics-preprod.CDA_VISTAS.VW_DIM_DATE
+    WHERE WEEKDAY_NUMBER is not null""",
     'dim_fin_doc_tp_type' : """
     SELECT
     TO_BASE64(FIN_DOC_TP_KEY),
