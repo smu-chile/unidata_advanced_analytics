@@ -112,6 +112,13 @@ def main() -> None:  # noqa: D103
 
     landing_bucket = 'smu-datalake-test-landing'
     landing_path = 'views/datascience'
+
+    boto3_session=boto3.Session(
+                **getSecret(
+                    project=gcp_project_id,
+                    secret_name='bdaa_aws_credentials'  # noqa: S106
+                )
+            )
     # Load data from SharePoint to pandas DataFrame
 
     fact_list = ['sales_item','sales_basket']
@@ -130,7 +137,7 @@ def main() -> None:  # noqa: D103
     }
 
     for fact_table in fact_list :
-        logging.info('Load the file to DataFrame')
+        logging.info(f'Load the file {fact_table} to DataFrame')
 
         df_fact = readBigQuery(
             query=SQL_QUERIES[fact_table].substitute(
@@ -140,19 +147,14 @@ def main() -> None:  # noqa: D103
             gbq_client = Client()
         )
 
-        # Upload to S3
-        boto3_session=boto3.Session(
-                **getSecret(
-                    project=gcp_project_id,
-                    secret_name='bdaa_aws_credentials'  # noqa: S106
-                )
-            )
+        logging.info(f'UpLoad the file {fact_table} to S3')
+
         moveDataframeToS3(df_file=df_fact,
                         landing_bucket=landing_bucket,
                         landing_path=landing_path,
                         table_name=table_names[fact_table],
                         partition_value=partition_value,
-                        column_types=column_types,
+                        column_types=column_types[fact_table],
                         boto3_session=boto3_session
                         )
 
