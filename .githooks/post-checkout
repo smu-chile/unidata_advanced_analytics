@@ -23,7 +23,9 @@ def main() -> None:
         ['git', 'symbolic-ref', '--short', 'HEAD'],
         stdout=subprocess.PIPE
     ).stdout.decode().strip()
-    new_branch = new_branch if (not 'preprod' in new_branch) and ('prod' in new_branch) else 'dev'
+    new_branch = 'prod' if (
+        (not 'preprod' in new_branch) and ('prod' in new_branch)
+    ) else 'dev'
 
     # Replace text in VSC config
     with open(vsc_config_filepath) as configfile:

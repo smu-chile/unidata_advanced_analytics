@@ -223,7 +223,7 @@ jobs:
           project_id: ${{ needs.set_env_vars.outputs.SCRIPTS_PROJECT_ID }}
           destination: ${{ needs.set_env_vars.outputs.DAG_GCS }}/dags/${{ github.ref_name }}/${{ github.repository }}/src
           path: src
-          glob: 'common/constants/dag_env_config.json'
+          glob: 'common/**'
           gzip: false
           parent: false
           process_gcloudignore: false
