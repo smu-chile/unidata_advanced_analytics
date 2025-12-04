@@ -20,7 +20,7 @@ with open(
 
 PROJECT_NAME = 'etl_aws'
 dag_args = {
-    'dag_id': 'etl_aws_ing_sales_item',
+    'dag_id': 'etl_aws_ing_fact_tables_daily',
     'schedule_interval': '30 8 * * *',
     'dagrun_timeout': None,
     'catchup': False,
@@ -45,8 +45,8 @@ dag_args = {
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
     PARTITION_VALUE =  "{{ dag_run.conf.get('partition_value', dag.timezone.convert(data_interval_start).strftime('%Y%m%d')) }}"  # noqa: E501
-    aws_ing_sales_item = DataprocCreateBatchOperator(
-        task_id = 'aws_ing_sales_item',
+    aws_ing_fact_tables_daily = DataprocCreateBatchOperator(
+        task_id = 'aws_ing_fact_tables_daily',
 
         batch = {
             'pyspark_batch': {
@@ -55,7 +55,7 @@ with DAG(**dag_args) as dag:
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'aws_ing_sales_item.py'
+                    'aws_ing_fact_tables_daily.py'
                 ),
                 # Common files
                 'python_file_uris': [

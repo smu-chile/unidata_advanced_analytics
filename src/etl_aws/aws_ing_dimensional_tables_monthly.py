@@ -20,7 +20,7 @@ with open(
 
 PROJECT_NAME = 'etl_aws'
 dag_args = {
-    'dag_id': 'etl_aws_ing_dimensional_tables',
+    'dag_id': 'etl_aws_ing_dimensional_tables_monthly',
     'schedule_interval': '0 13 1 * *',
     'dagrun_timeout': None,
     'catchup': False,
@@ -44,8 +44,8 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    aws_ing_dimensional_tables = DataprocCreateBatchOperator(
-        task_id = 'aws_ing_dimensional_tables',
+    aws_ing_dimensional_tables_monthly = DataprocCreateBatchOperator(
+        task_id = 'aws_ing_dimensional_tables_monthly',
 
         batch = {
             'pyspark_batch': {
@@ -54,7 +54,7 @@ with DAG(**dag_args) as dag:
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'aws_ing_dimensional_tables.py'
+                    'aws_ing_dimensional_tables_monthly.py'
                 ),
                 # Common files
                 'python_file_uris': [
