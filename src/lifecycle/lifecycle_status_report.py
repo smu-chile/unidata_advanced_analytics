@@ -22,7 +22,7 @@ with open(
 PROJECT_NAME = 'lifecycle'#
 dag_args = {
     'dag_id': 'lifecycle_status_report',
-    'schedule_interval': '0 0 5 * *',
+    'schedule_interval': '0 18 5 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
