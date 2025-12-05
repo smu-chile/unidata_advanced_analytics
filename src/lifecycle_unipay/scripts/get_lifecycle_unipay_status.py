@@ -146,7 +146,7 @@ SQL_QUERIES = QueryDict({
     FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD`
     WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
     AND PERIOD <= ${periodo}
-    AND CREDIT_LIMIT > 1
+    AND CREDIT_LIMIT >= 30000
     ) t
     WHERE rw = 1
     )
@@ -889,7 +889,7 @@ def main():
         tarjetas_clientes['CICLO_75'] = np.select(
             conditions,
             ciclo_choices,
-            default=0.0
+            default=500.0
         )
 
         # Tarjetas que no se cerraron
