@@ -22,7 +22,7 @@ with open(
 PROJECT_NAME = 'lifecycle'#
 dag_args = {
     'dag_id': 'lifecycle_status_report',
-    'schedule_interval': '0 0 5 * *',
+    'schedule_interval': '0 18 5 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
@@ -94,8 +94,8 @@ with DAG(**dag_args) as dag:
                     'spark.executor.cores': '4',
                     'spark.executor.memory': '4096m',
                     # Dirver instances
-                    'spark.driver.cores': '8',
-                    'spark.driver.memory': '40g',
+                    'spark.driver.cores': '16',
+                    'spark.driver.memory': '60g',
                 }
             },
 
