@@ -94,8 +94,8 @@ with DAG(**dag_args) as dag:
                     'spark.executor.cores': '4',
                     'spark.executor.memory': '4096m',
                     # Dirver instances
-                    'spark.driver.cores': '8',
-                    'spark.driver.memory': '40g',
+                    'spark.driver.cores': '16',
+                    'spark.driver.memory': '60g',
                 }
             },
 
