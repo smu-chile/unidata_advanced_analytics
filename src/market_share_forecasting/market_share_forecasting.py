@@ -24,7 +24,6 @@ else:
     err_msg = ''
     raise NotImplementedError(err_msg)
 
-
 # Globals
 with open(
     f'{conf.get("core", "dags_folder")}/'
