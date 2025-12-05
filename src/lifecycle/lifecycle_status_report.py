@@ -88,7 +88,15 @@ with DAG(**dag_args) as dag:
                     f'{dag_env_config["project_id"]}/'
                     'dataproc-worker-images/'
                     f"{PROJECT_NAME.replace('_', '-')}:latest"
-                ),
+                ),'properties' : {
+                    # Executor instances
+                    'spark.executor.instances': '2',
+                    'spark.executor.cores': '4',
+                    'spark.executor.memory': '4096m',
+                    # Dirver instances
+                    'spark.driver.cores': '8',
+                    'spark.driver.memory': '40g',
+                }
             },
 
             # Privileges config
