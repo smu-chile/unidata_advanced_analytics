@@ -97,6 +97,16 @@ SQL_QUERIES = QueryDict({
     FROM cl-bigdata-analytics-preprod.CDA_VISTAS.VW_SALES_BASKET
     left join cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID id using (customer_key)
     WHERE TRANSACTION_DATE = '${execution_date}'
+    """,
+    'sales_discount' : """
+    SELECT
+    BASKET_ID,
+    UPC,
+    GEOPROMOTION_ID,
+    DISCOUNT_VALUE,
+    FECHA_DESCUENTO
+    FROM cl-bigdata-analytics-preprod.CDA_VISTAS.VW_SALES_DISCOUNT
+    WHERE FECHA_DESCUENTO = '${execution_date}'
     """
 })
 
@@ -121,19 +131,21 @@ def main() -> None:  # noqa: D103
             )
     # Load data from SharePoint to pandas DataFrame
 
-    fact_list = ['sales_item','sales_basket']
+    fact_list = ['sales_item','sales_basket','sales_discount']
     column_types = {
         'sales_item' : ['str', 'str', 'Int64', 'str', 'str', 'str', 'str', 'str',
                     'str', 'float', 'float', 'float', 'float', 'str', 'str',
                     'Int64', 'str', 'float', 'float'],
         'sales_basket' : ['str', 'str', 'Int64', 'str', 'str', 'str', 'str', 'str',
                            'str', 'str', 'float', 'float', 'float', 'str',
-                           'Int64', 'str', 'str']
+                           'Int64', 'str', 'str'],
+        'sales_discount' : ['str', 'str', 'str', 'float', 'str']
 
     }
     table_names = {
         'sales_item' : 'TMP_LAB_SMU_SALES_ITEM_GCP',
-        'sales_basket' : 'TMP_LAB_SMU_SALES_BASKET_GCP'
+        'sales_basket' : 'TMP_LAB_SMU_SALES_BASKET_GCP',
+        'sales_discount' : 'TMP_LAB_SMU_SALES_DISCOUNT_GCP'
     }
 
     for fact_table in fact_list :
