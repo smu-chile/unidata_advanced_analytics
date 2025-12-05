@@ -100,7 +100,7 @@ def main() -> None:  # noqa: D103
     # Parameters
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
-    execution_date: str = args['project_id']
+    execution_date: str = args['execution_date']
     partition_value: str = args['partition_value']
     execution_date = dt.strftime(
         dt.strptime(execution_date, '%Y-%m-%d') - timedelta(days=8),  # noqa: DTZ007
