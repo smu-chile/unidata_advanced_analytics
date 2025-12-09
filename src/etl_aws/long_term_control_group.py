@@ -17,7 +17,7 @@ if platform.system() == 'Windows':
     )
 elif platform.system() == 'Linux':
     ExtendedDataprocCreateBatchOperator = (importlib.import_module(
-        'dev.'
+        'BRANCH_PLACEHOLDER.'
         'smu-chile.unidata_advanced_analytics.'
         'src.common.operators.dataproc_create_batch'
     )).ExtendedDataprocCreateBatchOperator
