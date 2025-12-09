@@ -3,6 +3,7 @@ import json
 from datetime import timedelta
 
 # pip
+import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
 from airflow.providers.google.cloud.operators.dataproc import (
@@ -18,21 +19,24 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'evaluate_promotions'
+PROJECT_NAME = 'etl_aws'
 dag_args = {
-    'dag_id': 'compute_halo_effect',
-    'schedule_interval': None,
+    'dag_id': 'etl_aws_ing_fact_tables_last_week',
+    'schedule_interval': '30 8 * * *',
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME, 'ecastrot'],
+    'tags': [PROJECT_NAME, 'csotob'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
-        'email': ['ecastrot@unidata.cl'],
-        'start_date': None,
+        'email': ['csotob@unidata.cl'],
+        'start_date': pendulum.datetime(
+            2025, 12, 1,
+            tz=pendulum.timezone('America/Santiago')
+        ),
         'depends_on_past': False,
         'catchup': False,
         'email_on_failure': True,
@@ -44,9 +48,9 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
-
-    get_costs = DataprocCreateBatchOperator(
-        task_id = 'get_costs',
+    PARTITION_VALUE =  "{{ dag_run.conf.get('partition_value', dag.timezone.convert(data_interval_start).strftime('%Y%m%d')) }}"  # noqa: E501
+    aws_ing_fact_tables_last_week = DataprocCreateBatchOperator(
+        task_id = 'aws_ing_fact_tables_last_week',
 
         batch = {
             'pyspark_batch': {
@@ -55,7 +59,7 @@ with DAG(**dag_args) as dag:
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'main_halo_effect_promotion_table.py'
+                    'aws_ing_fact_tables_last_week.py'
                 ),
                 # Common files
                 'python_file_uris': [
@@ -67,15 +71,15 @@ with DAG(**dag_args) as dag:
                         f'gs://{dag_env_config["scripts_gcs"]}/'
                         f'{PROJECT_NAME}/'
                         'gbq_objects/'
-                    )
+                    ),
                 ],
                 # For Google Big Query read/write
                 'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
                 # Main file arguments
                 'args': [
-                    '--project_name', PROJECT_NAME,
                     '--project_id', dag_env_config['project_id'],
                     '--execution_date', EXECUTION_DATE,
+                    '--partition_value', PARTITION_VALUE,
                 ],
             },
 
