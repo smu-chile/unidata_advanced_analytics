@@ -348,7 +348,7 @@ def main() -> None:  # noqa: D103
     uploadFrame(
         df_balance_matrix_sp,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'ingest_product_elasticity.json'),
+                                         'ingest_product_balance_matrix.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='append'
