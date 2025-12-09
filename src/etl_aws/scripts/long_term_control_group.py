@@ -49,7 +49,7 @@ SQL_QUERIES = QueryDict({
         FECHA_CARGA,
         SUBSTR(P_WEEK, 1, 4) AS P_YEAR
     FROM dev_perm.long_term_control_group
-    WHERE p_week LIKE '${year}%'
+    WHERE p_year LIKE '${year}%'
     """,
 })
 
@@ -64,6 +64,13 @@ def main() -> None:  # noqa: D103
 
     # Load data from SharePoint to pandas DataFrame
     logging.info('Load the file to DataFrame')
+    logging.info(f'execution_date: {execution_date}')
+    logging.info('Query sent:')
+    logging.info(
+        SQL_QUERIES['ltcg_data'].substitute(
+            year=execution_date[:4]
+        )
+    )
 
     ltcg_data = readAthenaQuery(
         query=SQL_QUERIES['ltcg_data'].substitute(
