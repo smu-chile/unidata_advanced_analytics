@@ -43,6 +43,7 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
         DataprocCreateBatchOperator
     """
     template_fields = (
+        *DataprocCreateBatchOperator.template_fields,
         'pyspark_batch_args', 'batch_id'
     )
 
@@ -54,42 +55,6 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
             ttl: int = 14400,
             **kwargs
         ):
-        """Extended Dataproc Create Batch Operator.
-
-        Wrapper over DataprocCreateBatchOperator. Keeps the same base
-        functionality but exposes only relevant configuration and makes the
-        general DAG code more readable.
-
-        The tasks created by this operator set up an automatic batch_id
-        extracting the uuid4 from the Airflow macros. Once up the task
-        will defer its tracking to the Airflow Trigger.
-
-        Parameters
-        ----------
-        task_id : str
-            The unique task_id for the Airflow operator instance.
-        project_name : str
-            The GCP project ID where the Dataproc batch job will execute.
-        python_script_path : str
-            Relative path from the ``src`` directory to the file that will
-            be executed.
-        dag_env_config : dict[str, str]
-            Environment variables to be set for the Dataproc job.
-        pyspark_batch_args : list
-            Command-line arguments passed directly to the PySpark script.
-        include_paths : list
-            Relative path from the ``src`` directory to the additional
-            files, jars or archives to be included.
-        spark_driver_cores : int
-            The number of CPU cores allocated for the Spark driver.
-        spark_driver_memory : int
-            The memory allocated for the Spark driver.
-        ttl : int
-            Time-to-live (TTL) for the Dataproc batch in seconds.
-        **kwargs
-            Other keyword arguments passed on to the
-            DataprocCreateBatchOperator
-        """  # noqa: D401
         # Set attributes
         self.task_id = task_id
         self.project_name = project_name
