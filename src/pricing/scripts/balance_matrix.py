@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import os
 import logging
 import argparse
 from logging import config
@@ -15,7 +16,11 @@ import common.office365_extended.sharepoint as sp
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.gcp_extended.bigquery import readBigQuery
+from common.gcp_extended.bigquery import (
+    uploadFrame,
+    readBigQuery,
+    deleteFromTable,
+)
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -253,6 +258,8 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
     # ENDREGION
 
+    # REGION: Se sube a sharepoint
+    #----------------------------------------------------------------------
 
     # ordenar antes por Categoria
     df_balance_matrix_sp = df_balance_matrix_sp.sort_values(by='Categoria')
@@ -315,8 +322,42 @@ def main() -> None:  # noqa: D103
             f'Balance_Matrix_AA_{store_banner}.xlsx'
         )
     ).upload(buffer)
-    logging.info('Tabla subida en GCP')
+    logging.info('Tabla subida en Sharepoint')
 
+    #----------------------------------------------------------------------
+    # ENDREGION
+
+
+    # REGION: Se sube a GCP
+    #----------------------------------------------------------------------
+    # Definir el WHERE
+    where_clause = f"store_banner = '{store_banner}'"
+
+    # Parametros
+    esquema = 'PRECIO_PROMOCIONES'
+    tabla = 'BALANCE_MATRIX'
+
+    # Se elimina los datos para cierto store_banner y rango (si existen)
+    deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
+                    where_clause=where_clause,
+                    gbq_client=gbq_client)
+
+
+
+    # Se carga en BQ con los datos recalculados
+    uploadFrame(
+        df_balance_matrix_sp,
+        table_ddl_json_path=os.path.join('gbq_objects',
+                                         'ingest_product_elasticity.json'),
+        project=proyecto,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    logging.info('Se sube la tabla a GCP')
+
+    #----------------------------------------------------------------------
+    # ENDREGION
 
 if __name__ == '__main__':
     main()
