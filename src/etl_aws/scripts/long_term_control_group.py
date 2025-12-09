@@ -49,7 +49,7 @@ SQL_QUERIES = QueryDict({
         FECHA_CARGA,
         SUBSTR(P_WEEK, 1, 4) AS P_YEAR
     FROM dev_perm.long_term_control_group
-    WHERE p_year LIKE '${year}%'
+    WHERE p_week LIKE '${year}%'
     """,
 })
 
