@@ -66,13 +66,13 @@ with DAG(**dag_args) as dag:
     # ---------------------------------------------------------------------
     week_forecasting = ExtendedDataprocCreateBatchOperator(
         task_id='week_forecasting',
-        project_name=PROJECT_NAME,
         python_script_path=(
             f'{PROJECT_NAME}/'
             'scripts/'
             'week_compute_market_share.py'
         ),
         dag_env_config=dag_env_config,
+        docker_image_name=PROJECT_NAME,
         pyspark_batch_args=[
             '--project_name', PROJECT_NAME,
             '--gcp_project', dag_env_config['project_id'],
@@ -91,13 +91,13 @@ with DAG(**dag_args) as dag:
     # ---------------------------------------------------------------------
     day_forecasting = ExtendedDataprocCreateBatchOperator(
         task_id='day_forecasting',
-        project_name=PROJECT_NAME,
         python_script_path=(
             f'{PROJECT_NAME}/'
             'scripts/'
             'day_compute_market_share.py'
         ),
         dag_env_config=dag_env_config,
+        docker_image_name=PROJECT_NAME,
         pyspark_batch_args=[
             '--project_name', PROJECT_NAME,
             '--gcp_project', dag_env_config['project_id'],

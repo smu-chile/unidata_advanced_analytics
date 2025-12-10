@@ -1,4 +1,4 @@
-import posixpath
+import posixpath  # noqa: D100
 
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
@@ -6,57 +6,58 @@ from airflow.providers.google.cloud.operators.dataproc import (
 
 
 class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
+    """Extended Dataproc Create Batch Operator.
+
+    Wrapper over DataprocCreateBatchOperator. Keeps the same base
+    functionality but exposes only relevant configuration and makes the
+    general DAG code more readable.
+
+    The tasks created by this operator set up an automatic batch_id
+    extracting the uuid4 from the Airflow macros. Once up the task
+    will defer its tracking to the Airflow Trigger.
+
+    Parameters
+    ----------
+    task_id : str
+        The unique task_id for the Airflow operator instance.
+    python_script_path : str
+        Relative path from the ``src`` directory to the file that will
+        be executed.
+    dag_env_config : dict[str, str]
+        Environment variables to be set for the Dataproc job.
+    docker_image_name : str
+        The GCP project ID where the Dataproc batch job will execute.
+    pyspark_batch_args : list
+        Command-line arguments passed directly to the PySpark script.
+    include_paths : list
+        Relative path from the ``src`` directory to the additional
+        files, jars or archives to be included.
+    spark_driver_cores : int
+        The number of CPU cores allocated for the Spark driver.
+    spark_driver_memory : int
+        The memory allocated for the Spark driver.
+    ttl : int
+        Time-to-live (TTL) for the Dataproc batch in seconds.
+    **kwargs
+        Other keyword arguments passed on to the
+        DataprocCreateBatchOperator
+    """
     template_fields = (
+        *DataprocCreateBatchOperator.template_fields,
         'pyspark_batch_args', 'batch_id'
     )
 
     def __init__(
-            self, task_id: str, project_name: str, python_script_path: str,
-            dag_env_config: dict[str, str],
+            self, task_id: str, python_script_path: str,
+            dag_env_config: dict[str, str], docker_image_name: str,
             pyspark_batch_args: list = (), include_paths: list[str] = (),
             spark_driver_cores: int = 4, spark_driver_memory: int = 10,
             ttl: int = 14400,
             **kwargs
         ):
-        """Extended Dataproc Create Batch Operator.
-
-        Wrapper over DataprocCreateBatchOperator. Keeps the same base
-        functionality but exposes only relevant configuration and makes the
-        general DAG code more readable.
-
-        The tasks created by this operator set up an automatic batch_id
-        extracting the uuid4 from the Airflow macros. Once up the task
-        will defer its tracking to the Airflow Trigger.
-
-        Parameters
-        ----------
-        task_id : str
-            The unique task_id for the Airflow operator instance.
-        project_name : str
-            The GCP project ID where the Dataproc batch job will execute.
-        python_script_path : str
-            Relative path from the ``src`` directory to the file that will
-            be executed.
-        dag_env_config : dict[str, str]
-            Environment variables to be set for the Dataproc job.
-        pyspark_batch_args : list
-            Command-line arguments passed directly to the PySpark script.
-        include_paths : list
-            Relative path from the ``src`` directory to the additional
-            files, jars or archives to be included.
-        spark_driver_cores : int
-            The number of CPU cores allocated for the Spark driver.
-        spark_driver_memory : int
-            The memory allocated for the Spark driver.
-        ttl : int
-            Time-to-live (TTL) for the Dataproc batch in seconds.
-        **kwargs
-            Other keyword arguments passed on to the
-            DataprocCreateBatchOperator
-        """
         # Set attributes
         self.task_id = task_id
-        self.project_name = project_name
+        self.docker_image_name = docker_image_name
         self.python_script_path = python_script_path
         self.dag_env_config = dag_env_config
         self.pyspark_batch_args = pyspark_batch_args
@@ -107,7 +108,7 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
                         'us-east1-docker.pkg.dev/'
                         f'{self.dag_env_config["project_id"]}/'
                         'dataproc-worker-images/'
-                        f"{self.project_name.replace('_', '-')}:latest"
+                        f"{self.docker_image_name.replace('_', '-')}:latest"
                     ),
 
                     # Executor hardware config
@@ -136,7 +137,7 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
             **kwargs
         )
 
-    def execute(self, context):
+    def execute(self, context) -> None:  # noqa: ANN001, D102
         # Execute the parent operator
         super().execute(context=context)
 

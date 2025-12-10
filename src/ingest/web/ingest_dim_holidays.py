@@ -65,7 +65,6 @@ with DAG(**dag_args) as dag:
 
     ingest_data = ExtendedDataprocCreateBatchOperator(
         task_id = 'ingest_data',
-        project_name=PROJECT_NAME,
         python_script_path=(
             f'{PROJECT_NAME}/'
             f'{SUBPROJECT_NAME}/'
@@ -73,6 +72,7 @@ with DAG(**dag_args) as dag:
             'ingest_dim_holidays.py'
         ),
         dag_env_config=dag_env_config,
+        project_name=PROJECT_NAME,
         pyspark_batch_args=[
             '--project_id', dag_env_config['project_id'],
             '--execution_date', EXECUTION_DATE,

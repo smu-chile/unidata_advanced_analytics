@@ -65,13 +65,13 @@ with DAG(**dag_args) as dag:
 
     create_batch = ExtendedDataprocCreateBatchOperator(
         task_id = 'create_batch',
-        project_name=PROJECT_NAME,
         python_script_path=(
             f'{PROJECT_NAME}/'
             'scripts/'
             'gcp_dag_example.py'
         ),
         dag_env_config=dag_env_config,
+        docker_image_name=PROJECT_NAME,
         pyspark_batch_args=[
             '--project_id', dag_env_config['project_id'],
             '--execution_date', EXECUTION_DATE,

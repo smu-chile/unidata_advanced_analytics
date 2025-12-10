@@ -67,13 +67,13 @@ with DAG(**dag_args) as dag:
     # ---------------------------------------------------------------------
     month_forecasting = ExtendedDataprocCreateBatchOperator(
         task_id = 'month_forecasting',
-        project_name=PROJECT_NAME,
         python_script_path=(
             f'{PROJECT_NAME}/'
             'scripts/'
             'month_prophet_sales_forecasting.py'
         ),
         dag_env_config=dag_env_config,
+        docker_image_name=PROJECT_NAME,
         pyspark_batch_args=[
             '--project_name', PROJECT_NAME,
             '--gcp_project', dag_env_config['project_id'],
