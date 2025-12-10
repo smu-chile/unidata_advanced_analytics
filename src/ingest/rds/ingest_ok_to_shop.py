@@ -72,7 +72,7 @@ with DAG(**dag_args) as dag:
             'ingest_ok_to_shop.py'
         ),
         dag_env_config=dag_env_config,
-        docker_image_name=f"{PROJECT_NAME.replace('_', '-')}-{SUBPROJECT_NAME}",
+        docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
         pyspark_batch_args=[
             '--project_id', dag_env_config['project_id'],
             '--execution_date', EXECUTION_DATE,
