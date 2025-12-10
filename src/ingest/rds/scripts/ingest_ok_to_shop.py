@@ -93,7 +93,10 @@ def main() -> None:
     # Get data
     data = readPostgresQuery(
         SQL_QUERIES['get_data'],
-        credentials_dict=getSecret('ecommerce_postgres_credentials')
+        credentials_dict=getSecret(
+            secret_name='ecommerce_postgres_credentials',  # noqa: S106
+            project=gcp_project_id,
+        )
     )
 
     # Upload data to the table
