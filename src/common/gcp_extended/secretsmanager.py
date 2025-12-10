@@ -40,7 +40,9 @@ def _getProjectNumber(project_name: str) -> int:
     return __PROJECT_NUMBERS[project_name]
 
 
-def getSecret(secret_name: str, project: str = 'cl-bigdata-analytics') -> dict:
+def getSecret(
+        secret_name: str, project: str = 'cl-bigdata-analytics', version: str = 'latest'
+    ) -> dict:
     """Get secret value as `dict` from GCP Secrets Manager.
 
     Parameters
@@ -49,6 +51,8 @@ def getSecret(secret_name: str, project: str = 'cl-bigdata-analytics') -> dict:
         Name of the secret in GCP Secrets Manager
     project : str
         Name of the account in which the secret is hosted
+    version : str, default='latest'
+        Version of the secret.
 
     Returns
     -------
@@ -60,7 +64,7 @@ def getSecret(secret_name: str, project: str = 'cl-bigdata-analytics') -> dict:
     # Get the secret as dict
     return json.loads(
         secretmanager.SecretManagerServiceClient().access_secret_version(
-            name=f'projects/{project_number}/secrets/{secret_name}/versions/latest'
+            name=f'projects/{project_number}/secrets/{secret_name}/versions/{version}'
         ).payload.data
     )
 
