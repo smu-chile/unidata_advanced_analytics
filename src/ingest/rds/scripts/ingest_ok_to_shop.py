@@ -40,10 +40,10 @@ SQL_QUERIES = QueryDict({
             brand_name AS brand,
             description,
             flavor,
-            CAST(REPLACE(drained_size_value, ',', '.') AS FLOAT) AS drained_size_value,
-            CAST(REPLACE(num_portions, ',', '.') AS FLOAT) AS num_portions,
+            CAST(CAST(REPLACE(drained_size_value, ',', '.') AS FLOAT) AS INT) AS drained_size_value,
+            CAST(CAST(REPLACE(num_portions, ',', '.') AS FLOAT) AS INT) AS num_portions,
             basic_unit,
-        """
+        """  # noqa: E501
 
         + ''.join([
             f"\tCAST(REPLACE({col + suffix}, ',', '.') AS FLOAT) AS {col + suffix},\n"
@@ -91,6 +91,7 @@ def main() -> None:
     gbq_client = Client()
 
     # Get data
+    logging.info('Sending query...')
     data = readPostgresQuery(
         query=SQL_QUERIES['get_data'].substitute(),
         credentials_dict=getSecret(
@@ -98,8 +99,10 @@ def main() -> None:
             project=gcp_project_id,
         )
     )
+    logging.info('Data collected!')
 
     # Upload data to the table
+    logging.info('Uploading frame to GBQ...')
     uploadFrame(
         data,
         table_ddl_json_path=os.path.join('gbq_objects', 'dim_ok_to_shop.json'),
@@ -107,6 +110,7 @@ def main() -> None:
         gbq_client=gbq_client,
         if_exists='replace'
     )
+    logging.info('Done!')
 
 
 if __name__ == '__main__':
