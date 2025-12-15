@@ -22,7 +22,7 @@ elif platform.system() == 'Linux':
         'src.common.operators.dataproc_create_batch'
     )).ExtendedDataprocCreateBatchOperator
 else:
-    err_msg = ''
+    err_msg = 'Only Linux and Windows are supported.'
     raise NotImplementedError(err_msg)
 
 # Globals
