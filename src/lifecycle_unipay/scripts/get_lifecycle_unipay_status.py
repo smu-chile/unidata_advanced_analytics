@@ -145,7 +145,7 @@ SQL_QUERIES = QueryDict({
     WHERE CARD_ID IN (SELECT CARD_ID
     FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD`
     WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
-    AND PERIOD <= ${periodo}
+    AND PERIOD <= CAST(${periodo} AS INT)
     AND CREDIT_LIMIT >= 30000
     ) t
     WHERE rw = 1
@@ -765,7 +765,7 @@ def main():
         # Esto se utilizo para el periodo = 202302,
         # debido a las tarjetas de años anteriores para no tener problemas,
         # dado que se le asigno el estado grow en el periodo 202301
-        if periodo == 202302:
+        if int(periodo) == 202302:
             ciclo = pd.merge(  # noqa: PD015
                 ciclo,
                 estados_n1,
