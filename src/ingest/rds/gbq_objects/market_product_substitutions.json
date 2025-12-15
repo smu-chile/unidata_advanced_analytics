@@ -8,7 +8,7 @@
         {"name":"vtex_ref_id_original","field_type":"STRING"},
         {"name":"vtex_ref_id_substitute","field_type":"STRING"},
         {"name":"ean_original","field_type":"INTEGER"},
-        {"name":"ean_subtitute","field_type":"INTEGER"}
+        {"name":"ean_substitute","field_type":"INTEGER"}
     ],
 
     "time_partitioning": {
