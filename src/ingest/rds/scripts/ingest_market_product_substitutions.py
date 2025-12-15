@@ -8,7 +8,7 @@ from google.cloud.bigquery import Client
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.databases.postgresql import readPostgresQuery
-from common.gcp_extended.bigquery import uploadFrame
+from common.gcp_extended.bigquery import uploadFrame, deleteFromTable
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -104,6 +104,17 @@ def main() -> None:
         )
     )
     logging.info('Data collected!')
+
+    # Deleting past data if exist
+    logging.info('Deleting past run data')
+    deleteFromTable(
+        table_ref=os.path.join('gbq_objects', 'market_product_substitutions.json'),
+        project=gcp_project_id,
+        where_clause=f'delivery_date = "{execution_date}"',
+        gbq_client=gbq_client,
+        if_not_exists='ignore'
+    )
+
 
     # Upload data to the table
     logging.info('Uploading frame to GBQ...')
