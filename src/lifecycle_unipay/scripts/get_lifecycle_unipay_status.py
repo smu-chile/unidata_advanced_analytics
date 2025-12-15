@@ -275,7 +275,7 @@ def main():
     logging.info('--------------------')
 
     # Ejecucion Queries
-    if periodo > periodo_inicio:
+    if int(periodo) > periodo_inicio:
         estados_n1 = readBigQuery(SQL_QUERIES['estados'].substitute(
         gcp_proyect = 'cl-bigdata-analytics-preprod',
         schema = 'UNIPAY',
