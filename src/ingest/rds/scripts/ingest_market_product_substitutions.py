@@ -106,7 +106,7 @@ def main() -> None:
     logging.info('Data collected!')
 
     # Deleting past data if exist
-    logging.info('Deleting past run data')
+    logging.info('Deleting past run data if exists...')
     deleteFromTable(
         table_ref=os.path.join('gbq_objects', 'market_product_substitutions.json'),
         project=gcp_project_id,
