@@ -610,7 +610,7 @@ def main():
     logging.info('Inicia el proceso del calculo de estado')
     logging.info('--------------------')
 
-    if periodo == periodo_inicio:
+    if int(periodo) == periodo_inicio:
         tarjetas_ajust['FECHA_ESTADO'] = pd.to_datetime(
             np.where(tarjetas_ajust['FECHA_ESTADO'].dt.strftime('%Y%m') > \
                     str(periodo),pd.NaT,tarjetas_ajust['FECHA_ESTADO'])
@@ -676,7 +676,7 @@ def main():
             if_exists = 'ignore'
         )
 
-    elif periodo > periodo_inicio:
+    elif int(periodo) > periodo_inicio:
         # Tarjetas UNIPAY
         tarjetas_ajust_copy = tarjetas_ajust.copy()
 
