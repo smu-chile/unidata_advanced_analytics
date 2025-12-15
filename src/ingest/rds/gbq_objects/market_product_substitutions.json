@@ -1,0 +1,22 @@
+{
+    "schema": "ML_LAB",
+    "table": "MARKET_PRODUCT_SUBSTITUTIONS",
+
+    "columns": [
+        {"name":"delivery_date","field_type":"DATE"},
+        {"name":"order_id","field_type":"INTEGER"},
+        {"name":"vtex_ref_id_original","field_type":"STRING"},
+        {"name":"vtex_ref_id_substitute","field_type":"STRING"},
+        {"name":"ean_original","field_type":"INTEGER"},
+        {"name":"ean_subtitute","field_type":"INTEGER"}
+    ],
+
+    "time_partitioning": {
+        "field": "delivery_date",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": [
+        "ean_original", "ean_substitute"
+    ]
+}
