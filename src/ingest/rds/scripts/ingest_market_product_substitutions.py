@@ -40,8 +40,8 @@ SQL_QUERIES = QueryDict({
         id_orden,
         vtex_ref_id_og,
         vtex_ref_id_sub,
-        ean_og,
-        ean_sub
+        CAST(ean_og AS BIGINT),
+        CAST(ean_sub AS BIGINT)
 
     FROM (
         SELECT
