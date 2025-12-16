@@ -1,0 +1,25 @@
+{
+    "schema": "ML_LAB",
+    "table": "MARKET_DIAMOND_MEMBERSHIPS",
+
+    "columns": [
+        {"name":"transaction_date","field_type":"DATE"},
+        {"name":"rut","field_type":"INTEGER"},
+        {"name":"estado","field_type":"STRING"},
+        {"name":"fecha_inicio","field_type":"DATE"},
+        {"name":"fecha_fin","field_type":"DATE"},
+        {"name":"tipo_membresia","field_type":"STRING"},
+        {"name":"motivo_inactivacion","field_type":"STRING"},
+        {"name":"fecha_inactivacion","field_type":"DATE"},
+        {"name":"motivo_cancelacion","field_type":"STRING"}
+    ],
+
+    "time_partitioning": {
+        "field": "fecha_fin",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": [
+        "rut", "fecha_inicio"
+    ]
+}
