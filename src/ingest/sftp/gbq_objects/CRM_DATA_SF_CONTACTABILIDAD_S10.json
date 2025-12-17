@@ -1,6 +1,6 @@
 {
     "schema": "CRM",
-    "table": "CRM_DATA_SF_CONTACTABILIDAD_ALVI",
+    "table": "CRM_DATA_SF_CONTACTABILIDAD_S10",
 
     "columns": [
         {
@@ -24,11 +24,6 @@
             "mode": "NULLABLE"
         },
         {
-            "name": "TELEFONO_VERIFICADO",
-            "field_type": "BOOLEAN",
-            "mode": "NULLABLE"
-        },
-        {
             "name": "EMAIL",
             "field_type": "STRING",
             "mode": "NULLABLE"
@@ -36,26 +31,6 @@
         {
             "name": "EMAIL_VERIFICADO",
             "field_type": "BOOLEAN",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "DIRECCION",
-            "field_type": "STRING",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "FECHA_REGISTRO",
-            "field_type": "DATETIME",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "FECHA_VALIDACION_EMAIL",
-            "field_type": "DATETIME",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "FECHA_VALIDACION_WHATSAPP",
-            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {
@@ -68,24 +43,24 @@
             "field_type": "STRING",
             "mode": "NULLABLE"
         },
-       {
-            "name": "ACEPTA_BASES_CONCURSOS",
-            "field_type": "BOOLEAN",
-            "mode": "NULLABLE"
-        },
         {
             "name": "ACEPTA_TYC_CLUB",
             "field_type": "BOOLEAN",
             "mode": "NULLABLE"
         },
         {
-            "name": "TIPO_RUT",
-            "field_type": "STRING",
+            "name": "FECHA_VALIDACION_EMAIL",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {
-            "name": "ESTADO_PERSONA",
-            "field_type": "STRING",
+            "name": "FECHA_NACIMIENTO",
+            "field_type": "DATETIME",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_REGISTRO",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {

@@ -31,3 +31,4 @@ else
     # Lint using Ruff
     ruff check --config lint/prod_ruff.toml --quiet --no-cache ${LINT_FILES[@]};
 fi
+
