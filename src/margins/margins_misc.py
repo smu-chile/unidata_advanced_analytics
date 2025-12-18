@@ -30,7 +30,7 @@ SUBNETWORK = dag_env_config['subnetwork']
 
 dag_args = {
     'dag_id': 'margins_fuentes_manuales_misc',
-    'schedule_interval': None,
+    'schedule_interval': '00 18 * * *',
     'dagrun_timeout': None,
     'catchup': True,
     'max_active_runs': 1,
