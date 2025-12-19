@@ -3,6 +3,7 @@ import json
 from datetime import timedelta
 
 # pip
+import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
 from airflow.providers.google.cloud.operators.dataproc import (
@@ -32,7 +33,10 @@ dag_args = {
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['csotob@unidata.cl'],
-        'start_date': None,
+        'start_date': pendulum.datetime(
+            2025, 12, 1,
+            tz=pendulum.timezone('America/Santiago')
+        ),
         'depends_on_past': False,
         'catchup': False,
         'email_on_failure': True,

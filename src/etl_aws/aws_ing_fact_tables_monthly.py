@@ -21,10 +21,10 @@ with open(
 
 PROJECT_NAME = 'etl_aws'
 dag_args = {
-    'dag_id': 'etl_aws_ing_dimensional_tables_weekly',
-    'schedule_interval': '40 16 * * 0',
+    'dag_id': 'etl_aws_ing_fact_tables_monthly',
+    'schedule_interval': '00 18 7 * *',
     'dagrun_timeout': None,
-    'catchup': False,
+    'catchup': True,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': [PROJECT_NAME, 'csotob'],
@@ -34,11 +34,11 @@ dag_args = {
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['csotob@unidata.cl'],
         'start_date': pendulum.datetime(
-            2025, 12, 1,
+            2026, 1, 1,
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
-        'catchup': False,
+        'catchup': True,
         'email_on_failure': True,
         'email_on_retry': False,
         'retries': 0,
@@ -47,9 +47,18 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    aws_ing_dimensional_tables_weekly = DataprocCreateBatchOperator(
-        task_id = 'aws_ing_dimensional_tables_weekly',
+    #Mes anterior yyyy-mm
+    PARTITION_MONTH = "{{ dag_run.conf.get('partition_month', dag.timezone.convert(data_interval_start).strftime('%Y-%m')) }}"  # noqa: E501
+    #Mes anterior yyyymm
+    MONTH_ID =  "{{ dag_run.conf.get('month_id', dag.timezone.convert(data_interval_start).strftime('%Y%m')) }}"  # noqa: E501
+    #Mes actual yyyy-mm
+    PARTITION_MONTH_ACTUAL = "{{ dag_run.conf.get('partition_month_actual', dag.timezone.convert(data_interval_end).strftime('%Y-%m')) }}"  # noqa: E501
+    #Mes actual yyyymm
+    MONTH_ID_ACTUAL =  "{{ dag_run.conf.get('month_id_actual', dag.timezone.convert(data_interval_end).strftime('%Y%m')) }}"  # noqa: E501
+    #ultima semana mes pasado yyyyvv
+    WEEK_ID =  "{{ dag_run.conf.get('week_id', (dag.timezone.convert(data_interval_end).replace(day=1) - macros.timedelta(days=1)).strftime('%G%V') }}"  # noqa: E501
+    aws_ing_fact_tables_monthly = DataprocCreateBatchOperator(
+        task_id = 'aws_ing_fact_tables_monthly',
 
         batch = {
             'pyspark_batch': {
@@ -58,7 +67,7 @@ with DAG(**dag_args) as dag:
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'aws_ing_dimensional_tables_weekly.py'
+                    'aws_ing_fact_tables_monthly.py'
                 ),
                 # Common files
                 'python_file_uris': [
@@ -77,7 +86,11 @@ with DAG(**dag_args) as dag:
                 # Main file arguments
                 'args': [
                     '--project_id', dag_env_config['project_id'],
-                    '--execution_date', EXECUTION_DATE,
+                    '--partition_month', PARTITION_MONTH,
+                    '--month_id', MONTH_ID,
+                    '--partition_month_actual', PARTITION_MONTH_ACTUAL,
+                    '--month_id_actual', MONTH_ID_ACTUAL,
+                    '--week_id', WEEK_ID,
                 ],
             },
 
