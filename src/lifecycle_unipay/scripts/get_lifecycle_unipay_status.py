@@ -1,9 +1,11 @@
 # Default
 from __future__ import annotations
 
+import io
 import os
 import logging
 import argparse
+import posixpath
 from logging import config
 
 # Pip
@@ -16,6 +18,8 @@ from pandas.tseries.offsets import MonthEnd
 
 # Own
 import common.gcp_extended.bigquery as gbq_extended  # noqa: F401
+import common.gcp_extended.secretsmanager as secretmanager
+import common.office365_extended.sharepoint as sp
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict  # noqa: F401
 from common.gcp_extended.bigquery import (
@@ -275,6 +279,8 @@ def main():
     logging.info('--------------------')
 
     # Ejecucion Queries
+    logging.info(' ')
+    logging.info('Inicia la query de estados')
     if int(periodo) > periodo_inicio:
         estados_n1 = readBigQuery(SQL_QUERIES['estados'].substitute(
         gcp_proyect = 'cl-bigdata-analytics-preprod',
@@ -285,6 +291,11 @@ def main():
         gbq_client = gbq_client
         )
 
+    logging.info('Finaliza la query de estados')
+
+    logging.info(' ')
+    logging.info('Inicia la query de tarjetas_unipay')
+
     tarjetas = readBigQuery(SQL_QUERIES['tarjetas_unipay'].substitute(
     gcp_proyect = 'cl-cda-unidata-prod',
     schema = 'DS_PROD_UNI_SSFF',
@@ -294,6 +305,11 @@ def main():
     user = usuario,
     gbq_client = gbq_client
     )
+
+    logging.info('Inicia la query de tarjetas_unipay')
+
+    logging.info(' ')
+    logging.info('Inicia la query de compras')
 
     compras = readBigQuery(SQL_QUERIES['compras'].substitute(
     gcp_proyect_1 = 'cl-cda-unidata-prod',
@@ -307,6 +323,11 @@ def main():
     gbq_client = gbq_client
     )
 
+    logging.info('Finaliza la query de compras')
+
+    logging.info(' ')
+    logging.info('Inicia la query de compras_unipay')
+
     compras_unipay = readBigQuery(SQL_QUERIES['compras_unipay'].substitute(
     gcp_proyect_1 = 'cl-cda-unidata-prod',
     gcp_proyect_2 = 'cl-cda-prod',
@@ -317,6 +338,8 @@ def main():
     user = usuario,
     gbq_client = gbq_client
     )
+
+    logging.info('Finaliza la query de compras_unipay')
 
     logging.info(' ')
     logging.info('--------------------')
@@ -345,33 +368,38 @@ def main():
         errors='coerce'
     ) + pd.DateOffset(months=1)
 
-    # Verificar la fecha de cierre de las tarjetas
+    # Dado que la fecha de cierre de las tarjetas Unipay se puede obtener
+    # en 2 tablas, es necesario realizar lo siguiente para obtener la
+    # fecha de cierre
+    logging.info(' ')
+    logging.info('Inicia el proceso para corregir la fecha de cierre de las tarjetas')
+
     conditions = [
         (~tarjetas_copy['TERMINATION_DATE'].isna()) &
         (~tarjetas_copy['PERIODO2'].isna()) &
         (tarjetas_copy['TERMINATION_DATE'].dt.strftime('%Y%m') > \
-         tarjetas_copy['PERIODO2'].dt.strftime('%Y%m')), #PERIODO2
+         tarjetas_copy['PERIODO2'].dt.strftime('%Y%m')),
 
         (~tarjetas_copy['TERMINATION_DATE'].isna()) &
         (~tarjetas_copy['PERIODO2'].isna()) &
         (tarjetas_copy['TERMINATION_DATE'].dt.strftime('%Y%m') < \
-         tarjetas_copy['PERIODO2'].dt.strftime('%Y%m')), #TERMINATION_DATE
+         tarjetas_copy['PERIODO2'].dt.strftime('%Y%m')),
 
         (tarjetas_copy['TERMINATION_DATE'].isna()) &
-        (~tarjetas_copy['PERIODO2'].isna()), #PERIODO2
+        (~tarjetas_copy['PERIODO2'].isna()),
 
         (tarjetas_copy['TERMINATION_DATE'].isna()) &
-        (tarjetas_copy['PERIODO2'].isna()), #SUBSCRIPTION_DATE
+        (tarjetas_copy['PERIODO2'].isna()),
 
         (~tarjetas_copy['TERMINATION_DATE'].isna()) &
         (tarjetas_copy['PERIODO2'].isna()) &
         (tarjetas_copy['TERMINATION_DATE'].dt.strftime('%Y%m') > \
-         tarjetas_copy['SUBSCRIPTION_DATE'].dt.strftime('%Y%m')), #SUBSCRIPTION_DATE
+         tarjetas_copy['SUBSCRIPTION_DATE'].dt.strftime('%Y%m')),
 
         (~tarjetas_copy['TERMINATION_DATE'].isna()) &
         (tarjetas_copy['PERIODO2'].isna()) &
         (tarjetas_copy['TERMINATION_DATE'].dt.strftime('%Y%m') == \
-         tarjetas_copy['SUBSCRIPTION_DATE'].dt.strftime('%Y%m')) #TERMINATION_DATE
+         tarjetas_copy['SUBSCRIPTION_DATE'].dt.strftime('%Y%m'))
     ]
 
     choices = [
@@ -401,10 +429,15 @@ def main():
         'AUX']
     ]
 
+    logging.info('Finaliza el proceso para corregir la fecha de cierre de las tarjetas')
+
+    logging.info('')
+    logging.info('Inicia el proceso que asigna la compra a la tarjeta que esta activa'
+                 'en ese periodo a la tabla compras')
+
     # Asignar la compra a la tarjeta que esta activa en ese periodo
-    # al dataframe compras
-    df_merged = pd.merge(  # noqa: PD015
-        compras,
+    # a la tabla compras
+    df_merged = compras.merge(
         tarjetas_copy,
         on='CUSTOMER_KEY',
         how='inner'
@@ -436,13 +469,19 @@ def main():
         'TNDR_TP_ID',
         'TOT_SALE_AMT']]
 
+    logging.info('Finaliza el proceso que asigna la compra a la tarjeta que esta activa'
+                 'en ese periodo a la tabla compras')
+
+    logging.info('')
+    logging.info('Inicia el proceso que asigna la compra a la tarjeta que esta activa'
+                 'en ese periodo a la tabla compras_unipay')
+
     # Asignar la compra a la tarjeta que esta activa en ese periodo
-    # al dataframe compras_unipay
-    df_merged = pd.merge(  # noqa: PD015
-        compras_unipay,
-        tarjetas_copy,
-        on='CUSTOMER_KEY',
-        how='inner'
+    # a la tabla compras_unipay
+    df_merged = compras_unipay.merge(
+    tarjetas_copy,
+    on='CUSTOMER_KEY',
+    how='inner'
     )
 
     df_activas = df_merged[
@@ -473,8 +512,16 @@ def main():
 
     compras_unipay_ajust = compras_unipay_ajust.reset_index(drop=True)
 
-    # Actualizacion de ACTIVATION_DATE para las tarjetas que se activaron
-    # pero en UNICARD_CARD no se ve reflejado
+    logging.info('Finaliza el proceso que asigna la compra a la tarjeta que esta activa'
+                 'en ese periodo a la tabla compras_unipay')
+
+    logging.info('')
+    logging.info('Inicia el proceso actualiza la fecha de activacion de las tarjetas'
+                 'que se activaron pero en la tabla UNICARD_CARD no se ve reflejado')
+
+    # Dado que en algunos casos la activacion de las tarjetas no se ve
+    # reflejado en la tabla UNICARD_CARD, hay que realizar el siguiente
+    # ajuste
 
     tarjetas_ajust = pd.concat([
         tarjetas_copy.query('SUBSCRIPTION_DATE < @fecha_ini \
@@ -514,9 +561,17 @@ def main():
 
     tarjetas_ajust = tarjetas_ajust.drop(columns=['AUX'])
 
-    # Verificar si un cliente activo la tarjeta con compras o
-    # si la activo con prestamos, etc. Esto se hace para calcular su
-    # estado de ciclo de vida
+    logging.info('Finaliza el proceso actualiza la fecha de activacion de las tarjetas'
+                 'que se activaron pero en la tabla UNICARD_CARD no se ve reflejado')
+
+
+    logging.info('')
+    logging.info('Inicia el proceso que verifica si un cliente activo la tarjeta'
+                 'comprando o mediante otro canal de activacion')
+
+    # Dado que un cliente puede activar la tarjeta mediante distintos
+    # canales, hay que obtener el medio de activacion utilizado para
+    # calcular su estado de ciclo de vida correctamente
 
     compras_unipay_ajust_copy = compras_unipay_ajust.copy()
 
@@ -529,11 +584,10 @@ def main():
         'CUSTOMER_KEY',
         'CARD_ID']]
 
-    tarjetas_ajust = pd.merge(  # noqa: PD015
-        tarjetas_ajust,
-        primera_compra_unipay,
-        on=['CUSTOMER_KEY','CARD_ID'],
-        how='left'
+    tarjetas_ajust = tarjetas_ajust.merge(
+    primera_compra_unipay,
+    on=['CUSTOMER_KEY','CARD_ID'],
+    how='left'
     )
 
     conditions = [
@@ -599,6 +653,9 @@ def main():
         tarjetas_ajust['FECHA_ESTADO'])
 
     tarjetas_ajust = tarjetas_ajust.drop(columns=['DATE_VALUE'])
+
+    logging.info('Inicia el proceso que verifica si un cliente activo la tarjeta'
+                 'comprando o mediante otro canal de activacion')
 
     logging.info(' ')
     logging.info('--------------------')
@@ -677,7 +734,6 @@ def main():
         )
 
     elif int(periodo) > periodo_inicio:
-        # Tarjetas UNIPAY
         tarjetas_ajust_copy = tarjetas_ajust.copy()
 
         tarjetas_ajust_copy['FECHA_ESTADO'] = pd.to_datetime(
@@ -697,8 +753,9 @@ def main():
          0
         )
 
-        # Compras realizadas por los clientes en el mes anterior al actual
-        # Se agregan los clientes que no han realizado
+        # Se obtienen las compras realizadas por los clientes mediante
+        # la tarjeta Unipay en el mes anterior al periodo establecido y
+        # se agregan los clientes que no han realizado
         # transacciones el mes anterior
         compras_ajust_copy = compras_ajust.copy()
 
@@ -727,6 +784,9 @@ def main():
             'TOT_SALE_AMT',
             'TOT_SALE_AMT_UNIPAY']]
 
+        logging.info(' ')
+        logging.info('Inicia el proceso de calculo del SOW')
+
         # Calculo del SOW de los clientes
         sow = compras_ajust_copy.groupby(['CUSTOMER_KEY','CARD_ID']).agg(
             TOT_SALE_AMT = ('TOT_SALE_AMT','sum'),
@@ -739,6 +799,11 @@ def main():
         # Si el cliente no compro con UNIPAY en el mes anterior al actual
         # el SOW es igual a 0.0
         sow['SOW'] = sow['SOW'].fillna(0.0)
+
+        logging.info('Finaliza el proceso de calculo del SOW')
+
+        logging.info(' ')
+        logging.info('Inicia el proceso de calculo del Ciclo')
 
         # Calculo del CICLO de los clientes
         compras_unipay_ajust_copy = compras_unipay_ajust.copy()
@@ -766,8 +831,7 @@ def main():
         # debido a las tarjetas de años anteriores para no tener problemas,
         # dado que se le asigno el estado grow en el periodo 202301
         if int(periodo) == 202302:
-            ciclo = pd.merge(  # noqa: PD015
-                ciclo,
+            ciclo = ciclo.merge(
                 estados_n1,
                 on=['CUSTOMER_KEY','CARD_ID'],
                 how='left')
@@ -792,25 +856,27 @@ def main():
             (ciclo['ULTIMA_COMPRA'] - ciclo['PENULTIMA_COMPRA']).dt.days,500.0
         )
 
+        logging.info('Finaliza el proceso de calculo del Ciclo')
+
+        logging.info(' ')
+        logging.info('Inicia el proceso para calcular el estado del ciclo de vida')
+
         # Se realiza un merge entre sow, ciclo, TARJETAS_COPY y ESTADOS_N1
         # para obtener el sow, ciclo, CREDIT LIMIT
         # y el ESTADO (mes anterior) del cliente
-        riesgo = pd.merge(  # noqa: PD015
-            sow,
+        riesgo = sow.merge(  # noqa: PD015
             ciclo,
             on=['CUSTOMER_KEY','CARD_ID'],
             how='left')
 
         riesgo['CICLO'] = riesgo['CICLO'].fillna(500.0)
 
-        riesgo = pd.merge(  # noqa: PD015
-            riesgo,
+        riesgo = riesgo.merge(  # noqa: PD015
             tarjetas_ajust_copy,
             on=['CUSTOMER_KEY','CARD_ID'],
             how='left')
 
-        riesgo = pd.merge(  # noqa: PD015
-            riesgo,
+        riesgo = riesgo.merge(  # noqa: PD015
             estados_n1,
             on=['CUSTOMER_KEY','CARD_ID'],
             how='left')
@@ -985,13 +1051,16 @@ def main():
     logging.info('--------------------')
 
 
+    logging.info(' ')
+    logging.info(f'Se borra la partición actual de {periodo}')
     deleteFromTable(
     table_ref='cl-bigdata-analytics-preprod.UNIPAY.LIFECYCLE_UNIPAY_STATUS',
     where_clause=f"monthid = '{periodo}'",
     gbq_client=gbq_client,
     )
-    logging.info(f'Se borra la partición actual de {periodo}')
 
+    logging.info(' ')
+    logging.info('Inicia la carga de datos a la tabla de GCP')
 
     uploadFrame(
     estado_clientes[['CUSTOMER_KEY','CARD_ID','STATUS','MONTHID']],
@@ -999,6 +1068,35 @@ def main():
     project=proyecto,
     gbq_client=gbq_client,
     if_exists='append')
+
+    logging.info('Finaliza la carga de datos a la tabla de GCP')
+
+
+    logging.info(' ')
+    logging.info('Inicia el proceso para el envio de correo')
+
+    # credenciales Sharepoint
+    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',
+                                      project=proyecto)
+
+    # ruta carpeta
+    file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
+    file_site += 'Unipay/Ciclo Vida Unipay/Ejecucion'
+    remote_path = posixpath.join(file_site,'Ultimo Periodo Ejecucion.txt')
+
+    buffer = io.BytesIO()
+    buffer.write(periodo.encode('utf-8'))
+    buffer.seek(0)
+
+    sp_output = sp.SharePointFile(
+    **sp_cred,
+    server_relative_path=remote_path
+    )
+    sp_output.upload(content=buffer)
+
+    logging.info('Finaliza el proceso para el envio de correo')
+
+    logging.info('Proceso Finalizado con exito')
 
 if __name__ == '__main__':
     main()
