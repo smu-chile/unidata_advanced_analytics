@@ -32,7 +32,7 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'examples'
+PROJECT_NAME = 'adquisicion_unipay'
 dag_args = {
     'dag_id': 'dataset_adquisicion_unipay',
     'schedule_interval': None,
