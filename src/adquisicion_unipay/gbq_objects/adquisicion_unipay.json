@@ -1,0 +1,42 @@
+{
+    "schema": "DS_UNIDATA_TEMP",
+    "table": "TMP_MODELO_ADQUISICION_UNIPAY",
+
+    "columns": [
+        {
+            "name": "CUSTOMER_KEY",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": "Identificador único del cliente en formato encriptado o codificado"
+        },
+        {
+            "name": "PROPENSION",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Propension del cliente de abrir la tarjeta Unipay"
+        },
+        {
+            "name": "GRUPO",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Grupo que fue asignado el cliente en base a su propension"
+        },
+        {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Periodo de referencia en formato YYYYMM (año y mes)."
+        },
+        {
+            "name": "FECHA",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "[PARTICIONADO] Columna auxiliar para particionar"
+        } 
+    ],
+    
+    "time_partitioning": {
+        "field": "FECHA",
+        "type_": "DAY"
+    }
+}
