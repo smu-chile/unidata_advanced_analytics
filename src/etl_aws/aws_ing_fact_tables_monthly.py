@@ -22,7 +22,7 @@ with open(
 PROJECT_NAME = 'etl_aws'
 dag_args = {
     'dag_id': 'etl_aws_ing_fact_tables_monthly',
-    'schedule_interval': '00 18 7 * *',
+    'schedule_interval': '0 18 7 * *',
     'dagrun_timeout': None,
     'catchup': True,
     'max_active_runs': 1,
