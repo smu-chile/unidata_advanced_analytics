@@ -232,7 +232,7 @@ SQL_QUERIES = {
     ULTIMA_CARGA,
     PROM_CANCEL,
     SKU_CANCEL
-    FROM NZ_SMU_BI_PROD.ML_LAB.VW_FACT_WORKFLOW
+    FROM cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WORKFLOW
     """
 }
 
