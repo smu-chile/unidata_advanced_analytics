@@ -34,7 +34,7 @@ dag_args = {
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['csotob@unidata.cl'],
         'start_date': pendulum.datetime(
-            2025, 12, 1,
+            2025, 11, 1,
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
