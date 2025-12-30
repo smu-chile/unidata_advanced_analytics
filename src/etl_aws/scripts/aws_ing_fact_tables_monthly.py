@@ -224,9 +224,9 @@ def main() -> None:  # noqa: D103
     }
 
 
-    partition_id = month_id
-    partition_value = partition_month
     for fact_table in fact_list :
+        partition_id = month_id
+        partition_value = partition_month
         if fact_table in ('last_week_customer_organization_shabits'):
             partition_id = week_id
             partition_value = week_id
