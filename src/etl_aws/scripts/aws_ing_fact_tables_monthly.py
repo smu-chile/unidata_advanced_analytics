@@ -148,7 +148,7 @@ SQL_QUERIES = QueryDict({
     left join cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID id using(customer_key)
     WHERE MONTHID = ${partition_id}
     """,
-    'customer_organization_tyc' : """"
+    'customer_organization_tyc' : """
     SELECT
         FORMATO
         ,PDA_CUSTOMER_KEY as CUSTOMER_ID
