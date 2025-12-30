@@ -106,7 +106,7 @@ SQL_QUERIES = QueryDict({
     FROM cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_MONTH_CUSTOMER_ORGANIZATION_PROFILE_VF vf
     left join cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID id
     on id.customer_key = vf.customer_id
-    WHERE MONTH_ID = '${partition_id}'""",
+    WHERE MONTH_ID = ${partition_id}""",
     'customer_organization_shabits_unidata_alvi': """
     SELECT
         ORG_IP_ID
@@ -126,7 +126,7 @@ SQL_QUERIES = QueryDict({
     FROM
     cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_MONTH_CUSTOMER_ORGANIZATION_SHABITS_UNIDATA_ALVI
     left join cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID id using(customer_key)
-    WHERE MONTHID = '${partition_id}'
+    WHERE MONTHID = ${partition_id}
     """,
     'customer_organization_shabits_unidata' : """
     SELECT
@@ -146,7 +146,7 @@ SQL_QUERIES = QueryDict({
     FROM
     cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_MONTH_CUSTOMER_ORGANIZATION_SHABITS_UNIDATA
     left join cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID id using(customer_key)
-    WHERE MONTHID = '${partition_id}'
+    WHERE MONTHID = ${partition_id}
     """,
     'customer_organization_tyc' : """"
     SELECT
