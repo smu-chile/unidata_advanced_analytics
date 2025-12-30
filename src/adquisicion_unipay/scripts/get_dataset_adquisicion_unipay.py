@@ -4,20 +4,27 @@ from __future__ import annotations
 import os
 import logging
 import argparse
+import tempfile
 from logging import config
 
 # Pip
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pendulum
-from google.cloud import bigquery  # noqa: F401
-from google.cloud.bigquery import Client
+import pyarrow.parquet as pq
 
 # Own
+from google.cloud import (
+    storage,
+    bigquery,  # noqa: F401
+)
+from google.cloud.bigquery import Client
+
 import common.gcp_extended.bigquery as gbq_extended  # noqa: F401
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.gcp_extended.bigquery import uploadFrame, readBigQuery, deleteFromTable
+from common.gcp_extended.bigquery import readBigQuery
 
 
 # -------------------------------------------------------------------------
@@ -279,7 +286,19 @@ SQL_QUERIES = QueryDict({
 # -------------------------------------------------------------------------
 # Functions
 # -------------------------------------------------------------------------
+"""
+Funcion que realiza un merge entre las tablas compras_formatos
+y promociones que se obtienen en las queries, ademas, se calcula la
+variable DIST_PROMOS, que representa el porcentaje de productos que compro
+en promocion el cliente. medido a partir del total de productos distintos
+que compro en la basket
 
+Parametros:
+- compras_formatos: tabla obtenida a partir de la query compras_formatos
+- promociones: tabla obtenida a partir de la query promociones
+
+Retorno: Dataframe
+"""
 def compras_promociones(
         compras_formatos: pd.DataFrame,
         promociones: pd.DataFrame
@@ -303,6 +322,23 @@ def compras_promociones(
 
     return compras_promociones_formatos
 
+"""
+Función que obtiene el medio o los medios de pago preferidos y utilizados
+por el cliente dentro de un rango de tiempo definido. Los medios de pago
+considerados son: crédito, efectivo, débito y resto
+
+Parametros:
+- compras_promociones_formatos: Dataframe obtenido en la funcion
+    compras_promociones
+- idmes: periodo (en formato YYYYMM) para realizar el calculo
+- idmes_n1: Mes anterior al periodo establecido (en formato YYYYMM)
+    para calcular el dataset. Se utiliza la variable periodo_n1
+    creada en la linea ""
+- tiempo: variable utilizada para dar nombre a las variables del DataFrame
+    de retorno. valores permitidos: 1M,3M,6M
+
+Retorno: Dataframe
+"""
 def medios_pago(
         compras_promociones_formatos: pd.DataFrame,
         idmes: str,
@@ -385,6 +421,21 @@ def variables_compras_formatos(
     ]
 
     return variables_compras.reset_index()
+
+def subir_dataset_cloud_storage(df: pd.DataFrame, bucket_name: str, blob_path: str):
+    table = pa.Table.from_pandas(df, preserve_index=False)
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.parquet') as tmp:
+        pq.write_table(table, tmp.name, compression='snappy')
+        temp_path = tmp.name
+
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_path)
+
+    blob.chunk_size = 8 * 1024 * 1024
+    blob.upload_from_filename(temp_path, content_type='application/octet-stream', timeout=600)
+
+    os.remove(temp_path)
 
 
 # -------------------------------------------------------------------------
@@ -834,14 +885,7 @@ def main():
     dataset['MEDIO_PAGO_PREFERIDO_6M'] = dataset['MEDIO_PAGO_PREFERIDO_6M'].fillna('NINGUNO')
     dataset['MEDIOS_PAGO_USADOS_6M'] = dataset['MEDIOS_PAGO_USADOS_6M'].fillna('NINGUNO')
 
-    dataset['FECHA'] = (
-        pd.to_datetime(dataset['MONTHID'].astype(str) + '01', format='%Y%m%d')
-        .dt.strftime('%Y-%m-%d')
-    )
-
     dataset = dataset[['PERIODO'] + [x for x in dataset.columns if x != 'PERIODO']]
-
-
 
     logging.info(' ')
     logging.info('--------------------')
@@ -849,23 +893,18 @@ def main():
     logging.info('--------------------')
 
     logging.info(' ')
-    logging.info(f'Se borra la partición actual de {periodo}')
+    logging.info('Inicia el proceso para subir el dataset a cloud storage')
 
-    deleteFromTable(
-    table_ref='cl-bigdata-analytics-preprod.UNIPAY.DATASET_ADQUISICION',
-    where_clause=f"monthid = '{periodo}'",
-    gbq_client=gbq_client,
+    subir_dataset_cloud_storage(
+    df=dataset,
+    bucket_name='cl-bigdata-analytics-preprod-us-sandbox-datasets',
+    blob_path='UNIPAY/ADQUISICION_UNIPAY/DATASETS/DATASET_ADQUISICION_'+str(periodo)+'.parquet'
     )
 
-    logging.info(' ')
-    logging.info('Inicia la carga de datos a la tabla de GCP')
+    logging.info('Finaliza el proceso para subir el dataset a cloud storage')
 
-    uploadFrame(
-    dataset,
-    table_ddl_json_path=os.path.join('gbq_objects','dataset_adquisicion_unipay.json'),
-    project=proyecto,
-    gbq_client=gbq_client,
-    if_exists='append')
+    logging.info(' ')
+    logging.info('Flujo ejecutado de forma exitosa')
 
 if __name__ == '__main__':
     main()
