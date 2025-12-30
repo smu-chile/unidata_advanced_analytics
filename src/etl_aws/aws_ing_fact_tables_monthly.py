@@ -56,7 +56,7 @@ with DAG(**dag_args) as dag:
     #Mes actual yyyymm
     MONTH_ID_ACTUAL =  "{{ dag_run.conf.get('month_id_actual', dag.timezone.convert(data_interval_end).strftime('%Y%m')) }}"  # noqa: E501
     #ultima semana mes pasado yyyyvv
-    WEEK_ID =  "{{ dag_run.conf.get('week_id', (dag.timezone.convert(data_interval_end).replace(day=1) - macros.timedelta(days=1)).strftime('%G%V') }}"  # noqa: E501
+    WEEK_ID =  "{{ dag_run.conf.get('week_id', (dag.timezone.convert(data_interval_end).replace(day=1) - macros.timedelta(days=1)).strftime('%Y%V')) }}"  # noqa: E501
     aws_ing_fact_tables_monthly = DataprocCreateBatchOperator(
         task_id = 'aws_ing_fact_tables_monthly',
 
