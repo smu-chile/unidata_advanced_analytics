@@ -237,7 +237,7 @@ def main() -> None:  # noqa: D103
 
         df_fact = readBigQuery(
             query=SQL_QUERIES[fact_table].substitute(
-                partition_value = partition_id
+                partition_id = partition_id
             ),
             user='csotob',
             gbq_client = Client()
