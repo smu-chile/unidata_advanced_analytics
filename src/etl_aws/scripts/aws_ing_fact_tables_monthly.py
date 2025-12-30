@@ -152,7 +152,7 @@ SQL_QUERIES = QueryDict({
     SELECT
         FORMATO
         ,PDA_CUSTOMER_KEY as CUSTOMER_ID
-        ,CAST(MONTH_ID TO INT64) AS MONTH_ID
+        ,CAST(MONTH_ID AS INT64) AS MONTH_ID
         ,FECHA_TYC
         ,MEDIO
         ,TYC
