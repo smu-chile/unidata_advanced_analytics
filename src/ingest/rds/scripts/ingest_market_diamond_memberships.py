@@ -37,7 +37,7 @@ SQL_QUERIES = QueryDict({
     """
     SELECT DISTINCT
         CAST(SUBSTR(id_membresia, 1, 10) AS DATE) AS transaction_date,
-        CAST(rut AS BIGINT) AS rut,
+        CAST(rut AS TEXT) AS rut,
         estado,
         CAST(fecha_inicio AS DATE) AS fecha_inicio,
         CAST(fecha_fin AS DATE) AS fecha_fin,
