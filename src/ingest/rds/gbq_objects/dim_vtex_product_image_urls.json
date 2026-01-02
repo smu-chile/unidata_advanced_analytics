@@ -1,0 +1,30 @@
+{
+    "schema": "ML_LAB",
+    "table": "DIM_VTEX_PRODUCT_IMAGE_URLS",
+    "columns": [
+        {
+            "name": "sku",
+            "field_type": "INTEGER"
+        },
+        {
+            "name": "ean",
+            "field_type": "INTEGER"
+        },
+        {
+            "name": "name",
+            "field_type": "STRING"
+        },
+        {
+            "name": "url",
+            "field_type": "STRING"
+        },
+        {
+            "name": "etiqueta",
+            "field_type": "STRING"
+        },
+        {
+            "name": "orden",
+            "field_type": "INTEGER"
+        }
+    ]
+}
