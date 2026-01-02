@@ -32,7 +32,7 @@ dag_args = {
     'dag_id': 'margins_fuentes_manuales_misc',
     'schedule_interval': '00 18 * * *',
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': [PROJECT_NAME, 'csotob'],
@@ -42,7 +42,7 @@ dag_args = {
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['csotob@unidata.cl'],
         'start_date': pendulum.datetime(
-            2025, 6, 25,
+            2026, 1, 1,
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
