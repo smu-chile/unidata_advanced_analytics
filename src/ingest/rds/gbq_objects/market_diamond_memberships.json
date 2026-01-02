@@ -4,7 +4,7 @@
 
     "columns": [
         {"name":"transaction_date","field_type":"DATE"},
-        {"name":"rut","field_type":"INTEGER"},
+        {"name":"rut","field_type":"STRING"},
         {"name":"estado","field_type":"STRING"},
         {"name":"fecha_inicio","field_type":"DATE"},
         {"name":"fecha_fin","field_type":"DATE"},
