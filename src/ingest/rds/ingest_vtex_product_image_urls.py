@@ -62,7 +62,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    MAX_WORKERS = 25
+    MAX_WORKERS = '25'
 
     ingest_data = ExtendedDataprocCreateBatchOperator(
         task_id = 'ingest_data',
