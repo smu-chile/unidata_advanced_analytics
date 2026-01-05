@@ -427,8 +427,10 @@ def main() -> None:  # noqa: D103
     usuario = 'pricing'
 
     # Tabla temporal aux
+    store_banner_tabla = 'Super_10' if store_banner == 'Super 10' else store_banner
+
     esquema = 'TMP'
-    tabla = f'TMP_REGRESSION_DATA_{use}_aux_{store_banner}'
+    tabla = f'TMP_REGRESSION_DATA_{use}_aux_{store_banner_tabla}'
     tmp_path_table_aux = f'{proyecto}.{esquema}.{tabla}'
 
     # Tabla temporal final
