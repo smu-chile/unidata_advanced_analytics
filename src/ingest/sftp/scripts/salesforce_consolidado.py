@@ -42,13 +42,6 @@ SQL_QUERIES = {
     'EMAIL' :
     """
     SELECT
-    PDA_CUSTOMER_KEY as CUSTOMER_ID
-    from
-    cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID
-    limit 10""",
-    'EMAIL_' :
-    """
-    SELECT
         REPORT_ID,
         MAILING_ID,
         CANAL,
@@ -86,6 +79,16 @@ SQL_QUERIES = {
     WHERE
         DATE(A.ENVIADO) >= '2023-12-01'
     ORDER BY 12 DESC;
+    """,
+    'SMS' : """
+    SELECT *
+    FROM cl-cda-unidata-prod.DS_UNIDATA_CRM.VW_FACT_EVENTS_REPORT_SMS A
+    ORDER BY 9 DESC;
+    """,
+    'PUSH' : """
+    SELECT *
+    FROM cl-cda-unidata-prod.DS_UNIDATA_CRM.VW_FACT_EVENTS_TOTAL_REPORT_PUSH_SALESFORCE
+    ORDER BY 9 DESC:
     """
 }
 
@@ -115,7 +118,7 @@ def main() -> None:  # noqa: D103
         excel_name = f'CONSOLIDADO_{archivo}_{execution_date}.xlsx'
         consolidado_df.to_excel(
         excel_name,
-        sheet_name='Consolidado Email',
+        sheet_name=f'Consolidado {archivo.capitalize()}',
         index=False,
         header=True
     )
