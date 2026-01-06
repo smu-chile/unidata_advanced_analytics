@@ -53,7 +53,7 @@ SQL_QUERIES = QueryDict({
     FROM cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WEEK_CUSTOMER_ORGANIZATION_OUTLIER ou
     left join cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID id
     on id.customer_key = ou.customer_id
-    WHERE WEEK_ISO_ID = ${partition_id}
+    WHERE WEEK_ISO_ID = ${partition_value}
     """
 })
 
