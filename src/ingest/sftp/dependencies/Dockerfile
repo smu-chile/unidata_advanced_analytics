@@ -83,6 +83,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       gensim \
       virtualenv \
       xlrd \
+      xlwt \
   && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
 # (Optional) Install additional requirements
