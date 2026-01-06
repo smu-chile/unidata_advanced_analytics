@@ -43,6 +43,12 @@ SQL_QUERIES = {
     'EMAIL' :
     """
     SELECT
+    PDA_CUSTOMER_KEY as CUSTOMER_ID
+    from
+    cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID""",
+    'EMAIL_' :
+    """
+    SELECT
         REPORT_ID,
         MAILING_ID,
         CANAL,
