@@ -10,7 +10,7 @@ import pandas as pd
 import paramiko
 
 # pip
-from google.cloud import bigquery
+from google.cloud.bigquery import Client
 
 import common.gcp_extended.secretsmanager as secretmanager
 
@@ -76,7 +76,7 @@ SQL_QUERIES = {
         TASA_CLICK_OPEN_UNICO,
         TASA_CLICK_SENT_UNICO,
         UNSUBSCRIBE
-    FROM cl-cda-unidata-dev.DS_UNIDATA_CRM.VW_FACT_EVENTS_REPORT_EMAIL A
+    FROM cl-cda-unidata-prod.DS_UNIDATA_CRM.VW_FACT_EVENTS_REPORT_EMAIL A
     WHERE
         DATE(A.ENVIADO) >= '2023-12-01'
     ORDER BY 12 DESC;
@@ -94,8 +94,6 @@ def main() -> None:  # noqa: D103
     archivos = ['EMAIL','SMS', 'PUSH']
     # Set all clients
 
-    gbq_client = bigquery.Client()
-
 
     for archivo in archivos:
         #Read Query
@@ -103,7 +101,7 @@ def main() -> None:  # noqa: D103
         consolidado_df = readBigQuery(
             query=SQL_QUERIES[archivo],
             user='csotob',
-            gbq_client = gbq_client
+            gbq_client = Client()
         )
 
         #Create excel from dataframe
