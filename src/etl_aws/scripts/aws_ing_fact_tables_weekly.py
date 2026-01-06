@@ -64,7 +64,7 @@ def main() -> None:  # noqa: D103
     # Parameters
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
-    partition_week: str = args['partition_month']
+    partition_week: str = args['partition_week']
 
     landing_bucket = 'smu-datalake-test-landing'
     landing_path = 'views/datascience'
