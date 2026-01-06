@@ -1705,15 +1705,45 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
     # ENDREGION
 
-    dpi = 40
+    dpi_fig1 = 200
+    max_alto_fig1 = 320
+    max_ancho_fig1 = 320
+
+    dpi_fig2 = 200
+    max_alto_fig2 = 320
+    max_ancho_fig2 = 320
+
+    dpi_fig3 = 400
+    max_alto_fig3 = 700
+    max_ancho_fig3 = 500
+
+    dpi_fig4 = 400
+    max_alto_fig4 = 700
+    max_ancho_fig4 = 500
+
+    dpi_fig5 = 400
+    max_alto_fig5 = 7000
+    max_ancho_fig5 = 500
+
+    dpi_fig6 = 400
+    max_alto_fig6 = 700
+    max_ancho_fig6 = 500
+
+    dpi_fig7 = 400
+    max_alto_fig7 = 700
+    max_ancho_fig7 = 500
 
     # REGION: Creacion del documento
     #----------------------------------------------------------------------
 
     # --- Helper para insertar figura y liberar memoria ---
-    def _add_fig(doc, fig, *, dpi: int, max_ancho: int | None = 320,
+    def _add_fig(doc, fig, *, dpi: int,
+                max_alto: int | None = 320,
+                max_ancho: int | None = 320,
                 nombre_log: str = '') -> None:
-        doc.add_figure(fig, dpi=dpi, max_ancho=max_ancho)
+        doc.add_figure(fig, dpi=dpi,
+                       max_alto=max_alto,
+                       max_ancho=max_ancho)
         plt.close(fig)
         del fig
         gc.collect()
@@ -1741,7 +1771,11 @@ def main() -> None:  # noqa: D103
     fig1 = grafico_torta_estado_mes(
         df_lc, monthid=last_monthid, considerar_gasto=False, show=False
     )
-    _add_fig(doc, fig1, dpi=dpi, max_ancho=320, nombre_log='Fig1')
+    _add_fig(doc, fig1,
+             dpi=dpi_fig1,
+             max_alto=max_alto_fig1,
+             max_ancho=max_ancho_fig1,
+             nombre_log='Fig1')
 
     doc.add_spacer(10)
 
@@ -1757,7 +1791,11 @@ def main() -> None:  # noqa: D103
     fig2 = matriz_status_vs_nivel_graficos(
         df_lc, last_monthid, modo_porcentaje='fila', considerar_gasto=False
     )
-    _add_fig(doc, fig2, dpi=dpi, max_ancho=320, nombre_log='Fig2')
+    _add_fig(doc, fig2,
+             dpi=dpi_fig2,
+             max_alto=max_alto_fig2,
+             max_ancho=max_ancho_fig2,
+             nombre_log='Fig2')
 
     doc.add_page_break()
 
@@ -1778,7 +1816,11 @@ def main() -> None:  # noqa: D103
         df_lc, monthid=prev_monthid, considerar_gasto=True,
         mostrar_monto_ventas=False, umbral_pct_inside=3.0, show=False
     )
-    _add_fig(doc, fig3, dpi=dpi, max_ancho=320, nombre_log='Fig3')
+    _add_fig(doc, fig3,
+             dpi=dpi_fig3,
+             max_alto=max_alto_fig3,
+             max_ancho=max_ancho_fig3,
+             nombre_log='Fig3')
 
     doc.add_spacer(10)
 
@@ -1793,7 +1835,11 @@ def main() -> None:  # noqa: D103
     fig4 = matriz_status_vs_nivel_graficos(
         df_lc, prev_monthid, modo_porcentaje='fila', considerar_gasto=True
     )
-    _add_fig(doc, fig4, dpi=dpi, max_ancho=320, nombre_log='Fig4')
+    _add_fig(doc, fig4,
+             dpi=dpi_fig4,
+             max_alto=max_alto_fig4,
+             max_ancho=max_ancho_fig4,
+             nombre_log='Fig4')
 
     doc.add_page_break()
 
@@ -1811,7 +1857,11 @@ def main() -> None:  # noqa: D103
 
     # fig5: resumen variaciones (mes anterior)
     fig5 = resumen_clientes_ciclo_extendido(df_lc, monthid=prev_monthid)
-    _add_fig(doc, fig5, dpi=dpi, max_ancho=320, nombre_log='Fig5')
+    _add_fig(doc, fig5,
+             dpi=dpi_fig5,
+             max_alto=max_alto_fig5,
+             max_ancho=max_ancho_fig5,
+             nombre_log='Fig5')
 
     doc.add_page_break()
 
@@ -1829,7 +1879,11 @@ def main() -> None:  # noqa: D103
 
     # fig6: evolución 6 meses
     fig6 = grafico_clientes_por_estado(df_lc, n_meses=6, tipo=1)
-    _add_fig(doc, fig6, dpi=dpi, max_ancho=330, nombre_log='Fig6')
+    _add_fig(doc, fig6,
+             dpi=dpi_fig6,
+             max_alto=max_alto_fig6,
+             max_ancho=max_ancho_fig6,
+             nombre_log='Fig6')
 
     doc.add_spacer(10)
 
@@ -1842,7 +1896,11 @@ def main() -> None:  # noqa: D103
 
     # fig7: evolución 12 meses
     fig7 = grafico_lineas_clientes_por_estado(df_lc, 12)
-    _add_fig(doc, fig7, dpi=dpi, max_ancho=330, nombre_log='Fig7')
+    _add_fig(doc, fig7,
+             dpi=dpi_fig7,
+             max_alto=max_alto_fig7,
+             max_ancho=max_ancho_fig7,
+             nombre_log='Fig7')
 
     logging.info('Se agrega contenido.')
 
