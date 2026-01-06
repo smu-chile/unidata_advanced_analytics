@@ -44,7 +44,8 @@ SQL_QUERIES = {
     SELECT
     PDA_CUSTOMER_KEY as CUSTOMER_ID
     from
-    cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID""",
+    cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID
+    limit 10""",
     'EMAIL_' :
     """
     SELECT
