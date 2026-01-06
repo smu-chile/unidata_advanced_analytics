@@ -1,5 +1,5 @@
 {
-    "schema": "ML_LAB",
+    "schema": "ECOMMERCE",
     "table": "DIM_OK_TO_SHOP",
 
     "columns": [
