@@ -6,7 +6,6 @@ import logging
 import argparse
 from logging import config
 
-import pandas as pd
 import paramiko
 
 # pip
@@ -113,11 +112,8 @@ def main() -> None:  # noqa: D103
         #Create excel from dataframe
         logging.info(f'Creating excel file for {archivo}')
         excel_name = f'CONSOLIDADO_{archivo}_{execution_date}.xls'
-        excel_writer = pd.ExcelWriter(
-            excel_name,
-        )
         consolidado_df.to_excel(
-        excel_writer,
+        excel_name,
         sheet_name='Consolidado Email',
         index=False,
         header=True
