@@ -112,7 +112,7 @@ def main() -> None:  # noqa: D103
 
         #Create excel from dataframe
         logging.info(f'Creating excel file for {archivo}')
-        excel_name = f'CONSOLIDADO_{archivo}_{execution_date}.xls'
+        excel_name = f'CONSOLIDADO_{archivo}_{execution_date}.xlsx'
         consolidado_df.to_excel(
         excel_name,
         sheet_name='Consolidado Email',
