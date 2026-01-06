@@ -1885,7 +1885,7 @@ def main() -> None:  # noqa: D103
              max_ancho=max_ancho_fig6,
              nombre_log='Fig6')
 
-    doc.add_spacer(10)
+    doc.add_page_break()
 
     doc.add_text('<b>Resultados en el <u>largo plazo</u></b>', estilo='subtitulo')
     doc.add_text(
