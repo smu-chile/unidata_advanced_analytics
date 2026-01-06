@@ -30,7 +30,7 @@ NETWORK = dag_env_config['network']
 SUBNETWORK = dag_env_config['subnetwork']
 
 dag_args = {
-    'dag_id': 'salesforce_ing_consolidado_temp',
+    'dag_id': 'salesforce_ing_consolidado',
     'schedule_interval': '0 12 * * *',
     'dagrun_timeout': None,
     'catchup': False,
@@ -43,7 +43,7 @@ dag_args = {
         'owner': 'BIGDATA_ANALYTICS',
         'email': ['csotob@unidata.cl'],
         'start_date': pendulum.datetime(
-            2025, 6, 25,
+            2026, 1, 1,
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
@@ -58,8 +58,8 @@ dag_args = {
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y%m%d')) }}"  # noqa: E501
 
-    salesforce_consolidado_temp = DataprocCreateBatchOperator(
-        task_id = 'salesforce_consolidado_temp',
+    salesforce_consolidado = DataprocCreateBatchOperator(
+        task_id = 'salesforce_consolidado',
 
         batch = {
             'pyspark_batch': {
@@ -69,7 +69,7 @@ with DAG(**dag_args) as dag:
                     f'{PROJECT_NAME}/'
                     f'{SUBPROJECT_NAME}/'
                     'scripts/'
-                    'salesforce_consolidado_temp.py'
+                    'salesforce_consolidado.py'
                 ),
                 # Common files
                 'python_file_uris': [
