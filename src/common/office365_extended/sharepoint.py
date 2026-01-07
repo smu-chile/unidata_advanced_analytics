@@ -147,19 +147,29 @@ class SharePointFile:
             path_or_file=content, file_name=filename
         ).execute_query()
 
+
     def rename(self, new_name: str) -> None:
-        """Rename file in SharePoint.
+        """Rename file in SharePoint server.
+
+        Change the name of the file represented by the object to a new one.
+        The ``SharePointFile`` object will now point to the file with the
+        new name so its not needed to create a new object after renaming.
 
         Parameters
         ----------
-        new_name : string
-            New name to be given to the file.
-
+        new_name : str
+            New name of the file in the server
         """
+        # Rename the file
         self._client_context.web.get_file_by_server_relative_path(
-        self.server_relative_path
+            self.server_relative_path
         ).rename(new_name).execute_query()
 
+        # Reasign server_relative_path so it points to the new file
+        self.server_relative_path = posixpath.join(
+            posixpath.split(self.server_relative_path)[0],
+            new_name
+        )
 
 
 class SharePointFolder:
