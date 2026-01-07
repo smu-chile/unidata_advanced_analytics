@@ -147,6 +147,7 @@ class SharePointFile:
             path_or_file=content, file_name=filename
         ).execute_query()
 
+
     def rename(self, new_name: str) -> None:
         """Rename file in SharePoint server.
 
