@@ -69,7 +69,7 @@ with DAG(**dag_args) as dag:
     # ---------------------------------------------------------------------
     train_tasks = [
         ExtendedDataprocCreateBatchOperator(
-            task_id=f'train_w2v_embeddings_{store_banner.replace(' ', '_').lower()}',
+            task_id=f"train_w2v_embeddings_{store_banner.replace(' ', '_').lower()}",
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 'scripts/'
