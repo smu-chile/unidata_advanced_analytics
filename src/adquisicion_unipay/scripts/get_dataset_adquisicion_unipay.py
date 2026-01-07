@@ -548,7 +548,8 @@ def main():
     gcp_proyect = 'cl-cda-unidata-prod',
     schema = 'DS_PROD_UNI_SSFF',
     periodo = periodo,
-    periodo_n1 = periodo_n1
+    periodo_n1 = periodo_n1,
+    periodo_n2 = periodo_n2
     ),
     user = 'abravom',
     gbq_client = gbq_client

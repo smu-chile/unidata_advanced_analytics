@@ -60,7 +60,7 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d') }}"
+    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date',dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
     create_batch = ExtendedDataprocCreateBatchOperator(
         task_id = 'get_dataset_adquisicion_unipay',
