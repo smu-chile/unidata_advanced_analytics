@@ -172,7 +172,6 @@ class SharePointFile:
         )
 
 
-
 class SharePointFolder:
     """Sharepoint Folder.
 
