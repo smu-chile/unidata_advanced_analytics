@@ -9,13 +9,14 @@ from string import Template
 from logging import config
 
 # pip
+import pandas as pd
 import pendulum
 from gensim.models import Word2Vec
 from google.cloud.bigquery import Client
 
 # Own
 import common.gcp_extended.bigquery as gbq_extended
-from common.constants import LOGGING_CONFIG, SHORT_STORE_BANNERS
+from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 
 
@@ -102,18 +103,18 @@ SQL_QUERIES = QueryDict({
             basket_quantity,
             sku_product
 
-        FROM `${gcp_project}.ML_LAB.VW_SALES_ITEM` sales_item
+        FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
 
-        INNER JOIN `${gcp_project}.ML_LAB.VW_SALES_BASKET` sales_basket
+        INNER JOIN `${gcp_project}.CDA_VISTAS.VW_SALES_BASKET` sales_basket
         USING (txn_key, customer_key, store_id, itm_txn_fcn_tp_dsc)
 
-        INNER JOIN `${gcp_project}.ML_LAB.VW_DIM_STORE` dim_store
+        INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` dim_store
         USING (store_id)
 
         INNER JOIN (
             SELECT
                 sku_product
-            FROM `${gcp_project}.ML_LAB.VW_DIM_PRODUCT`
+            FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
             GROUP BY 1
             HAVING MAX(neg_dsc) NOT IN ('SERVICIOS COMERCIALES', 'NO RETAIL')
         ) dim_product
@@ -123,15 +124,15 @@ SQL_QUERIES = QueryDict({
             SELECT
                 market_basket_key,
                 TRUE AS from_other_ecommerce
-            FROM `${gcp_project}.ML_LAB.VW_FACT_MARKET_BASKET_E_COMMERCE`
+            FROM `${gcp_project}.CDA_VISTAS.VW_FACT_MARKET_BASKET_E_COMMERCE`
             WHERE canal_venta IN ('PEDIDOS YA','CORNER SHOP','RAPPI','RAPPI TURBO')
         ) external_ecommerce_filter
-        ON sales_item.market_basket_key = external_ecommerce_filter.market_basket_key
+        USING (market_basket_key)
 
         WHERE
-            sales_basket.transaction_date >= DATE('${execution_date}') - INTERVAL 1 MONTH
+            sales_basket.transaction_date >= DATE('${execution_date}') - INTERVAL 1 YEAR
             AND sales_basket.transaction_date < DATE('${execution_date}')
-            AND sales_item.transaction_date >= DATE('${execution_date}') - INTERVAL 1 MONTH
+            AND sales_item.transaction_date >= DATE('${execution_date}') - INTERVAL 1 YEAR
             AND sales_item.transaction_date < DATE('${execution_date}')
             AND channel = 'SALA'
             AND itm_txn_fcn_tp_dsc = 'V'
@@ -285,9 +286,10 @@ def main() -> None:  # noqa: D103
     gcp_project: str = args['gcp_project']
     execution_date: pendulum.Date = pendulum.date(
         *list(map(int, args['execution_date'].split('-')))
+    ).set(
+        day=1
     )
     store_banner: str = args['store_banner']
-    short_store_banner: str = SHORT_STORE_BANNERS[store_banner]
 
     # Model
     epochs: int = args['epochs']
@@ -307,17 +309,8 @@ def main() -> None:  # noqa: D103
     # --------------------
     # Automatic parameters
     # --------------------
-    # Output
-    output_uri = (
-        'gs://cl-bigdata-analytics-dev-us-sandbox-models/'
-        f'{short_store_banner}/'
-        f'{user}/'
-        f"{execution_date.format('YYYYMM')}.kv"
-    )
-
     logging.info('Parameters:')
     logging.info(f'Execution date: {execution_date.isoformat()}')
-    logging.info(f'Output URI: {output_uri}')
 
     logging.info('Hyperparameters:')
     logging.info(f'sg: {sg}')
@@ -396,10 +389,41 @@ def main() -> None:  # noqa: D103
         epochs=epochs
     )
 
-    # Save the keyed vectors
-    model.wv.save(fname_or_handle=output_uri)
+    # Delete sentences object as it was allready used
+    del sentences
 
-    return uuid
+    # Get the model keyword vectors
+    sku_w2v_embeddings = pd.DataFrame(
+        model.wv.vectors, index=model.wv.key_to_index
+    ).reset_index(names='sku')
+    sku_w2v_embeddings.insert(0, 'store_banner', store_banner)
+    sku_w2v_embeddings.reset_index(names='sku')
+    sku_w2v_embeddings.insert(0, 'date', execution_date.isoformat())
+
+    # Remove past run output
+    logging.info('Removing past run if exists')
+    gbq_extended.deleteFromTable(
+        table_ref=os.path.join('gbq_objects', 'w2v_sku_embeddings.json'),
+        project=gcp_project,
+        where_clause=f"""
+            date = {execution_date.isoformat()}
+            AND store_banner = {store_banner}
+        """,
+        gbq_client=gbq_client,
+    )
+
+    # Upload to GBQ
+    logging.info('Updating table to GBQ')
+    gbq_extended.uploadFrame(
+        df=pd.DataFrame(
+            model.wv.vectors, index=model.wv.key_to_index
+        ).reset_index(),
+        table_ddl_json_path=os.path.join('gbq_objects', 'w2v_sku_embeddings.json'),
+        project=gcp_project,
+        gbq_client=gbq_client,
+        if_exists='append',
+    )
+
 
 
 if __name__ == '__main__':
