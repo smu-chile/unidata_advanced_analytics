@@ -6,6 +6,7 @@ import argparse
 from logging import config
 
 import pandas as pd
+import pendulum
 
 # pip
 from google.cloud import bigquery
@@ -102,9 +103,7 @@ def main() -> None:  # noqa: D103
     gbq_client = bigquery.Client()
     #input files
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Pricing/SellOut'
-    #TODO(csotob): Cambiar nombre de input:file y la logica de renombrar a
-    # 'Procesado-' en GCP cuando se depreque en aws, eventualmente
-    input_file =  f'{file_site}/SellOut ID_0 Unimarc/PROCESADO-Sellout_{execution_month}.xlsx'
+    input_file =  f'{file_site}/SellOut ID_0 Unimarc/Sellout_{execution_month}.xlsx'
     #table definitions jsons
     json = 'sellout_unimarc.json'
     schema = 'REPORTE_MARGEN'
@@ -130,6 +129,9 @@ def main() -> None:  # noqa: D103
     if modified:
         logging.info('Archivo existe y fue modificado hoy')
         df_file = sharepoint.toFrame()
+        file_name = os.path.basename(sharepoint.server_relative_path)
+        new_name =  f'PROCESADO-{file_name}-{pendulum.now().to_date_string()}'
+        sharepoint.rename(new_name=new_name)
         df_file =cleaning_func(df_file,execution_month,execution_week)
         # Upload data
         logging.info('Uploading data')

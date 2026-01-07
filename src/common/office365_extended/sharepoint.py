@@ -2,14 +2,14 @@
 from __future__ import annotations
 
 import os
-
-# Default
 import logging
 import posixpath
 from io import BytesIO
 
 # pip
 import pandas as pd
+
+# Default
 from office365.sharepoint.files.file import File
 from office365.sharepoint.client_context import ClientContext
 from cryptography.hazmat.primitives.serialization import (
@@ -146,6 +146,12 @@ class SharePointFile:
         target_dir.files.upload(
             path_or_file=content, file_name=filename
         ).execute_query()
+
+    def rename(self, new_name: str) -> None:
+        self._client_context.web.get_file_by_server_relative_path(
+        self.server_relative_path
+        ).rename(new_name).execute_query()
+
 
 
 class SharePointFolder:
