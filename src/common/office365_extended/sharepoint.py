@@ -149,7 +149,7 @@ class SharePointFile:
 
     def rename(self, new_name: str) -> None:
         self._client_context.web.get_file_by_server_relative_path(
-        self.server_relative_path
+            self.server_relative_path
         ).rename(new_name).execute_query()
 
 
