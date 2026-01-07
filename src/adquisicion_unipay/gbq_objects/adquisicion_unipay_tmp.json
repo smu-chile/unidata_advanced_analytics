@@ -1,6 +1,6 @@
 {
-    "schema": "UNIPAY",
-    "table": "ADQUISICION_UNIPAY",
+    "schema": "DS_UNIDATA_TEMP",
+    "table": "TMP_MODELO_ADQUISICION_UNIPAY",
 
     "columns": [
         {
