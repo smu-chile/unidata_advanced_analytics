@@ -106,8 +106,6 @@ def main() -> None:  # noqa: D103
         '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
         'Pricing/SellOut/SellOut Consolidado/'
     )
-    #TODO(csotob): Cambiar nombre de input:file y la logica de renombrar a
-    # 'Procesado-' en GCP cuando se depreque en aws, eventualmente
     input_files = {
         's10': f'{file_site}/S10/Sellout_S10_{execution_month}.xlsx',
         'm10': f'{file_site}/M10/Sellout_M10_{execution_month}.xlsx',
