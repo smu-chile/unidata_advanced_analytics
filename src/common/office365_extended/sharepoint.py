@@ -211,7 +211,7 @@ class SharePointFolder:
         )
 
     def fileList(self) -> list[str]:
-        """Returns a list of with the filenames inside the directory."""
+        """Return a list of with the filenames inside the directory."""
         folder = self._client_context.web.get_folder_by_server_relative_url(
             self.server_relative_folder
         )
