@@ -38,8 +38,8 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
 # recommended to include all of them.
 #
 # Use mamba to install packages quickly.
-RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
-    && ${CONDA_HOME}/bin/mamba install \
+RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
+    && ${CONDA_HOME}/bin/micromamba install -y -c conda-forge\
       conda \
       cython \
       fastavro \
@@ -81,7 +81,8 @@ RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
       pendulum \
       pandas-gbq \
       gensim \
-      virtualenv
+      virtualenv \
+    && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
 # (Optional) Install additional requirements
 # COPY requirements.txt .
