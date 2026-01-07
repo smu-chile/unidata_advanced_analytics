@@ -85,9 +85,6 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       pendulum \
       pandas-gbq \
       virtualenv \
-      category-encoders=2.8.1 \
-      imbalanced-learn=0.14.0 \
-      xgboost=3.0.5 \
     && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
 # (Optional) Install additional requirements
