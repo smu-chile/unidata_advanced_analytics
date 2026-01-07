@@ -72,77 +72,81 @@ SQL_QUERIES = QueryDict({
     'n_preaprobado_cupos':
     """
     WITH SOLICITARON AS (
-    SELECT CUSTOMER_ID,CARD_ID,
-    SUBSCRIPTION_DATE,ACTIVATION_DATE,TERMINATION_DATE
-    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD`
-    WHERE CUSTOMER_ID IN (SELECT CUSTOMER_ID
+    SELECT CUSTOMER_ID,CARD_ID,FECHACAPTACION
+    FROM (
+    SELECT CUSTOMER_ID,CARD_ID,FECHACAPTACION,
+    ROW_NUMBER() OVER (PARTITION BY CUSTOMER_ID ORDER BY FECHACAPTACION DESC) AS RW
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD` a
+    INNER JOIN `${gcp_proyect}.${schema}.VW_APERTURAS_UNIDATA` b
+    ON a.CUSTOMER_ID = b.ID_CUSTOMER
+    AND CAST(a.SUBSCRIPTION_DATE AS DATE) = b.FECHACAPTACION
+    WHERE a.CUSTOMER_ID IN (SELECT CUSTOMER_ID
     FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_PREAPROBADOS`
     WHERE PERIODO = ${periodo})
-    AND FORMAT_DATE('%Y%m', PARSE_DATE('%Y-%m-%d',SUBSCRIPTION_DATE)) <= '${periodo_n1}'
+    AND FORMAT_DATE('%Y%m', b.FECHACAPTACION) <= '${periodo_n1}'
+    ) t
+    WHERE RW = 1
     ),
-    PERIODO AS (
-    SELECT CARD_ID,PERIOD
+    SOLICITARON_MES_ANT AS (
+    SELECT CUSTOMER_ID,CARD_ID,FECHACAPTACION
+    FROM SOLICITARON
+    WHERE FORMAT_DATE('%Y%m', FECHACAPTACION) = '${periodo_n1}'
+    ),
+    SOLICITARON_MESES_ANT AS (
+    SELECT CUSTOMER_ID,CARD_ID,FECHACAPTACION
+    FROM SOLICITARON
+    WHERE FORMAT_DATE('%Y%m', FECHACAPTACION) < '${periodo_n1}'
+    ),
+    NO_SOLICITARON AS (
+    SELECT CUSTOMER_ID
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_PREAPROBADOS`
+    WHERE CUSTOMER_ID NOT IN (SELECT CUSTOMER_ID FROM SOLICITARON)
+    AND PERIODO = ${periodo}
+    ),
+    PERIODO_CIERRE_SOLICITARON_MESES_ANT AS (
+    SELECT CARD_ID,PERIOD,
+    CAST(FORMAT_DATE('%Y%m',
+    DATE_ADD(PARSE_DATE('%Y%m',
+    CAST(PERIOD AS STRING)), INTERVAL 1 MONTH)) AS INT64) PERIODO_CIERRE
     FROM (
         SELECT CARD_ID,PERIOD,
         ROW_NUMBER() OVER (PARTITION BY CARD_ID ORDER BY PERIOD DESC) AS RW
         FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD_STATUS`
-        WHERE CARD_ID IN (SELECT CARD_ID FROM SOLICITARON)
-    ) t
+        WHERE CARD_ID IN (SELECT CARD_ID FROM SOLICITARON_MESES_ANT)
+        AND PERIOD <= ${periodo_n2}
+    )t
+    WHERE RW = 1
     ),
-    PREAPROBADOS as (
-    SELECT CUSTOMER_ID,CUPO,GRUPO_RIESGO,PERIODO
-    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_PREAPROBADOS`
-    WHERE PERIODO = ${periodo}
-    ),
-    PRE_CON_TARJETAS_CERRADAS as (
-    SELECT a.CUSTOMER_ID,a.CARD_ID,
-    a.SUBSCRIPTION_DATE,a.ACTIVATION_DATE,a.TERMINATION_DATE,
-    b.PERIOD as PERIODO
-    FROM SOLICITARON a
-    LEFT JOIN PERIODO b
+    TARJETAS_CIERRE_MESES_ANT AS (
+    SELECT a.CUSTOMER_ID,a.CARD_ID,a.FECHACAPTACION,
+    COALESCE(b.PERIODO_CIERRE,
+    CAST(FORMAT_DATE('%Y%m', a.FECHACAPTACION) AS INT)) AS PERIODO_CIERRE
+    FROM SOLICITARON_MESES_ANT a
+    LEFT JOIN PERIODO_CIERRE_SOLICITARON_MESES_ANT b
     ON a.CARD_ID = b.CARD_ID
-    WHERE b.PERIOD <= ${periodo_n1}
-    AND a.CUSTOMER_ID IN (SELECT CUSTOMER_ID FROM PREAPROBADOS)
-    ),
-    PRE_CON_TARJETAS_CERRADAS_PERIODOS AS (
-    SELECT a.CUSTOMER_ID,a.CARD_ID,
-    CAST(FORMAT_DATE(
-    '%Y%m', DATE_ADD(PARSE_DATE(
-    '%Y%m', CAST(a.PERIODO AS STRING)), INTERVAL 1 MONTH)) AS INT64) PERIODO_CIERRE,
-    b.PERIODO PERIODO_PRE
-    FROM PRE_CON_TARJETAS_CERRADAS a
-    INNER JOIN `${gcp_proyect}.${schema}.VW_I_UNICARD_PREAPROBADOS` b
-    ON a.CUSTOMER_ID = b.CUSTOMER_ID
-    WHERE b.PERIODO > CAST(FORMAT_DATE(
-    '%Y%m', DATE_ADD(PARSE_DATE(
-    '%Y%m', CAST(a.PERIODO AS STRING)), INTERVAL 1 MONTH)) AS INT64)
-    ),
-    PRE_CERRADAS_PERIODO_VARIABLES AS (
-    SELECT CUSTOMER_ID,CARD_ID,PERIODO_CIERRE,PERIODO_PRE
-    FROM (
-    SELECT CUSTOMER_ID,CARD_ID,PERIODO_CIERRE,PERIODO_PRE,
-    ROW_NUMBER() OVER (PARTITION BY CUSTOMER_ID ORDER BY PERIODO_PRE asc) rw
-    FROM PRE_CON_TARJETAS_CERRADAS_PERIODOS
-    ) t
-    WHERE rw = 1
     )
     SELECT a.CUSTOMER_ID CUSTOMER_KEY,
-    COUNT(DISTINCT b.PERIODO) N_PREAPROBADO, COUNT(DISTINCT b.CUPO) N_CUPOS
-    FROM PRE_CERRADAS_PERIODO_VARIABLES a
+    COUNT(DISTINCT b.PERIODO) N_PREAPROBADO,
+    COUNT(DISTINCT b.CUPO) N_CUPOS
+    FROM TARJETAS_CIERRE_MESES_ANT a
     INNER JOIN `${gcp_proyect}.${schema}.VW_I_UNICARD_PREAPROBADOS` b
     ON a.CUSTOMER_ID = b.CUSTOMER_ID
-    WHERE b.PERIODO >= a.PERIODO_PRE
+    WHERE b.PERIODO >= a.PERIODO_CIERRE
     AND b.PERIODO <= ${periodo}
     GROUP BY a.CUSTOMER_ID
 
     UNION ALL
 
+    SELECT CUSTOMER_ID CUSTOMER_KEY,1 N_PREAPROBADO,1 N_CUPOS
+    FROM SOLICITARON_MES_ANT
+
+    UNION ALL
+
     SELECT CUSTOMER_ID CUSTOMER_KEY,
-    COUNT(DISTINCT PERIODO) N_PREAPROBADO, COUNT(DISTINCT CUPO) N_CUPOS
+    COUNT(DISTINCT PERIODO) N_PREAPROBADO,
+    COUNT(DISTINCT CUPO) N_CUPOS
     FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_PREAPROBADOS`
-    WHERE CUSTOMER_ID IN (SELECT CUSTOMER_ID FROM PREAPROBADOS)
-    AND CUSTOMER_ID NOT IN (SELECT CUSTOMER_ID FROM PRE_CON_TARJETAS_CERRADAS)
-    AND PERIODO <= ${periodo}
+    WHERE CUSTOMER_ID IN (SELECT CUSTOMER_ID FROM NO_SOLICITARON)
     GROUP BY CUSTOMER_ID
     """,
 
@@ -290,8 +294,8 @@ SQL_QUERIES = QueryDict({
 Funcion que realiza un merge entre las tablas compras_formatos
 y promociones que se obtienen en las queries, ademas, se calcula la
 variable DIST_PROMOS, que representa el porcentaje de productos que compro
-en promocion el cliente. medido a partir del total de productos distintos
-que compro en la basket
+en promocion el cliente, medido a partir del total de productos distintos
+que compro en la basket.
 
 Parametros:
 - compras_formatos: tabla obtenida a partir de la query compras_formatos
@@ -325,7 +329,7 @@ def compras_promociones(
 """
 Función que obtiene el medio o los medios de pago preferidos y utilizados
 por el cliente dentro de un rango de tiempo definido. Los medios de pago
-considerados son: crédito, efectivo, débito y resto
+considerados son: crédito, efectivo, débito y resto.
 
 Parametros:
 - compras_promociones_formatos: Dataframe obtenido en la funcion
@@ -333,7 +337,7 @@ Parametros:
 - idmes: periodo (en formato YYYYMM) para realizar el calculo
 - idmes_n1: Mes anterior al periodo establecido (en formato YYYYMM)
     para calcular el dataset. Se utiliza la variable periodo_n1
-    creada en la linea ""
+    creada en la linea "478"
 - tiempo: variable utilizada para dar nombre a las variables del DataFrame
     de retorno. valores permitidos: 1M,3M,6M
 
@@ -386,7 +390,22 @@ def medios_pago(
     return medios_pago.rename(columns={'MEDIO_PREFERIDO':'MEDIO_PAGO_PREFERIDO_'+tiempo,
                                             'MEDIOS_USADOS':'MEDIOS_PAGO_USADOS_'+tiempo})
 
+"""
+Función que obtiene variables estadisticas basadas en las compras
+realizadas por el cliente dentro de un rango de tiempo definido.
 
+Parametros:
+- compras_promociones_formatos: Dataframe obtenido en la funcion
+    compras_promociones
+- idmes: periodo (en formato YYYYMM) para realizar el calculo
+- idmes_n1: Mes anterior al periodo establecido (en formato YYYYMM)
+    para calcular el dataset. Se utiliza la variable periodo_n1
+    creada en la linea "478"
+- tiempo: variable utilizada para dar nombre a las variables del DataFrame
+    de retorno. valores permitidos: 1M,3M,6M
+
+Retorno: Dataframe
+"""
 def variables_compras_formatos(
         compras_promociones_formatos: pd.DataFrame,
         idmes: str,
@@ -422,7 +441,18 @@ def variables_compras_formatos(
 
     return variables_compras.reset_index()
 
-def subir_dataset_cloud_storage(df: pd.DataFrame, bucket_name: str, blob_path: str):
+"""
+Funcion que aloja el dataset en Cloud Storage
+
+Parametros:
+- df: Dataframe obtenido en el flujo
+- bucket_name: Nombre del bucket que se alojara el dataset
+- path: Ruta donde se alojara el archivo + el nombre del archivo + formato
+"""
+def alojar_dataset_cloud_storage(
+        df: pd.DataFrame,
+        bucket_name: str,
+        path: str):
     table = pa.Table.from_pandas(df, preserve_index=False)
     with tempfile.NamedTemporaryFile(delete=False, suffix='.parquet') as tmp:
         pq.write_table(table, tmp.name, compression='snappy')
@@ -430,10 +460,12 @@ def subir_dataset_cloud_storage(df: pd.DataFrame, bucket_name: str, blob_path: s
 
     client = storage.Client()
     bucket = client.bucket(bucket_name)
-    blob = bucket.blob(blob_path)
+    blob = bucket.blob(path)
 
     blob.chunk_size = 8 * 1024 * 1024
-    blob.upload_from_filename(temp_path, content_type='application/octet-stream', timeout=600)
+    blob.upload_from_filename(
+        temp_path,
+        content_type='application/octet-stream', timeout=600)
 
     os.remove(temp_path)
 
@@ -463,10 +495,13 @@ def main():
     fecha_ini = fecha.subtract(months=5).start_of('month').strftime('%Y-%m-%d')
     fecha_fin = fecha.add(months=1).start_of('month').strftime('%Y-%m-%d')
 
+    # Variables Cloud Storage
+    bucket_name = 'cl-bigdata-analytics-preprod-us-sandbox-datasets'
+    prefix = 'UNIPAY/ADQUISICION_UNIPAY/DATASETS/DATASET_ADQUISICION'
+
     logging.info(' ')
     logging.info('--------------------')
     logging.info(f'Se inicia el proceso para el periodo: {periodo}')
-    logging.info(f'Con el parametro periodo_n1: {periodo_n1}')
     logging.info(f'Con el parametro fecha inicial: {fecha_ini}')
     logging.info(f'Con el parametro fecha final: {fecha_fin}')
     logging.info('--------------------')
@@ -583,7 +618,7 @@ def main():
     promociones = readBigQuery(SQL_QUERIES['promociones'].substitute(
     gcp_proyect_1 = 'cl-bigdata-analytics-preprod',
     gcp_proyect_2 = 'cl-cda-unidata-prod',
-    schema_1 = 'ML_LAB',
+    schema_1 = 'CDA_VISTAS',
     schema_2 = 'DS_PROD_UNI_SSFF',
     periodo = periodo,
     periodo_n1 = periodo_n1,
@@ -671,7 +706,8 @@ def main():
 
     logging.info(' ')
     logging.info('--------------------')
-    logging.info('Inicia el proceso de creacion de tablas mediante las tablas de las queries')
+    logging.info('Inicia el proceso de creacion de tablas a partir de las tablas ' \
+    'obtenidas en las queries')  # noqa: ISC002
     logging.info('--------------------')
 
     logging.info(' ')
@@ -764,7 +800,8 @@ def main():
 
     logging.info(' ')
     logging.info('--------------------')
-    logging.info('Finaliza el proceso de creacion de tablas mediante las tablas de las queries')
+    logging.info('Finaliza el proceso de creacion de tablas a partir de las tablas ' \
+    'obtenidas en las queries')  # noqa: ISC002
     logging.info('--------------------')
 
 
@@ -895,16 +932,13 @@ def main():
     logging.info(' ')
     logging.info('Inicia el proceso para subir el dataset a cloud storage')
 
-    subir_dataset_cloud_storage(
+    alojar_dataset_cloud_storage(
     df=dataset,
-    bucket_name='cl-bigdata-analytics-preprod-us-sandbox-datasets',
-    blob_path='UNIPAY/ADQUISICION_UNIPAY/DATASETS/DATASET_ADQUISICION_'+str(periodo)+'.parquet'
+    bucket_name=bucket_name,
+    path=prefix+'_'+str(periodo)+'.parquet'
     )
 
     logging.info('Finaliza el proceso para subir el dataset a cloud storage')
-
-    logging.info(' ')
-    logging.info('Flujo ejecutado de forma exitosa')
 
 if __name__ == '__main__':
     main()
