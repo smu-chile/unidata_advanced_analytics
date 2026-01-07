@@ -6,6 +6,7 @@ import argparse
 from logging import config
 
 import pandas as pd
+import pendulum
 
 # pip
 from google.cloud import bigquery
@@ -141,6 +142,9 @@ def main() -> None:  # noqa: D103
         if modified:
             logging.info('Archivo existe y fue modificado hoy')
             df_file = sharepoint.toFrame(sheet_name = 'ID 0')
+            file_name = os.path.basename(sharepoint.server_relative_path)
+            new_name =  f'PROCESADO-{file_name}-{pendulum.now().to_date_string()}'
+            sharepoint.rename(new_name=new_name)
             df_file =cleaning_func(df_file,execution_month)
             # Upload data
             logging.info('Uploading data')
