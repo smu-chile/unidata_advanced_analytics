@@ -127,7 +127,7 @@ SQL_QUERIES = QueryDict({
             FROM `${gcp_project}.CDA_VISTAS.VW_FACT_MARKET_BASKET_E_COMMERCE`
             WHERE canal_venta IN ('PEDIDOS YA','CORNER SHOP','RAPPI','RAPPI TURBO')
         ) external_ecommerce_filter
-        USING (market_basket_key)
+        ON sales_item.market_basket_key = external_ecommerce_filter.market_basket_key
 
         WHERE
             sales_basket.transaction_date >= DATE('${execution_date}') - INTERVAL 1 YEAR
