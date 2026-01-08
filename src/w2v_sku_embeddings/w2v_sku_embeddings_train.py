@@ -1,6 +1,8 @@
 """Defines the DAG that trains the product embeddings."""
 # Default
 import json
+import platform
+import importlib
 from datetime import timedelta
 
 # pip
@@ -8,10 +10,21 @@ import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
 from airflow.models.baseoperator import chain
-from airflow.providers.google.cloud.operators.dataproc import (
-    DataprocCreateBatchOperator,
-)
 
+
+if platform.system() == 'Windows':
+    from common.operators.dataproc_create_batch import (
+        ExtendedDataprocCreateBatchOperator,
+    )
+elif platform.system() == 'Linux':
+    ExtendedDataprocCreateBatchOperator = (importlib.import_module(
+        'BRANCH_PLACEHOLDER.'
+        'smu-chile.unidata_advanced_analytics.'
+        'src.common.operators.dataproc_create_batch'
+    )).ExtendedDataprocCreateBatchOperator
+else:
+    err_msg = 'Only Linux and Windows are supported.'
+    raise NotImplementedError(err_msg)
 
 # Globals
 with open(
@@ -49,80 +62,43 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    RUN_UUID4 = '{{ macros.uuid.uuid4() }}'
+    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
-    # Tasks
+    # ---------------------------------------------------------------------
+    # Week forecasting
+    # ---------------------------------------------------------------------
     train_tasks = [
-        DataprocCreateBatchOperator(
-            task_id = f"train_embeddings_{store_banner.replace(' ', '_').lower()}",
-
-            batch = {
-                'pyspark_batch': {
-                    # Main file to run in the dataproc pod
-                    'main_python_file_uri': (
-                        f'gs://{dag_env_config["scripts_gcs"]}/'
-                        f'{PROJECT_NAME}/'
-                        'scripts/'
-                        'sku_embedding_train.py'
-                    ),
-                    # Common files
-                    'python_file_uris': [
-                        (
-                            f'gs://{dag_env_config["scripts_gcs"]}/'
-                            'common/'
-                        )
-                    ],
-                    # For Google Big Query read/write
-                    'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
-                    # Main file arguments
-                    'args': [
-                        '--uuid', RUN_UUID4,
-                        '--project_name', PROJECT_NAME,
-                        '--gcp_project', dag_env_config['project_id'],
-                        '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}",  # noqa: E501
-                        '--store_banner', store_banner,
-                        '--epochs', "{{ dag_run.conf.get('epochs', 10) }}",
-                        '--batch_size', "{{ dag_run.conf.get('batch_size', 5000000) }}",
-                        '--sg', "{{ dag_run.conf.get('sg', 1) }}",
-                        '--hs', "{{ dag_run.conf.get('hs', 0) }}",
-                        '--min_count', "{{ dag_run.conf.get('min_count', 100) }}",
-                        '--window_size', "{{ dag_run.conf.get('window_size', 100) }}",
-                        '--ns_exponent', "{{ dag_run.conf.get('ns_exponent', -0.5) }}",
-                        '--embedding_dim', "{{ dag_run.conf.get('embedding_dim', 100) }}",
-                        '--n_negative_samples', "{{ dag_run.conf.get('n_negative_samples', 20) }}",
-                        '--cart_lenght', "{{ dag_run.conf.get('min_cart_lenght', 2) }}", "{{ dag_run.conf.get('max_cart_lenght', 100) }}"  # noqa: E501
-                    ],
-                },
-
-                # Docker image to be used in the dataproc pod
-                'runtime_config': {
-                    'version': '2.2',
-                    'container_image': (
-                        'us-east1-docker.pkg.dev/'
-                        f'{dag_env_config["project_id"]}/'
-                        'dataproc-worker-images/'
-                        f"{PROJECT_NAME.replace('_', '-')}:latest"
-                    ),
-                },
-
-                # Privileges config
-                'environment_config': {
-                    'execution_config': {
-                        'service_account': dag_env_config['g_service_account'],
-                        'network_uri': dag_env_config['network'],
-                        'subnetwork_uri': dag_env_config['subnetwork'],  # noqa: E501
-                        'ttl': '14400s',
-                    },
-                },
-            },
-
-            # Leaves Airflow Trigger to track the status of the Dataproc
-            # batch
-            deferrable=True,
-
-            # Batch ID
-            batch_id=f'batch-{RUN_UUID4}',
-            project_id=dag_env_config['project_id'],
+        ExtendedDataprocCreateBatchOperator(
+            task_id=f"train_w2v_embeddings_{store_banner.replace(' ', '_').lower()}",
+            python_script_path=(
+                f'{PROJECT_NAME}/'
+                'scripts/'
+                'sku_embedding_train.py'
+            ),
+            dag_env_config=dag_env_config,
+            docker_image_name=PROJECT_NAME,
+            pyspark_batch_args=[
+                '--uuid', '{{ macros.uuid.uuid4() }}',
+                '--project_name', PROJECT_NAME,
+                '--gcp_project', dag_env_config['project_id'],
+                '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}",  # noqa: E501
+                '--store_banner', store_banner,
+                '--epochs', "{{ dag_run.conf.get('epochs', 10) }}",
+                '--batch_size', "{{ dag_run.conf.get('batch_size', 5000000) }}",
+                '--sg', "{{ dag_run.conf.get('sg', 1) }}",
+                '--hs', "{{ dag_run.conf.get('hs', 0) }}",
+                '--min_count', "{{ dag_run.conf.get('min_count', 100) }}",
+                '--window_size', "{{ dag_run.conf.get('window_size', 100) }}",
+                '--ns_exponent', "{{ dag_run.conf.get('ns_exponent', -0.5) }}",
+                '--embedding_dim', "{{ dag_run.conf.get('embedding_dim', 100) }}",
+                '--n_negative_samples', "{{ dag_run.conf.get('n_negative_samples', 20) }}",
+                '--cart_lenght', "{{ dag_run.conf.get('min_cart_lenght', 2) }}", "{{ dag_run.conf.get('max_cart_lenght', 100) }}"  # noqa: E501
+            ],
+            include_paths=[
+                'common/',
+                f'{PROJECT_NAME}/gbq_objects/'
+            ],
+            ttl=43200,
         )
 
         for store_banner in [
@@ -132,5 +108,6 @@ with DAG(**dag_args) as dag:
             'Super 10'
         ]
     ]
+
 
 chain(train_tasks)
