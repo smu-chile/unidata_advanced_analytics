@@ -52,7 +52,7 @@ month_dict = {
     'Noviembre' : '11',
     'Diciembre' : '12'
 }
-ppto_year = '2025' #sorry about this, will think of something, thx
+ppto_year = '2026' #sorry about this, will think of something, thx
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
@@ -135,7 +135,7 @@ def main() -> None:  # noqa: D103
         'Paneles Power BI/Reporte de Margen'
     )
     input_files = {
-            'ppto' :f'{site}/Unimarc/Fuentes datos manuales/Presupuesto/2025 V2/PPTO FORMATOS SELLOUT RECUPERO 2025.xlsx',  # noqa: E501
+            'ppto' :f'{site}/Unimarc/Fuentes datos manuales/Presupuesto/2026/PPTO FORMATOS SELLOUT RECUPERO 2026.xlsx',  # noqa: E501
             'ppto_mg1' : f'{site}/Unimarc/Reporte Unimarc MMPP/PPTO/PPTO 2025.xlsx',
             'cat_h' : f'{site}/Unimarc/Fuentes datos manuales/Categoria H/Categoria_H_Estructura_Comercial.xlsx',  # noqa: E501
             'est_com' : f'{site}/Unimarc/Fuentes datos manuales/Estructura comercial/Estructura Comercial.xlsx',  # noqa: E501
