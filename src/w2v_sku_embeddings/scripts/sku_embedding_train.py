@@ -263,7 +263,7 @@ class QueryDataLoader:
             # Query is OK
             else:
                 # Filter by column and cart lenght
-                response_df = response_df['sku_product']
+                response_df = response_df['sku_product'].apply(list)
 
                 # Augment offset
                 self.start_index += self.batch_size
