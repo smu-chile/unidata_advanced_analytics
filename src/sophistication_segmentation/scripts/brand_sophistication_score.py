@@ -85,7 +85,7 @@ SQL_QUERIES = QueryDict({
     )
 
     SELECT
-        '${execution_date}' AS date,
+        DATE('${execution_date}') AS date,
         '${store_banner}' AS store_banner,
         CATEGORY_DESCRIPTION,
         BRAND,
@@ -203,6 +203,7 @@ def main():
             field='date',
             type_='DAY',
         ),
+        use_legacy_sql=False,
         clustering_fields=['store_banner'],
         gbq_client=gbq_client,
     )
