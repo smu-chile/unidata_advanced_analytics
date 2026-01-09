@@ -76,7 +76,12 @@ with DAG(**dag_args) as dag:
                 '--project_name', PROJECT_NAME,
                 '--gcp_project', dag_env_config['project_id'],
                 '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}",  # noqa: E501
-                '--store_banner', store_banner
+                '--store_banner', store_banner,
+                '--min_category_transacted_items', "{{ dag_run.conf.get('min_category_transacted_items', 1) }}"  # noqa: E501
+            ],
+            include_paths=[
+                'common/',
+                f'{PROJECT_NAME}/gbq_objects/'
             ],
         )
 

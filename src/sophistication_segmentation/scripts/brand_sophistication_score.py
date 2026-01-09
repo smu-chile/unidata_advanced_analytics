@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # Default
+import logging
 import argparse
 from logging import config
 
@@ -41,7 +42,10 @@ parser.add_argument(
     choices=['Unimarc', 'Alvi', 'Super 10', 'Mayorista'],
     help='SMU subsidiary for which the allocation will be made'
 )
-
+parser.add_argument(
+    '--min_category_transacted_items', type=int, required=True,
+    help='Minimum number of baskets a client must have to be considered'
+)
 
 # -------------------------------------------------------------------------
 #  SQL Queries
@@ -55,9 +59,9 @@ SQL_QUERIES = QueryDict({
             brand_desc AS brand,
             SAFE_CAST(contenido_bruto AS FLOAT64) AS weight,
             grupo_dsc AS sub_category_description,
-            um_contenido AS weight_um
-            neg_dsc AS business_name,
-        FROM `${gcp_proyect}.CDA_VISTAS.VW_DIM_PRODUCT`
+            um_contenido AS weight_um,
+            neg_dsc AS business_name
+        FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
     ),
 
     customer_category_counts_filter AS (
@@ -81,8 +85,8 @@ SQL_QUERIES = QueryDict({
     )
 
     SELECT
-        ${execution_date} AS date,
-        ${store_banner} AS store_banner,
+        '${execution_date}' AS date,
+        '${store_banner}' AS store_banner,
         CATEGORY_DESCRIPTION,
         BRAND,
         2 * (
@@ -100,7 +104,7 @@ SQL_QUERIES = QueryDict({
             VALUE / QUANTITY / AVG(VALUE / QUANTITY) OVER (
                 PARTITION BY CONCAT(SUB_CATEGORY_DESCRIPTION, ' - ', WEIGHT_UM)
             ) AS INDEXED_PU,
-            VALUE / (WEIGHT * QUANTITY) / AVG(VALUE / (WEIGHT * QUANTITY)) OVER (
+            VALUE / (distinct_products.WEIGHT * QUANTITY) / AVG(VALUE / (distinct_products.WEIGHT * QUANTITY)) OVER (
                 PARTITION BY CONCAT(SUB_CATEGORY_DESCRIPTION, ' - ', WEIGHT_UM)
             ) AS INDEXED_PPUM
 
@@ -134,8 +138,8 @@ SQL_QUERIES = QueryDict({
             AND from_other_ecommerce IS NULL
             AND customer_key <> MD5('CST^CL^-1')
     )
-    GROUP BY 1,2
-    """
+    GROUP BY 1,2,3,4
+    """  # noqa: E501
 })
 
 
@@ -154,20 +158,26 @@ def main():
         + '_score'
     )
     gcp_project: str = args['gcp_project']
-    min_category_transacted_items: str = args['min_category_transacted_items']
     execution_date: pendulum.Date = pendulum.date(
         *list(map(int, args['execution_date'].split('-')))
     ).set(
         day=1 # Allways ensures first day of the month
     )
+    min_category_transacted_items: int = args['min_category_transacted_items']
     store_banner: str = args['store_banner']
 
     # Hardcoded
     gbq_client = Client()
     table_ref=f'{gcp_project}.ML_LAB.BRAND_SOPHISTICATION_SCORE'
 
+    logging.info(f'gcp_project = {gcp_project}')
+    logging.info(f'execution_date = {execution_date}')
+    logging.info(f'min_category_transacted_items = {min_category_transacted_items}')
+    logging.info(f'store_banner = {store_banner}')
+
 
     # Remove past run if needed
+    logging.info(f'Removing past run from {table_ref}')
     deleteFromTable(
         table_ref=table_ref,
         where_clause=f"""
@@ -178,6 +188,7 @@ def main():
     )
 
     # Create the table
+    logging.info('Creating new partition')
     createTableAsSelect(
         query=SQL_QUERIES['brand_sophistication_score'].substitute(
            gcp_project=gcp_project,
@@ -195,6 +206,8 @@ def main():
         clustering_fields=['store_banner'],
         gbq_client=gbq_client,
     )
+
+    logging.info('Done!')
 
 
 if __name__ == '__main__':
