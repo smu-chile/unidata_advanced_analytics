@@ -88,7 +88,7 @@ SQL_QUERIES = {
     'PUSH' : """
     SELECT *
     FROM cl-cda-unidata-prod.DS_UNIDATA_CRM.VW_FACT_EVENTS_TOTAL_REPORT_PUSH_SALESFORCE
-    ORDER BY 9 DESC:
+    ORDER BY 9 DESC;
     """
 }
 
