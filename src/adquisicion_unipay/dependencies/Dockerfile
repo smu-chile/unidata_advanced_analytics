@@ -85,11 +85,14 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       pendulum \
       pandas-gbq \
       virtualenv \
+      category-encoders \
+      imbalanced-learn \
     && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
 # (Optional) Install additional requirements
 # COPY requirements.txt .
 # RUN pip install --no-cache-dir -r requirements.txt
+RUN ${CONDA_HOME}/bin/python -m pip install xgboost==3.0.5 --no-input
 
 # Set timezone
 ENV TZ="America/Santiago"
