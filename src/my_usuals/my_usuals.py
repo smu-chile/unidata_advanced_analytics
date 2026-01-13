@@ -68,7 +68,7 @@ with DAG(**dag_args) as dag:
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 'scripts/'
-                'brand_sophistication_score.py'
+                'my_usuals.py'
             ),
             dag_env_config=dag_env_config,
             docker_image_name=PROJECT_NAME,
