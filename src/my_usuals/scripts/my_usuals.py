@@ -230,7 +230,18 @@ SQL_QUERIES = QueryDict({
 
     FROM base_my_usuals
 
-    INNER JOIN  `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
+    INNER JOIN  (
+        SELECT *
+        FROM (
+            SELECT
+                CAST(ean AS INT64) AS ean,
+                sku_product,
+                unidad_de_medida,
+                ROW_NUMBER() OVER (PARTITION BY ean) AS ean_index
+            FROM ${ref("VW_DIM_PRODUCT")}
+        )
+        WHERE ean_index = 1
+    )
     USING (EAN)
 
     INNER JOIN (
