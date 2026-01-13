@@ -263,6 +263,12 @@ def main():
     # Environment
     user: str = args['project_name']  # noqa: F841
     gcp_project: str = args['gcp_project']
+    gcp_project_cda: str = {
+        'cl-bigdata-analytics': 'cl-cda-unidata-dev',
+        'cl-bigdata-analytics-dev': 'cl-cda-unidata-dev',
+        'cl-bigdata-analytics-preprod': 'cl-cda-unidata-prod',
+        'cl-bigdata-analytics-prod': 'cl-cda-unidata-prod',
+    }[args['gcp_project']]
     execution_date: pendulum.Date = pendulum.date(
         *list(map(int, args['execution_date'].split('-')))
     )
@@ -277,6 +283,7 @@ def main():
     table_ref=f'{gcp_project}.ECOMMERCE.MY_USUALS'
 
     logging.info(f'gcp_project = {gcp_project}')
+    logging.info(f'gcp_project_cda = {gcp_project_cda}')
     logging.info(f'execution_date = {execution_date}')
     logging.info(f'store_banner = {store_banner}')
     logging.info(f'rollback_months: {rollback_months}')
@@ -300,6 +307,7 @@ def main():
     createTableAsSelect(
         query=SQL_QUERIES['compute_usuals_partition'].substitute(
             gcp_project=gcp_project,
+            gcp_project_cda=gcp_project_cda,
             execution_date=execution_date,
             store_banner=store_banner,
             rollback_months=rollback_months,
