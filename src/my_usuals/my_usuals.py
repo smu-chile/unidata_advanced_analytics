@@ -83,8 +83,7 @@ with DAG(**dag_args) as dag:
                 '--top_n', "{{ dag_run.conf.get('top_n', 100) }}",
             ],
             include_paths=[
-                'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
+                'common/'
             ],
         )
 
