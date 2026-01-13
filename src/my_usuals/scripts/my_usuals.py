@@ -238,7 +238,7 @@ SQL_QUERIES = QueryDict({
                 sku_product,
                 unidad_de_medida,
                 ROW_NUMBER() OVER (PARTITION BY ean) AS ean_index
-            FROM ${ref("VW_DIM_PRODUCT")}
+            FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
         )
         WHERE ean_index = 1
     )
