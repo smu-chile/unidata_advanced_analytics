@@ -84,14 +84,16 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       sympy \
       pendulum \
       pandas-gbq \
-      category-encoders \
-      imbalanced-learn \
       virtualenv \
     && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
 # (Optional) Install additional requirements
 # COPY requirements.txt .
 # RUN pip install --no-cache-dir -r requirements.txt
+RUN ${CONDA_HOME}/bin/python -m pip install --no-cache-dir \
+  category-encoders \
+  imbalanced-learn \
+  --no-input
 
 # Set timezone
 ENV TZ="America/Santiago"
