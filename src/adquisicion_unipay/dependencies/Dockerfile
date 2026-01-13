@@ -93,6 +93,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
 RUN ${CONDA_HOME}/bin/python -m pip install --no-cache-dir \
   category-encoders \
   imbalanced-learn \
+  xgboost==3.0.5 \
   --no-input
 
 # Set timezone
