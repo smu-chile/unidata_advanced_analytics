@@ -82,6 +82,10 @@ with DAG(**dag_args) as dag:
                 '--min_transacted_months', "{{ dag_run.conf.get('min_transacted_months', 2) }}",
                 '--top_n', "{{ dag_run.conf.get('top_n', 100) }}",
             ],
+            include_paths=[
+                'common/',
+                f'{PROJECT_NAME}/gbq_objects/'
+            ],
         )
 
         for store_banner in [
