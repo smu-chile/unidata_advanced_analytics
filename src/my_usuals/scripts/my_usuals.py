@@ -314,7 +314,7 @@ def main():
         table_ref=table_ref,
         where_clause=f"""
             date = '{execution_date}'
-            AND store_banner = '{store_banner_numbers[store_banner]}'
+            AND store_banner = {store_banner_numbers[store_banner]}
         """,
         gbq_client=gbq_client,
     )
