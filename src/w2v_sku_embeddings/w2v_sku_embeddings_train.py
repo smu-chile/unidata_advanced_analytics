@@ -69,11 +69,11 @@ with DAG(**dag_args) as dag:
     # ---------------------------------------------------------------------
     train_tasks = [
         ExtendedDataprocCreateBatchOperator(
-            task_id=f"train_w2v_embeddings_{store_banner.replace(' ', '_').lower()}",
+            task_id=f"train_product_embeddings_{store_banner.replace(' ', '_').lower()}",
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 'scripts/'
-                'sku_embedding_train.py'
+                'w2v_train_product_embeddings.py'
             ),
             dag_env_config=dag_env_config,
             docker_image_name=PROJECT_NAME,
@@ -93,6 +93,38 @@ with DAG(**dag_args) as dag:
                 '--embedding_dim', "{{ dag_run.conf.get('embedding_dim', 100) }}",
                 '--n_negative_samples', "{{ dag_run.conf.get('n_negative_samples', 20) }}",
                 '--cart_lenght', "{{ dag_run.conf.get('min_cart_lenght', 2) }}", "{{ dag_run.conf.get('max_cart_lenght', 100) }}"  # noqa: E501
+            ],
+            include_paths=[
+                'common/',
+                f'{PROJECT_NAME}/gbq_objects/'
+            ],
+            ttl=43200,
+        )
+
+        for store_banner in [
+            #'Unimarc',
+            #'Mayorista',
+            #'Alvi',
+            'Super 10'
+        ]
+    ]
+
+    predict_tasks = [
+        ExtendedDataprocCreateBatchOperator(
+            task_id=f"predict_customer_embeddings_{store_banner.replace(' ', '_').lower()}",
+            python_script_path=(
+                f'{PROJECT_NAME}/'
+                'scripts/'
+                'w2v_predict_customer_embeddings.py'
+            ),
+            dag_env_config=dag_env_config,
+            docker_image_name=PROJECT_NAME,
+            pyspark_batch_args=[
+                '--project_name', PROJECT_NAME,
+                '--gcp_project', dag_env_config['project_id'],
+                '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}",  # noqa: E501
+                '--store_banner', store_banner,
+                '--month_interval', "{{ dag_run.conf.get('month_interval', 12) }}"
             ],
             include_paths=[
                 'common/',
