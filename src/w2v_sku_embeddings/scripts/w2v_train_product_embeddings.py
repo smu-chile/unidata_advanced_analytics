@@ -388,17 +388,21 @@ def main() -> None:  # noqa: D103
         ns_exponent=ns_exponent,
         epochs=epochs
     )
+    logging.info('Trainning done!')
 
     # Delete sentences object as it was allready used
     del sentences
 
     # Get the model keyword vectors
+    logging.info('Saving embedding weights')
     sku_w2v_embeddings = pd.DataFrame(
         model.wv.vectors, index=model.wv.key_to_index
     ).reset_index(names='sku')
-    sku_w2v_embeddings.insert(0, 'store_banner', store_banner)
-    sku_w2v_embeddings.reset_index(names='sku')
-    sku_w2v_embeddings.insert(0, 'date', execution_date.isoformat())
+    sku_w2v_embeddings['store_banner'] = store_banner
+    sku_w2v_embeddings['date'] = execution_date.isoformat()
+    sku_w2v_embeddings = sku_w2v_embeddings[[
+        'date', 'sku', 'store_banner', *list(range(100))
+    ]]
 
     # Remove past run output
     logging.info('Removing past run if exists')
@@ -406,18 +410,16 @@ def main() -> None:  # noqa: D103
         table_ref=os.path.join('gbq_objects', 'w2v_sku_embeddings.json'),
         project=gcp_project,
         where_clause=f"""
-            date = {execution_date.isoformat()}
-            AND store_banner = {store_banner}
+            date = '{execution_date.isoformat()}'
+            AND store_banner = '{store_banner}'
         """,
         gbq_client=gbq_client,
     )
 
     # Upload to GBQ
-    logging.info('Updating table to GBQ')
+    logging.info('Updating SKU table to GBQ')
     gbq_extended.uploadFrame(
-        df=pd.DataFrame(
-            model.wv.vectors, index=model.wv.key_to_index
-        ).reset_index(),
+        df=sku_w2v_embeddings,
         table_ddl_json_path=os.path.join('gbq_objects', 'w2v_sku_embeddings.json'),
         project=gcp_project,
         gbq_client=gbq_client,
