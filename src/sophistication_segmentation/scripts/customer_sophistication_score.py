@@ -57,10 +57,10 @@ SQL_QUERIES = QueryDict({
         SELECT DISTINCT
             ean,
             cat_dsc AS category_description,
-            grupo_dsc AS sub_category_description,
-            neg_dsc AS business_name
             SAFE_CAST(contenido_bruto AS FLOAT64) AS weight,
+            grupo_dsc AS sub_category_description,
             um_contenido AS weight_um,
+            neg_dsc AS business_name
         FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
     ),
 
