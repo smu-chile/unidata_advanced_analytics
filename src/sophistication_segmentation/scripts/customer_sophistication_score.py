@@ -61,7 +61,7 @@ SQL_QUERIES = QueryDict({
             neg_dsc AS business_name
             SAFE_CAST(contenido_bruto AS FLOAT64) AS weight,
             um_contenido AS weight_um,
-        FROM `${proyecto}.CDA_VISTAS.VW_DIM_PRODUCT`
+        FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
     ),
 
     customer_category_counts_filter AS (
