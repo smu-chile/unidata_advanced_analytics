@@ -99,10 +99,10 @@ SQL_QUERIES = QueryDict({
         SUM(VALUE) AS TOTAL_CATEGORY_VALUE
     FROM (
         SELECT
-            A.CUSTOMER_KEY,
-            P.CATEGORY_DESCRIPTION,
-            A.QUANTITY,
-            A.VALUE,
+            CUSTOMER_KEY,
+            CATEGORY_DESCRIPTION,
+            QUANTITY,
+            VALUE,
             VALUE / QUANTITY / AVG(VALUE / QUANTITY) OVER (
                 PARTITION BY CONCAT(SUB_CATEGORY_DESCRIPTION, ' - ', WEIGHT_UM)
             ) AS INDEXED_PU,
