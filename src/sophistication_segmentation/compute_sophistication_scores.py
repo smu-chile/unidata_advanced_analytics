@@ -125,4 +125,4 @@ with DAG(**dag_args) as dag:
     ]
 
 
-chain(brand_compute_score_tasks, customer_compute_score_tasks)
+chain([*brand_compute_score_tasks, *customer_compute_score_tasks])
