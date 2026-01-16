@@ -114,7 +114,7 @@ def main() -> None:
     deleteFromTable(
         table_ref=os.path.join('gbq_objects', 'found_rate_product_by_date.json'),
         project=gcp_project_id,
-        where_clause=f'transaction_date >= "{execution_date.add(months=-1).isoformat()}"',
+        where_clause=f'fecha_facturacion >= "{execution_date.add(months=-1).isoformat()}"',
         gbq_client=gbq_client,
         if_not_exists='ignore'
     )
