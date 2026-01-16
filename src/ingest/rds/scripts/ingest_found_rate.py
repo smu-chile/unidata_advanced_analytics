@@ -39,6 +39,7 @@ SQL_QUERIES = QueryDict({
     SELECT
         fecha_facturacion,
         ref_id,
+        id_tienda AS store_id,
         ean_primario AS ean,
         unidades_completadas AS ordenes_completadas,
         unidades_solicitadas AS ordenes_solicitadas,
@@ -46,6 +47,7 @@ SQL_QUERIES = QueryDict({
     FROM (
         SELECT
             fecha_facturacion,
+            id_tienda,
             ref_id,
 
             SUM(CASE
@@ -68,7 +70,7 @@ SQL_QUERIES = QueryDict({
 
         FROM operaciones_unimarc.found_rate_productos
         WHERE fecha_facturacion >= '${execution_date}'::timestamp - '1 month'::interval
-        GROUP BY ref_id, fecha_facturacion
+        GROUP BY 1,2,3
     ) found_rate_productos
     LEFT JOIN ecommdata.skus USING(ref_id)
     WHERE unidades_solicitadas > 0
@@ -112,7 +114,7 @@ def main() -> None:
     # Deleting past data if exist
     logging.info('Deleting past run data if exists...')
     deleteFromTable(
-        table_ref=os.path.join('gbq_objects', 'found_rate_product_by_date.json'),
+        table_ref=os.path.join('gbq_objects', 'found_rate_product_store_date.json'),
         project=gcp_project_id,
         where_clause=f'fecha_facturacion >= "{execution_date.add(months=-1).isoformat()}"',
         gbq_client=gbq_client,
@@ -124,7 +126,7 @@ def main() -> None:
     logging.info('Uploading frame to GBQ...')
     uploadFrame(
         data,
-        table_ddl_json_path=os.path.join('gbq_objects', 'found_rate_product_by_date.json'),
+        table_ddl_json_path=os.path.join('gbq_objects', 'found_rate_product_store_date.json'),
         project=gcp_project_id,
         gbq_client=gbq_client,
         if_exists='append',

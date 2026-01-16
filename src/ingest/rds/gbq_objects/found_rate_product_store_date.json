@@ -1,10 +1,11 @@
 {
     "schema": "ECOMMERCE",
-    "table": "FOUND_RATE_PRODUCT_BY_DATE",
+    "table": "FOUND_RATE_PRODUCT_STORE_DATE",
 
     "columns": [
         {"name":"fecha_facturacion","field_type":"DATE"},
         {"name":"ref_id","field_type":"STRING"},
+        {"name":"store_id","field_type":"STRING"},
         {"name":"ean","field_type":"INT64"},
         {"name":"ordenes_completadas","field_type":"INTEGER"},
         {"name":"ordenes_solicitadas","field_type":"INTEGER"},
