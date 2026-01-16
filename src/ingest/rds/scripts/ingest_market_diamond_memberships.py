@@ -3,6 +3,7 @@ import logging
 import argparse
 from logging import config
 
+import pendulum
 from google.cloud.bigquery import Client
 
 from common.constants import LOGGING_CONFIG
@@ -46,7 +47,7 @@ SQL_QUERIES = QueryDict({
         CAST(fecha_inactivacion AS DATE) AS fecha_inactivacion,
         motivo_cancelacion
     FROM power_bi.membresias_por_user_profile_id
-    WHERE CAST(SUBSTR(id_membresia, 1, 10) AS DATE) = CAST('${execution_date}' AS DATE)
+    WHERE SUBSTR(id_membresia, 1, 10)::date >= '${execution_date}'::date - '7 month'::interval
     """,
 })
 
@@ -59,7 +60,9 @@ def main() -> None:
     user = 'ingest-rds'  # noqa: F841
     # Parse input variables
     args = vars(parser.parse_args())
-    execution_date: str = args['execution_date']
+    execution_date: pendulum.Date = pendulum.date(
+        *list(map(int, args['execution_date'].split('-')))
+    )
     gcp_project_id: str = args['project_id']
     logging.info(f'execution_date: {execution_date}')
 
@@ -70,7 +73,7 @@ def main() -> None:
     logging.info('Sending query...')
     data = readPostgresQuery(
         query=SQL_QUERIES['extract_data'].substitute(
-            execution_date=execution_date,
+            execution_date=execution_date.isoformat(),
         ),
         credentials_dict=getSecret(
             secret_name='ecommerce_postgres_credentials',  # noqa: S106
@@ -84,7 +87,7 @@ def main() -> None:
     deleteFromTable(
         table_ref=os.path.join('gbq_objects', 'market_diamond_memberships.json'),
         project=gcp_project_id,
-        where_clause=f'transaction_date = "{execution_date}"',
+        where_clause=f'transaction_date >= "{execution_date.add(months=-7).isoformat()}"',
         gbq_client=gbq_client,
         if_not_exists='ignore'
     )
