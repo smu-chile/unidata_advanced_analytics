@@ -1,3 +1,4 @@
+"""Contains the declaration of the DAG with the diamond memberships process."""  # noqa: W505
 # Default
 import json
 import platform
