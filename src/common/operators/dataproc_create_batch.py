@@ -20,13 +20,13 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
     ----------
     task_id : str
         The unique task_id for the Airflow operator instance.
-    project_name : str
-        The GCP project ID where the Dataproc batch job will execute.
     python_script_path : str
         Relative path from the ``src`` directory to the file that will
         be executed.
     dag_env_config : dict[str, str]
         Environment variables to be set for the Dataproc job.
+    docker_image_name : str
+        The GCP project ID where the Dataproc batch job will execute.
     pyspark_batch_args : list
         Command-line arguments passed directly to the PySpark script.
     include_paths : list
@@ -48,8 +48,8 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
     )
 
     def __init__(
-            self, task_id: str, project_name: str, python_script_path: str,
-            dag_env_config: dict[str, str],
+            self, task_id: str, python_script_path: str,
+            dag_env_config: dict[str, str], docker_image_name: str,
             pyspark_batch_args: list = (), include_paths: list[str] = (),
             spark_driver_cores: int = 4, spark_driver_memory: int = 10,
             ttl: int = 14400,
@@ -57,7 +57,7 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
         ):
         # Set attributes
         self.task_id = task_id
-        self.project_name = project_name
+        self.docker_image_name = docker_image_name
         self.python_script_path = python_script_path
         self.dag_env_config = dag_env_config
         self.pyspark_batch_args = pyspark_batch_args
@@ -108,7 +108,7 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
                         'us-east1-docker.pkg.dev/'
                         f'{self.dag_env_config["project_id"]}/'
                         'dataproc-worker-images/'
-                        f"{self.project_name.replace('_', '-')}:latest"
+                        f"{self.docker_image_name.replace('_', '-')}:latest"
                     ),
 
                     # Executor hardware config
