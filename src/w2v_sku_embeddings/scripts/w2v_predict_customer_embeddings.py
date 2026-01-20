@@ -135,7 +135,7 @@ def main() -> None:  # noqa: D103
     # Parameters
     # --------------------
     # Environment
-    user = args['project_name']
+    user = args['project_name']  # noqa: F841
     gcp_project = args['gcp_project']
     execution_date = args['execution_date']
     store_banner = args['store_banner']
