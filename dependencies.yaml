@@ -1,0 +1,36 @@
+name: smu_gcp_dev
+ 
+channels:
+  - conda-forge
+  - defaults
+ 
+dependencies:
+    - python=3.12.2
+    - pip>=24.2
+    - pip: 
+      - ipykernel
+      - apache-airflow-providers-google
+      - awswrangler
+      - beautifulsoup4
+      - boto3
+      - botocore
+      - fastavro
+      - fastparquet
+      - gensim
+      - koalas
+      - lxml
+      - matplotlib
+      - numba
+      - numpy
+      - Office365-REST-Python-Client
+      - openpyxl
+      - pendulum
+      - pyarrow
+      - pyspark
+      - requests
+      - scikit-learn
+      - scipy
+      - seaborn
+      - sqlalchemy
+      - sympy
+      - torch
