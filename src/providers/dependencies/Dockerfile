@@ -78,7 +78,7 @@ RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
       pendulum \
       pandas-gbq \
       virtualenv \
-      xlrd \
+      xlrd
 
 # (Optional) Install additional requirements
 # COPY requirements.txt .
