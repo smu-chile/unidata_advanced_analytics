@@ -166,6 +166,7 @@ def main() -> None:  # noqa: D103
             gcp_project=gcp_project,
             execution_date=execution_date,
             store_banner=store_banner,
+            month_interval=month_interval,
         ),
         table_ref=final_table_ref,
         create_disposition='CREATE_IF_NEEDED',
