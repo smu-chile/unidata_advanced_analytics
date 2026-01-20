@@ -8,7 +8,6 @@ from logging import config
 from textwrap import dedent
 
 # pip
-import pendulum
 from google.cloud.bigquery import Client, TimePartitioning
 
 # Own
