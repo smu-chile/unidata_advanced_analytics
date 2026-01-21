@@ -16,6 +16,7 @@ import common.office365_extended.sharepoint as sp
 
 # Own
 from common.constants import LOGGING_CONFIG
+from common.databases.queries import QueryDict
 from common.gcp_extended.bigquery import readBigQuery
 
 
@@ -39,7 +40,7 @@ parser.add_argument(
 # SQL QUERIES
 # -------------------------------------------------------------------------
 
-SQL_QUERIES = {
+SQL_QUERIES = QueryDict({
     'TRANSACCIONES_PA' :
     """
     SELECT STORE_ID AS `Store Code`,
@@ -71,7 +72,7 @@ SQL_QUERIES = {
     FROM
     `cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION`
 
-    WHERE SEMANA_ACTUAL_2 = '202602'
+    WHERE SEMANA_ACTUAL_2 = '${execution_date}'
     """,
     'TRANSACCIONES_AA' : """
     SELECT STORE_ID AS `Store Code`,
@@ -103,9 +104,9 @@ SQL_QUERIES = {
     FROM
     `cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION`
 
-    WHERE SEMANA_ACTUAL_2 = '202602'
+    WHERE SEMANA_ACTUAL_2 = '${execution_date}'
     """,
-}
+})
 
 # -------------------------------------------------------------------------
 # Main function
@@ -119,22 +120,24 @@ def main() -> None:  # noqa: D103
     # Set all clients
 
     excel_transacciones = f'Transacciones Venta y Penetración {execution_date}.xlsx'
+    offset_buffer = io.BytesIO()
+    writer = pd.ExcelWriter(offset_buffer, engine='openpyxl')
     for hoja in transacciones:
         #Read Query
         logging.info(f'Reading Query for {hoja}')
         transacciones_df = readBigQuery(
-            query=SQL_QUERIES[hoja],
+            query=SQL_QUERIES[hoja].substitute(
+                execution_date = execution_date
+            ),
             user='csotob',
             gbq_client = Client()
         )
 
         logging.info (f'Query result: {transacciones_df.head()}')
         #Create excel from dataframe
-        logging.info(f'Creating excel file for Transacciones Prosepan {execution_date}')
-
-        offset_buffer = io.BytesIO()
-        with pd.ExcelWriter(offset_buffer, engine='openpyxl') as writer:
-            transacciones_df.to_excel(
+        semanas = f'{execution_date}-{int(execution_date) -1}'
+        logging.info(f'Creating excel file for Transacciones Prosepan {semanas}')
+        transacciones_df.to_excel(
             writer,
             sheet_name=hoja,
             index=False,
@@ -143,19 +146,18 @@ def main() -> None:  # noqa: D103
         offset_buffer.seek(0)
         #file_content = offset_buffer.getvalue()  # noqa: ERA001
 
-        logging.info(f'Starting upload of {excel_transacciones} into SharePoint')
-
-        file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Proveedores/Prosepan'
-        input_file =  f'{file_site}/{excel_transacciones}'
-        sp_cred = secretmanager.getSecret(
-            'bdaa_sharepoint_credentials',
-            project=gcp_project_id
-        )
-        sharepoint = sp.SharePointFolder(
-            **sp_cred,
-            server_relative_folder=file_site
-        )
-        sharepoint.upload_file(input_file,offset_buffer)
+    logging.info(f'Starting upload of {excel_transacciones} into SharePoint')
+    file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Proveedores/Prosepan'
+    input_file =  f'{file_site}/{excel_transacciones}'
+    sp_cred = secretmanager.getSecret(
+        'bdaa_sharepoint_credentials',
+        project=gcp_project_id
+    )
+    sharepoint = sp.SharePointFolder(
+        **sp_cred,
+        server_relative_folder=file_site
+    )
+    sharepoint.upload_file(input_file,offset_buffer)
 
     logging.info('Process ended!')
 
