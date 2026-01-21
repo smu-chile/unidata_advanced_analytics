@@ -118,8 +118,8 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     transacciones = ['TRANSACCIONES_PA','TRANSACCIONES_AA']
     # Set all clients
-
-    excel_transacciones = f'Transacciones Venta y Penetración {execution_date}.xlsx'
+    semanas = f'{execution_date}-{int(execution_date) -1}'
+    excel_transacciones = f'Transacciones Venta y Penetración {semanas}.xlsx'
     offset_buffer = io.BytesIO()
     writer = pd.ExcelWriter(offset_buffer, engine='openpyxl')
     for hoja in transacciones:
@@ -135,7 +135,6 @@ def main() -> None:  # noqa: D103
 
         logging.info (f'Query result: {transacciones_df.head()}')
         #Create excel from dataframe
-        semanas = f'{execution_date}-{int(execution_date) -1}'
         logging.info(f'Creating excel file for Transacciones Prosepan {semanas}')
         transacciones_df.to_excel(
             writer,
@@ -143,8 +142,8 @@ def main() -> None:  # noqa: D103
             index=False,
             header=True
             )
-        offset_buffer.seek(0)
-        #file_content = offset_buffer.getvalue()  # noqa: ERA001
+    offset_buffer.seek(0)
+    #file_content = offset_buffer.getvalue()  # noqa: ERA001
 
     logging.info(f'Starting upload of {excel_transacciones} into SharePoint')
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Proveedores/Prosepan'
