@@ -74,7 +74,6 @@ SQL_QUERIES = QueryDict({
     ) found_rate_productos
     LEFT JOIN ecommdata.skus USING(ref_id)
     WHERE unidades_solicitadas > 0
-    LIMIT 100;
     """,
 })
 
