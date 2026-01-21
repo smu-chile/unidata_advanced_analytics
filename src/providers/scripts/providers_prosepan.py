@@ -2,7 +2,6 @@
 """
 # Default
 import io
-import os
 import logging
 import argparse
 from logging import config
@@ -129,6 +128,7 @@ def main() -> None:  # noqa: D103
             gbq_client = Client()
         )
 
+        logging.info (f'Query result: {transacciones_df.head()}')
         #Create excel from dataframe
         logging.info(f'Creating excel file for Transacciones Prosepan {execution_date}')
 
@@ -157,8 +157,6 @@ def main() -> None:  # noqa: D103
         )
         sharepoint.upload_file(input_file,offset_buffer)
 
-        logging.info(f'removing {excel_transacciones} from local')
-        os.remove(f'{excel_transacciones}')
     logging.info('Process ended!')
 
 if __name__ == '__main__':
