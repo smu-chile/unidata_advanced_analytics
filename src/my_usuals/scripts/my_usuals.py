@@ -1,3 +1,4 @@
+"""Contains the flow that computes My Usuals for ecommerce."""
 from __future__ import annotations
 
 # Default
@@ -266,7 +267,7 @@ SQL_QUERIES = QueryDict({
 # -------------------------------------------------------------------------
 #                        Main Function
 # -------------------------------------------------------------------------
-def main():
+def main() -> None:  # noqa: D103
     # ----------
     # Parameters
     # ----------
