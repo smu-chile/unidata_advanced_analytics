@@ -121,7 +121,7 @@ def main() -> None:  # noqa: D103
     semanas = f'{execution_date}-{int(execution_date) -1}'
     excel_transacciones = f'Transacciones Venta y Penetración {semanas}.xlsx'
     offset_buffer = io.BytesIO()
-    writer = pd.ExcelWriter(offset_buffer, engine='openpyxl')
+    transacciones_list = []
     for hoja in transacciones:
         #Read Query
         logging.info(f'Reading Query for {hoja}')
@@ -132,18 +132,22 @@ def main() -> None:  # noqa: D103
             user='csotob',
             gbq_client = Client()
         )
+        transacciones_list.append(transacciones_df)
 
         logging.info (f'Query result: {transacciones_df.head()}')
+
+    with pd.ExcelWriter(offset_buffer, engine='openpyxl') as writer:
         #Create excel from dataframe
         logging.info(f'Creating excel file for Transacciones Prosepan {semanas}')
-        transacciones_df.to_excel(
-            writer,
-            sheet_name=hoja,
-            index=False,
-            header=True
-            )
+        for trx_df in transacciones_list:
+            trx_df.to_excel(
+                writer,
+                sheet_name=hoja,
+                index=False,
+                header=True
+                )
     offset_buffer.seek(0)
-    #file_content = offset_buffer.getvalue()  # noqa: ERA001
+    file_content = offset_buffer.getvalue()  # noqa: ERA001
 
     logging.info(f'Starting upload of {excel_transacciones} into SharePoint')
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Proveedores/Prosepan'
@@ -156,7 +160,7 @@ def main() -> None:  # noqa: D103
         **sp_cred,
         server_relative_folder=file_site
     )
-    sharepoint.upload_file(input_file,offset_buffer)
+    sharepoint.upload_file(input_file,file_content)
 
     logging.info('Process ended!')
 
