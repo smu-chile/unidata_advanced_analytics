@@ -119,7 +119,7 @@ def main() -> None:  # noqa: D103
     transacciones = ['TRANSACCIONES_PA','TRANSACCIONES_AA']
     # Set all clients
 
-    excel_transacciones = f'Transacciones Venta y Penetración {execution_date}.xlsx'
+    excel_transacciones = f'Transacciones Venta y Penetración {execution_date}.xls'
     for hoja in transacciones:
         #Read Query
         logging.info(f'Reading Query for {hoja}')
