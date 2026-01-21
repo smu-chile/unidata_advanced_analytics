@@ -153,7 +153,7 @@ def main() -> None:  # noqa: D103
         )
         sharepoint = sp.SharePointFolder(
             **sp_cred,
-            server_relative_path=file_site
+            server_relative_folder=file_site
         )
         sharepoint.upload(input_file,offset_buffer)
 
