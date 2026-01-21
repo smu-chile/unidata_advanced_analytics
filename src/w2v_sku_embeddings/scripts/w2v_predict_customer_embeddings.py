@@ -161,6 +161,7 @@ def main() -> None:  # noqa: D103
     )
 
     # Rebuild customer embeddings table
+    logging.info('Create new partition')
     gbq_extended.createTableAsSelect(
         query=SQL_QUERIES['customer_embeddings'].substitute(
             gcp_project=gcp_project,
