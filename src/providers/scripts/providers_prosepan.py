@@ -140,7 +140,8 @@ def main() -> None:  # noqa: D103
             index=False,
             header=True
             )
-        file_content = offset_buffer.getvalue()
+        offset_buffer.seek(0)
+        #file_content = offset_buffer.getvalue()  # noqa: ERA001
 
         logging.info(f'Starting upload of {excel_transacciones} into SharePoint')
 
@@ -150,11 +151,11 @@ def main() -> None:  # noqa: D103
             'bdaa_sharepoint_credentials',
             project=gcp_project_id
         )
-        sharepoint = sp.SharePointFile(
+        sharepoint = sp.SharePointFolder(
             **sp_cred,
-            server_relative_path=input_file
+            server_relative_path=file_site
         )
-        sharepoint.upload(file_content)
+        sharepoint.upload(input_file,offset_buffer)
 
         logging.info(f'removing {excel_transacciones} from local')
         os.remove(f'{excel_transacciones}')

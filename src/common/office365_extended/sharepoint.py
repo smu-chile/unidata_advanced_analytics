@@ -218,6 +218,27 @@ class SharePointFolder:
         folder.expand(['Files']).get().execute_query()
         return [f.name for f in folder.files]
 
+    def upload_file(self, file_name:str, content: BytesIO) -> None:
+        """Upload a file to SharePoint folder.
+
+        Parameters
+        ----------
+        file_name : string
+            Name of the file to be uploaded.
+        content : bytes
+            Contents of the file that will be uploaded as bytes.
+
+        Notes
+        -----
+        This function will be slow on large files (>4Mb). Its possible to
+        make it fast when it comes to uploading them but is a fucking pain
+        to work with the microsoft API. Please ask the theam if you need
+        this functionality.
+        """
+        target_folder = self._client_context.web.get_folder_by_server_relative_url(
+            self.server_relative_folder
+            )
+        target_folder.upload_file(file_name, content).execute_query()
 
 def unpackPFXCredentials(pfx_path: str, pfx_password: str) -> tuple[str, str]:
     """Unpack `.pfx` file with SharePoint credentials into `.pem` files.
