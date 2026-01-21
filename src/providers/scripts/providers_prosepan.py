@@ -155,7 +155,7 @@ def main() -> None:  # noqa: D103
             **sp_cred,
             server_relative_folder=file_site
         )
-        sharepoint.upload(input_file,offset_buffer)
+        sharepoint.upload_file(input_file,offset_buffer)
 
         logging.info(f'removing {excel_transacciones} from local')
         os.remove(f'{excel_transacciones}')
