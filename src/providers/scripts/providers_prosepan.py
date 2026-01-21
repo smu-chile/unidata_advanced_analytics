@@ -70,7 +70,7 @@ SQL_QUERIES = {
         frecuencia_PA as `Frecuencia PA`,
         Var_frecuencia_PA as `Var % Frecuencia`
     FROM
-    `cl-cda-unidata-dev.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION`
+    `cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION`
 
     WHERE SEMANA_ACTUAL_2 = '202602'
     """,
@@ -102,7 +102,7 @@ SQL_QUERIES = {
         frecuencia_AA as `Frecuencia AA`,
         Var_frecuencia_AA as `Var % Frecuencia`
     FROM
-    `cl-cda-unidata-dev.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION`
+    `cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION`
 
     WHERE SEMANA_ACTUAL_2 = '202602'
     """,
