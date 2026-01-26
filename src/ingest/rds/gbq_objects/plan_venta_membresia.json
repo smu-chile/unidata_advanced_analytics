@@ -1,0 +1,27 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "PLAN_VENTA_MEMBRESIA",
+    "columns": [
+        {"name": "date", "field_type": "date", "mode": "REQUIRED"},
+        {"name": "store_id", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "tipo_membresia", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "estado_membresia", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "tipo_facturacion_membresia", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "membresias", "field_type": "INT64", "mode": "NULLABLE"},
+        {"name": "ingresos_item_membresia", "field_type": "INT64", "mode": "NULLABLE"},
+        {"name": "facturacion_membresia", "field_type": "INT64", "mode": "NULLABLE"},
+        {"name": "ordenes_membresia", "field_type": "INT64", "mode": "NULLABLE"}
+    ],
+
+    "time_partitioning": {
+        "field": "date",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": [
+        "store_id",
+        "tipo_membresia",
+        "estado_membresia",
+        "tipo_facturacion_membresia"
+    ]
+}
