@@ -39,7 +39,7 @@ dag_args = {
     'dag_id': 'ingest_market_product_substitutions',
     'schedule_interval': '0 4 1 * *',
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
     'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'ecastrot'],
