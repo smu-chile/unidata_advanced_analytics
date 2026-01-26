@@ -56,19 +56,19 @@ ppto_year = '2026' #sorry about this, will think of something, thx
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(file: str,df: pd.DataFrame) -> pd.DataFrame :
+def cleaning_func(file: str,df_file: pd.DataFrame) -> pd.DataFrame :
     """Transform Dataframe into expected format for uploading into BQ.
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df_file : pd.DataFrame
         Input DataFrame to transform.
     file : str
         Short name of the type of file associated to the dataframe
     """
-    logging.info(f'Before cleaning: {df}')
+    logging.info(f'Before cleaning: {df_file}')
     if file == 'ppto':
-        df = df[['Formato', 'Mes', 'Categoria', 'Venta_Neta', 'Costo_Neto',
+        df_file = df_file[['Formato', 'Mes', 'Categoria', 'Venta_Neta', 'Costo_Neto',
        'Margen Comercial 1', 'Recupero', 'Sell Out']]
         float_columns = 	['Venta_Neta',
                     'Costo_Neto',
@@ -76,39 +76,39 @@ def cleaning_func(file: str,df: pd.DataFrame) -> pd.DataFrame :
                     'Recupero',
                     'Sell Out']
         for c in float_columns:
-            df[c] = df[c].astype('Float64')
-        df = df.replace('nan', 0.0)
-        df['año'] = ppto_year
-        df['Mes'] = df['año'] + df['Mes'].map(month_dict)
-        df['año'] = df['año'].astype('Int64')
-        logging.info(f'After cleaning: {df}')
-        return df
+            df_file[c] = df_file[c].astype('Float64')
+        df_file = df_file.replace('nan', 0.0)
+        df_file['año'] = ppto_year
+        df_file['Mes'] = df_file['año'] + df_file['Mes'].map(month_dict)
+        df_file['año'] = df_file['año'].astype('Int64')
+        logging.info(f'After cleaning: {df_file}')
+        return df_file
     if file == 'ppto_mg1':
-        df.columns = ['Mes', 'Formato', 'Categoria', 'ppto_venta_neta',
+        df_file.columns = ['Mes', 'Formato', 'Categoria', 'ppto_venta_neta',
                       'ppto_contrib', 'ppto_costo_neto']
         float_columns = ['ppto_venta_neta',
                     'ppto_contrib',
                     'ppto_costo_neto']
         for c in float_columns:
-            df[c] = df[c].astype('Float64')
-        df = df.replace('nan', 0.0)
-        df['año'] = ppto_year
-        df['Mes'] =  pd.to_datetime(df['Mes'], format='%Y-%m-%d').dt.strftime('%Y%m')
-        df['año'] = df['año'].astype('Int64')
-        logging.info(f'After cleaning: {df}')
-        return df
+            df_file[c] = df_file[c].astype('Float64')
+        df_file = df_file.replace('nan', 0.0)
+        df_file['año'] = ppto_year
+        df_file['Mes'] =  pd.to_datetime(df_file['Mes'], format='%Y-%m-%d').dt.strftime('%Y%m')
+        df_file['año'] = df_file['año'].astype('Int64')
+        logging.info(f'After cleaning: {df_file}')
+        return df_file
     if file.startswith('admg'):
-        df['MES'] = df['MES'].astype('Int64')
-        df['Material'] = df['Material'].astype('Int64')
-        df['SELLOUT'] = df['SELLOUT'].astype('Float64')
-        df = df.dropna(axis=0,subset=['MES'])
-        logging.info(f'After cleaning: {df}')
-        return df
+        df_file['MES'] = df_file['MES'].astype('Int64')
+        df_file['Material'] = df_file['Material'].astype('Int64')
+        df_file['SELLOUT'] = df_file['SELLOUT'].astype('Float64')
+        df_file = df_file.dropna(axis=0,subset=['MES'])
+        logging.info(f'After cleaning: {df_file}')
+        return df_file
     if file == 'est_com_alvi':
-        df = df.replace('#N/D', '')
-        logging.info(f'After cleaning: {df}')
-        return df
-    return df
+        df_file = df_file.replace('#N/D', '')
+        logging.info(f'After cleaning: {df_file}')
+        return df_file
+    return df_file
 
 # -------------------------------------------------------------------------
 # Main function
