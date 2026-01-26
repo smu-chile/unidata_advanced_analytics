@@ -1,4 +1,4 @@
-"""Moves valid ecommerce stores from RDS to GBQ."""
+"""Moves full tables from ecommerce RDS to GBQ."""
 import os
 import logging
 import argparse
@@ -7,7 +7,6 @@ from logging import config
 from google.cloud.bigquery import Client
 
 from common.constants import LOGGING_CONFIG
-from common.databases.queries import QueryDict
 from common.databases.postgresql import readPostgresQuery
 from common.gcp_extended.bigquery import uploadFrame
 from common.gcp_extended.secretsmanager import getSecret
@@ -28,27 +27,14 @@ parser.add_argument(
     '--execution_date', type=str,
     help='DAG execution date'
 )
-
-
-# -------------------------------------------------------------------------
-#  Config
-# -------------------------------------------------------------------------
-SQL_QUERIES = QueryDict({
-    'get_data':
-    """
-    (
-        SELECT id, nombre_tienda_janis
-        FROM ecommdata.tiendas
-        WHERE status = 1
-    ) UNION ALL (
-        SELECT id, nombre_tienda_janis
-        FROM ecommdata_alvi.tiendas
-        WHERE
-            id LIKE '3%%'
-            AND status = 1
-    )
-    """,
-})
+parser.add_argument(
+    '--query', type=str,
+    help='Query to be executed'
+)
+parser.add_argument(
+    '--table_ddl_filename', type=str,
+    help='Name of the JSON with the table ddl'
+)
 
 
 # -------------------------------------------------------------------------
@@ -68,7 +54,7 @@ def main() -> None:
     # Get data
     logging.info('Sending query...')
     data = readPostgresQuery(
-        query=SQL_QUERIES['get_data'].substitute(),
+        query=args['query'],
         credentials_dict=getSecret(
             secret_name='ecommerce_postgres_credentials',  # noqa: S106
             project=gcp_project_id,
@@ -80,7 +66,7 @@ def main() -> None:
     logging.info('Uploading frame to GBQ...')
     uploadFrame(
         data,
-        table_ddl_json_path=os.path.join('gbq_objects', 'dim_valid_ecommerce_stores.json'),
+        table_ddl_json_path=os.path.join('gbq_objects', f"dim_{args['table_ddl_filename']}.json"),
         project=gcp_project_id,
         gbq_client=gbq_client,
         if_exists='replace'
