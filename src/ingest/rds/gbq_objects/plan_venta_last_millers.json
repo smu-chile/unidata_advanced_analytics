@@ -1,9 +1,9 @@
 {
     "schema": "ECOMMERCE",
-    "table": "DIM_PLAN_VENTA_ALVI",
+    "table": "PLAN_VENTA_LAST_MILLERS",
     "columns": [
         {"name": "date", "field_type": "DATE", "mode": "REQUIRED"},
-        {"name": "store_id", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "nombre_last_miller", "field_type": "STRING", "mode": "REQUIRED"},
         {"name": "plan_venta", "field_type": "INT64", "mode": "NULLABLE"},
         {"name": "plan_ticket_promedio", "field_type": "INT64", "mode": "NULLABLE"},
         {"name": "plan_ordenes", "field_type": "INT64", "mode": "NULLABLE"},
@@ -15,5 +15,5 @@
         "type_": "DAY"
     },
 
-    "clustering_fields": ["store_id"]
+    "clustering_fields": ["nombre_last_miller"]
 }

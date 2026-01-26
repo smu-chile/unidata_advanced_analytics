@@ -1,6 +1,6 @@
 {
     "schema": "ECOMMERCE",
-    "table": "DIM_PLAN_VENTA_UNIMARC",
+    "table": "PLAN_VENTA_UNIMARC",
     "columns": [
         {"name": "date", "field_type": "DATE", "mode": "REQUIRED"},
         {"name": "store_id", "field_type": "STRING", "mode": "REQUIRED"},

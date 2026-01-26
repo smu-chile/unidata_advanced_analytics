@@ -1,6 +1,6 @@
 {
     "schema": "ECOMMERCE",
-    "table": "DIM_PLAN_VENTA_MEMBRESIA",
+    "table": "PLAN_VENTA_MEMBRESIA",
     "columns": [
         {"name": "date", "field_type": "date", "mode": "REQUIRED"},
         {"name": "store_id", "field_type": "STRING", "mode": "REQUIRED"},
