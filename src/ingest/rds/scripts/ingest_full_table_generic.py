@@ -66,7 +66,7 @@ def main() -> None:
     logging.info('Uploading frame to GBQ...')
     uploadFrame(
         data,
-        table_ddl_json_path=os.path.join('gbq_objects', f"dim_{args['table_ddl_filename']}.json"),
+        table_ddl_json_path=os.path.join('gbq_objects', f"{args['table_ddl_filename']}.json"),
         project=gcp_project_id,
         gbq_client=gbq_client,
         if_exists='replace'

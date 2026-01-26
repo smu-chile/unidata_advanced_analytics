@@ -63,7 +63,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     QUERIES = {
-        'valid_ecommerce_stores': """
+        'dim_valid_ecommerce_stores': """
         (
             SELECT id, nombre_tienda_janis
             FROM ecommdata.tiendas
@@ -77,7 +77,7 @@ with DAG(**dag_args) as dag:
         )
         """,
 
-        'ok_to_shop': (
+        'dim_ok_to_shop': (
         """
         SELECT
             CAST(product_ean AS BIGINT) AS ean,
