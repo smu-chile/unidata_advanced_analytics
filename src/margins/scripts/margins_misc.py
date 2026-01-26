@@ -66,8 +66,10 @@ def cleaning_func(file: str,df: pd.DataFrame) -> pd.DataFrame :
     file : str
         Short name of the type of file associated to the dataframe
     """
-    logging.info('Before cleaning:', df)
+    logging.info(f'Before cleaning: {df}')
     if file == 'ppto':
+        df = df[['Formato', 'Mes', 'Categoria', 'Venta_Neta', 'Costo_Neto',
+       'Margen Comercial 1', 'Recupero', 'Sell Out']]
         float_columns = 	['Venta_Neta',
                     'Costo_Neto',
                     'Margen Comercial 1',
@@ -75,11 +77,11 @@ def cleaning_func(file: str,df: pd.DataFrame) -> pd.DataFrame :
                     'Sell Out']
         for c in float_columns:
             df[c] = df[c].astype('Float64')
-        df = df.replace('nan', 0.0)  # noqa: PD901
+        df = df.replace('nan', 0.0)
         df['año'] = ppto_year
         df['Mes'] = df['año'] + df['Mes'].map(month_dict)
         df['año'] = df['año'].astype('Int64')
-        logging.info('After cleaning:', df)
+        logging.info(f'After cleaning: {df}')
         return df
     if file == 'ppto_mg1':
         df.columns = ['Mes', 'Formato', 'Categoria', 'ppto_venta_neta',
@@ -89,22 +91,22 @@ def cleaning_func(file: str,df: pd.DataFrame) -> pd.DataFrame :
                     'ppto_costo_neto']
         for c in float_columns:
             df[c] = df[c].astype('Float64')
-        df = df.replace('nan', 0.0)  # noqa: PD901
+        df = df.replace('nan', 0.0)
         df['año'] = ppto_year
         df['Mes'] =  pd.to_datetime(df['Mes'], format='%Y-%m-%d').dt.strftime('%Y%m')
         df['año'] = df['año'].astype('Int64')
-        logging.info('After cleaning:', df)
+        logging.info(f'After cleaning: {df}')
         return df
     if file.startswith('admg'):
         df['MES'] = df['MES'].astype('Int64')
         df['Material'] = df['Material'].astype('Int64')
         df['SELLOUT'] = df['SELLOUT'].astype('Float64')
-        df = df.dropna(axis=0,subset=['MES'])  # noqa: PD901
-        logging.info('After cleaning:', df)
+        df = df.dropna(axis=0,subset=['MES'])
+        logging.info(f'After cleaning: {df}')
         return df
     if file == 'est_com_alvi':
-        df = df.replace('#N/D', '')  # noqa: PD901
-        logging.info('After cleaning:', df)
+        df = df.replace('#N/D', '')
+        logging.info(f'After cleaning: {df}')
         return df
     return df
 
