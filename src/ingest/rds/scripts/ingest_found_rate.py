@@ -40,7 +40,10 @@ SQL_QUERIES = QueryDict({
         fecha_facturacion,
         ref_id,
         id_tienda AS store_id,
-        ean_primario AS ean,
+        CASE
+            WHEN ref_id = '000000000000651953-UN' THEN '7807975004117'
+            ELSE ean_primario
+        END AS ean,
         unidades_completadas AS ordenes_completadas,
         unidades_solicitadas AS ordenes_solicitadas,
         found_rate
@@ -73,8 +76,9 @@ SQL_QUERIES = QueryDict({
         GROUP BY 1,2,3
     ) found_rate_productos
     LEFT JOIN ecommdata.skus USING(ref_id)
-    WHERE unidades_solicitadas > 0
-    LIMIT 100;
+    WHERE
+        unidades_solicitadas > 0
+        AND length(ean_primario) < 19
     """,
 })
 
@@ -110,6 +114,10 @@ def main() -> None:
         'ean': 'Int64',
     })
     logging.info('Data collected!')
+
+    if data.isna().sum().sum():
+        err_msg = 'Missing values!'
+        raise Exception(err_msg)
 
     # Deleting past data if exist
     logging.info('Deleting past run data if exists...')
