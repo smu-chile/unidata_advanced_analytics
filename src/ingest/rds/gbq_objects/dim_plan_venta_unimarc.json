@@ -5,7 +5,7 @@
         {"name": "date", "field_type": "DATE", "mode": "REQUIRED"},
         {"name": "store_id", "field_type": "STRING", "mode": "REQUIRED"},
         {"name": "plan_venta", "field_type": "INT64", "mode": "NULLABLE"},
-        {"name": "plan_ticket_promedio", "field_type": "INT6", "mode": "NULLABLE"},
+        {"name": "plan_ticket_promedio", "field_type": "INT64", "mode": "NULLABLE"},
         {"name": "plan_ordenes", "field_type": "INT64", "mode": "NULLABLE"},
         {"name": "forecast_venta", "field_type": "INT64", "mode": "NULLABLE"},
         {"name": "forecast", "field_type": "INT64", "mode": "NULLABLE"},
