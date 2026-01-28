@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 # Default
+import os
 import logging
 import argparse
 from logging import config
 
 # pip
 import pendulum
-from google.cloud.bigquery import Client, TimePartitioning
+from google.cloud.bigquery import Client
 
 # Own
 from common.constants import LOGGING_CONFIG
@@ -15,6 +16,7 @@ from common.databases.queries import QueryDict
 from common.gcp_extended.bigquery import (
     deleteFromTable,
     createTableAsSelect,
+    createTableFromJSON,
 )
 
 
@@ -214,7 +216,7 @@ SQL_QUERIES = QueryDict({
         date,
         customer_key,
         hash_string,
-        sku_product,
+        CAST(sku_product AS INT64) AS sku_product,
         ean,
         relevance,
         CASE
@@ -223,7 +225,7 @@ SQL_QUERIES = QueryDict({
             WHEN store_banner = 'Alvi' THEN 5
             WHEN store_banner = 'Super 10' THEN 15
         END AS store_banner,
-            CASE
+        CASE
             WHEN unidad_de_medida LIKE '%ST%' THEN LPAD(sku_product, 18, '0') || '-' || 'UN'
             ELSE LPAD(sku_product, 18, '0') || '-' || unidad_de_medida
         END AS vtexrefid
@@ -302,6 +304,15 @@ def main():
     logging.info(f'min_transacted_months: {min_transacted_months}')
     logging.info(f'top_n: {top_n}')
 
+    # Create table using DDL JSON
+    logging.info('Creating table schema if needed')
+    createTableFromJSON(
+        table_ddl_json_path=os.path.join('gbq_objects', 'my_usuals.json'),
+        project=gcp_project,
+        gbq_client=gbq_client,
+        if_exists='ignore',
+    )
+
     # Remove past run if needed
     logging.info(f'Removing past run from {table_ref}')
     store_banner_numbers = {
@@ -335,12 +346,7 @@ def main():
         table_ref=table_ref,
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_APPEND',
-        time_partitioning=TimePartitioning(
-            field='date',
-            type_='DAY',
-        ),
         use_legacy_sql=False,
-        clustering_fields=['store_banner'],
         gbq_client=gbq_client,
     )
 
