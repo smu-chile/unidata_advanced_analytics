@@ -1,0 +1,24 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "FOUND_RATE",
+
+    "columns": [
+        {"name": "fecha_facturacion", "field_type": "DATE", "mode": "REQUIRED"},
+        {"name": "store_banner", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "store_id", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "orden", "field_type": "INT64", "mode": "REQUIRED"},
+        {"name": "ref_id", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "ean", "field_type": "INT64", "mode": "REQUIRED"},
+        {"name": "ordenes_completadas", "field_type": "INT64", "mode": "REQUIRED"},
+        {"name": "ordenes_solicitadas", "field_type": "INT64", "mode": "REQUIRED"}
+    ],
+
+    "time_partitioning": {
+        "field": "fecha_facturacion",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": [
+        "store_banner", "store_id", "orden", "ref_id", "ean"
+    ]
+}

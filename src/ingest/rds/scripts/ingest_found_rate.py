@@ -38,20 +38,24 @@ SQL_QUERIES = QueryDict({
     """
     SELECT
         fecha_facturacion,
-        ref_id,
+        store_banner,
         id_tienda AS store_id,
+        orden,
+        ref_id,
         CASE
             WHEN ref_id = '000000000000651953-UN' THEN '7807975004117'
             ELSE ean_primario
         END AS ean,
         unidades_completadas AS ordenes_completadas,
-        unidades_solicitadas AS ordenes_solicitadas,
-        found_rate
-    FROM (
+        unidades_solicitadas AS ordenes_solicitadas
+    FROM
+    (
         SELECT
             fecha_facturacion,
             id_tienda,
+            orden,
             ref_id,
+            'Unimarc' AS store_banner,
 
             SUM(CASE
                 WHEN estado_foundrate = 3 THEN 1
@@ -61,21 +65,55 @@ SQL_QUERIES = QueryDict({
             SUM(CASE
                 WHEN producto_substituto = false THEN 1
                 ELSE 0
-            END) AS unidades_solicitadas,
+            END) AS unidades_solicitadas
+
+        FROM operaciones_unimarc.found_rate_productos
+        WHERE fecha_facturacion >= '${execution_date}'::timestamp - '1 month'::interval
+        GROUP BY 1,2,3,4
+    ) found_rate_unimarc
+    LEFT JOIN ecommdata.skus USING(ref_id)
+    WHERE
+        unidades_solicitadas > 0
+        AND length(ean_primario) < 19
+
+    UNION ALL
+
+    SELECT
+        fecha_facturacion,
+        store_banner,
+        id_tienda AS store_id,
+        orden,
+        ref_id,
+        CASE
+            WHEN ref_id = '000000000000651953-UN' THEN '7807975004117'
+            ELSE ean_primario
+        END AS ean,
+        unidades_completadas AS ordenes_completadas,
+        unidades_solicitadas AS ordenes_solicitadas
+    FROM
+    (
+        SELECT
+            fecha_facturacion,
+            id_tienda,
+            orden,
+            ref_id,
+            'Alvi' AS store_banner,
 
             SUM(CASE
                 WHEN estado_foundrate = 3 THEN 1
                 ELSE 0
-            END)::numeric * 1.0 / SUM(CASE
+            END) AS unidades_completadas,
+
+            SUM(CASE
                 WHEN producto_substituto = false THEN 1
                 ELSE 0
-            END)::numeric AS found_rate
+            END) AS unidades_solicitadas
 
-        FROM operaciones_unimarc.found_rate_productos
+        FROM operaciones_alvi.found_rate_productos
         WHERE fecha_facturacion >= '${execution_date}'::timestamp - '1 month'::interval
-        GROUP BY 1,2,3
-    ) found_rate_productos
-    LEFT JOIN ecommdata.skus USING(ref_id)
+        GROUP BY 1,2,3,4
+    ) found_rate_alvi
+    LEFT JOIN ecommdata_alvi.skus USING(ref_id)
     WHERE
         unidades_solicitadas > 0
         AND length(ean_primario) < 19
@@ -122,7 +160,7 @@ def main() -> None:
     # Deleting past data if exist
     logging.info('Deleting past run data if exists...')
     deleteFromTable(
-        table_ref=os.path.join('gbq_objects', 'found_rate_product_store_date.json'),
+        table_ref=os.path.join('gbq_objects', 'found_rate.json'),
         project=gcp_project_id,
         where_clause=f'fecha_facturacion >= "{execution_date.add(months=-1).isoformat()}"',
         gbq_client=gbq_client,
@@ -134,7 +172,7 @@ def main() -> None:
     logging.info('Uploading frame to GBQ...')
     uploadFrame(
         data,
-        table_ddl_json_path=os.path.join('gbq_objects', 'found_rate_product_store_date.json'),
+        table_ddl_json_path=os.path.join('gbq_objects', 'found_rate.json'),
         project=gcp_project_id,
         gbq_client=gbq_client,
         if_exists='append',
