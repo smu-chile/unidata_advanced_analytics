@@ -148,9 +148,7 @@ def main() -> None:
             secret_name='ecommerce_postgres_credentials',  # noqa: S106
             project=gcp_project_id,
         )
-    ).astype({
-        'ean': 'Int64',
-    })
+    )
     logging.info('Data collected!')
 
     if data.isna().sum().sum():
