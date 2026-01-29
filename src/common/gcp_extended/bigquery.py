@@ -4,21 +4,19 @@ from __future__ import annotations
 # Default
 import os
 import json
-from typing import TYPE_CHECKING, Literal
+import posixpath
+from uuid import uuid4
+from typing import Literal
 
 # pip
-import pandas_gbq
+import pandas as pd
+import pyarrow as pa
 from pendulum import DateTime
-from google.cloud import bigquery, bigquery_storage
+from google.cloud import storage, bigquery, bigquery_storage
 from google.cloud.exceptions import NotFound, BadRequest
 
 # Own
 from ..databases.queries import QueryDict  # noqa: TID252
-
-
-# Type checking imports
-if TYPE_CHECKING:
-    import pandas as pd
 
 
 _TIME_PARTITIONING_TYPES = {
@@ -26,6 +24,23 @@ _TIME_PARTITIONING_TYPES = {
     'HOUR': bigquery.TimePartitioningType.HOUR,
     'MONTH': bigquery.TimePartitioningType.MONTH,
     'YEAR': bigquery.TimePartitioningType.YEAR,
+}
+
+_GBQ_TO_PYARROW_DTYPES = {
+    ('BOOL', 'BOOLEAN'): pa.bool_(),
+    ('BYTES'): pa.binary(),
+    ('DATE'): pa.date32(),
+    ('DATETIME'): pa.timestamp('us'),
+    # TODO(ecastrot): Add Interval
+    ('INT64', 'INTEGER', 'INT', 'SMALLINT', 'BIGINT', 'TINYINT', 'BYTEINT'): pa.int64(),
+    ('NUMERIC', 'DECIMAL'): pa.decimal128(38, 9),
+    ('BIGNUMERIC', 'BIGDECIMAL'): pa.decimal256(76, 38),
+    ('FLOAT', 'FLOAT64'): pa.float64(),
+    # TODO(ecastrot): Add Range
+    ('STRING'): pa.string(),
+    # TODO(ecastrot): Add Struct
+    ('TIME'): pa.time64('us'),
+    ('TIMESTAMP'): pa.timestamp('us', tz='UTC'),
 }
 
 
@@ -300,9 +315,7 @@ def uploadFrame(
         project: str,
         gbq_client: bigquery.Client,
         if_exists: Literal['fail', 'replace', 'append'] = 'fail',
-        progress_bar: bool = False,
         json_encoding: str = 'utf8',
-        **kwargs
     ) -> None:
     """Upload a Pandas DataFrame to a table in Google BigQuery.
 
@@ -370,16 +383,49 @@ def uploadFrame(
     # Rename DataFrame columns
     df.columns = [column['name'] for column in table_schema]
 
-    # Upload
-    return pandas_gbq.to_gbq(**{
-        'dataframe': df,
-        'destination_table': table_ref,
-        'if_exists': if_exists,
-        'progress_bar': progress_bar,
-        'table_schema': table_schema,
-        'bigquery_client': gbq_client,
-        **kwargs
-    })
+    uuid_id = uuid4()
+    # Save dataframe to local storage
+    tmp_local_filename = f'tmp_df-{uuid_id}.parquet'
+    # Change types from the frame to pyarrow
+    df.astype(
+        pyArrowDTypesFromJSON(table_ddl_json_path)
+    # Save to local as parquet
+    ).to_parquet(
+        tmp_local_filename,
+        engine='pyarrow',
+        schema=_pyArrowSchemaFromJSON(table_ddl_json_path)
+    )
+
+    # Upload file to GCS
+    tmp_gcs_filename = posixpath.join('uploads', tmp_local_filename)
+    gcs_tmp_file = storage.Client().bucket(
+        f"cl-bigdata-analytics-{project.split('-')[-1]}-us-sandbox-temporary"
+    ).blob(
+        # Path of the file in GCS
+        tmp_gcs_filename
+    )
+    gcs_tmp_file.upload_from_filename(
+        # Path to localfile
+        tmp_local_filename
+    )
+
+    # Load the data to the table from the GCS file
+    gbq_client.load_table_from_uri(
+        source_uris=f'gs://cl-bigdata-analytics-{project.split('-')[-1]}-us-sandbox-temporary/{tmp_gcs_filename}',
+        destination=(
+            project
+            + '.' + table_ddl['schema']
+            + '.' + table_ddl['table']
+        ),
+        job_config=bigquery.LoadJobConfig(
+            source_format=bigquery.SourceFormat.PARQUET,
+            write_disposition=bigquery.WriteDisposition.WRITE_APPEND
+        )
+    ).result()
+
+    # Remove tempral files from local and GCS
+    os.remove(tmp_local_filename)
+    gcs_tmp_file.delete()
 
 
 def deleteFromTable(
@@ -499,6 +545,79 @@ def setTableExpiration(
             'partition_colum_name value.'
         )
         raise ValueError(err_msg)
+
+
+def _pyArrowSchemaFromJSON(table_ddl_json_path: str) -> pa.Schema:
+    """Builds a pyarrow schema from the BigQuery DDL JSON
+
+    The schema created by this function is usefull when transforming a
+    frame to parquet. When a parquet file is uploaded to BigQuery it will
+    fail if the file does not contain the metadata of the nullability of
+    the columns.
+
+    Parameters
+    ----------
+    table_ddl_json_path : str,
+        Path to the JSON file with the DDL configuration for the table.
+
+    Returns
+    ----------
+    parquet_schema : pa.Schema
+        PyArrow schema with the information of the column names, dtypes and
+        if the column is nullable or not
+    """
+    # Get the DDL of the columns
+    with open(table_ddl_json_path) as table_ddl_file:
+        table_columns: dict[str, str] = json.load(table_ddl_file)['columns']
+    # Build the schema
+    return pa.schema([
+        (
+            # Name of the column
+            col['name'],
+            # Column dtype
+            next(
+                v
+                for k, v
+                in _GBQ_TO_PYARROW_DTYPES.items()
+                if col['field_type'].upper() in k
+            ),
+            # Column is nullable?
+            col.get('mode', 'NULLABLE').upper() != 'REQUIRED'
+        )
+        for col in table_columns
+    ])
+
+
+def pyArrowDTypesFromJSON(table_ddl_json_path: str) -> dict[str, str]:
+    """Builds a dictionary with columns and its pyarrow dtype from the DDL
+
+    Usses the JSON that contains the DDL of the table to build a dictionary
+    with the column names and they correspondency in pyarrow dtypes
+
+    Parameters
+    ----------
+    table_ddl_json_path : str,
+        Path to the JSON file with the DDL configuration for the table.
+
+    Returns
+    -------
+    compatibility_dict : dict[str, str]
+        Dictionary with the new dtypes in the format
+        ``{'column_name': 'dtype[pyarrow]'}``
+    """
+    # Get the DDL
+    with open(table_ddl_json_path) as table_ddl_file:
+        table_ddl = json.load(table_ddl_file)
+    # Build a dictionary with column_name: pyarrow dtype
+    return {
+        col['name']: next(
+            pd.ArrowDtype(v)
+            for k, v
+            in _GBQ_TO_PYARROW_DTYPES.items()
+            if col['field_type'].upper() in k
+        )
+        for col in table_ddl['columns']
+    }
 
 
 if __name__ == '__main__':
