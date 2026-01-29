@@ -157,7 +157,8 @@ def main() -> None:  # noqa: D103
         **sp_cred,
         server_relative_folder=file_site
     )
-    sharepoint.upload_file(input_file,file_content)
+    if not transacciones_df.empty():
+        sharepoint.upload_file(input_file,file_content)
 
     logging.info('Process ended!')
 
