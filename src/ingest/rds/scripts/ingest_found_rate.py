@@ -42,10 +42,10 @@ SQL_QUERIES = QueryDict({
         id_tienda AS store_id,
         orden,
         ref_id,
-        CASE
+        (CASE
             WHEN ref_id = '000000000000651953-UN' THEN '7807975004117'
             ELSE ean_primario
-        END AS ean,
+        END)::FLOAT::BIGINT AS ean,
         unidades_completadas AS ordenes_completadas,
         unidades_solicitadas AS ordenes_solicitadas
     FROM
@@ -84,10 +84,10 @@ SQL_QUERIES = QueryDict({
         id_tienda AS store_id,
         orden,
         ref_id,
-        CASE
+        (CASE
             WHEN ref_id = '000000000000651953-UN' THEN '7807975004117'
             ELSE ean_primario
-        END AS ean,
+        END)::FLOAT::BIGINT AS ean,
         unidades_completadas AS ordenes_completadas,
         unidades_solicitadas AS ordenes_solicitadas
     FROM

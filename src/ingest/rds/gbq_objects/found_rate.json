@@ -19,6 +19,6 @@
     },
 
     "clustering_fields": [
-        "store_banner", "store_id", "orden", "ref_id", "ean"
+        "store_banner", "store_id", "orden"
     ]
 }
