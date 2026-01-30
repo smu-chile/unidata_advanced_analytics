@@ -4,7 +4,7 @@
 
     "columns": [
         {
-            "name": "COMTACT_KEY",
+            "name": "CONTACT_KEY",
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description" : "ID Cliente"
