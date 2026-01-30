@@ -111,7 +111,7 @@ def main() -> None:  # noqa: D103
         )
         #get file
         logging.info(f'Getting zip file wsp_tracking_{formato}')
-        zip_name =f'wsp_tracking_{formato}_{execution_date}'
+        zip_name =f'wsp_tracking_{formato}_{execution_date}.zip'
         try:
             ftp.get(f'/Import/WhatsApp/{zip_name}',zip_name)
         except FileNotFoundError:
