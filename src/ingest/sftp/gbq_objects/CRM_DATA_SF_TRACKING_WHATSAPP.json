@@ -17,7 +17,7 @@
         },
         {
             "name": "EVENT_DATE",
-            "field_type": "DATETIME",
+            "field_type": "TIMESTAMP",
             "mode": "REQUIRED",
             "description" : "Fecha de evento."
         },
