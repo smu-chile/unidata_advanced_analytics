@@ -1,0 +1,31 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "TICKETS_ZENDEKESK",
+    "columns": [
+        {"name": "store_banner", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "fecha_creacion", "field_type": "DATE", "mode": "REQUIRED"},
+        {"name": "fecha_cierre", "field_type": "DATE", "mode": "NULLABLE"},
+        {"name": "id_ticket", "field_type": "INT64", "mode": "REQUIRED"},
+        {"name": "estado", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "motivo", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "canal", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "numero_pedido", "field_type": "INT64", "mode": "NULLABLE"},
+        {"name": "tipo1", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "tipo2", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "tipo3", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "total_dias_hasta_resolucion", "field_type": "FLOAT", "mode": "NULLABLE"},
+        {"name": "cerrado_por_merge", "field_type": "BOOL", "mode": "NULLABLE"},
+        {"name": "id_ticket_fusionado", "field_type": "INT64", "mode": "NULLABLE"},
+        {"name": "ids_tickets_hijo", "field_type": "STRING", "mode": "NULLABLE"}
+    ],
+
+    "time_partitioning": {
+        "field": "fecha_creacion",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": [
+        "store_banner", "id_ticket"
+    ]
+}
+
