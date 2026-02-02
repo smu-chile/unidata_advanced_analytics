@@ -42,7 +42,7 @@
             "name": "REASON",
             "field_type": "STRING",
             "mode": "NULLABLE",
-            "description" : "Razón de fallo de envío"
+            "description" : "Razón de fallo de envío."
         },
         {
             "name": "CAMPAIGN",
