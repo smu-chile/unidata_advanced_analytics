@@ -1,0 +1,25 @@
+{
+    "schema": "TMP",
+    "table": "TMP_DIM_PROMOTIONS_TO_EVALUATE",
+
+    "columns": [
+        {
+            "name": "FORMATO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "N_PROMOCION_PPAL",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "N_PROMOCION",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+    ]
+}

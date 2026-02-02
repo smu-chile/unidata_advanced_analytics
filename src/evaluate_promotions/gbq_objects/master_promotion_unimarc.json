@@ -1,0 +1,73 @@
+{
+    "schema": "TMP",
+    "table": "TMP_DIM_PROMOTIONS_TO_EVALUATE_MAIN_PROMOTION_UNIMARC",
+
+    "columns": [
+        {
+            "name": "N_PROMOCION",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TIPO_PROMOCION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "NOMBRE_PROMOCION_PPAL",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "FECHA_INICIO_DE_PROMOCION_PPAL",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "FECHA_FIN_DE_PROMOCION_PPAL",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "MES_PROMOCION",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "DESCRIPCION_MECANICA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "DESCRIPCION_EVENTO_PROMOCIONAL",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "NOMBRE_PROMOCION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "FECHA_INICIO_DE_PROMOCION",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "FECHA_FIN_DE_PROMOCION",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+    ]
+}
