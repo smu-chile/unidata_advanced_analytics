@@ -341,6 +341,9 @@ def uploadFrame(
     **kwargs : pd.DataFrame
         Arguments passed on to `pandas_gbq.to_bgq`
     """
+    if if_exists not in ['fail', 'replace', 'append']:
+        err_msg = "if_exists must be one of 'fail', 'replace' or 'append'"
+        raise ValueError(err_msg)
     with open(table_ddl_json_path, encoding=json_encoding) as table_ddl_file:
         table_ddl = json.load(table_ddl_file)
 
@@ -422,6 +425,9 @@ def uploadFrame(
             job_config=bigquery.LoadJobConfig(
                 source_format=bigquery.SourceFormat.PARQUET,
                 write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+                # This line is where the fucking magic happens.
+                # If this MOTHERFUCKING line is removed, DATETIME support
+                # is completely lost
                 schema=[
                     bigquery.SchemaField(**colum_config)
                     for colum_config
