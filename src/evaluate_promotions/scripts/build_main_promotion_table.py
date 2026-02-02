@@ -48,7 +48,7 @@ SQL_QUERIES = QueryDict({
     'promotions_to_evaluate':
     """
     SELECT FORMATO,N_PROMOCION_PPAL,N_PROMOCION
-    FROM `${gcp_project}.${schema}.TEMP_DIM_PROMOTIONS_TO_EVALUATE`
+    FROM `${gcp_project}.${schema}.TMP_DIM_PROMOTIONS_TO_EVALUATE`
     WHERE UPPER(FORMATO) = '${upper_store_banner}'
     """
 })
