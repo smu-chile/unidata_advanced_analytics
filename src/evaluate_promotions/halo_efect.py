@@ -64,9 +64,6 @@ dag_args = {
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date',dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
-    main_promotions_task = []
-    compute_halo_efect = []
-
     promotions_sharepoint_task = ExtendedDataprocCreateBatchOperator(
         task_id = 'get_promotions_from_sharepoint',
         python_script_path=(
@@ -85,6 +82,9 @@ with DAG(**dag_args) as dag:
             f'{PROJECT_NAME}/gbq_objects/'
         ],
     )
+
+    main_tasks = []
+    halo_tasks = []
 
     for store_banner in store_banner_list:
         lower_banner = store_banner.lower()
@@ -129,4 +129,10 @@ with DAG(**dag_args) as dag:
             ],
         )
 
-        promotions_sharepoint_task >> [main_promotions_task] >> [compute_halo_efect]
+        promotions_sharepoint_task >> main_promotions_task
+        main_promotions_task >> compute_halo_efect
+
+        main_tasks.append(main_promotions_task)
+        halo_tasks.append(compute_halo_efect)
+
+
