@@ -30,7 +30,7 @@ _GBQ_TO_PYARROW_DTYPES = {
     ('BOOL', 'BOOLEAN'): pa.bool_(),
     ('BYTES'): pa.binary(),
     ('DATE'): pa.date32(),
-    ('DATETIME'): pa.timestamp('us'),
+    ('DATETIME'): pa.timestamp('us', tz=None),
     # TODO(ecastrot): Add Interval
     ('INT64', 'INTEGER', 'INT', 'SMALLINT', 'BIGINT', 'TINYINT', 'BYTEINT'): pa.int64(),
     ('NUMERIC', 'DECIMAL'): pa.decimal128(38, 9),
@@ -393,7 +393,8 @@ def uploadFrame(
     ).to_parquet(
         tmp_local_filename,
         engine='pyarrow',
-        schema=_pyArrowSchemaFromJSON(table_ddl_json_path)
+        schema=_pyArrowSchemaFromJSON(table_ddl_json_path),
+        use_deprecated_int96_timestamps=True
     )
 
     # Upload file to GCS
@@ -410,22 +411,28 @@ def uploadFrame(
     )
 
     # Load the data to the table from the GCS file
-    gbq_client.load_table_from_uri(
-        source_uris=f'gs://cl-bigdata-analytics-{project.split('-')[-1]}-us-sandbox-temporary/{tmp_gcs_filename}',
-        destination=(
-            project
-            + '.' + table_ddl['schema']
-            + '.' + table_ddl['table']
-        ),
-        job_config=bigquery.LoadJobConfig(
-            source_format=bigquery.SourceFormat.PARQUET,
-            write_disposition=bigquery.WriteDisposition.WRITE_APPEND
-        )
-    ).result()
-
-    # Remove tempral files from local and GCS
-    os.remove(tmp_local_filename)
-    gcs_tmp_file.delete()
+    try:
+        gbq_client.load_table_from_uri(
+            source_uris=f'gs://cl-bigdata-analytics-{project.split('-')[-1]}-us-sandbox-temporary/{tmp_gcs_filename}',
+            destination=(
+                project
+                + '.' + table_ddl['schema']
+                + '.' + table_ddl['table']
+            ),
+            job_config=bigquery.LoadJobConfig(
+                source_format=bigquery.SourceFormat.PARQUET,
+                write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+                schema=[
+                    bigquery.SchemaField(**colum_config)
+                    for colum_config
+                    in table_ddl['columns']
+                ],
+            )
+        ).result()
+    finally:
+        # Remove tempral files from local and GCS
+        os.remove(tmp_local_filename)
+        gcs_tmp_file.delete()
 
 
 def deleteFromTable(
