@@ -16,7 +16,7 @@
         {"name": "total_dias_hasta_resolucion", "field_type": "FLOAT", "mode": "NULLABLE"},
         {"name": "cerrado_por_merge", "field_type": "BOOL", "mode": "NULLABLE"},
         {"name": "id_ticket_fusionado", "field_type": "INT64", "mode": "NULLABLE"},
-        {"name": "ids_tickets_hijo", "field_type": "STRING", "mode": "NULLABLE"}
+        {"name": "ids_tickets_hijos", "field_type": "STRING", "mode": "NULLABLE"}
     ],
 
     "time_partitioning": {
