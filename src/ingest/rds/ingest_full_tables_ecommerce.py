@@ -172,12 +172,11 @@ with DAG(**dag_args) as dag:
         'tickets_zendesk': """
         SELECT
             store_banner,
-            id_ticket,
-            estado,
             fecha_creacion,
             fecha_cierre,
+            id_ticket,
+            estado,
             motivo,
-            store_banner,
             canal,
             numero_pedido,
             tipo1,
