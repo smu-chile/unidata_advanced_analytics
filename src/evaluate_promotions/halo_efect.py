@@ -129,7 +129,4 @@ with DAG(**dag_args) as dag:
             ],
         )
 
-        promotions_sharepoint_task >> main_promotions_task >> compute_halo_efect
-
-        main_promotions_task.append(main_promotions_task)
-        compute_halo_efect.append(compute_halo_efect)
+        promotions_sharepoint_task >> [main_promotions_task] >> [compute_halo_efect]
