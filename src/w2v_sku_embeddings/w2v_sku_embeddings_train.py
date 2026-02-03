@@ -140,4 +140,4 @@ with DAG(**dag_args) as dag:
     ]
 
 
-chain(train_tasks)
+chain(train_tasks, predict_tasks)
