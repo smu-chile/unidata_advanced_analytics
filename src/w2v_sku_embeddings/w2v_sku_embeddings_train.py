@@ -105,6 +105,8 @@ with DAG(**dag_args) as dag:
                 f'{PROJECT_NAME}/gbq_objects/'
             ],
             ttl=43200,
+            spark_driver_cores=4,
+            spark_driver_memory=28,
         )
 
         for store_banner in STORE_BANNERS
