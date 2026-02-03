@@ -87,7 +87,7 @@ with DAG(**dag_args) as dag:
     halo_tasks = []
 
     for store_banner in store_banner_list:
-        lower_banner = store_banner.lower()
+        lower_banner = 'm10' if store_banner == 'Mayorista' else store_banner.lower()
 
         main_promotions_task = ExtendedDataprocCreateBatchOperator(
             task_id = f'get_main_promotions_{lower_banner}',
