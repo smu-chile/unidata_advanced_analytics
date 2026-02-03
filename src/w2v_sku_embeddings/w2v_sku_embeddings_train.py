@@ -41,7 +41,7 @@ dag_args = {
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
-    'concurrency': 1,
+    'concurrency': 4,
     'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
@@ -65,8 +65,8 @@ with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
     STORE_BANNERS = [
         'Unimarc',
-        'Mayorista',
-        'Alvi',
+        #'Mayorista',
+        #'Alvi',
         'Super 10'
     ]
 
@@ -105,8 +105,8 @@ with DAG(**dag_args) as dag:
                 f'{PROJECT_NAME}/gbq_objects/'
             ],
             ttl=43200,
-            spark_driver_cores=4,
-            spark_driver_memory=28,
+            spark_driver_cores=8,
+            spark_driver_memory=35,
         )
 
         for store_banner in STORE_BANNERS
