@@ -64,9 +64,9 @@ dag_args = {
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
     STORE_BANNERS = [
-        #'Unimarc',
-        #'Mayorista',
-        #'Alvi',
+        'Unimarc',
+        'Mayorista',
+        'Alvi',
         'Super 10'
     ]
 
