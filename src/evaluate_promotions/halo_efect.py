@@ -127,8 +127,8 @@ with DAG(**dag_args) as dag:
                 'common/',
                 f'{PROJECT_NAME}/gbq_objects/'
             ],
-            spark_driver_cores=16,
-            spark_driver_memory=60
+            spark_driver_cores=8,
+            spark_driver_memory=35
         )
 
         promotions_sharepoint_task >> main_promotions_task
