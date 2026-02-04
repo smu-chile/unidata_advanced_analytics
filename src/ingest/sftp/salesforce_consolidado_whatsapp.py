@@ -31,7 +31,7 @@ SUBNETWORK = dag_env_config['subnetwork']
 
 dag_args = {
     'dag_id': 'salesforce_ing_consolidado_whatsapp',
-    'schedule_interval': '0 12 * * *',
+    'schedule_interval': '0 7 * * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
@@ -55,7 +55,7 @@ dag_args = {
     }
 }
 
-with DAG(**dag_args) as dag:
+with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y%m%d')) }}"  # noqa: E501
 
     salesforce_consolidado_whatsapp = DataprocCreateBatchOperator(
