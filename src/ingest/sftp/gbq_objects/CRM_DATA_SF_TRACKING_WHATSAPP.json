@@ -1,0 +1,71 @@
+{
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_TRACKING_WHATSAPP",
+
+    "columns": [
+        {
+            "name": "CONTACT_KEY",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description" : "ID Cliente"
+        },
+        {
+            "name": "MOBILE_NUMBER",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED",
+            "description" : "Número de teléfono."
+        },
+        {
+            "name": "EVENT_DATE",
+            "field_type": "DATETIME",
+            "mode": "REQUIRED",
+            "description" : "Fecha de evento."
+        },
+        {
+            "name": "CHANNEL_ID",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED"
+        },
+                {
+            "name": "CHANNEL_NAME",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description" : "Canal (i.e, WhatsApp)."
+        },
+        {
+            "name": "STATUS",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description" : "Status envío ('delivered', 'sent', 'read', 'failed')"
+        },
+        {
+            "name": "REASON",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description" : "Razón de fallo de envío."
+        },
+        {
+            "name": "CAMPAIGN",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre de campaña."
+        },
+        {
+            "name": "YEAR",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description" : "Año."
+        },
+        {
+            "name": "MONTH",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Mes."
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "NULLABLE"
+        }       
+    ]
+}
