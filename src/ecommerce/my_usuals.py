@@ -34,7 +34,7 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'my_usuals'
+PROJECT_NAME = 'ecommerce'
 dag_args = {
     'dag_id': 'my_usuals_allocation',
     'schedule_interval': '0 9 * * 3',
