@@ -179,13 +179,13 @@ SQL_QUERIES = QueryDict({
                 SALES_ITEM.customer_key,
                 product_code as material,
                 SALES_ITEM.transaction_date
-            FROM `${gcp_project_1}.${schema_1}.VW_SALES_ITEM` AS SALES_ITEM
+            FROM `${gcp_project_2}.${schema_2}.VW_SALES_ITEM` AS SALES_ITEM
 
             INNER JOIN (
             select
                 PRODUCT_H.EAN as upc,
                 LTRIM(PRODUCT_H.SKU_PRODUCT, '0') as product_code
-            from `${gcp_project_1}.${schema_1}.VW_DIM_PRODUCT` as PRODUCT_H
+            from `${gcp_project_2}.${schema_2}.VW_DIM_PRODUCT` as PRODUCT_H
             group by 1,2
             ) AS PRODUCT_H
             ON SALES_ITEM.ean = PRODUCT_H.upc
@@ -430,7 +430,7 @@ SQL_QUERIES = QueryDict({
                 PRODUCT_H.LIN_H_DSC as department_description_h
             from `${gcp_project_2}.${schema_2}.VW_DIM_PRODUCT` as PRODUCT_H
         ) AS PRODUCT_H
-        ON SALES_ITEM.ean = PRODUCT_H.upc --ARREGLO GCP
+        ON SALES_ITEM.ean = PRODUCT_H.upc
 
         join `${gcp_project_2}.${schema_3}.TMP_SUBCAT_UM_${upper_store_banner}` um
         on um.sub_cat_UM = PRODUCT_H.sub_cat_UM

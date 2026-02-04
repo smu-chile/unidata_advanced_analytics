@@ -825,7 +825,7 @@ SQL_QUERIES = QueryDict({
         ) AS PRODUCT_H
         ON SALES_ITEM.ean = PRODUCT_H.upc
 
-        join `${gcp_project_2}.${schema_3}.TEMP_SUBCAT_UM_UNIMARC` um
+        join `${gcp_project_2}.${schema_3}.TMP_SUBCAT_UM_UNIMARC` um
         on um.sub_cat_UM = PRODUCT_H.sub_cat_UM
 
         left JOIN (
