@@ -201,7 +201,7 @@ SQL_QUERIES = QueryDict({
                 nombre_promocion as nombre_apo,
                 cast(fecha_inicio_de_promocion as date) as inicio_promo,
                 cast(fecha_fin_de_promocion as date) as fin_promo
-            FROM `${gcp_project_1}.${schema_1}.VW_FACT_WORKFLOW`
+            FROM `${gcp_project_2}.${schema_2}.VW_FACT_WORKFLOW`
             WHERE registro_valido = 'X'
                 and organizacion_ventas = '3000'
                 and canal_distribucion = '10'
