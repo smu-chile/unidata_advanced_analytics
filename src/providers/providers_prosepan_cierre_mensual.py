@@ -35,8 +35,8 @@ with open(
 
 PROJECT_NAME = 'providers'
 dag_args = {
-    'dag_id': 'providers_prosepan',
-    'schedule_interval': '0 9 * * 2',
+    'dag_id': 'providers_prosepan_cierre_mensual',
+    'schedule_interval': '0 9 * * 5#1',
     'dagrun_timeout': None,
     'max_active_runs': 1,
     'concurrency': 2,
@@ -59,22 +59,22 @@ dag_args = {
     }
 }
 
-with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
-    providers_prosepan = ExtendedDataprocCreateBatchOperator(
-        task_id='providers_prosepan',
+with DAG(**dag_args) as dag:
+    providers_prosepan_cierre_mensual = ExtendedDataprocCreateBatchOperator(
+        task_id='providers_prosepan_cierre_mensual',
         python_script_path=(
             f'{PROJECT_NAME}/'
             'scripts/'
-            'providers_prosepan.py'
+            'providers_prosepan_cierre_mensual.py'
         ),
         dag_env_config=dag_env_config,
         docker_image_name=PROJECT_NAME,
         pyspark_batch_args=[
             '--project_id', dag_env_config['project_id'],
-            '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%G%V')) }}",  # noqa: E501
+            '--execution_month', "{{ dag_run.conf.get('execution_month', dag.timezone.convert(data_interval_start).strftime('%Y-%m')) }}",  # noqa: E501
         ],
         include_paths=[
             'common/'
         ],
     )
-providers_prosepan  # noqa: B018
+providers_prosepan_cierre_mensual  # noqa: B018
