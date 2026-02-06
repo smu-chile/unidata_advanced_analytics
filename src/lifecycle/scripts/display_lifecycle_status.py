@@ -115,8 +115,8 @@ ventas_mensuales AS (
     customer_key,
     COUNT(DISTINCT market_basket_key) AS canastas_compradas,
     SUM(basket_value)                 AS gasto_total
-  FROM `${proyecto}.ML_LAB.VW_SALES_BASKET` A
-  INNER JOIN `${proyecto}.ML_LAB.VW_DIM_STORE` D
+  FROM `${proyecto}.CDA_VISTAS.VW_SALES_BASKET` A
+  INNER JOIN `${proyecto}.CDA_VISTAS.VW_DIM_STORE` D
     ON A.store_id = D.store_id
   WHERE transaction_date BETWEEN DATE_TRUNC(DATE_SUB(fecha_final, INTERVAL 12 MONTH), MONTH)
                              AND fecha_final
