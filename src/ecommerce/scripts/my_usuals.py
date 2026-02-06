@@ -274,7 +274,7 @@ def main():
     # ----------
     args = vars(parser.parse_args())
     # Environment
-    user: str = args['project_name']  # noqa: F841
+    user: str = args['project_name'] + '_my_usuals'  # noqa: F841
     gcp_project: str = args['gcp_project']
     gcp_project_cda: str = {
         'cl-bigdata-analytics': 'cl-cda-unidata-dev',

@@ -82,6 +82,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       sqlalchemy \
       sympy \
       pendulum \
+      awswrangler \
       pandas-gbq \
       virtualenv \
     && ${CONDA_HOME}/bin/micromamba clean --all --yes

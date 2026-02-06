@@ -9,7 +9,6 @@ from datetime import timedelta
 import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
-from airflow.models.baseoperator import chain
 
 
 if platform.system() == 'Windows':
@@ -34,14 +33,14 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'my_usuals'
+PROJECT_NAME = 'ecommerce'
 dag_args = {
-    'dag_id': 'my_usuals_allocation',
-    'schedule_interval': '0 9 * * 3',
+    'dag_id': 'diamond_discount',
+    'schedule_interval': '00 3 * * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
-    'concurrency': 2,
+    'concurrency': 1,
     'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
@@ -62,37 +61,22 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    train_tasks = [
-        ExtendedDataprocCreateBatchOperator(
-            task_id=f"compute_score_{store_banner.replace(' ', '_').lower()}",
-            python_script_path=(
-                f'{PROJECT_NAME}/'
-                'scripts/'
-                'my_usuals.py'
-            ),
-            dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
-            pyspark_batch_args=[
-                '--project_name', PROJECT_NAME,
-                '--gcp_project', dag_env_config['project_id'],
-                '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).next(3).strftime('%Y-%m-%d')) }}",  # noqa: E501
-                '--store_banner', store_banner,
-                '--rollback_months', "{{ dag_run.conf.get('rollback_months', 6) }}",
-                '--rollback_months_filter', "{{ dag_run.conf.get('rollback_months_filter', 12) }}",
-                '--min_transacted_months', "{{ dag_run.conf.get('min_transacted_months', 2) }}",
-                '--top_n', "{{ dag_run.conf.get('top_n', 100) }}",
-            ],
-            include_paths=[
-                'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
-            ],
-        )
-
-        for store_banner in [
-            'Unimarc',
-            'Alvi',
-        ]
-    ]
-
-
-chain(train_tasks)
+    ExtendedDataprocCreateBatchOperator(
+        task_id='compute_diamond_discount',
+        python_script_path=(
+            f'{PROJECT_NAME}/'
+            'scripts/'
+            'compute_diamond_discount.py'
+        ),
+        dag_env_config=dag_env_config,
+        docker_image_name=PROJECT_NAME,
+        pyspark_batch_args=[
+            '--project_name', PROJECT_NAME,
+            '--gcp_project', dag_env_config['project_id'],
+            '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}",  # noqa: E501
+        ],
+        include_paths=[
+            'common/',
+            f'{PROJECT_NAME}/gbq_objects/'
+        ],
+    )
