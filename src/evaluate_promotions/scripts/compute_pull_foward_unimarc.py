@@ -1116,8 +1116,7 @@ def main():
             '/sites/'
             'BigDatayAdvancedAnalytics/'
             'Documentos%20compartidos/'
-            'Unipay/'
-            'PRUEBAS/'
+            'Evaluate_Promotions/'
             'sobrestock_unimarc.xlsx'
         )
     ).upload(excel_content)

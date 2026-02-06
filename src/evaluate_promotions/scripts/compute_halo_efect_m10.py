@@ -2070,8 +2070,7 @@ def main():
             '/sites/'
             'BigDatayAdvancedAnalytics/'
             'Documentos%20compartidos/'
-            'Unipay/'
-            'PRUEBAS/'
+            'Evaluate_Promotions/'
             'halo_efect_m10.xlsx'
         )
     ).upload(excel_content)

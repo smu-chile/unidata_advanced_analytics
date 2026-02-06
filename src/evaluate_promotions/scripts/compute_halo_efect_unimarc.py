@@ -1865,8 +1865,7 @@ def main():
             '/sites/'
             'BigDatayAdvancedAnalytics/'
             'Documentos%20compartidos/'
-            'Unipay/'
-            'PRUEBAS/'
+            'Evaluate_Promotions/'
             'halo_efect_unimarc.xlsx'
         )
     ).upload(excel_content)

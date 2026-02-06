@@ -55,7 +55,7 @@ def main():
     secret_name = 'bdaa_sharepoint_credentials'  # noqa: S105
 
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
-    file_site += 'Unipay/PRUEBAS'
+    file_site += 'Evaluate_Promotions'
 
     #file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'  # noqa: ERA001, W505
     #file_site += 'Evaluacion Promociones'  # noqa: ERA001

@@ -1138,8 +1138,7 @@ def main():
             '/sites/'
             'BigDatayAdvancedAnalytics/'
             'Documentos%20compartidos/'
-            'Unipay/'
-            'PRUEBAS/'
+            'Evaluate_Promotions/'
             'sobrestock_m10.xlsx'
         )
     ).upload(excel_content)
