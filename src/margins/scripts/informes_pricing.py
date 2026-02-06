@@ -52,22 +52,14 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
     if formato == 'unimarc':
         df_file = df_file.iloc[:, :26]
         df_file = df_file.replace('|', '', regex=True)
-        df_file['Solo 1 barra por linea'] = (
-            df_file['Solo 1 barra por linea']
-            .astype('Float64')
-            .astype('Int64')
-        )
+
         logging.info(f'After cleaning: {df_file}')
         return df_file
     if formato == 's10':
         df_file.columns = df_file.iloc[5,]
         df_file = df_file.iloc[6:, :25]
         df_file = df_file.replace('|', '', regex=True)
-        df_file['Solo 1 barra por linea'] = (
-            df_file['Solo 1 barra por linea']
-            .astype('Float64')
-            .astype('Int64')
-        )
+
         logging.info(f'After cleaning: {df_file}')
         return df_file
     if formato == 'm10':
@@ -75,14 +67,7 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
         df_file = df_file[6:]
         df_file = df_file.iloc[:, :22]
         df_file = df_file.replace('|', '', regex=True)
-        df_file['Solo 1 barra por linea'] = (
-            df_file['Solo 1 barra por linea']
-            .astype('Float64')
-            .astype('Int64')
-        )
-        df_file['FACTOR'] = (
-            df_file['FACTOR'].astype('Float64').astype('Int64')
-        )
+
         logging.info(f'After cleaning: {df_file}')
         return df_file
     return df_file
