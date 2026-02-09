@@ -1,0 +1,69 @@
+{
+    "schema": "ML_LAB",
+    "table": "DS_OFFER_TOOL_S10",
+
+    "columns": [
+        {
+            "name": "TOTAL_CUSTOMERS",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TOTAL_SALES",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "UNITS",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "VISITS",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "CAT_BRAND",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "RANKING",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "DISPLAY",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "N_SALES",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "LOYALTY_PENETRATION",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+    ],
+
+    "clustering_fields": ["MONTHID"]
+}

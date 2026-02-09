@@ -1,0 +1,117 @@
+{
+    "schema": "ML_LAB",
+    "table": "DS_OFFER_TOOL_ALVI",
+
+    "columns": [
+        {
+            "name": "TOTAL_CUSTOMERS",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TOTAL_SALES",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "UNITS",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "VISITS",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "CAT_BRAND",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "RANKING",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": ""
+        },
+        {
+            "name": "MAX_SUGGESTED_UNITS",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "AVERAGE_UNITS",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "NET_PRICE",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "ESTIMATED_CUSTOMERS",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "DISCOUNT",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": ""
+        },
+        {
+            "name": "SELL_OUT",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": ""
+        },
+        {
+            "name": "IS_RANKED",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "SUPPLIER_NM",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "DISPLAY",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": ""
+        },
+        {
+            "name": "N_SALES",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": ""
+        },
+        {
+            "name": "LOYALTY_PENETRATION",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": ""
+        },
+        {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+    ],
+
+    "clustering_fields": ["MONTHID"]
+}

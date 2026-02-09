@@ -1481,7 +1481,7 @@ def main():
         min_date = min_date,
         max_date = max_date
     ),
-    user = 'abravom',
+    user = usuario,
     gbq_client = gbq_client
     ).groupby(['nombre_promocion_ppal']).agg({
             'Venta_Bruta': 'sum'
@@ -1492,7 +1492,7 @@ def main():
         schema = 'TMP',
         upper_store_banner = upper_store_banner,
     ),
-    user = 'abravom',
+    user = usuario,
     gbq_client = gbq_client
     )
 
