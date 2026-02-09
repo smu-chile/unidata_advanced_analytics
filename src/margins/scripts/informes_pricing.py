@@ -77,6 +77,7 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
         df_file = df_file.iloc[:, :22]
         df_file = df_file.replace('|', '', regex=True)
         df_file = df_file.astype('str')
+        df_file = df_file.replace('nan', '', regex=True)
         logging.info(f'After cleaning: {df_file}')
         return df_file
     return df_file
