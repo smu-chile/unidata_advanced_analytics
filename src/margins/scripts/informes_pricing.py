@@ -52,7 +52,9 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
     if formato == 'unimarc':
         df_file = df_file.iloc[:, :26]
         df_file = df_file.replace('|', '', regex=True)
-
+        df_file['OFERTA'] = df_file['OFERTA'].astype('str')
+        df_file['ID ALTERNATIVO WF'] = df_file['ID ALTERNATIVO WF'].astype('str')
+        df_file['NUMERO CABECERA'] = df_file['NUMERO CABECERA'].astype('str')
         logging.info(f'After cleaning: {df_file}')
         return df_file
     if formato == 's10':
