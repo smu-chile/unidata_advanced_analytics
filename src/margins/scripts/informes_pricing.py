@@ -66,6 +66,7 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
         df_file['OFERTA'] = df_file['OFERTA'].astype('str')
         df_file['ID ALTERNATIVO WF'] = df_file['ID ALTERNATIVO WF'].astype('str')
         df_file['NUMERO CABECERA'] = df_file['NUMERO CABECERA'].astype('str')
+        logging.info(f'TYPES: {df_file.dtypes}')
         logging.info(f'After cleaning: {df_file}')
         return df_file
     if formato == 's10':
