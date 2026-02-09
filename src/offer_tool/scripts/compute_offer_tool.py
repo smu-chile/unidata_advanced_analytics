@@ -263,7 +263,7 @@ FULL_SALES_OLD_QUERIES = QueryDict(
             PARSE_DATE('%G-W%V-%u',CONCAT(SUBSTR(CAST(week_iso_id AS STRING), 1, 4),
                 '-W',LPAD(SUBSTR(CAST(week_iso_id AS STRING), 5, 2), 2, '0'),'-1')
             ) AS week_start_monday
-            FROM `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_FACT_WEEK_CUSTOMER_ORGANIZATION_SHABITS
+            FROM `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_FACT_WEEK_CUSTOMER_ORGANIZATION_SHABITS`
             WHERE WEEK_ISO_ID >= 202301
             GROUP BY WEEK_ISO_ID
         ),
