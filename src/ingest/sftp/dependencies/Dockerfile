@@ -71,6 +71,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       pyarrow \
       pytables \
       python \
+      pytz \
       regex \
       requests \
       rtree \
