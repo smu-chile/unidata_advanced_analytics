@@ -45,12 +45,12 @@
         },
         {
             "name": "FACTOR",
-            "field_type": "INTEGER",
+            "field_type": "FLOAT",
             "mode": "NULLABLE"
         },
         {
             "name": "PRECIO_OFERTA_POR_FACTOR",
-            "field_type": "FLOAT",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {

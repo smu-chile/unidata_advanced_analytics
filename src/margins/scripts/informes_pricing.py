@@ -38,39 +38,49 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(formato: str,df: pd.DataFrame) -> pd.DataFrame:
+def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
     """Transform Dataframe into expected format for uploading into BQ.
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df_file : pd.DataFrame
         Input DataFrame to transform.
     formato : str
         Business format to be added as a new field.
     """
-    logging.info('Before cleaning:', df)
+    logging.info(f'Before cleaning: {df_file}')
     if formato == 'unimarc':
-        df = df.iloc[:, :26]  # noqa: PD901
-        df = df.replace('|', '', regex=True)  # noqa: PD901
-        df['Solo 1 barra por linea'] = df['Solo 1 barra por linea'].astype('Float64').astype('Int64')  # noqa: E501
-        logging.info('After cleaning:', df)
-        return df
+        df_file = df_file.iloc[:, :26]
+        df_file = df_file.replace('|', '', regex=True)
+        df_file = df_file[['CODIGO SAP SMU', 'Solo 1 barra por linea', 'DESCRIPCION', 'UM',
+       'Unnamed: 4', 'PRECIO NORMAL', 'P/F', 'FACTOR', 'OFERTA',
+       'PACK VIRTUAL', 'ID 1', 'ID 2', 'BONIFICACION', 'LISTA DE PRODUCTOS',
+       'LISTA DE LOCALES', 'DESCRIPCION_LS_SELL_OUT', 'NOMBRE DEL PROVEEDOR',
+       'RUT PROVEEDOR', 'IMPORTE SELL OUT', 'FINANCIAMIENTO', 'INICIO',
+       'TERMINO', 'FECHA DE INCORPORACION ','ID ALTERNATIVO WF', 'NUMERO CABECERA',
+       'TIPO PROMOCIÓN']]
+
+        df_file = df_file.astype('str')
+        logging.info(f'TYPES: {df_file.dtypes}')
+        logging.info(f'After cleaning: {df_file}')
+        return df_file
     if formato == 's10':
-        df.columns = df.iloc[5,]
-        df = df.iloc[6:, :25]  # noqa: PD901
-        df = df.replace('|', '', regex=True)  # noqa: PD901
-        df['Solo 1 barra por linea'] = df['Solo 1 barra por linea'].astype('Float64').astype('Int64')  # noqa: E501
-        logging.info('After cleaning:', df)
-        return df
+        df_file.columns = df_file.iloc[5,]
+        df_file = df_file.iloc[6:, :25]
+        df_file = df_file.replace('|', '', regex=True)
+        df_file = df_file.astype('str')
+        logging.info(f'After cleaning: {df_file}')
+        return df_file
     if formato == 'm10':
-        df.columns = df.iloc[5,]
-        df = df[6:]  # noqa: PD901
-        df = df.iloc[:, :22]  # noqa: PD901
-        df = df.replace('|', '', regex=True)  # noqa: PD901
-        df['Solo 1 barra por linea'] = df['Solo 1 barra por linea'].astype('Float64').astype('Int64')  # noqa: E501
-        logging.info('After cleaning:', df)
-        return df
-    return df
+        df_file.columns = df_file.iloc[5,]
+        df_file = df_file[6:]
+        df_file = df_file.iloc[:, :22]
+        df_file = df_file.replace('|', '', regex=True)
+        df_file = df_file.astype('str')
+        df_file = df_file.replace('nan', '', regex=True)
+        logging.info(f'After cleaning: {df_file}')
+        return df_file
+    return df_file
 
 # -------------------------------------------------------------------------
 # Main function
