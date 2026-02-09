@@ -35,8 +35,8 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
 # recommended to include all of them.
 #
 # Use mamba to install packages quickly.
-RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
-    && ${CONDA_HOME}/bin/micromamba install \
+RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
+    && ${CONDA_HOME}/bin/micromamba install -y -c conda-forge\
       conda \
       cython \
       fastavro \
@@ -55,15 +55,16 @@ RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
       google-cloud-redis \
       google-cloud-secret-manager \
       google-cloud-spanner \
+      google-cloud-speech \
       google-cloud-storage \
       koalas \
       matplotlib \
+      nltk \
       numba \
       numpy \
+      office365-rest-python-client \
       openblas \
       orc \
-      office365-rest-python-client \
-      openpyxl \
       pandas \
       pyarrow \
       pytables \
@@ -71,12 +72,15 @@ RUN ${CONDA_HOME}/bin/conda install micromamba -n base -c conda-forge \
       regex \
       requests \
       rtree \
+      scikit-learn \
+      scipy \
+      seaborn \
+      sqlalchemy \
       sympy \
-      libsqlite \
-      sqlite \
       pendulum \
       pandas-gbq \
-      virtualenv
+      virtualenv \
+    && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
 # (Optional) Install additional requirements
 # COPY requirements.txt .
