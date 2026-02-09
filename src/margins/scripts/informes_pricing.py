@@ -60,12 +60,7 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
        'TERMINO', 'FECHA DE INCORPORACION ','ID ALTERNATIVO WF', 'NUMERO CABECERA',
        'TIPO PROMOCIÓN']]
 
-        df_file['FACTOR'] = df_file['FACTOR'].astype('Float64')
-        df_file['PRECIO NORMAL'] = df_file['PRECIO NORMAL'].astype('Float64')
-        df_file['P/F'] = df_file['P/F'].astype('Float64')
-        df_file['OFERTA'] = df_file['OFERTA'].astype('str')
-        df_file['ID ALTERNATIVO WF'] = df_file['ID ALTERNATIVO WF'].astype('str')
-        df_file['NUMERO CABECERA'] = df_file['NUMERO CABECERA'].astype('str')
+        df_file = df_file.astype('str')
         logging.info(f'TYPES: {df_file.dtypes}')
         logging.info(f'After cleaning: {df_file}')
         return df_file
@@ -73,7 +68,7 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
         df_file.columns = df_file.iloc[5,]
         df_file = df_file.iloc[6:, :25]
         df_file = df_file.replace('|', '', regex=True)
-
+        df_file = df_file.astype('str')
         logging.info(f'After cleaning: {df_file}')
         return df_file
     if formato == 'm10':
@@ -81,7 +76,7 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
         df_file = df_file[6:]
         df_file = df_file.iloc[:, :22]
         df_file = df_file.replace('|', '', regex=True)
-
+        df_file = df_file.astype('str')
         logging.info(f'After cleaning: {df_file}')
         return df_file
     return df_file
