@@ -52,6 +52,17 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
     if formato == 'unimarc':
         df_file = df_file.iloc[:, :26]
         df_file = df_file.replace('|', '', regex=True)
+        df_file = df_file[['CODIGO SAP SMU', 'Solo 1 barra por linea', 'DESCRIPCION', 'UM',
+       'Unnamed: 4', 'PRECIO NORMAL', 'P/F', 'FACTOR', 'OFERTA',
+       'PACK VIRTUAL', 'ID 1', 'ID 2', 'BONIFICACION', 'LISTA DE PRODUCTOS',
+       'LISTA DE LOCALES', 'DESCRIPCION_LS_SELL_OUT', 'NOMBRE DEL PROVEEDOR',
+       'RUT PROVEEDOR', 'IMPORTE SELL OUT', 'FINANCIAMIENTO', 'INICIO',
+       'TERMINO', 'FECHA DE INCORPORACION ','ID ALTERNATIVO WF', 'NUMERO CABECERA',
+       'TIPO PROMOCIÓN']]
+
+        df_file['FACTOR'] = df_file['FACTOR'].astype('Float64')
+        df_file['PRECIO NORMAL'] = df_file['PRECIO NORMAL'].astype('Float64')
+        df_file['P/F'] = df_file['P/F'].astype('Float64')
         logging.info(f'After cleaning: {df_file}')
         return df_file
     if formato == 's10':
