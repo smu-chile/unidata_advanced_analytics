@@ -1567,7 +1567,7 @@ def main():
         upper_store_banner = upper_store_banner,
         month_date = month_date
     ),
-    user = 'abravom',
+    user = usuario,
     gbq_client = gbq_client
     )
 
