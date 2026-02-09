@@ -1209,12 +1209,13 @@ def main() -> None:
     logging.info('Getting variables')
     # Parsed Variables
 
-    args = vars(parser.parse_args)
+    args = vars(parser.parse_args())
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']
     store_banner: str = args['store_banner']
 
     logging.info(f'Execution date: {execution_date}')
+    logging.info(f'store_banner: {store_banner}')
 
     gbq_client = Client()
 
@@ -1236,7 +1237,11 @@ def main() -> None:
             'Mayorista': 'M10'
     }[store_banner]
 
+    logging.info(f'upper_store_banner: {upper_store_banner}')
+
     monthid = pendulum.parse(execution_date).start_of('month').format('YYYYMM')
+
+    logging.info(f'monthid: {monthid}')
 
     # ---------------------------------------------------------------------
     #                       Stage 1: Create Offer Tool Tables
