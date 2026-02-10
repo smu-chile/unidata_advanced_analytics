@@ -1058,48 +1058,28 @@ def productPropsAlvi(
     #----------------------------------------------------------------------
 
     # Load offer tool source
-    logging.info('STARTING: Retrive data from Alvi tables')
     # Load last 52 weeks cycles
-    logging.info('Reading last 52 weeks cycles')
-
-    start = pendulum.now()
-
     cycles_df = readBigQuery(SQL_QUERIES['cycles'].substitute(
     ),
     user = usuario,
     gbq_client = gbq_client
     )
 
-    logging.info(f'Reading process completed at {pendulum.now()-start}')
     # Load suggested discount table
-    logging.info('Reading suggested discount table')
-
-    start = pendulum.now()
-
     suggested_discount = readBigQuery(SQL_QUERIES['offer_tool_discount'].substitute(
     ),
     user = usuario,
     gbq_client = gbq_client
     )
 
-    logging.info(f'offer tool discount columns: {suggested_discount.columns.tolist()}')
-    logging.info(f'Reading process completed at {pendulum.now()-start}')
-
     # Load max suggested units
-    logging.info('Computing max suggested units')
-    start = pendulum.now()
     max_suggested_units = readBigQuery(SQL_QUERIES['max_suggested_units'].substitute(
     ),
     user = usuario,
     gbq_client = gbq_client
     )
 
-    logging.info(f'Computing process completed at {pendulum.now()-start}')
     # Load customers per cycle
-    logging.info('Computing customers per cycle')
-
-    start = pendulum.now()
-
     customers_per_cycle = {}
     for loyalty, value in {'loyals': 1, 'non_loyals': 0}.items():
         customers_per_cycle[loyalty] = readBigQuery(SQL_QUERIES['customers_per_cycle'].substitute(
@@ -1109,12 +1089,8 @@ def productPropsAlvi(
         gbq_client = gbq_client
         )
 
-    logging.info(f'Computing process completed at {pendulum.now()-start}')
-    logging.info('COMPLETED: Retrive data from Alvi tables')
-
     # Add calculated columns to ranking
     #----------------------------------------------------------------------
-    logging.info('STARTING: Add calculated columns to ranking')
 
     # Format offer tool columns
     ranking = ranking.rename(columns={'categoria_marca':'cat_brand'})
@@ -1135,11 +1111,7 @@ def productPropsAlvi(
     ].astype('int32')
 
     # Calculate Redemption Rate
-    logging.info('STARTING: Redemption Rate calculation')
-
     redemption_rate = calculateRedemptionRate(cycles_df,usuario,gbq_client)  # noqa: E501
-
-    logging.info('COMPLETED: Redemption Rate calculation')
 
     redemption_rate =  {col: redemption_rate[col].mean()
                         for col in redemption_rate.columns[1:]}
@@ -1176,8 +1148,6 @@ def productPropsAlvi(
         how='left'
     )
 
-    logging.info(f'Ranking columns after merge: {ranking.columns.tolist()}')
-
     # Compute Sell Out
     ranking['sell_out'] = (
         ranking['precio_neto'] *
@@ -1186,8 +1156,6 @@ def productPropsAlvi(
         ranking['estimated_customers'] *
         4
     ).round()
-
-    logging.info('COMPLETED: Add calculated columns to ranking')
 
     # Format columns
     ranking[['estimated_customers', 'max_suggested_units']] = ranking[
