@@ -662,7 +662,7 @@ SQL_QUERIES = QueryDict({
     ORDER BY score DESC
     """, # noqa: E501
 
-    'presentacion':
+    'presentation':
     """
     WITH presentation AS (
         SELECT
