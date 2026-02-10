@@ -53,7 +53,7 @@
         },
         {
             "name": "LOYALTY_PENETRATION",
-            "field_type": "INT64",
+            "field_type": "FLOAT64",
             "mode": "REQUIRED",
             "description": ""
         },
