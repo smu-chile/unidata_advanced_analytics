@@ -498,7 +498,7 @@ def main() -> None:
 
     logging.info(f'execution_date: {execution_date}')
 
-    print('Obtainning data')
+    logging.info('Obtainning data')
     sku_ots_embeddings = gbq_extended.readBigQuery(
         SQL_QUERIES['ots_embeddings'].substitute(
             gcp_project=gcp_project,
@@ -568,7 +568,7 @@ def main() -> None:
     product_names = product_names.drop(columns=[
         'sub_category_description', 'category_description'
     ]).dropna()
-    print('Data obtained!')
+    logging.info('Data obtained!')
 
     # Change upc to int64
     nielsen_product_names = nielsen_product_names[
