@@ -69,7 +69,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       numpy \
       openblas \
       orc \
-      pandas \
+      "pandas=2.3.*" \
       pyarrow \
       pytables \
       python \
