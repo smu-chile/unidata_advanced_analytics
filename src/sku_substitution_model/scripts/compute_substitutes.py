@@ -276,6 +276,7 @@ def computeSubstitutes(
         'sku'
     )
 
+    # Returns empty DataFrame if no product has embedding
     if bop_w2v_embeddings.empty: return pd.DataFrame()
 
     # Get TF-IDF embeddings for products in the bag
@@ -756,6 +757,10 @@ def main() -> None:
             output='rank',
             top_k=n_substitutes
         )
+
+        # Pass if substitutes is empty
+        if substitutes.empty: continue
+
         substitutes.insert(0, 'date', execution_date)
         substitutes.insert(1, 'store_banner', store_banner)
 
