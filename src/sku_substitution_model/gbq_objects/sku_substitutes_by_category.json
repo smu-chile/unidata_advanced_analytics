@@ -1,0 +1,51 @@
+{
+    "schema": "ML_LAB",
+    "table": "SKU_SUBSTITUTES_BY_CATEGORY",
+
+    "columns": [
+        {
+            "name": "date",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "[PARTITIONED] First day of the month on which the substitutes are valid"
+        },
+        {
+            "name": "store_banner",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "[CLUSTERED] SMU subsidiary in BDF format"
+        },
+        {
+            "name": "sku",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "SKU of product A"
+        },
+        {
+            "name": "substitute",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "SKU of product B"
+        },
+        {
+            "name": "substitution_score",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Distance between products A and B (must be minimized)"
+        },
+        {
+            "name": "substitution_rank",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Ranking in which the product B substitutes product A (lower is better)"
+        }
+        
+    ],
+
+    "time_partitioning": {
+        "field": "date",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": ["STORE_BANNER"]
+}
