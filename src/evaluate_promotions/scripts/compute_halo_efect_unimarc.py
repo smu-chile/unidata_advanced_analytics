@@ -1373,7 +1373,7 @@ def main():
     }[store_banner]
 
     banner_nro = 1
-    #fecha_carga = execution_date  # noqa: ERA001
+    fecha_carga = execution_date
 
     logging.info(f'upper_store_banner: {upper_store_banner}')
 
@@ -1407,13 +1407,15 @@ def main():
     logging.info(f'result_date: {result_date}')
     logging.info(f'month_date: {month_date}')
 
+    logging.info('promo_eval_behavior_last_12_months')
+
     _ = createTableAsSelect(
     query=SQL_QUERIES['promo_eval_behavior_last_12_months'].substitute(
         gcp_project_1 = 'cl-cda-prod',
         schema_1 = 'DS_CDA_VW_SMU',
         gcp_project_2 = 'cl-bigdata-analytics-preprod',
         schema_2 = 'CDA_VISTAS',
-        fecha_carga = '2026-01-01',
+        fecha_carga = fecha_carga,
         banner_nro = banner_nro,
         min_date = min_date,
         result_date = result_date
@@ -1425,6 +1427,8 @@ def main():
     write_disposition = 'WRITE_TRUNCATE'
     )
 
+    logging.info('step_1')
+
     _ = createTableAsSelect(
     query=SQL_QUERIES['step_1'].substitute(
         gcp_project_1 = 'cl-cda-prod',
@@ -1432,7 +1436,7 @@ def main():
         gcp_project_2 = 'cl-bigdata-analytics-preprod',
         schema_2 = 'CDA_VISTAS',
         schema_3 = 'TMP',
-        fecha_carga = '2026-01-01',
+        fecha_carga = fecha_carga,
         banner_nro = banner_nro,
         min_date = min_date,
         max_date = max_date,
@@ -1445,6 +1449,8 @@ def main():
     create_disposition='CREATE_IF_NEEDED',
     write_disposition = 'WRITE_TRUNCATE'
     )
+
+    logging.info('step_2')
 
     _ = createTableAsSelect(
     query=SQL_QUERIES['step_2'].substitute(
@@ -1459,6 +1465,8 @@ def main():
     write_disposition = 'WRITE_TRUNCATE'
     )
 
+    logging.info('step_3')
+
     _ = createTableAsSelect(
     query=SQL_QUERIES['step_3'].substitute(
         gcp_project = proyecto,
@@ -1471,6 +1479,8 @@ def main():
     create_disposition='CREATE_IF_NEEDED',
     write_disposition = 'WRITE_TRUNCATE'
     )
+
+    logging.info('promotional_sales')
 
     result_df = readBigQuery(SQL_QUERIES['promotional_sales'].substitute(
         gcp_project_1 = proyecto,
@@ -1487,6 +1497,8 @@ def main():
             'Venta_Bruta': 'sum'
         }).reset_index()
 
+    logging.info('get_step_3_data')
+
     halo_df = readBigQuery(SQL_QUERIES['get_step_3_data'].substitute(
         gcp_project = proyecto,
         schema = 'TMP',
@@ -1495,6 +1507,8 @@ def main():
     user = usuario,
     gbq_client = gbq_client
     )
+
+    logging.info('halo_efect')
 
     totales_nombre_promocion_ppal_df = pd.merge(  # noqa: PD015
     left=halo_df.groupby([

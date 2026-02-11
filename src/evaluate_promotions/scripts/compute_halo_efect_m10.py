@@ -1460,7 +1460,7 @@ def main():
 
     banner_nro = 2
     org_bdf = 4
-    #fecha_carga = execution_date  # noqa: ERA001
+    fecha_carga = execution_date
 
     logging.info(f'upper_store_banner: {upper_store_banner}')
 
@@ -1500,7 +1500,7 @@ def main():
         schema_1 = 'DS_CDA_VW_SMU',
         gcp_project_2 = 'cl-bigdata-analytics-preprod',
         schema_2 = 'CDA_VISTAS',
-        fecha_carga = '2026-01-01',
+        fecha_carga = fecha_carga,
         banner_nro = banner_nro,
         org_bdf = org_bdf,
         min_date = min_date,
@@ -1520,7 +1520,7 @@ def main():
         gcp_project_2 = 'cl-bigdata-analytics-preprod',
         schema_2 = 'CDA_VISTAS',
         schema_3 = 'TMP',
-        fecha_carga = '2026-01-01',
+        fecha_carga = fecha_carga,
         banner_nro = banner_nro,
         org_bdf = org_bdf,
         min_date = min_date,

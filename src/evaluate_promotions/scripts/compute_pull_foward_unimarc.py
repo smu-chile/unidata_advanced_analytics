@@ -991,7 +991,7 @@ def main():
     }[store_banner]
 
     banner_nro = 1
-    #fecha_carga = execution_date  # noqa: ERA001
+    fecha_carga = execution_date
 
     logging.info(f'upper_store_banner: {upper_store_banner}')
 
@@ -1048,7 +1048,7 @@ def main():
         schema_2 = 'CDA_VISTAS',
         schema_3 = 'TMP',
         banner_nro = banner_nro,
-        fecha_carga = '2026-01-01',
+        fecha_carga = fecha_carga,
         result_date = result_date,
         min_date = min_date,
         max_date = max_date,
@@ -1070,7 +1070,7 @@ def main():
         schema_2 = 'CDA_VISTAS',
         schema_3 = 'TMP',
         banner_nro = banner_nro,
-        fecha_carga = '2026-01-01',
+        fecha_carga = fecha_carga,
         min_date = min_date,
         max_date = max_date,
         month_date = month_date,
