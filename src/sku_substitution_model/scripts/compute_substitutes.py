@@ -348,7 +348,8 @@ def computeSubstitutes(
     # If returning rank or vector, auto-distances must be deleted
     if output in ['rank', 'vector']:
         substitutes = substitutes.query(
-            'sku != other_sku'
+            'sku != other_sku',
+            engine='python',
         )
 
     # Add units
