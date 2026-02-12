@@ -771,7 +771,7 @@ def main() -> None:
             table_ddl_json_path=os.path.join('gbq_objects', 'sku_substitutes_by_category.json'),
             project=gcp_project,
             gbq_client=gbq_client,
-            if_exists='replace'
+            if_exists='append'
         )
 
     logging.info('Done!')
