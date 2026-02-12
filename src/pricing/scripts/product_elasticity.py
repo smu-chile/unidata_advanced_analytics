@@ -10,22 +10,18 @@ from logging import config
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-from boto3 import Session
 from sklearn.cluster import KMeans
 from google.cloud.bigquery import Client
 
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.aws_extended.athena import (
-    readAthenaQuery,
-)
 from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
     deleteFromTable,
 )
-from common.gcp_extended.secretsmanager import getSecret
+from common.gcp_extended.secretsmanager import getSecret  # noqa: F401
 
 
 # -------------------------------------------------------------------------
@@ -433,23 +429,6 @@ def main() -> None:  # noqa: D103
     # Tabla con data procesada
     table_processed_data = f'{proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY'
 
-
-    #---
-    # Athena
-    #---
-
-    # Sesion aws
-    boto3_session = Session(**getSecret(
-        project=proyecto,
-        secret_name='bdaa_aws_credentials'  # noqa: S106
-    ))
-
-    # Configuracion nube
-    env_name = 'dev'
-
-    env_db_name = 'dev' if  env_name == 'test' else env_name
-    db_temp = f'{env_db_name}_temp'
-
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
@@ -811,16 +790,16 @@ def main() -> None:  # noqa: D103
 
     # Query sustitutos
     query_sustitutos = SQL_QUERIES['query_sustitutos'].substitute(
-                        first_month=p_month_inicial,
-                        last_month=p_month_final,
-                        store_banner = store_banner)
+        first_month=p_month_inicial,
+        last_month=p_month_final,
+        store_banner = store_banner
+    )
 
-    df_sustitutos  = readAthenaQuery(
-        query_sustitutos,
+    df_sustitutos  = readBigQuery(
+        query = query_sustitutos,
         user = usuario,
-        database = db_temp,
-        boto3_session=boto3_session
-        )
+        gbq_client=gbq_client
+    )
 
 
 

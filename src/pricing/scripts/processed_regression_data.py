@@ -11,23 +11,19 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pendulum
-from boto3 import Session
 from google.cloud.bigquery import Client
 from dateutil.relativedelta import relativedelta
 
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.aws_extended.athena import (
-    readAthenaQuery,
-)
 from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
     setTableExpiration,
     createTableAsSelect,
 )
-from common.gcp_extended.secretsmanager import getSecret
+from common.gcp_extended.secretsmanager import getSecret  # noqa: F401
 
 
 # -------------------------------------------------------------------------
@@ -406,21 +402,6 @@ def main() -> None:  # noqa: D103
     # Set gbq client for all subsequent queries
     gbq_client = Client()
 
-
-    # Sesion aws
-    boto3_session = Session(**getSecret(
-        project=proyecto,
-        secret_name='bdaa_aws_credentials'  # noqa: S106
-    ))
-
-    # Configuracion nube
-    env_name = 'dev'
-
-    env_db_name = 'dev' if  env_name == 'test' else env_name
-    db_perm = f'{env_db_name}_perm'
-    db_temp = f'{env_db_name}_temp'
-    athena_workgroup = f'smu-datalake-{env_name}-workgroup'
-
     # REGION: Configuracion inicial
     #----------------------------------------------------------------------
 
@@ -785,16 +766,16 @@ def main() -> None:  # noqa: D103
                             ].drop_duplicates().sort_values(by=['material','weight_upc'])
 
     # Query sustitutos
-    query_sust = SQL_QUERIES['query_athena_sust'].substitute( # type: ignore  # noqa: PGH003
-                        first_month=monthid_inicial,
-                        last_month=monthid_final,
-                        store_banner = store_banner)
+    query_sust = SQL_QUERIES['query_athena_sust'].substitute(
+        first_month=monthid_inicial,
+        last_month=monthid_final,
+        store_banner = store_banner
+    )
 
-    df_sust = readAthenaQuery(
-        query_sust,
+    df_sust = readBigQuery(
+        query = query_sust,
         user = usuario,
-        database = db_temp,
-        boto3_session=boto3_session
+        gbq_client=gbq_client
         )
 
 
