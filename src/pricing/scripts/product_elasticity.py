@@ -61,11 +61,17 @@ SQL_QUERIES = QueryDict({    # Region: Explicación de query
 
     'query_sustitutos':
     """
-    SELECT sku as material, substitute, score, relevance, p_month
-            FROM "dev_perm"."ds_substitution_model"
-    where store_banner = '${store_banner}'
-    and p_month >= '${first_month}'
-    and p_month <= '${last_month}';
+    SELECT
+        sku as material,
+        substitute,
+        substitution_score as score,
+        substitution_rank as relevance,
+        FORMAT_DATE('%Y%m', date) as p_month
+    FROM `cl-bigdata-analytics-preprod.ML_LAB.SKU_SUBSTITUTES_BY_CATEGORY`
+    WHERE store_banner = '${store_banner}'
+    AND FORMAT_DATE('%Y%m', date) >= '${first_month}'
+    AND FORMAT_DATE('%Y%m', date) <= '${last_month}'
+    AND substitution_rank <= 5
     """,
 
     'query_pesos':

@@ -24,7 +24,6 @@ from common.aws_extended.athena import (
 from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
-    deleteFromTable,
     setTableExpiration,
     createTableAsSelect,
 )
@@ -252,11 +251,17 @@ ORDER BY fecha_fin_de_promocion
 
 'query_athena_sust':
 """
-    SELECT sku as material, substitute, score, relevance, p_month
-            FROM "dev_perm"."ds_substitution_model"
-    where store_banner = '${store_banner}'
-    and p_month >= '${first_month}'
-    and p_month <= '${last_month}';
+SELECT
+    sku as material,
+    substitute,
+    substitution_score as score,
+    substitution_rank as relevance,
+    FORMAT_DATE('%Y%m', date) as p_month
+FROM `cl-bigdata-analytics-preprod.ML_LAB.SKU_SUBSTITUTES_BY_CATEGORY`
+WHERE store_banner = '${store_banner}'
+AND FORMAT_DATE('%Y%m', date) >= '${first_month}'
+AND FORMAT_DATE('%Y%m', date) <= '${last_month}'
+AND substitution_rank <= 5
 """
 })
 
@@ -1068,23 +1073,13 @@ def main() -> None:  # noqa: D103
     # REGION: Se sube la tabla a BIG QUERY
     #--------------------------------------------------------------------------
 
-
-
-    deleteFromTable(
-    table_ref=tmp_path_table,
-    where_clause=f"store_banner = '{store_banner}'",
-    gbq_client=gbq_client,
-    )
-
-    logging.info(f'Se elimina info anterior del formato {store_banner}...')
-
     uploadFrame(
         df_final,
         table_ddl_json_path=os.path.join('gbq_objects',
                                          nombre_json),
         project=proyecto,
         gbq_client=gbq_client,
-        if_exists='append'
+        if_exists='replace'
     )
 
     logging.info(f'Se sube info actualizada del formato {store_banner}...')
