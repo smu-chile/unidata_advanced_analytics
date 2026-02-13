@@ -996,7 +996,7 @@ def calculateRedemptionRate(
         cycle_df = cycles_df[cycles_df['CYCLE_NUMBER'] == cycle]
         start_date = cycle_df['START_DATE'].iloc[0]
         monthid = pendulum.date(start_date.year, start_date.month, start_date.day).subtract(months=1).format('YYYYMM')  # noqa: E501
-        cycle_id = tuple(cycle_df['CYCLE_ID'].values)
+        cycle_id = tuple(cycle_df['CYCLE_ID'].astype(int).tolist())
 
         # Read Redemptions and Allocation data
         redemptions_df = readBigQuery(SQL_QUERIES['redemptions'].substitute(
