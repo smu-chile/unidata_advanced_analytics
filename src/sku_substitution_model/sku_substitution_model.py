@@ -75,7 +75,7 @@ with DAG(**dag_args) as dag:
             pyspark_batch_args=[
                 '--project_name', PROJECT_NAME,
                 '--gcp_project', dag_env_config['project_id'],
-                '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).next(3).strftime('%Y-%m-%d')) }}",  # noqa: E501
+                '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}",  # noqa: E501
                 '--store_banner', store_banner,
                 '--transacted_months', "{{ dag_run.conf.get('transacted_months', 3) }}",
                 '--n_substitutes', "{{ dag_run.conf.get('n_substitutes', 99999999) }}",
