@@ -8,7 +8,7 @@
         {"name": "ean", "field_type": "INT64", "mode": "REQUIRED"},
         {"name": "store_id", "field_type": "STRING", "mode": "REQUIRED"},
         {"name": "store_banner", "field_type": "STRING", "mode": "REQUIRED"},
-        {"name": "inweb", "field_type": "INT64", "mode": "REQUIRED"}
+        {"name": "inweb", "field_type": "FLOAT", "mode": "REQUIRED"}
     ],
 
     "time_partitioning": {
