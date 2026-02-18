@@ -94,7 +94,7 @@ def main() -> None:
     logging.info('Sending query...')
     data = readPostgresQuery(
         query=SQL_QUERIES['extract_data'].substitute(
-            execution_date=execution_date.isoformat(),
+            execution_date=execution_date,
         ),
         credentials_dict=getSecret(
             secret_name='ecommerce_postgres_credentials',  # noqa: S106
