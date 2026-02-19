@@ -146,7 +146,7 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
         if event and event.get('batch_state') == 'FAILED':
             from airflow.providers.google.cloud.hooks.dataproc import DataprocHook
 
-            hook = DataprocHook()
+            hook = DataprocHook(gcp_conn_id=self.gcp_conn_id)
             # Fetch the batch object directly
             batch = hook.get_batch(
                 batch_id=event['batch_id'],
@@ -157,6 +157,7 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
             # In Dataproc Batches, error details live in 'state_message'
             # We use getattr to safely handle potential missing attributes
             details = getattr(batch, 'state_message', '').lower()
+            self.log.info(f'RAW state_message: {details}')
 
             # If the main message is generic, check the history logs
             if not details and hasattr(batch, 'state_history'):
