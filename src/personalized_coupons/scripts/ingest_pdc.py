@@ -1,6 +1,5 @@
 # Default
 import os
-import sys
 import logging
 import argparse
 from logging import config
@@ -95,9 +94,9 @@ def main() -> None:
     except HTTPError as e:
         if 'Not Found for url:' in str(e):
             msg = 'There was a problem reading the file from SharePoint. Skipping process'
-            logging.exception(msg)
+            logging.warning(msg)
             # Skipper error code
-            sys.exit(10)
+            os._exit(10)
         else:
             raise
 
