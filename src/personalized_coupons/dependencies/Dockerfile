@@ -81,6 +81,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       seaborn \
       sqlalchemy \
       sympy \
+      office365-rest-python-client \
       pendulum \
       awswrangler \
       pandas-gbq \
