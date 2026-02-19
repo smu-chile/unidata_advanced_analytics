@@ -1,5 +1,6 @@
 import posixpath  # noqa: D100
 
+from airflow.exceptions import AirflowException, AirflowSkipException
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
 )
@@ -140,6 +141,28 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
     def execute(self, context) -> None:  # noqa: ANN001, D102
         # Execute the parent operator
         super().execute(context=context)
+
+    def execute_complete(self, context, event=None):
+        try:
+            # The parent method will raise an AirflowException if the
+            # Dataproc Batch state is 'FAILED'
+            return super().execute_complete(context=context, event=event)
+
+        except AirflowException as e:
+            # We look into the event sent by the Triggerer.
+            # When a Batch fails, the event contains the error message.
+            error_msg = str(e)
+
+            # Dataproc usually reports the exit code in the status message.
+            # We check if our magic number '10' is present.
+            if 'exit_code: 10' in error_msg or 'exitCode: 10' in error_msg:
+                self.log.info('Detected custom exit code 10. Skipping downstream tasks.')
+                msg = 'PySpark script signaled a skip via exit code 10.'
+                raise AirflowSkipException(msg) from AirflowException
+
+            # If it's any other error (OOM, syntax error, etc.),
+            # re-raise it so the task fails
+            raise
 
 
 if __name__ == '__main__':
