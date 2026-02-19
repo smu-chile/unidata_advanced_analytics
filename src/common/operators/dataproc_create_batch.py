@@ -1,6 +1,7 @@
 import posixpath  # noqa: D100
 
 from airflow.exceptions import AirflowSkipException
+from airflow.providers.google.cloud.hooks.dataproc import DataprocHook
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
 )
@@ -143,21 +144,31 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
         super().execute(context=context)
 
     def execute_complete(self, context, event=None):
-        # Log the event to see exactly what GCP returns
-        self.log.info(f'Dataproc Batch completed with event: {event}')
+        if event and event.get('batch_state') == 'FAILED':
+            hook = DataprocHook()
+            batch = hook.get_batch(
+                batch_id=event['batch_id'],
+                region=self.region,
+                project_id=self.project_id
+            )
 
-        if event and event.get('status') == 'error':
-            message = event.get('message', '').lower()
+            # state_history is a list of status objects.
+            # The latest one (index -1) contains the final failure reason.
+            if batch.status.state_history:
+                # Look at the most recent state transition details
+                final_status = batch.status.state_history[-1]
+                details = getattr(final_status, 'details', '').lower()
 
-            # Check for the exit code in the message
-            # Dataproc usually returns "Batch ... failed with exit code 10"
-            if 'exitcode: 10' in message or 'exit_code: 10' in message or 'status 10' in message:
-                self.log.info('Detected Exit Code 10. Converting failure to Skip.')
-                msg = 'PySpark script signaled a skip via exit code 10.'
-                raise AirflowSkipException(msg)
+                self.log.info(f'Final state details: {details}')
 
-        # If it's not code 10, let the standard operator logic handle the
-        # failure
+                # GCP usually reports this as "Google Cloud Dataproc Agent
+                # reports job failure... exitCode: 10"
+                if 'exitcode: 10' in details or 'exit code: 10' in details:
+                    self.log.info('Detected exit code 10 in state history. Skipping.')
+                    msg = 'Process skipped via exit code 10.'
+                    raise AirflowSkipException(msg)
+
+        # Fallback to parent behavior if not a skip
         return super().execute_complete(context=context, event=event)
 
 
