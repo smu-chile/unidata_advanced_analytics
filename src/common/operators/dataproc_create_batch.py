@@ -1,6 +1,6 @@
 import posixpath  # noqa: D100
 
-from airflow.exceptions import AirflowException, AirflowSkipException
+from airflow.exceptions import AirflowSkipException
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
 )
@@ -143,26 +143,22 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
         super().execute(context=context)
 
     def execute_complete(self, context, event=None):
-        try:
-            # The parent method will raise an AirflowException if the
-            # Dataproc Batch state is 'FAILED'
-            return super().execute_complete(context=context, event=event)
+        # Log the event to see exactly what GCP returns
+        self.log.info(f'Dataproc Batch completed with event: {event}')
 
-        except AirflowException as e:
-            # We look into the event sent by the Triggerer.
-            # When a Batch fails, the event contains the error message.
-            error_msg = str(e)
+        if event and event.get('status') == 'error':
+            message = event.get('message', '').lower()
 
-            # Dataproc usually reports the exit code in the status message.
-            # We check if our magic number '10' is present.
-            if 'exit_code: 10' in error_msg or 'exitCode: 10' in error_msg:
-                self.log.info('Detected custom exit code 10. Skipping downstream tasks.')
+            # Check for the exit code in the message
+            # Dataproc usually returns "Batch ... failed with exit code 10"
+            if 'exitcode: 10' in message or 'exit_code: 10' in message or 'status 10' in message:
+                self.log.info('Detected Exit Code 10. Converting failure to Skip.')
                 msg = 'PySpark script signaled a skip via exit code 10.'
-                raise AirflowSkipException(msg) from AirflowException
+                raise AirflowSkipException(msg)
 
-            # If it's any other error (OOM, syntax error, etc.),
-            # re-raise it so the task fails
-            raise
+        # If it's not code 10, let the standard operator logic handle the
+        # failure
+        return super().execute_complete(context=context, event=event)
 
 
 if __name__ == '__main__':
