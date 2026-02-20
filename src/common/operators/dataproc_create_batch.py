@@ -143,12 +143,13 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
         super().execute(context=context)
 
 def execute_complete(self, context, event=None):
+    print(f'FULL EVENT: {event}')
     if event and event.get('batch_state') == 'FAILED':
         from google.cloud import logging as gcloud_logging
 
         client = gcloud_logging.Client(project=self.project_id)
         batch_id = event['batch_id']
-        self.log.info(f'FULL EVENT: {event}')
+        print(f'FULL EVENT INSIDE: {event}')
 
         entries = list(client.list_entries(
             filter_=(
