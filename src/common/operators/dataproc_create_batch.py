@@ -153,7 +153,7 @@ def execute_complete(self, context, event=None):
             filter_=(
                 f'resource.type="cloud_dataproc_batch" '
                 f'AND resource.labels.batch_id="{batch_id}" '
-                f'AND textPayload:"AIRFLOW_SKIP_SIGNAL"'
+                f'AND jsonPayload.message:"AIRFLOW_SKIP_EXCEPTION"'
             ),
             max_results=1
         ))
