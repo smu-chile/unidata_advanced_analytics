@@ -142,30 +142,31 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
         # Execute the parent operator
         super().execute(context=context)
 
-def execute_complete(self, context, event=None):
-    print(f'FULL EVENT: {event}')
-    if event and event.get('batch_state') == 'FAILED':
-        from google.cloud import logging as gcloud_logging
+    def handle_batch_status(self, context, state, batch_id, state_message=''):
+        if state == 'FAILED':
+            from google.cloud import logging as gcloud_logging
 
-        client = gcloud_logging.Client(project=self.project_id)
-        batch_id = event['batch_id']
-        print(f'FULL EVENT INSIDE: {event}')
+            self.log.info(f'Batch failed, checking skip signal for batch_id: {batch_id}')
 
-        entries = list(client.list_entries(
-            filter_=(
-                f'resource.type="cloud_dataproc_batch" '
-                f'AND resource.labels.batch_id="{batch_id}" '
-                f'AND jsonPayload.message:"AIRFLOW_SKIP_EXCEPTION"'
-            ),
-            max_results=1
-        ))
+            client = gcloud_logging.Client(project=self.project_id)
+            entries = list(client.list_entries(
+                filter_=(
+                    f'resource.type="cloud_dataproc_batch" '
+                    f'AND resource.labels.batch_id="{batch_id}" '
+                    f'AND jsonPayload.message:"AIRFLOW_SKIP_EXCEPTION"'
+                ),
+                max_results=1
+            ))
 
-        if entries:
-            self.log.info('Skip signal detected in logs! Raising AirflowSkipException.')
-            msg = 'Process signaled skip via log message.'
-            raise AirflowSkipException(msg)
+            self.log.info(f'Cloud Logging entries found: {len(entries)}')
 
-    return super().execute_complete(context=context, event=event)
+            if entries:
+                self.log.info('Skip signal detected! Raising AirflowSkipException.')
+                msg = 'Process signaled skip via log message.'
+                raise AirflowSkipException(msg)
+
+        # For any other case, let the parent handle it normally
+        super().handle_batch_status(context, state, batch_id, state_message=state_message)
 
 
 if __name__ == '__main__':
