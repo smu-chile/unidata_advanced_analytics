@@ -148,6 +148,7 @@ def execute_complete(self, context, event=None):
 
         client = gcloud_logging.Client(project=self.project_id)
         batch_id = event['batch_id']
+        self.log.info(f'FULL EVENT: {event}')
 
         entries = list(client.list_entries(
             filter_=(
