@@ -93,8 +93,7 @@ def main() -> None:
         )
     except HTTPError as e:
         if 'Not Found for url:' in str(e):
-            msg = 'There was a problem reading the file from SharePoint. Skipping process'
-            logging.warning(msg)
+            logging.warning('AIRFLOW_SKIP_EXCEPTION')
             # Skipper error code
             os._exit(10)
         else:

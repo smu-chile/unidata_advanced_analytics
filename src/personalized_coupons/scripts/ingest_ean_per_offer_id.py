@@ -105,8 +105,7 @@ def main() -> None:
         ).toFrame()
     except HTTPError as e:
         if 'Not Found for url:' in str(e):
-            msg = 'At least one of the two required files was not found. Skipping process'
-            logging.warning(msg)
+            logging.warning('AIRFLOW_SKIP_EXCEPTION')
             # Skipper error code
             os._exit(10)
         else:

@@ -142,41 +142,28 @@ class ExtendedDataprocCreateBatchOperator(DataprocCreateBatchOperator):
         # Execute the parent operator
         super().execute(context=context)
 
-    def execute_complete(self, context, event=None):
-        if event and event.get('batch_state') == 'FAILED':
-            from airflow.providers.google.cloud.hooks.dataproc import DataprocHook
+def execute_complete(self, context, event=None):
+    if event and event.get('batch_state') == 'FAILED':
+        from google.cloud import logging as gcloud_logging
 
-            hook = DataprocHook(gcp_conn_id=self.gcp_conn_id)
-            # Fetch the batch object directly
-            batch = hook.get_batch(
-                batch_id=event['batch_id'],
-                region=self.region,
-                project_id=self.project_id
-            )
+        client = gcloud_logging.Client(project=self.project_id)
+        batch_id = event['batch_id']
 
-            # In Dataproc Batches, error details live in 'state_message'
-            # We use getattr to safely handle potential missing attributes
-            details = getattr(batch, 'state_message', '').lower()
-            self.log.info(f'RAW state_message: {details}')
+        entries = list(client.list_entries(
+            filter_=(
+                f'resource.type="cloud_dataproc_batch" '
+                f'AND resource.labels.batch_id="{batch_id}" '
+                f'AND textPayload:"AIRFLOW_SKIP_SIGNAL"'
+            ),
+            max_results=1
+        ))
 
-            # If the main message is generic, check the history logs
-            if not details and hasattr(batch, 'state_history'):
-                for history_entry in batch.state_history:
-                    msg = getattr(history_entry, 'state_message', '').lower()
-                    if msg:
-                        details += ' ' + msg
+        if entries:
+            self.log.info('Skip signal detected in logs! Raising AirflowSkipException.')
+            msg = 'Process signaled skip via log message.'
+            raise AirflowSkipException(msg)
 
-            self.log.info(f'Checking Batch failure details: {details}')
-
-            # Checking for our specific exit code
-            if 'exit code: 10' in details or 'exitcode: 10' in details:
-                self.log.info('Exit code 10 detected! Raising AirflowSkipException.')
-                msg = 'Process signaled skip via exit code 10.'
-                raise AirflowSkipException(msg)
-
-        # If it is any other failure, let the parent operator raise the
-        # exception
-        return super().execute_complete(context=context, event=event)
+    return super().execute_complete(context=context, event=event)
 
 
 if __name__ == '__main__':
