@@ -107,7 +107,7 @@ with DAG(**dag_args) as dag:
     # ShortCircuitOperator
     def _check_ingest_ean_per_offerid_state(**context):
         """Return False if B was ingest_ean_per_offerid, True otherwise."""
-        task_instance = context['dag_run'].get_task_instance('task_b')
+        task_instance = context['dag_run'].get_task_instance('ingest_ean_per_offerid')
         return task_instance.state == 'success'
 
     check_ingest_ean_per_offerid_state = ShortCircuitOperator(
