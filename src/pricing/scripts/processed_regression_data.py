@@ -1060,7 +1060,7 @@ def main() -> None:  # noqa: D103
                                          nombre_json),
         project=proyecto,
         gbq_client=gbq_client,
-        if_exists='replace'
+        if_exists='append'
     )
 
     logging.info(f'Se sube info actualizada del formato {store_banner}...')
