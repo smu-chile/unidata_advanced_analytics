@@ -20,6 +20,7 @@ from common.databases.queries import QueryDict
 from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
+    deleteFromTable,
     setTableExpiration,
     createTableAsSelect,
 )
@@ -1054,14 +1055,29 @@ def main() -> None:  # noqa: D103
     # REGION: Se sube la tabla a BIG QUERY
     #--------------------------------------------------------------------------
 
-    uploadFrame(
-        df_final,
-        table_ddl_json_path=os.path.join('gbq_objects',
-                                         nombre_json),
-        project=proyecto,
-        gbq_client=gbq_client,
-        if_exists='append'
-    )
+    if use == 'FORECAST':
+        uploadFrame(
+            df_final,
+            table_ddl_json_path=os.path.join('gbq_objects',
+                                            nombre_json),
+            project=proyecto,
+            gbq_client=gbq_client,
+            if_exists='replace'
+        )
+
+    if use == 'ELASTICITY':
+        deleteFromTable(table_ref='cl-bigdata-analytics-preprod.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY',
+                where_clause=f"store_banner = '{store_banner}'",
+                gbq_client=gbq_client)
+
+        uploadFrame(
+            df_final,
+            table_ddl_json_path=os.path.join('gbq_objects',
+                                            nombre_json),
+            project=proyecto,
+            gbq_client=gbq_client,
+            if_exists='append'
+        )
 
     logging.info(f'Se sube info actualizada del formato {store_banner}...')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
