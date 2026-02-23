@@ -89,7 +89,7 @@ with DAG(**dag_args) as dag:
         python_script_path=(
             f'{PROJECT_NAME}/'
             'scripts/'
-            'ingest_ean_per_offerid.py'
+            'ingest_ean_per_offer_id.py'
         ),
         dag_env_config=dag_env_config,
         docker_image_name=PROJECT_NAME,
