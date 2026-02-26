@@ -7,8 +7,8 @@
         {"name": "ciclo_interno", "field_type": "INT64", "mode": "REQUIRED"},
         {"name": "customer_key", "field_type": "BYTES", "mode": "REQUIRED"},
         {"name": "offer_id", "field_type": "INT64", "mode": "REQUIRED"},
-        {"name": "rank", "field_type": "INT64", "mode": "REQUIRED"},
-        {"name": "campaign_type_id", "field_type": "INT64", "mode": "REQUIRED"}
+        {"name": "offer_rank", "field_type": "INT64", "mode": "REQUIRED"},
+        {"name": "offer_type", "field_type": "INT64", "mode": "REQUIRED"}
     ],
 
     "range_partitioning": {
