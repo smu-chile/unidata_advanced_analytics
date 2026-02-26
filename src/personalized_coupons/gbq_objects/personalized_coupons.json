@@ -1,0 +1,24 @@
+{
+    "schema": "FIDELIZACION",
+    "table": "PERSONALIZED_COUPONS",
+
+    "columns": [
+        {"name": "store_banner", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "ciclo_interno", "field_type": "INT64", "mode": "REQUIRED"},
+        {"name": "customer_key", "field_type": "BYTES", "mode": "REQUIRED"},
+        {"name": "offer_id", "field_type": "INT64", "mode": "REQUIRED"},
+        {"name": "rank", "field_type": "INT64", "mode": "REQUIRED"},
+        {"name": "campaign_type_id", "field_type": "INT64", "mode": "REQUIRED"}
+    ],
+
+    "range_partitioning": {
+        "field": "ciclo_interno",
+        "range_": {
+            "start": 0,
+            "end": 3999,
+            "interval": 1
+        }
+    },
+
+    "clustering_fields": ["store_banner"]
+}
