@@ -86,7 +86,7 @@ def main() -> None:
                 'Documentos compartidos/'
                 'Ingesta/'
                 'Ciclos Alvi/'
-                f'PROCESADO-pdc_alvi_{execution_date.isoformat()}.xlsx'
+                f'pdc_alvi_{execution_date.isoformat()}.xlsx'
             )
         ).toFrame(
             header=None

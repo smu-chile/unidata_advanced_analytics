@@ -85,7 +85,7 @@ def main() -> None:
                 'Documentos compartidos/'
                 'Power Automate/'
                 'Correos Cupones Alvi/'
-                f'PROCESADO-planilla_alvi_ean_{execution_date.isoformat()}.xlsx'
+                f'planilla_alvi_ean_{execution_date.isoformat()}.xlsx'
             )
         ).toFrame()
 
@@ -100,7 +100,7 @@ def main() -> None:
                 'Documentos compartidos/'
                 'Power Automate/'
                 'Correos Cupones Alvi/'
-                f'PROCESADO-planilla_alvi_ofe_{execution_date.isoformat()}.xlsx'
+                f'planilla_alvi_ofe_{execution_date.isoformat()}.xlsx'
             )
         ).toFrame()
     except HTTPError as e:
