@@ -69,6 +69,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       numpy \
       openblas \
       orc \
+      openpyxl \
       "pandas=2.1.*" \
       pyarrow \
       pytables \
