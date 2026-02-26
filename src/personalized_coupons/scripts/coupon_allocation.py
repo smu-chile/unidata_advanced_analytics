@@ -949,3 +949,6 @@ def main() -> None:
         initial_client_number += batch_size
     logging.info('ENDED: Coupon allocation process')
     logging.info(':D')
+
+
+if __name__ == '__main__': main()
