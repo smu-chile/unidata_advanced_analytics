@@ -130,11 +130,22 @@ SQL_QUERIES = QueryDict({
     # Gets the customer embeddings matrix
     """
     SELECT *
-    FROM ${gcp_project}.ML_LAB.W2V_CUSTOMER_EMBEDDINGS
-    WHERE
-        date = '${embedding_date}'
-        AND store_banner = '${store_banner}'
-    """,
+    FROM (
+        SELECT *
+        FROM ${gcp_project}.ML_LAB.W2V_CUSTOMER_EMBEDDINGS
+        WHERE
+            date = '${embedding_date}'
+            AND store_banner = '${store_banner}'
+    )
+    INNER JOIN (
+        SELECT
+            customer_key,
+            nivel_informado AS nivel
+        FROM `${gcp_project_unidata}.DS_PROD_CLIENTES_IC.VW_FACT_MONTH_CUSTOMER_ORGANIZATION_SHABITS_UNIDATA_ALVI`
+        WHERE monthid = CAST(FORMAT_DATE('%Y%m', DATE('${execution_date}') - INTERVAL 1 MONTH) AS INT64)
+    )
+    USING (customer_key)
+    """,  # noqa: E501
 
     'product_embedding_table':
     # Gets the product embedding matrix with group, category and brand only
@@ -633,64 +644,8 @@ def main() -> None:
             gcp_project=gcp_project,
             store_banner=store_banner,
             embedding_date=execution_date.replace(day=1),
-        ),
-        user=user,
-        gbq_client=gbq_client
-    ).drop(columns=[
-        'date', 'store_banner'
-    ])
-    logging.info('ENDED: Data loading process')
-
-    # ---------------------------------------------------------------------
-    #                       Stage 1: Data load
-    # ---------------------------------------------------------------------
-    logging.info('STARTING: Data loading process')
-    # Load coupon id + start date information
-    # -------------------------------------
-    n_cycle, cycle_start_date = readBigQuery(
-        query=SQL_QUERIES['cycle_table'].substitute(
-            gcp_project=gcp_project,
+            gcp_project_unidata=gcp_project_unidata,
             execution_date=execution_date,
-            store_banner=store_banner,
-        ),
-        user=user,
-        gbq_client=gbq_client
-    ).to_numpy()[0]
-
-    # Load Offer ID + SKU code
-    # ------------------------
-    offer_ids = readBigQuery(
-        query=SQL_QUERIES['offer_sku_table'].substitute(
-            gcp_project=gcp_project,
-            cycle_start_date=cycle_start_date,
-            store_banner=store_banner,
-        ),
-        user=user,
-        gbq_client=gbq_client
-    )
-
-    # Load product embeddings
-    # ------------------------
-    sku_embeddings = readBigQuery(
-        query=SQL_QUERIES['product_embedding_table'].substitute(
-            gcp_project=gcp_project,
-            store_banner=store_banner,
-            embedding_date=execution_date.replace(day=1),
-            cycle_start_date=cycle_start_date,
-        ),
-        user=user,
-        gbq_client=gbq_client
-    ).drop(columns=[
-        'date', 'store_banner'
-    ])
-
-    # Load customer embeddings
-    # ------------------------
-    customer_embeddings = readBigQuery(
-        query=SQL_QUERIES['customer_embedding_table'].substitute(
-            gcp_project=gcp_project,
-            store_banner=store_banner,
-            embedding_date=execution_date.replace(day=1),
         ),
         user=user,
         gbq_client=gbq_client
