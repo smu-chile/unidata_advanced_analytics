@@ -139,8 +139,7 @@ SQL_QUERIES = QueryDict({
     )
     INNER JOIN (
         SELECT
-            customer_key,
-            nivel_informado AS nivel
+            customer_key
         FROM `${gcp_project_unidata}.DS_PROD_CLIENTES_IC.VW_FACT_MONTH_CUSTOMER_ORGANIZATION_SHABITS_UNIDATA_ALVI`
         WHERE monthid = CAST(FORMAT_DATE('%Y%m', DATE('${execution_date}') - INTERVAL 1 MONTH) AS INT64)
     )
