@@ -84,7 +84,7 @@ SQL_QUERIES = QueryDict({
             market_basket_key,
             TRUE AS from_other_ecommerce
         FROM `${gcp_project}.CDA_VISTAS.VW_FACT_MARKET_BASKET_E_COMMERCE`
-        WHERE canal_venta IN ('PEDIDOS YA','CORNER SHOP','RAPPI','RAPPI TURBO')
+        WHERE canal_venta IN ('PEDIDOS YA','UBER EATS','RAPPI','RAPPI TURBO')
     ) external_ecommerce_filter
     USING (market_basket_key)
 

@@ -125,7 +125,7 @@ ventas_mensuales AS (
     AND market_basket_key NOT IN (
       SELECT market_basket_key
       FROM `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_MARKET_BASKET_E_COMMERCE`
-      WHERE canal_venta IN ('PEDIDOS YA','CORNER SHOP','RAPPI','RAPPI TURBO')
+      WHERE canal_venta IN ('PEDIDOS YA','UBER EATS','RAPPI','RAPPI TURBO')
     )
     AND D.store_banner = '${formato}'
   GROUP BY monthid, customer_key
