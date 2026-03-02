@@ -106,7 +106,7 @@ def main() -> None:  # noqa: D103
         '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
         'Pricing/SellOut/SellOut Consolidado/'
     )
-    input_file =  f'{file_site}/Sellout_Unimarc_{execution_month}.xlsx'
+    input_file =  f'{file_site}/Unimarc/Sellout_Unimarc_{execution_month}.xlsx'
     #table definitions jsons
     json = 'sellout_unimarc.json'
     schema = 'REPORTE_MARGEN'
