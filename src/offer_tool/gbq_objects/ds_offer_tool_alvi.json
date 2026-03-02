@@ -84,7 +84,7 @@
         {
             "name": "SUPPLIER_NM",
             "field_type": "STRING",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": ""
         },
         {
