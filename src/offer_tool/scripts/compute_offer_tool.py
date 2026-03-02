@@ -1332,7 +1332,7 @@ def main() -> None:
             table_ddl_json_path=os.path.join('gbq_objects','ds_offer_tool_unimarc.json'),
             project=proyecto,
             gbq_client=gbq_client,
-            if_exists='replace'
+            if_exists='append'
         )
 
     elif store_banner == 'Alvi':
@@ -1341,7 +1341,7 @@ def main() -> None:
             table_ddl_json_path=os.path.join('gbq_objects','ds_offer_tool_alvi.json'),
             project=proyecto,
             gbq_client=gbq_client,
-            if_exists='replace'
+            if_exists='append'
     )
 
     elif store_banner == 'Mayorista':
@@ -1350,7 +1350,7 @@ def main() -> None:
             table_ddl_json_path=os.path.join('gbq_objects','ds_offer_tool_m10.json'),
             project=proyecto,
             gbq_client=gbq_client,
-            if_exists='replace'
+            if_exists='append'
     )
 
     elif store_banner == 'Super 10':
@@ -1359,7 +1359,7 @@ def main() -> None:
             table_ddl_json_path=os.path.join('gbq_objects','ds_offer_tool_s10.json'),
             project=proyecto,
             gbq_client=gbq_client,
-            if_exists='replace'
+            if_exists='append'
     )
 
 
