@@ -75,7 +75,6 @@ def cleaning_func(df_file:pd.DataFrame,mes_carga:str)->pd.DataFrame:
     df_file['n_cabecera'] = df_file['n_cabecera'].replace('-', '')
     df_file = df_file.astype('str')
     df_file = df_file.replace('nan', '')
-    df_file['n_cabecera'] = df_file['n_cabecera'].astype('Float64').astype('Int64')
 
 
     df_file['importe_sell_out'] = df_file['importe_sell_out'].astype('Float64').astype('Int64')
