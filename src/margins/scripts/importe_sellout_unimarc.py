@@ -77,11 +77,12 @@ def cleaning_func(df_file:pd.DataFrame,mes:str,semana_carga:str)->pd.DataFrame:
     #df_file['n_cabecera'] = df_file['n_cabecera'].replace('0', None)  # noqa: ERA001, W505
     #df_file = df_file.astype('str')  # noqa: ERA001
     df_file = df_file.replace('nan', '')
-    df_file['importe_sell_out'] = pd.to_numeric(df_file['importe_sell_out']).astype('Int64')
-    df_file['factor'] = pd.to_numeric(df_file['factor']).astype('Int64')
-    df_file['ean'] = pd.to_numeric(df_file['ean']).astype('Int64')
+    df_file['importe_sell_out'] = (
+        pd.to_numeric(df_file['importe_sell_out']).round(0).astype('Int64'))
+    df_file['factor'] = pd.to_numeric(df_file['factor']).round(0).astype('Int64')
+    df_file['ean'] = pd.to_numeric(df_file['ean']).round(0).astype('Int64')
     df_file['pvp_normal'] = pd.to_numeric(df_file['pvp_normal']).round(0).astype('Int64')
-    df_file['n_cabecera'] = pd.to_numeric(df_file['n_cabecera']).astype('Int64')
+    df_file['n_cabecera'] = pd.to_numeric(df_file['n_cabecera']).round(0).astype('Int64')
     #Agregar semana carga y mes datos
     df_file['mes'] = pd.to_datetime(mes,format='%Y%m')
     df_file['semana_carga'] = semana_carga
