@@ -80,6 +80,7 @@ def cleaning_func(df_file:pd.DataFrame,mes_carga:str)->pd.DataFrame:
     df_file['importe_sell_out'] = df_file['importe_sell_out'].astype('Float64').astype('Int64')
     df_file['factor'] = df_file['factor'].astype('Float64').astype('Int64')
     df_file['ean'] = df_file['ean'].astype('Float64').astype('Int64')
+    df_file['n_cabecera'] = pd.to_numeric(df_file['n_cabecera']).astype('Int64')
     #Agregar mes
     df_file['mes'] = mes
     df_file['mes_carga'] = pd.to_datetime(mes_carga,format='%Y%m')

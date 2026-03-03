@@ -79,7 +79,8 @@ def cleaning_func(df_file:pd.DataFrame,mes:str,semana_carga:str)->pd.DataFrame:
     df_file = df_file.replace('nan', '')
     df_file['importe_sell_out'] = df_file['importe_sell_out'].astype('Float64').astype('Int64')
     df_file['factor'] = df_file['factor'].astype('Float64').astype('Int64')
-    df_file['pvp_normal'] = pd.to_numeric(df_file['pvp_normal']).round(0)
+    df_file['pvp_normal'] = pd.to_numeric(df_file['pvp_normal']).round(0).astype('Int64')
+    df_file['n_cabecera'] = pd.to_numeric(df_file['n_cabecera']).astype('Int64')
     #Agregar semana carga y mes datos
     df_file['mes'] = pd.to_datetime(mes,format='%Y%m')
     df_file['semana_carga'] = semana_carga
