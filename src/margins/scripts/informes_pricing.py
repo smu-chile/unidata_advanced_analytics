@@ -60,7 +60,7 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
        'TERMINO', 'FECHA DE INCORPORACION ','ID ALTERNATIVO WF', 'NUMERO CABECERA',
        'TIPO PROMOCIÓN']]
 
-        df_file = df_file.astype('str')
+        #df_file = df_file.astype('str')  # noqa: ERA001
         df_file['Solo 1 barra por linea'] = (
             pd.to_numeric(df_file['Solo 1 barra por linea']).astype('Int64') )
         logging.info(f'TYPES: {df_file.dtypes}')
@@ -70,7 +70,7 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
         df_file.columns = df_file.iloc[5,]
         df_file = df_file.iloc[6:, :25]
         df_file = df_file.replace('|', '', regex=True)
-        df_file = df_file.astype('str')
+        #df_file = df_file.astype('str')  # noqa: ERA001
         logging.info(f'After cleaning: {df_file}')
         return df_file
     if formato == 'm10':
@@ -78,7 +78,7 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
         df_file = df_file[6:]
         df_file = df_file.iloc[:, :22]
         df_file = df_file.replace('|', '', regex=True)
-        df_file = df_file.astype('str')
+        #df_file = df_file.astype('str')  # noqa: ERA001
         df_file = df_file.replace('nan', '', regex=True)
         logging.info(f'After cleaning: {df_file}')
         return df_file
