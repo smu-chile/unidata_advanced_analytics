@@ -49,42 +49,42 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(df:pd.DataFrame,mes:str,semana_carga:str)->pd.DataFrame:
+def cleaning_func(df_file:pd.DataFrame,mes:str,semana_carga:str)->pd.DataFrame:
     """Transform Dataframe into expected format for uploading into BQ.
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df_file : pd.DataFrame
         Input DataFrame to transform.
     mes : str
         Data month to be added as a new field.
     semana_carga : str
         Upload week to be added as new field
     """
-    logging.info('Before cleaning:', df)
+    logging.info('Before cleaning:', df_file)
     #Drop first 2 rows and last 4 columns
-    df = df[2:]  # noqa: PD901
-    df = df.iloc[:, :17]  # noqa: PD901
-    logging.info('shape: %s', df.shape)
+    df_file = df_file[2:]
+    df_file = df_file.iloc[:, :17]
+    logging.info('shape: %s', df_file.shape)
     #rename columns
-    df.columns = ['id','nombre_proveedor', 'proveedor','n_cabecera','tipo_evento',
+    df_file.columns = ['id','nombre_proveedor', 'proveedor','n_cabecera','tipo_evento',
                   'fecha_inicio','fecha_termino','articulo','ean','descripcion',
                   'umv','importe_sell_out','id_promotions_consola_3','promocion',
                   'pvp_normal','factor','locales']
 
     #Limpiar
-    df['n_cabecera'] = df['n_cabecera'].replace('-', '0')
-    df['n_cabecera'] = df['n_cabecera'].replace('0', None)
-    df['n_cabecera'] = df['n_cabecera'].astype('Float64').astype('Int64')
-
-
-    df['importe_sell_out'] = df['importe_sell_out'].astype('Float64').astype('Int64')
-    df['factor'] = df['factor'].astype('Float64').astype('Int64')
+    df_file['n_cabecera'] = df_file['n_cabecera'].replace('-', '')
+    #df_file['n_cabecera'] = df_file['n_cabecera'].replace('0', None)  # noqa: ERA001, W505
+    df_file = df_file.astype('str')
+    df_file = df_file.replace('nan', '')
+    df_file['importe_sell_out'] = df_file['importe_sell_out'].astype('Float64').astype('Int64')
+    df_file['factor'] = df_file['factor'].astype('Float64').astype('Int64')
+    df_file['pvp_normal'] = pd.to_numeric(df_file['pvp_normal']).round(0)
     #Agregar semana carga y mes datos
-    df['mes'] = pd.to_datetime(mes,format='%Y%m')
-    df['semana_carga'] = semana_carga
-    logging.info('After cleaning:', df)
-    return df
+    df_file['mes'] = pd.to_datetime(mes,format='%Y%m')
+    df_file['semana_carga'] = semana_carga
+    logging.info('After cleaning:', df_file)
+    return df_file
 
 # -------------------------------------------------------------------------
 # Main function
@@ -102,8 +102,11 @@ def main() -> None:  # noqa: D103
                                       project=gcp_project_id)
     gbq_client = bigquery.Client()
     #input files
-    file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/Pricing/SellOut'
-    input_file =  f'{file_site}/SellOut ID_0 Unimarc/Sellout_{execution_month}.xlsx'
+    file_site = (
+        '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
+        'Pricing/SellOut/SellOut Consolidado/'
+    )
+    input_file =  f'{file_site}/Unimarc/Sellout_Unimarc_{execution_month}.xlsx'
     #table definitions jsons
     json = 'sellout_unimarc.json'
     schema = 'REPORTE_MARGEN'
@@ -130,8 +133,7 @@ def main() -> None:  # noqa: D103
         logging.info('Archivo existe y fue modificado hoy')
         df_file = sharepoint.toFrame()
         file_name = os.path.basename(sharepoint.server_relative_path)
-        new_name =  f'PROCESADO-{file_name}-{pendulum.now().to_date_string()}'
-        sharepoint.rename(new_name=new_name)
+
         df_file =cleaning_func(df_file,execution_month,execution_week)
         # Upload data
         logging.info('Uploading data')
@@ -157,6 +159,8 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client,
             if_exists='append',
         )
+        new_name =  f'PROCESADO-{file_name}-{pendulum.now().to_date_string()}'
+        sharepoint.rename(new_name=new_name)
         logging.info('Data uploaded')
     logging.info('Process ended!')
 
