@@ -77,9 +77,10 @@ def cleaning_func(df_file:pd.DataFrame,mes_carga:str)->pd.DataFrame:
     df_file = df_file.replace('nan', '')
 
 
-    df_file['importe_sell_out'] = pd.to_numeric(df_file['importe_sell_out']).astype('Int64')
-    df_file['factor'] = pd.to_numeric(df_file['factor']).astype('Int64')
-    df_file['ean'] = pd.to_numeric(df_file['ean']).astype('Int64')
+    df_file['importe_sell_out'] = (
+        pd.to_numeric(df_file['importe_sell_out']).round(0).astype('Int64'))
+    df_file['factor'] = pd.to_numeric(df_file['factor']).round(0).astype('Int64')
+    df_file['ean'] = pd.to_numeric(df_file['ean']).round(0).astype('Int64')
     df_file['n_cabecera'] = pd.to_numeric(df_file['n_cabecera']).astype('Int64')
     #Agregar mes
     df_file['mes'] = mes
