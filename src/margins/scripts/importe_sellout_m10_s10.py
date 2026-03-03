@@ -45,46 +45,46 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 # Cleaning Func
 # -------------------------------------------------------------------------
-def cleaning_func(df:pd.DataFrame,mes_carga:str)->pd.DataFrame:
+def cleaning_func(df_file:pd.DataFrame,mes_carga:str)->pd.DataFrame:
     """Transform Dataframe into expected format for uploading into BQ.
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df_file : pd.DataFrame
         Input DataFrame to transform.
     mes_carga : str
         Upload month to be added as a new field.
     """
-    logging.info(f'Before cleaning: {df}')
+    logging.info(f'Before cleaning: {df_file}')
     try:
-        mes = df.columns[1].split(' ')[3]
+        mes = df_file.columns[1].split(' ')[3]
     except IndexError:
-        mes = df.iloc[0,1].split(' ')[3]
+        mes = df_file.iloc[0,1].split(' ')[3]
 
     #Drop first 2 rows and last 4 columns
-    df = df[2:]  # noqa: PD901
-    df = df.iloc[:, :17]  # noqa: PD901
-    logging.info(f'shape: {df.shape}')
+    df_file = df_file[2:]
+    df_file = df_file.iloc[:, :17]
+    logging.info(f'shape: {df_file.shape}')
     #rename columns
-    df.columns = ['id','nombre_proveedor', 'proveedor','n_cabecera','tipo_evento',
+    df_file.columns = ['id','nombre_proveedor', 'proveedor','n_cabecera','tipo_evento',
                   'fecha_inicio','fecha_termino','articulo','ean','descripcion',
                   'umv','importe_sell_out','id_promotions_consola_3','promocion',
                   'pvp_normal','factor','locales']
 
     #Limpiar
-    df['n_cabecera'] = df['n_cabecera'].replace('-', '0')
-    df['n_cabecera'] = df['n_cabecera'].replace('0', None)
-    df['n_cabecera'] = df['n_cabecera'].astype('Float64').astype('Int64')
+    df_file['n_cabecera'] = df_file['n_cabecera'].replace('-', '')
+    df_file = df_file.astype('str')
+    df_file = df_file.replace('nan', '')
 
 
-    df['importe_sell_out'] = df['importe_sell_out'].astype('Float64').astype('Int64')
-    df['factor'] = df['factor'].astype('Float64').astype('Int64')
-    df['ean'] = df['ean'].astype('Float64').astype('Int64')
+    df_file['importe_sell_out'] = df_file['importe_sell_out'].astype('Float64').astype('Int64')
+    df_file['factor'] = df_file['factor'].astype('Float64').astype('Int64')
+    df_file['ean'] = df_file['ean'].astype('Float64').astype('Int64')
     #Agregar mes
-    df['mes'] = mes
-    df['mes_carga'] = pd.to_datetime(mes_carga,format='%Y%m')
-    logging.info(f'After cleaning: {df}')
-    return df
+    df_file['mes'] = mes
+    df_file['mes_carga'] = pd.to_datetime(mes_carga,format='%Y%m')
+    logging.info(f'After cleaning: {df_file}')
+    return df_file
 
 # -------------------------------------------------------------------------
 # Main function
@@ -141,8 +141,7 @@ def main() -> None:  # noqa: D103
             logging.info('Archivo existe y fue modificado hoy')
             df_file = sharepoint.toFrame(sheet_name = 'ID 0')
             file_name = os.path.basename(sharepoint.server_relative_path)
-            new_name =  f'PROCESADO-{file_name}-{pendulum.now().to_date_string()}'
-            sharepoint.rename(new_name=new_name)
+
             df_file =cleaning_func(df_file,execution_month)
             # Upload data
             logging.info('Uploading data')
@@ -168,6 +167,8 @@ def main() -> None:  # noqa: D103
                 if_exists='append',
             )
             logging.info('Data uploaded')
+            new_name =  f'PROCESADO-{file_name}-{pendulum.now().to_date_string()}'
+            sharepoint.rename(new_name=new_name)
     logging.info('Process ended!')
 
 if __name__ == '__main__':
