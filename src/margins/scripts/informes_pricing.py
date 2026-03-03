@@ -61,6 +61,8 @@ def cleaning_func(formato: str,df_file: pd.DataFrame) -> pd.DataFrame:
        'TIPO PROMOCIÓN']]
 
         df_file = df_file.astype('str')
+        df_file['Solo 1 barra por linea'] = (
+            df_file['Solo 1 barra por linea'].astype('Float64').astype('Int64'))
         logging.info(f'TYPES: {df_file.dtypes}')
         logging.info(f'After cleaning: {df_file}')
         return df_file
