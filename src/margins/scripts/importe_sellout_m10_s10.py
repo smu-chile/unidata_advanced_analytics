@@ -73,13 +73,14 @@ def cleaning_func(df_file:pd.DataFrame,mes_carga:str)->pd.DataFrame:
 
     #Limpiar
     df_file['n_cabecera'] = df_file['n_cabecera'].replace('-', '')
-    df_file = df_file.astype('str')
+    #df_file = df_file.astype('str')  # noqa: ERA001
     df_file = df_file.replace('nan', '')
 
 
-    df_file['importe_sell_out'] = df_file['importe_sell_out'].astype('Float64').astype('Int64')
-    df_file['factor'] = df_file['factor'].astype('Float64').astype('Int64')
-    df_file['ean'] = df_file['ean'].astype('Float64').astype('Int64')
+    df_file['importe_sell_out'] = pd.to_numeric(df_file['importe_sell_out']).astype('Int64')
+    df_file['factor'] = pd.to_numeric(df_file['factor']).astype('Int64')
+    df_file['ean'] = pd.to_numeric(df_file['ean']).astype('Int64')
+    df_file['n_cabecera'] = pd.to_numeric(df_file['n_cabecera']).astype('Int64')
     #Agregar mes
     df_file['mes'] = mes
     df_file['mes_carga'] = pd.to_datetime(mes_carga,format='%Y%m')

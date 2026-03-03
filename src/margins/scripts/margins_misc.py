@@ -77,7 +77,7 @@ def cleaning_func(file: str,df_file: pd.DataFrame) -> pd.DataFrame :
                     'Sell Out']
         for c in float_columns:
             df_file[c] = df_file[c].astype('Float64')
-        df_file = df_file.replace('nan', 0.0)  # noqa: PD901
+        df_file = df_file.replace('nan', 0.0)
         df_file['año'] = ppto_year
         df_file['Mes'] = df_file['año'] + df_file['Mes'].map(month_dict)
         df_file['año'] = df_file['año'].astype('Int64')
@@ -91,7 +91,7 @@ def cleaning_func(file: str,df_file: pd.DataFrame) -> pd.DataFrame :
                     'ppto_costo_neto']
         for c in float_columns:
             df_file[c] = df_file[c].astype('Float64')
-        df_file = df_file.replace('nan', 0.0)  # noqa: PD901
+        df_file = df_file.replace('nan', 0.0)
         df_file['año'] = ppto_year
         df_file['Mes'] =  pd.to_datetime(df_file['Mes'], format='%Y-%m-%d').dt.strftime('%Y%m')
         df_file['año'] = df_file['año'].astype('Int64')
@@ -101,11 +101,11 @@ def cleaning_func(file: str,df_file: pd.DataFrame) -> pd.DataFrame :
         df_file['MES'] = df_file['MES'].astype('Int64')
         df_file['Material'] = df_file['Material'].astype('Int64')
         df_file['SELLOUT'] = df_file['SELLOUT'].astype('Float64')
-        df_file = df_file.dropna(axis=0,subset=['MES'])  # noqa: PD901
+        df_file = df_file.dropna(axis=0,subset=['MES'])
         logging.info(f'After cleaning: {df_file}')
         return df_file
     if file == 'est_com_alvi':
-        df_file = df_file.replace('#N/D', '')  # noqa: PD901
+        df_file = df_file.replace('#N/D', '')
         logging.info(f'After cleaning: {df_file}')
         return df_file
     return df_file
