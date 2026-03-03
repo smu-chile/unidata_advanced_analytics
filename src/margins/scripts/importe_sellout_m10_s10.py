@@ -73,7 +73,7 @@ def cleaning_func(df_file:pd.DataFrame,mes_carga:str)->pd.DataFrame:
 
     #Limpiar
     df_file['n_cabecera'] = df_file['n_cabecera'].replace('-', '')
-    df_file = df_file.astype('str')
+    #df_file = df_file.astype('str')  # noqa: ERA001
     df_file = df_file.replace('nan', '')
 
 

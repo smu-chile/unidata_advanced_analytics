@@ -75,10 +75,10 @@ def cleaning_func(df_file:pd.DataFrame,mes:str,semana_carga:str)->pd.DataFrame:
     #Limpiar
     df_file['n_cabecera'] = df_file['n_cabecera'].replace('-', '')
     #df_file['n_cabecera'] = df_file['n_cabecera'].replace('0', None)  # noqa: ERA001, W505
-    df_file = df_file.astype('str')
+    #df_file = df_file.astype('str')  # noqa: ERA001
     df_file = df_file.replace('nan', '')
-    df_file['importe_sell_out'] = df_file['importe_sell_out'].astype('Float64').astype('Int64')
-    df_file['factor'] = df_file['factor'].astype('Float64').astype('Int64')
+    df_file['importe_sell_out'] = pd.to_numeric(df_file['importe_sell_out']).astype('Int64')
+    df_file['factor'] = pd.to_numeric(df_file['factor']).astype('Int64')
     df_file['pvp_normal'] = pd.to_numeric(df_file['pvp_normal']).round(0).astype('Int64')
     df_file['n_cabecera'] = pd.to_numeric(df_file['n_cabecera']).astype('Int64')
     #Agregar semana carga y mes datos
