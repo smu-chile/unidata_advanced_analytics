@@ -76,7 +76,7 @@ def cleaning_func(df_file:pd.DataFrame,mes:str,semana_carga:str)->pd.DataFrame:
     df_file['n_cabecera'] = df_file['n_cabecera'].replace('-', '0')
     df_file['n_cabecera'] = df_file['n_cabecera'].replace('0', None)
     df_file = df_file.astype('str')
-    df_file['n_cabecera'] = df_file['n_cabecera'].astype('Float64').astype('Int64')
+    df_file['n_cabecera'] = df_file['n_cabecera'].astype('Int64')
 
 
     df_file['importe_sell_out'] = df_file['importe_sell_out'].astype('Float64').astype('Int64')
@@ -134,8 +134,7 @@ def main() -> None:  # noqa: D103
         logging.info('Archivo existe y fue modificado hoy')
         df_file = sharepoint.toFrame()
         file_name = os.path.basename(sharepoint.server_relative_path)
-        new_name =  f'PROCESADO-{file_name}-{pendulum.now().to_date_string()}'
-        sharepoint.rename(new_name=new_name)
+
         df_file =cleaning_func(df_file,execution_month,execution_week)
         # Upload data
         logging.info('Uploading data')
@@ -161,6 +160,8 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client,
             if_exists='append',
         )
+        new_name =  f'PROCESADO-{file_name}-{pendulum.now().to_date_string()}'
+        sharepoint.rename(new_name=new_name)
         logging.info('Data uploaded')
     logging.info('Process ended!')
 
