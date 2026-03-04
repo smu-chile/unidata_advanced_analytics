@@ -93,6 +93,25 @@ WORKFLOW_QUERIES = QueryDict({
     CAST(FECHA_FIN_DE_PROMOCION AS STRING) AS FECHA_FIN_DE_PROMOCION
     FROM `${gcp_project}.${schema}.VW_FACT_WORKFLOW`
     WHERE n_promocion IN (${promotions_ids})
+    """,
+
+    'Super 10':
+    """
+    SELECT DISTINCT
+    N_PROMOCION,
+    NOMBRE_PROMOCION,
+    DESCRIPCION_MECANICA,
+    CASE
+        WHEN DESCRIPCION_EVENTO_PROMOCIONAL = 'S10 CICLO' THEN 'S10 CICLO'
+        WHEN DESCRIPCION_EVENTO_PROMOCIONAL = 'S10 APOTEOSICO' THEN 'APOTEOSICO S10'
+        WHEN DESCRIPCION_EVENTO_PROMOCIONAL = '10 DE S10' THEN '10 DE S10'
+        ELSE 'S10 VENTA ESPECIAL'
+    END AS TIPO_PROMOCION,
+    DESCRIPCION_EVENTO_PROMOCIONAL,
+    CAST(FECHA_INICIO_DE_PROMOCION AS STRING) AS FECHA_INICIO_DE_PROMOCION,
+    CAST(FECHA_FIN_DE_PROMOCION AS STRING) AS FECHA_FIN_DE_PROMOCION
+    FROM `${gcp_project}.${schema}.VW_FACT_WORKFLOW`
+    WHERE n_promocion IN (${promotions_ids})
     """
 })
 
@@ -113,36 +132,35 @@ def main():
     gbq_client = Client()
 
     upper_store_banner = {
-    'Alvi': 'ALVI',
-    'Unimarc': 'UNIMARC',
-    'Super 10': 'S10',
-    'Mayorista': 'M10'
+        'Alvi': 'ALVI',
+        'Unimarc': 'UNIMARC',
+        'Super 10': 'S10',
+        'Mayorista': 'M10'
     }[store_banner]
 
     logging.info(f'upper_store_banner: {upper_store_banner}')
 
     promotions_to_evaluate = readBigQuery(SQL_QUERIES['promotions_to_evaluate'].substitute(
-    gcp_project = proyecto,
-    schema = 'TMP',
-    upper_store_banner = upper_store_banner
-    ),
+        gcp_project = proyecto,
+        schema = 'TMP',
+        upper_store_banner = upper_store_banner
+        ),
     user = usuario,
     gbq_client = gbq_client
     )
 
     workflow_data = readBigQuery(WORKFLOW_QUERIES[store_banner].substitute(
-    gcp_project = proyecto,
-    schema = 'CDA_VISTAS',
-    promotions_ids = ','.join(promotions_to_evaluate['N_PROMOCION'].astype('str').to_list())
-    ),
+        gcp_project = proyecto,
+        schema = 'CDA_VISTAS',
+        promotions_ids = ','.join(promotions_to_evaluate['N_PROMOCION'].astype('str').to_list())
+        ),
     user = 'abravom',
     gbq_client = gbq_client
     )
 
     if list(
     set(promotions_to_evaluate['N_PROMOCION'].to_list()).difference(
-        set(workflow_data['N_PROMOCION'].to_list())
-    )
+        set(workflow_data['N_PROMOCION'].to_list()))
     ):
         missing_promotions = list(
         set(promotions_to_evaluate['N_PROMOCION'].to_list()).difference(
@@ -193,7 +211,8 @@ def main():
         + '01'
     )
 
-    columns = ['N_PROMOCION',
+    columns = [
+        'N_PROMOCION',
         'TIPO_PROMOCION',
         'NOMBRE_PROMOCION_PPAL',
         'FECHA_INICIO_DE_PROMOCION_PPAL',
@@ -203,7 +222,8 @@ def main():
         'DESCRIPCION_EVENTO_PROMOCIONAL',
         'NOMBRE_PROMOCION',
         'FECHA_INICIO_DE_PROMOCION',
-        'FECHA_FIN_DE_PROMOCION']
+        'FECHA_FIN_DE_PROMOCION'
+    ]
 
     if store_banner == 'Unimarc':
         uploadFrame(
@@ -213,10 +233,18 @@ def main():
         gbq_client=gbq_client,
         if_exists='replace'
         )
-    elif store_banner == 'Mayorista':
+    if store_banner == 'Mayorista':
         uploadFrame(
         master_promotion_table[columns],
         table_ddl_json_path=os.path.join('gbq_objects','master_promotion_mayorista.json'),
+        project=proyecto,
+        gbq_client=gbq_client,
+        if_exists='replace'
+        )
+    if store_banner == 'Super 10':
+        uploadFrame(
+        master_promotion_table[columns],
+        table_ddl_json_path=os.path.join('gbq_objects','master_promotion_s10.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='replace'

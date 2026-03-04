@@ -57,9 +57,6 @@ def main():
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
     file_site += 'Evaluate_Promotions'
 
-    #file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'  # noqa: ERA001, W505
-    #file_site += 'Evaluacion Promociones'  # noqa: ERA001
-
     sp_cred = secretmanager.getSecret(secret_name, project=proyecto)
 
     sp_folder = sp.SharePointFolder(
@@ -89,7 +86,6 @@ def main():
         ['Formato', 'n_promocion_ppal']
     ].ffill()
     promociones['n_promocion_ppal'] = promociones['n_promocion_ppal'].astype('int64')
-    promociones = promociones[promociones['Formato'].isin(['Unimarc', 'M10'])]
 
     uploadFrame(
     promociones[['Formato','n_promocion_ppal','n_promocion']],
