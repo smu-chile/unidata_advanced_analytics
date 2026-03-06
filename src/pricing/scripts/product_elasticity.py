@@ -317,7 +317,7 @@ def obtenerModeloOLS(df: pd.DataFrame,
         # dummies de días (si existen y varían)
         'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
         # años (si existen y varían)
-        '2024', '2025',
+        '2024', '2025', '2026',
         # flags varios (si existen y varían)
         'multiplicador_x05',
         'jueves_santo', 'viernes_santo',
@@ -354,12 +354,13 @@ def obtenerModeloOLS(df: pd.DataFrame,
     # -------------------------------------------------------------
     # 3) Reglas adicionales
     # -------------------------------------------------------------
-    # Anti-colinealidad: 2024 == diciembre en todo el set
-    if ('2024' in fixed_vars and  # noqa: SIM102
-            '2024' in df_ean.columns and
-            'diciembre' in df_ean.columns):
-        if (df_ean['2024'].values == df_ean['diciembre'].values).all():  # noqa: PD011
-            fixed_vars = [v for v in fixed_vars if v != '2024']
+    # Anti-colinealidad: AÑO == diciembre en todo el set
+    años_a_validar = ['2024', '2025']
+    for año in años_a_validar:
+        if (año in fixed_vars and año in df_ean.columns and 'diciembre' in df_ean.columns):  # noqa: SIM102
+            # Comparamos si el año es idéntico a diciembre
+            if (df_ean[año].values == df_ean['diciembre'].values).all():  # noqa: PD011
+                fixed_vars = [v for v in fixed_vars if v != año]
 
     # Cobertura de meses: >=5 días en cada mes (1..12) según p_date
     dias_por_mes = (
@@ -575,7 +576,7 @@ def main() -> None:  # noqa: D103
         'category_description', 'sub_category_description', 'material', 'product_description',
         'ean', 'sales_uom', 'sales_unit', 'p_date', 'p_week', 'p_month',
         'ventas_totales_producto', 'cantidad_total', 'precio_promedio',
-        '2023', '2024', '2025',
+        '2023', '2024', '2025', '2026',
         'l_m_w', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
         'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
         'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
