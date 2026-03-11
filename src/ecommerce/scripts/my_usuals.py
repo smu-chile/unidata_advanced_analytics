@@ -196,7 +196,7 @@ SQL_QUERIES = QueryDict({
             ROW_NUMBER() OVER(PARTITION BY customer_id ORDER BY SUM(weighted_week_frequency) DESC) AS relevance
         FROM week_weighted_transactions
         GROUP BY customer_id, ean
-    ),
+    )
 
     SELECT
         DATE('${execution_date}') AS date,
