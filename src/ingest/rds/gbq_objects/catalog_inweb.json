@@ -1,0 +1,22 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "CATALOG_INWEB",
+
+    "columns": [
+        {"name": "fecha", "field_type": "DATE", "mode": "REQUIRED"},
+        {"name": "ref_id", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "ean", "field_type": "INT64", "mode": "REQUIRED"},
+        {"name": "store_id", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "store_banner", "field_type": "STRING", "mode": "REQUIRED"},
+        {"name": "inweb", "field_type": "FLOAT", "mode": "REQUIRED"}
+    ],
+
+    "time_partitioning": {
+        "field": "fecha",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": [
+        "store_banner", "store_id"
+    ]
+}
