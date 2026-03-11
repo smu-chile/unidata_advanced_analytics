@@ -859,24 +859,6 @@ def main():
             gbq_client=gbq_client
         )
 
-
-        # Remove past run if needed
-        logging.info(f'Removing past run from {table_ref}')
-        store_banner_numbers = {
-                'Unimarc': 1,
-                'Mayorista': 4,
-                'Alvi': 5,
-                'Super 10': 15,
-        }
-        deleteFromTable(
-            table_ref=table_ref,
-            where_clause=f"""
-                date = '{execution_date}'
-                AND store_banner = {store_banner_numbers[store_banner]}
-            """,
-            gbq_client=gbq_client,
-        )
-
         # Create the table
         logging.info('Creating new partition')
         createTableAsSelect(
@@ -895,23 +877,6 @@ def main():
         logging.info('Done!')
 
     elif store_banner == 'Alvi':
-        # Remove past run if needed
-        logging.info(f'Removing past run from {table_ref}')
-        store_banner_numbers = {
-                'Unimarc': 1,
-                'Mayorista': 4,
-                'Alvi': 5,
-                'Super 10': 15,
-        }
-        deleteFromTable(
-            table_ref=table_ref,
-            where_clause=f"""
-                date = '{execution_date}'
-                AND store_banner = {store_banner_numbers[store_banner]}
-            """,
-            gbq_client=gbq_client,
-        )
-
         # Create the table
         logging.info('Creating new partition')
         createTableAsSelect(
