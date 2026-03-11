@@ -1,4 +1,4 @@
-"""Defines the DAG that allocates my usuals products."""
+"""Defines the DAG that sends prosepan monthly data to Sp."""
 # Default
 import json
 import platform

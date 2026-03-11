@@ -1,4 +1,4 @@
-"""Script Creación Consolidado y egesta hacia sftp.
+"""Script Egesta data semanal desde BQ Hacia SP.
 """
 # Default
 import io
