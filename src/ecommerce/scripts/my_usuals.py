@@ -293,7 +293,8 @@ SQL_QUERIES = QueryDict({
             AND A.customer_key IN (
                 FROM_BASE64('G3eG4XSovD/2EsL5eAP2wQ=='),
                 FROM_BASE64('eomAD4slCiWWkUDz/zwwLQ=='),
-                FROM_BASE64('5lvjTzd2D7/4Hzx9OOb3fg==')
+                FROM_BASE64('5lvjTzd2D7/4Hzx9OOb3fg=='),
+                FROM_BASE64('zSQdiN4QvKm39gwe5zqxUA==')
                 )
     ),
 
