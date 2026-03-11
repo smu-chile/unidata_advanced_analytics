@@ -26,7 +26,7 @@ dag_args = {
     'dag_id': 'lifecycle_status',
     'schedule_interval': '0 0 2 * *',
     'dagrun_timeout': None,
-    'catchup': True,
+    'catchup': False,
     'max_active_runs': 1,
     'concurrency': 4,
     'tags': [PROJECT_NAME, 'abravom'],
