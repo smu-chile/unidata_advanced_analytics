@@ -35,7 +35,7 @@ with open(
 PROJECT_NAME = 'ingest'
 SUBPROJECT_NAME = 'rds'
 dag_args = {
-    'dag_id': 'ingest_ecommerce_found_rate',
+    'dag_id': 'ingest_dim_vtex_sku',
     'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': False,
