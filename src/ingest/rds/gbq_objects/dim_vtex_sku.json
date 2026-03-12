@@ -1,0 +1,71 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "DIM_VTEX_SKU",
+    "columns": [
+        {
+            "name": "ref_id",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "vtex_id",
+            "field_type": "INT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "erp_id",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "ean_primario",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "id_producto",
+            "field_type": "INT",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "nombre_sku",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "ppum",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "multiplicador_unidad_medida",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "unidades_pack",
+            "field_type": "INT",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "fecha_creacion",
+            "field_type": "DATE",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "fecha_modificacion",
+            "field_type": "DATE",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "unidad_de_venta",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+                {
+            "name": "unidad_de_medida_ppum",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        }
+    ]
+}
