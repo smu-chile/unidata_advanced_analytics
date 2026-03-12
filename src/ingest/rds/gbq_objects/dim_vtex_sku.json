@@ -9,7 +9,7 @@
         },
         {
             "name": "vtex_id",
-            "field_type": "INT",
+            "field_type": "INT64",
             "mode": "NULLABLE"
         },
         {
@@ -24,7 +24,7 @@
         },
         {
             "name": "id_producto",
-            "field_type": "INT",
+            "field_type": "INT64",
             "mode": "REQUIRED"
         },
         {
@@ -44,7 +44,7 @@
         },
         {
             "name": "unidades_pack",
-            "field_type": "INT",
+            "field_type": "INT64",
             "mode": "REQUIRED"
         },
         {
