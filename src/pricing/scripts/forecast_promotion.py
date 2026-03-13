@@ -531,7 +531,7 @@ def verificacionVentasVolatiles(df_ean:pd.DataFrame,fecha_inicio_mes:str) -> boo
     desviacion = df_cv['ventas_totales_producto'].std()
     cv = (desviacion / media) * 100 if media != 0 else 0
 
-    if cv > 30:
+    if cv > 60:
         venta_volatil = True
 
     return venta_volatil
