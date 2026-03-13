@@ -489,8 +489,52 @@ def verificacionFactibilidadModelo(df_ean:pd.DataFrame) -> bool:
 
     return cumple_verificaciones
 
+def verificacionVentasVolatiles(df_ean:pd.DataFrame,fecha_inicio_mes:str) -> bool:  # noqa: D417
+    """Verifica las volatilidad de las ventas mensuales de un producto,
+    mediante el calculo del coeficiente de variacion, utilizando los
+    ultimos 8 meses de venta.
 
+    Parameters
+        ----------
+    df_ean : pd.DataFrame
+        Es el dataframe con los datos del ean que se quiere analizar.
 
+    fecha_inicio_mes: str
+        Fecha del inicio de la promocion, dejando el dia como 01.
+
+    Returns
+    -------
+    venta_volatil : bool
+        Booleano que es True si cumple con todas las verificaciones.
+
+    """
+    venta_volatil = False
+
+    fecha_inicio_mes = pd.to_datetime(fecha_inicio_mes)
+
+    df_ean_aux = df_ean.copy()
+
+    df_ean_aux['p_date'] = pd.to_datetime(df_ean_aux['p_date'])
+
+    df_ean_aux = df_ean_aux[df_ean_aux['p_date'] < fecha_inicio_mes]
+
+    df_ean_mensual = (
+        df_ean_aux
+        .set_index('p_date')
+        .resample('MS')['ventas_totales_producto']
+        .sum()
+        .fillna(0)
+        .reset_index()
+    )
+    df_cv = df_ean_mensual.tail(8)
+    media = df_cv['ventas_totales_producto'].mean()
+    desviacion = df_cv['ventas_totales_producto'].std()
+    cv = (desviacion / media) * 100 if media != 0 else 0
+
+    if cv > 30:
+        venta_volatil = True
+
+    return venta_volatil
 
 def obtenerDfDefaultProyeccion(
                                 df_final2,
@@ -907,6 +951,7 @@ def calcular_forecast(
             material = int(df_ean['material'].iloc[0])
             sales_uom = str(df_ean['un_medida_venta'].iloc[0])
             fecha_inicio = df_ean['p_date'].min().strftime('%Y-%m-%d')
+            fecha_inicio_mes = df_ean['p_date'].min().replace(day=1).strftime('%Y-%m-%d')
             fecha_fin = df_ean['p_date'].max().strftime('%Y-%m-%d')
             desc_mat = str(df_ean['desc_material'].iloc[0])
             categoria_prom = str(df_ean['desc_categoria'].iloc[0])
@@ -973,6 +1018,32 @@ def calcular_forecast(
                     'Venta Real': '-',
                     'Venta Proy': '-',
                     'Comentarios': 'Sin historial suficiente'
+                })
+                continue
+
+            if verificacionVentasVolatiles(df_prod,fecha_inicio_mes):
+                filas_resumen.append({
+                    'N° promoción': str(promo),
+                    'Nombre promoción': nombre_promo,
+                    'Categoría': categoria_prom,
+                    'Descripcion': desc_mat,
+                    'Material': material,
+                    'UMV': sales_uom,
+                    'EAN': ean,
+                    'R²': '-',
+                    'Inicio Proy': fecha_inicio,
+                    'Fin Proy': fecha_fin,
+                    'Baseline UV': '-',
+                    'UV Incremental Real': '-',
+                    'UV Incremental Proy': '-',
+                    'UV Real': '-',
+                    'UV Proy': '-',
+                    'Baseline Venta': '-',
+                    'Venta Incremental Real': '-',
+                    'Venta Incremental Proy': '-',
+                    'Venta Real': '-',
+                    'Venta Proy': '-',
+                    'Comentarios': 'Ventas volatiles'
                 })
                 continue
 
