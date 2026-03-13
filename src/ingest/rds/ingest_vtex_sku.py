@@ -36,7 +36,7 @@ PROJECT_NAME = 'ingest'
 SUBPROJECT_NAME = 'rds'
 dag_args = {
     'dag_id': 'ingest_dim_vtex_sku',
-    'schedule_interval': None,
+    'schedule_interval': '0 4 * * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
