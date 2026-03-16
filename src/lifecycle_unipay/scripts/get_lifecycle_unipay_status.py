@@ -1,11 +1,11 @@
 # Default
 from __future__ import annotations
 
-import io
+import io  # noqa: F401
 import os
 import logging
 import argparse
-import posixpath
+import posixpath  # noqa: F401
 from logging import config
 
 # Pip
@@ -18,8 +18,8 @@ from pandas.tseries.offsets import MonthEnd
 
 # Own
 import common.gcp_extended.bigquery as gbq_extended  # noqa: F401
-import common.gcp_extended.secretsmanager as secretmanager
-import common.office365_extended.sharepoint as sp
+import common.gcp_extended.secretsmanager as secretmanager  # noqa: F401
+import common.office365_extended.sharepoint as sp  # noqa: F401
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict  # noqa: F401
 from common.gcp_extended.bigquery import (
@@ -1070,31 +1070,6 @@ def main():
     if_exists='append')
 
     logging.info('Finaliza la carga de datos a la tabla de GCP')
-
-
-    logging.info(' ')
-    logging.info('Inicia el proceso para el envio de correo')
-
-    # credenciales Sharepoint
-    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',
-                                      project=proyecto)
-
-    # ruta carpeta
-    file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
-    file_site += 'Unipay/Ciclo Vida Unipay/Ejecucion'
-    remote_path = posixpath.join(file_site,'Ultimo Periodo Ejecucion.txt')
-
-    buffer = io.BytesIO()
-    buffer.write(periodo.encode('utf-8'))
-    buffer.seek(0)
-
-    sp_output = sp.SharePointFile(
-    **sp_cred,
-    server_relative_path=remote_path
-    )
-    sp_output.upload(content=buffer)
-
-    logging.info('Finaliza el proceso para el envio de correo')
 
     logging.info('Proceso Finalizado con exito')
 
