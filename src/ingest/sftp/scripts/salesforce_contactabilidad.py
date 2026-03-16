@@ -54,7 +54,7 @@ def cleaning_func(df_file: pd.DataFrame, execution_date: str) -> pd.DataFrame:
     logging.info('Before cleaning:', df_file)
 
     campos_fechas = ['FechaRegistro', 'FechaValidacionEmail',
-                     'FechaValidacionWhatsapp','FechaNacimiento']
+                     'FechaValidacionWhatsapp']
     for campo in campos_fechas:
         if campo in df_file.columns:
             df_file[campo] = pd.to_datetime(df_file[campo],format='ISO8601', dayfirst= True)
@@ -115,7 +115,24 @@ def main() -> None:  # noqa: D103
          # Upload data
         logging.info('Uploading data from Dataframe')
         gbq_extended.uploadFrame(
-            df_file,
+            df_file[['Rut',
+                     'Nombre',
+                     'Apellido',
+                     'TipoRut',
+                     'EstadoPersona',
+                     'Telefono',
+                     'TelefonoVerificado',
+                     'Email',
+                     'EmailVerificado',
+                     'Region',
+                     'Comuna',
+                     'Direccion',
+                     'AceptaBasesConcursos',
+                     'AceptaTyCClub',
+                     'FechaValidacionEmail',
+                     'FechaValidacionWhatsapp'
+                     'FechaRegistro',
+                     'FECHA_CARGA']],
             table_ddl_json_path=os.path.join('gbq_objects', json),
             project=gcp_project_id,
             gbq_client=gbq_client,
