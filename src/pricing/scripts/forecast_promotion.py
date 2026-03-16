@@ -1021,32 +1021,6 @@ def calcular_forecast(
                 })
                 continue
 
-            if verificacionVentasVolatiles(df_prod,fecha_inicio_mes):
-                filas_resumen.append({
-                    'N° promoción': str(promo),
-                    'Nombre promoción': nombre_promo,
-                    'Categoría': categoria_prom,
-                    'Descripcion': desc_mat,
-                    'Material': material,
-                    'UMV': sales_uom,
-                    'EAN': ean,
-                    'R²': '-',
-                    'Inicio Proy': fecha_inicio,
-                    'Fin Proy': fecha_fin,
-                    'Baseline UV': '-',
-                    'UV Incremental Real': '-',
-                    'UV Incremental Proy': '-',
-                    'UV Real': '-',
-                    'UV Proy': '-',
-                    'Baseline Venta': '-',
-                    'Venta Incremental Real': '-',
-                    'Venta Incremental Proy': '-',
-                    'Venta Real': '-',
-                    'Venta Proy': '-',
-                    'Comentarios': 'Ventas volatiles'
-                })
-                continue
-
             fecha_limite = (pd.to_datetime(fecha_inicio) - pd.Timedelta(days=1))\
                 .strftime('%Y-%m-%d')
 
@@ -1108,6 +1082,32 @@ def calcular_forecast(
                     'Venta Real': '-',
                     'Venta Proy': '-',
                     'Comentarios': 'Elasticidad positiva'
+                })
+                continue
+
+            if verificacionVentasVolatiles(df_prod,fecha_inicio_mes):
+                filas_resumen.append({
+                    'N° promoción': str(promo),
+                    'Nombre promoción': nombre_promo,
+                    'Categoría': categoria_prom,
+                    'Descripcion': desc_mat,
+                    'Material': material,
+                    'UMV': sales_uom,
+                    'EAN': ean,
+                    'R²': '-',
+                    'Inicio Proy': fecha_inicio,
+                    'Fin Proy': fecha_fin,
+                    'Baseline UV': '-',
+                    'UV Incremental Real': '-',
+                    'UV Incremental Proy': '-',
+                    'UV Real': '-',
+                    'UV Proy': '-',
+                    'Baseline Venta': '-',
+                    'Venta Incremental Real': '-',
+                    'Venta Incremental Proy': '-',
+                    'Venta Real': '-',
+                    'Venta Proy': '-',
+                    'Comentarios': 'Ventas volatiles'
                 })
                 continue
 
