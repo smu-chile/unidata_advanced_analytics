@@ -1,0 +1,1109 @@
+from __future__ import annotations  # noqa: D100
+
+# Default
+import io
+import os
+import logging
+import argparse
+import posixpath
+from logging import config
+
+# Pip
+import numpy as np
+import pandas as pd
+import pendulum
+from google.cloud import bigquery  # noqa: F401
+from google.cloud.bigquery import Client
+from pandas.tseries.offsets import MonthEnd
+
+# Own
+import common.gcp_extended.bigquery as gbq_extended  # noqa: F401
+import common.gcp_extended.secretsmanager as secretmanager
+import common.office365_extended.sharepoint as sp
+from common.constants import LOGGING_CONFIG
+from common.databases.queries import QueryDict
+from common.gcp_extended.bigquery import (
+    uploadFrame,
+    readBigQuery,
+    deleteFromTable,
+    createTableFromJSON,
+)
+
+
+# -------------------------------------------------------------------------
+#  Config
+# -------------------------------------------------------------------------
+# Logging config
+config.dictConfig(LOGGING_CONFIG)
+# Parser config
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '--project_id', type=str,
+    help='GCP project in which the script will be executed'
+)
+parser.add_argument(
+    '--execution_date', type=str,
+    help='DAG execution date'
+)
+
+# -------------------------------------------------------------------------
+#  SQL Queries
+# -------------------------------------------------------------------------
+SQL_QUERIES = QueryDict({
+    # Transacciones realizadas en el periodo establecido
+    # por los clientes con tarjeta unipay
+    'compras':
+    """
+    WITH TEMP AS (
+    SELECT DISTINCT CUSTOMER_ID
+    FROM `${gcp_proyect_1}.${schema_1}.VW_I_UNICARD_CARD`
+    WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
+    )
+    SELECT MARKET_BASKET_KEY,
+    CUSTOMER_KEY,
+    DATE_VALUE,
+    TNDR_TP_ID,
+    TOT_SALE_AMT
+    FROM (SELECT A.MARKET_BASKET_KEY,
+    P.CUSTOMER_KEY,
+    T.TNDR_TP_ID,
+    P.TOT_SALE_AMT,
+    P.DATE_VALUE,
+    RANK() OVER(
+        PARTITION BY A.MARKET_BASKET_KEY ORDER BY A.PYMT_AMT DESC,T.TNDR_TP_ID ASC
+        ) AS RANKING
+    FROM `${gcp_proyect_2}.${schema_2}.DW_VW_FACT_PAYMENT` A
+    INNER JOIN `${gcp_proyect_2}.${schema_2}.DW_VW_DIM_TENDER_TYPE` T
+        ON A.TNDR_TP_KEY = T.TENDER_TYPE_KEY
+    INNER JOIN `${gcp_proyect_2}.${schema_2}.DW_VW_FACT_MKT_BSKT` P
+        USING(MARKET_BASKET_KEY)
+    WHERE P.FNC_DOC_TP_DSC IN (
+        'TN','TF','BX','B','BE','F','NC','NE','FX','FE'
+        )
+    AND P.ITM_TXN_FCN_TP_DSC = 'V'
+    AND P.DATE_VALUE >= '${fecha_ini}'
+    AND P.DATE_VALUE < '${fecha_fin}'
+    )a
+    WHERE RANKING = 1
+    AND CUSTOMER_KEY IN (SELECT CUSTOMER_ID FROM TEMP)
+    """,
+
+    # Transacciones mediante la tarjeta unipay
+    # realizadas por los clientes
+    'compras_unipay':
+    """
+    WITH TEMP AS (
+    SELECT DISTINCT CUSTOMER_ID
+    FROM `${gcp_proyect_1}.${schema_1}.VW_I_UNICARD_CARD`
+    WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
+    )
+    SELECT MARKET_BASKET_KEY,
+    CUSTOMER_KEY,
+    DATE_VALUE,
+    TNDR_TP_ID,
+    TOT_SALE_AMT
+    FROM (SELECT A.MARKET_BASKET_KEY,
+    P.CUSTOMER_KEY,
+    T.TNDR_TP_ID,
+    P.TOT_SALE_AMT,
+    P.DATE_VALUE,
+    RANK() OVER(
+        PARTITION BY A.MARKET_BASKET_KEY ORDER BY A.PYMT_AMT DESC,T.TNDR_TP_ID ASC
+        ) AS RANKING
+    FROM `${gcp_proyect_2}.${schema_2}.DW_VW_FACT_PAYMENT` A
+    INNER JOIN `${gcp_proyect_2}.${schema_2}.DW_VW_DIM_TENDER_TYPE` T
+        ON A.TNDR_TP_KEY = T.TENDER_TYPE_KEY
+    INNER JOIN `${gcp_proyect_2}.${schema_2}.DW_VW_FACT_MKT_BSKT` P
+        USING(MARKET_BASKET_KEY)
+    WHERE P.FNC_DOC_TP_DSC IN ('TN','TF','BX','B','BE','F','NC','NE','FX','FE')
+    AND T.TNDR_TP_ID IN ('35','68','78')
+    AND P.ITM_TXN_FCN_TP_DSC = 'V'
+    AND P.DATE_VALUE < '${fecha_fin}'
+    ) a
+    WHERE CUSTOMER_KEY IN (SELECT CUSTOMER_ID FROM TEMP)
+    AND RANKING = 1
+    """,
+
+    # Clientes con tarjeta unipay en el periodo establecido
+    'tarjetas_unipay':
+    """
+    WITH TARJETAS AS (
+    SELECT *
+    FROM (
+    SELECT PERIOD,CARD_ID,CREDIT_LIMIT,
+    ROW_NUMBER() OVER (PARTITION BY CARD_ID ORDER BY PERIOD desc) rw
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD_STATUS`
+    WHERE CARD_ID IN (SELECT CARD_ID
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD`
+    WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
+    ) t
+    WHERE rw = 1
+    )
+    ,
+    CREDIT_LIMIT AS (
+    SELECT *
+    FROM (
+    SELECT PERIOD,CARD_ID,CREDIT_LIMIT,
+    ROW_NUMBER() OVER (PARTITION BY CARD_ID ORDER BY PERIOD desc) rw
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD_STATUS`
+    WHERE CARD_ID IN (SELECT CARD_ID
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD`
+    WHERE SUBSCRIPTION_DATE < '${fecha_fin}')
+    AND PERIOD <= CAST(${periodo} AS INT)
+    AND CREDIT_LIMIT >= 30000
+    ) t
+    WHERE rw = 1
+    )
+    SELECT UC.CUSTOMER_ID CUSTOMER_KEY,
+    UC.CARD_ID,
+    UC.SUBSCRIPTION_DATE,
+    UC.ACTIVATION_DATE,
+    UC.TERMINATION_DATE,
+    T.PERIOD PERIODO,
+    CASE
+        WHEN CL.CREDIT_LIMIT IS NULL THEN UC.CREDIT_LIMIT
+        ELSE CL.CREDIT_LIMIT
+    END AS CREDIT_LIMIT
+    FROM `${gcp_proyect}.${schema}.VW_I_UNICARD_CARD` UC
+    LEFT JOIN TARJETAS T ON UC.CARD_ID = T.CARD_ID
+    LEFT JOIN CREDIT_LIMIT CL ON UC.CARD_ID = CL.CARD_ID
+    WHERE SUBSCRIPTION_DATE < '${fecha_fin}'
+    """,
+
+    # Estado ciclo de vida unipay en el periodo
+    # anterior al establecido
+    'estados':
+    """
+    SELECT CUSTOMER_KEY,
+    CARD_ID,
+    STATUS,
+    MONTHID
+    FROM ${gcp_proyect}.${schema}.LIFECYCLE_UNIPAY_STATUS
+    WHERE MONTHID = CAST(${periodo_n1} AS STRING)
+    AND STATUS != 'closed'
+    """
+})
+
+# -------------------------------------------------------------------------
+# Functions
+# -------------------------------------------------------------------------
+
+# Funcion para obtener el nuevo estado, esta funcion es para los clientes
+# en el cual su estado anterior equivale a grow o reward
+# Parametros:
+# status_n1: estado periodo anterior
+# sow: share of wallet del cliente
+# sow_prom: share of wallet definido por el cupo de la tarjeta
+# ciclo: ciclo de compra del cliente
+# ciclo_75: ciclo definido por el cupo de la tarjeta
+
+def cambio_estado(  # noqa: D103
+        status_n1: str,
+        sow: float,
+        sow_prom: float,
+        ciclo: float,
+        ciclo_75: float
+        ) -> str:
+    if (status_n1 == 'grow'
+        and sow >= sow_prom
+        and ciclo <= ciclo_75):
+        return 'reward'
+    if (status_n1 == 'grow'
+        and sow < sow_prom
+        and ciclo > ciclo_75):
+        return 'retain'
+    if (status_n1 == 'grow'
+        and sow < sow_prom
+        and ciclo <= ciclo_75) \
+        or (status_n1 == 'grow'
+        and sow >= sow_prom
+        and ciclo > ciclo_75):
+        return 'grow'
+    if (status_n1 == 'reward'
+        and sow >= sow_prom
+        and ciclo <= ciclo_75):
+        return 'reward'
+    if (status_n1 == 'reward'
+        and ciclo > ciclo_75
+        and sow >= sow_prom) \
+        or (status_n1 == 'reward'
+        and sow < sow_prom
+        and sow == 0.0
+        and ciclo > ciclo_75):
+        return 'retain'
+    if (status_n1 == 'reward'
+        and sow < sow_prom
+        and ciclo <= ciclo_75) \
+        or (status_n1 == 'reward'
+        and sow < sow_prom
+        and sow > 0.0
+        and ciclo > ciclo_75):
+        return 'grow'
+    return None
+
+# -------------------------------------------------------------------------
+# Main function
+# -------------------------------------------------------------------------
+
+def main() -> None:  # noqa: D103
+    usuario = 'lifecycle_unipay'
+    # parse input variables
+    args = vars(parser.parse_args())
+    execution_date: str = args['execution_date']
+    proyecto: str = args['project_id']
+    logging.info(f'execution_date: {execution_date}')
+
+    # Set gbq client for all subsequent queries
+    gbq_client = Client()
+
+    # Periodo inicial ciclo vida unipay
+    periodo_inicio = 202301
+
+    # Variables de tiempo relacionadas a las queries
+    fecha = pendulum.parse(execution_date)
+    periodo = fecha.subtract(months=1).strftime('%Y%m')
+    periodo_n1 = fecha.subtract(months=2).strftime('%Y%m')
+    fecha_ini = fecha.subtract(months=1).start_of('month').strftime('%Y-%m-%d')
+    fecha_fin = fecha.start_of('month').strftime('%Y-%m-%d')
+
+    logging.info(' ')
+    logging.info('--------------------')
+    logging.info(f'Se inicia el proceso para el periodo: {periodo}')
+    logging.info(f'Con el parametro periodo_n1: {periodo_n1}')
+    logging.info(f'Con el parametro fecha inicial: {fecha_ini}')
+    logging.info(f'Con el parametro fecha final: {fecha_fin}')
+    logging.info('--------------------')
+
+    logging.info(' ')
+    logging.info('--------------------')
+    logging.info('Inicia la ejecucion de las queries')
+    logging.info('--------------------')
+
+    # Ejecucion Queries
+    logging.info(' ')
+    logging.info('Inicia la query de estados')
+    if int(periodo) > periodo_inicio:
+        estados_n1 = readBigQuery(SQL_QUERIES['estados'].substitute(
+        gcp_proyect = 'cl-bigdata-analytics-prod',
+        schema = 'UNIPAY',
+        periodo_n1 = periodo_n1
+        ),
+        user = usuario,
+        gbq_client = gbq_client
+        )
+
+    logging.info('Finaliza la query de estados')
+
+    logging.info(' ')
+    logging.info('Inicia la query de tarjetas_unipay')
+
+    tarjetas = readBigQuery(SQL_QUERIES['tarjetas_unipay'].substitute(
+    gcp_proyect = 'cl-cda-unidata-prod',
+    schema = 'DS_PROD_UNI_SSFF',
+    fecha_fin = fecha_fin,
+    periodo = periodo
+    ),
+    user = usuario,
+    gbq_client = gbq_client
+    )
+
+    logging.info('Inicia la query de tarjetas_unipay')
+
+    logging.info(' ')
+    logging.info('Inicia la query de compras')
+
+    compras = readBigQuery(SQL_QUERIES['compras'].substitute(
+    gcp_proyect_1 = 'cl-cda-unidata-prod',
+    gcp_proyect_2 = 'cl-cda-prod',
+    schema_1 = 'DS_PROD_UNI_SSFF',
+    schema_2 = 'DS_CDA_VW_SMU',
+    fecha_ini = fecha_ini,
+    fecha_fin = fecha_fin
+    ),
+    user = usuario,
+    gbq_client = gbq_client
+    )
+
+    logging.info('Finaliza la query de compras')
+
+    logging.info(' ')
+    logging.info('Inicia la query de compras_unipay')
+
+    compras_unipay = readBigQuery(SQL_QUERIES['compras_unipay'].substitute(
+    gcp_proyect_1 = 'cl-cda-unidata-prod',
+    gcp_proyect_2 = 'cl-cda-prod',
+    schema_1 = 'DS_PROD_UNI_SSFF',
+    schema_2 = 'DS_CDA_VW_SMU',
+    fecha_fin = fecha_fin
+    ),
+    user = usuario,
+    gbq_client = gbq_client
+    )
+
+    logging.info('Finaliza la query de compras_unipay')
+
+    logging.info(' ')
+    logging.info('--------------------')
+    logging.info('Termina la ejecucion de las queries')
+    logging.info('--------------------')
+
+
+    logging.info(' ')
+    logging.info('--------------------')
+    logging.info('Inicia el proceso del ajuste de la activacion y cierre de las tarjetas')
+    logging.info('--------------------')
+
+    compras['TOT_SALE_AMT'] = compras['TOT_SALE_AMT'].astype('int64')
+    compras_unipay['TOT_SALE_AMT'] = compras_unipay['TOT_SALE_AMT'].astype('int64')
+
+    compras['DATE_VALUE'] = pd.to_datetime(compras['DATE_VALUE'])
+    compras_unipay['DATE_VALUE'] = pd.to_datetime(compras_unipay['DATE_VALUE'])
+
+    tarjetas_copy = tarjetas.copy()
+    tarjetas_copy['SUBSCRIPTION_DATE'] = pd.to_datetime(tarjetas_copy['SUBSCRIPTION_DATE'])
+    tarjetas_copy['ACTIVATION_DATE'] = pd.to_datetime(tarjetas_copy['ACTIVATION_DATE'])
+    tarjetas_copy['TERMINATION_DATE'] = pd.to_datetime(tarjetas_copy['TERMINATION_DATE'])
+    tarjetas_copy['PERIODO2'] = pd.to_datetime(
+        tarjetas_copy['PERIODO'].dropna().astype(int).astype(str) + '01',
+        format='%Y%m%d',
+        errors='coerce'
+    ) + pd.DateOffset(months=1)
+
+    # Dado que la fecha de cierre de las tarjetas Unipay se puede obtener
+    # en 2 tablas, es necesario realizar lo siguiente para obtener la
+    # fecha de cierre
+    logging.info(' ')
+    logging.info('Inicia el proceso para corregir la fecha de cierre de las tarjetas')
+
+    conditions = [
+        (~tarjetas_copy['TERMINATION_DATE'].isna()) &
+        (~tarjetas_copy['PERIODO2'].isna()) &
+        (tarjetas_copy['TERMINATION_DATE'].dt.strftime('%Y%m') > \
+         tarjetas_copy['PERIODO2'].dt.strftime('%Y%m')),
+
+        (~tarjetas_copy['TERMINATION_DATE'].isna()) &
+        (~tarjetas_copy['PERIODO2'].isna()) &
+        (tarjetas_copy['TERMINATION_DATE'].dt.strftime('%Y%m') < \
+         tarjetas_copy['PERIODO2'].dt.strftime('%Y%m')),
+
+        (tarjetas_copy['TERMINATION_DATE'].isna()) &
+        (~tarjetas_copy['PERIODO2'].isna()),
+
+        (tarjetas_copy['TERMINATION_DATE'].isna()) &
+        (tarjetas_copy['PERIODO2'].isna()),
+
+        (~tarjetas_copy['TERMINATION_DATE'].isna()) &
+        (tarjetas_copy['PERIODO2'].isna()) &
+        (tarjetas_copy['TERMINATION_DATE'].dt.strftime('%Y%m') > \
+         tarjetas_copy['SUBSCRIPTION_DATE'].dt.strftime('%Y%m')),
+
+        (~tarjetas_copy['TERMINATION_DATE'].isna()) &
+        (tarjetas_copy['PERIODO2'].isna()) &
+        (tarjetas_copy['TERMINATION_DATE'].dt.strftime('%Y%m') == \
+         tarjetas_copy['SUBSCRIPTION_DATE'].dt.strftime('%Y%m'))
+    ]
+
+    choices = [
+        tarjetas_copy['PERIODO2'],
+        tarjetas_copy['TERMINATION_DATE'],
+        tarjetas_copy['PERIODO2'],
+        tarjetas_copy['SUBSCRIPTION_DATE'],
+        tarjetas_copy['SUBSCRIPTION_DATE'],
+        tarjetas_copy['TERMINATION_DATE']
+    ]
+
+    tarjetas_copy['CLOSED_DATE'] = np.select(
+        conditions,
+        choices,
+        default=tarjetas_copy['TERMINATION_DATE']
+    )
+
+    tarjetas_copy['AUX'] = pd.to_datetime(tarjetas_copy['CLOSED_DATE'].fillna('2100-01-01'))
+
+    tarjetas_copy = tarjetas_copy[[
+        'CUSTOMER_KEY',
+        'CARD_ID',
+        'SUBSCRIPTION_DATE',
+        'ACTIVATION_DATE',
+        'CLOSED_DATE',
+        'CREDIT_LIMIT',
+        'AUX']
+    ]
+
+    logging.info('Finaliza el proceso para corregir la fecha de cierre de las tarjetas')
+
+    logging.info('')
+    logging.info('Inicia el proceso que asigna la compra a la tarjeta que esta activa'
+                 'en ese periodo a la tabla compras')
+
+    # Asignar la compra a la tarjeta que esta activa en ese periodo
+    # a la tabla compras
+    df_merged = compras.merge(
+        tarjetas_copy,
+        on='CUSTOMER_KEY',
+        how='inner'
+    )
+
+    df_activas = df_merged[
+        (df_merged['DATE_VALUE'] >= df_merged['SUBSCRIPTION_DATE']) &
+        (df_merged['DATE_VALUE'] < df_merged['AUX'])
+    ]
+
+    compras_ajust = df_activas.sort_values(
+        by=['MARKET_BASKET_KEY',
+            'CUSTOMER_KEY',
+            'SUBSCRIPTION_DATE',
+            'ACTIVATION_DATE',
+            'AUX',
+            'DATE_VALUE'],
+        ascending=False).drop_duplicates(subset=['MARKET_BASKET_KEY'], keep='first')
+
+    compras_ajust = compras_ajust[[
+        'CUSTOMER_KEY',
+        'CARD_ID',
+        'SUBSCRIPTION_DATE',
+        'ACTIVATION_DATE',
+        'CLOSED_DATE',
+        'CREDIT_LIMIT',
+        'MARKET_BASKET_KEY',
+        'DATE_VALUE',
+        'TNDR_TP_ID',
+        'TOT_SALE_AMT']]
+
+    logging.info('Finaliza el proceso que asigna la compra a la tarjeta que esta activa'
+                 'en ese periodo a la tabla compras')
+
+    logging.info('')
+    logging.info('Inicia el proceso que asigna la compra a la tarjeta que esta activa'
+                 'en ese periodo a la tabla compras_unipay')
+
+    # Asignar la compra a la tarjeta que esta activa en ese periodo
+    # a la tabla compras_unipay
+    df_merged = compras_unipay.merge(
+    tarjetas_copy,
+    on='CUSTOMER_KEY',
+    how='inner'
+    )
+
+    df_activas = df_merged[
+        (df_merged['DATE_VALUE'] >= df_merged['SUBSCRIPTION_DATE']) &
+        (df_merged['DATE_VALUE'] < df_merged['AUX'])
+    ]
+
+    compras_unipay_ajust = df_activas.sort_values(
+        by=['MARKET_BASKET_KEY',
+            'CUSTOMER_KEY',
+            'SUBSCRIPTION_DATE',
+            'ACTIVATION_DATE',
+            'AUX',
+            'DATE_VALUE'],
+        ascending=False).drop_duplicates(subset=['MARKET_BASKET_KEY'], keep='first')
+
+    compras_unipay_ajust = compras_unipay_ajust[[
+        'CUSTOMER_KEY',
+        'CARD_ID',
+        'SUBSCRIPTION_DATE',
+        'ACTIVATION_DATE',
+        'CLOSED_DATE',
+        'CREDIT_LIMIT',
+        'MARKET_BASKET_KEY',
+        'DATE_VALUE',
+        'TNDR_TP_ID',
+        'TOT_SALE_AMT']]
+
+    compras_unipay_ajust = compras_unipay_ajust.reset_index(drop=True)
+
+    logging.info('Finaliza el proceso que asigna la compra a la tarjeta que esta activa'
+                 'en ese periodo a la tabla compras_unipay')
+
+    logging.info('')
+    logging.info('Inicia el proceso actualiza la fecha de activacion de las tarjetas'
+                 'que se activaron pero en la tabla UNICARD_CARD no se ve reflejado')
+
+    # Dado que en algunos casos la activacion de las tarjetas no se ve
+    # reflejado en la tabla UNICARD_CARD, hay que realizar el siguiente
+    # ajuste
+
+    tarjetas_ajust = pd.concat([
+        tarjetas_copy.query('SUBSCRIPTION_DATE < @fecha_ini \
+        & (CLOSED_DATE  >= @fecha_ini | CLOSED_DATE.isna())'),
+        tarjetas_copy.query('SUBSCRIPTION_DATE >= @fecha_ini \
+        & SUBSCRIPTION_DATE < @fecha_fin')],
+        ignore_index=True
+    )
+
+    activacion_tarjeta = compras_unipay_ajust.sort_values(
+        by=['CARD_ID','DATE_VALUE'],
+        ascending=False).groupby(['CUSTOMER_KEY','CARD_ID']).tail(1).copy()
+
+    tarjetas_revision = tarjetas_ajust.query('ACTIVATION_DATE.isna()')
+
+    tarjetas_revision = tarjetas_revision.merge(
+    activacion_tarjeta[['CUSTOMER_KEY',
+                        'CARD_ID',
+                        'DATE_VALUE']],
+    on=['CUSTOMER_KEY','CARD_ID'],
+    how='inner'
+    )
+
+    tarjetas_revision['DIAS'] = tarjetas_revision['DATE_VALUE'] - \
+        tarjetas_revision['SUBSCRIPTION_DATE']
+
+    tarjetas_revision = tarjetas_revision[
+        tarjetas_revision['DIAS'] <= pd.Timedelta(days=365)]
+
+    fechas_dict = tarjetas_revision.set_index('CARD_ID')['DATE_VALUE'].to_dict()
+
+    tarjetas_ajust.loc[
+        tarjetas_ajust['ACTIVATION_DATE'].isna(),
+        'ACTIVATION_DATE'] = tarjetas_ajust.loc[
+        tarjetas_ajust['ACTIVATION_DATE'].isna(),
+        'CARD_ID'].map(fechas_dict)
+
+    tarjetas_ajust = tarjetas_ajust.drop(columns=['AUX'])
+
+    logging.info('Finaliza el proceso actualiza la fecha de activacion de las tarjetas'
+                 'que se activaron pero en la tabla UNICARD_CARD no se ve reflejado')
+
+
+    logging.info('')
+    logging.info('Inicia el proceso que verifica si un cliente activo la tarjeta'
+                 'comprando o mediante otro canal de activacion')
+
+    # Dado que un cliente puede activar la tarjeta mediante distintos
+    # canales, hay que obtener el medio de activacion utilizado para
+    # calcular su estado de ciclo de vida correctamente
+
+    compras_unipay_ajust_copy = compras_unipay_ajust.copy()
+
+    primera_compra_unipay = compras_unipay_ajust_copy.sort_values(
+        by=['CARD_ID','DATE_VALUE'],
+        ascending=False).groupby(['CUSTOMER_KEY','CARD_ID']).tail(1).copy()
+
+    primera_compra_unipay = primera_compra_unipay[[
+        'DATE_VALUE',
+        'CUSTOMER_KEY',
+        'CARD_ID']]
+
+    tarjetas_ajust = tarjetas_ajust.merge(
+    primera_compra_unipay,
+    on=['CUSTOMER_KEY','CARD_ID'],
+    how='left'
+    )
+
+    conditions = [
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] >= fecha_fin),
+
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] < fecha_fin) &
+        (tarjetas_ajust['ACTIVATION_DATE'] == tarjetas_ajust['DATE_VALUE']),
+
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] < fecha_fin) &
+        (tarjetas_ajust['DATE_VALUE'].isna()),
+
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] < fecha_fin) &
+        (~tarjetas_ajust['DATE_VALUE'].isna()) &
+        (tarjetas_ajust['ACTIVATION_DATE'] != tarjetas_ajust['DATE_VALUE']) &
+        (tarjetas_ajust['DATE_VALUE'] - tarjetas_ajust['SUBSCRIPTION_DATE'] <= \
+         pd.Timedelta(days=365)),
+
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'] < fecha_fin) &
+        (~tarjetas_ajust['DATE_VALUE'].isna()) &
+        (tarjetas_ajust['ACTIVATION_DATE'] != tarjetas_ajust['DATE_VALUE']) &
+        (tarjetas_ajust['DATE_VALUE'] - tarjetas_ajust['SUBSCRIPTION_DATE'] > \
+         pd.Timedelta(days=365)),
+
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'].isna()) &
+        (~tarjetas_ajust['DATE_VALUE'].isna()) &
+        (tarjetas_ajust['DATE_VALUE'] - tarjetas_ajust['SUBSCRIPTION_DATE'] > \
+         pd.Timedelta(days=365)),
+
+        (tarjetas_ajust['SUBSCRIPTION_DATE'] >= '2023-01-01') &
+        (tarjetas_ajust['ACTIVATION_DATE'].isna()) &
+        (~tarjetas_ajust['DATE_VALUE'].isna()) &
+        (tarjetas_ajust['DATE_VALUE'] - tarjetas_ajust['SUBSCRIPTION_DATE'] <= \
+         pd.Timedelta(days=365)),
+    ]
+
+    choices = [
+        tarjetas_ajust['ACTIVATION_DATE'],
+        tarjetas_ajust['ACTIVATION_DATE'],
+        tarjetas_ajust['DATE_VALUE'],
+        tarjetas_ajust['DATE_VALUE'],
+        pd.NaT,
+        tarjetas_ajust['ACTIVATION_DATE'],
+        tarjetas_ajust['DATE_VALUE']
+    ]
+
+    tarjetas_ajust['FECHA_ESTADO'] = np.select(
+        conditions,
+        choices,
+        default=tarjetas_ajust['ACTIVATION_DATE']
+    )
+
+    tarjetas_ajust['FECHA_ESTADO'] = pd.to_datetime(
+        tarjetas_ajust['FECHA_ESTADO'])
+
+    tarjetas_ajust = tarjetas_ajust.drop(columns=['DATE_VALUE'])
+
+    logging.info('Inicia el proceso que verifica si un cliente activo la tarjeta'
+                 'comprando o mediante otro canal de activacion')
+
+    logging.info(' ')
+    logging.info('--------------------')
+    logging.info('Termina el proceso del ajuste de la activacion y cierre de las tarjetas')
+    logging.info('--------------------')
+
+    logging.info(' ')
+    logging.info('--------------------')
+    logging.info('Inicia el proceso del calculo de estado')
+    logging.info('--------------------')
+
+    if int(periodo) == periodo_inicio:
+        tarjetas_ajust['FECHA_ESTADO'] = pd.to_datetime(
+            np.where(tarjetas_ajust['FECHA_ESTADO'].dt.strftime('%Y%m') > \
+                    str(periodo),pd.NaT,tarjetas_ajust['FECHA_ESTADO'])
+            )
+        tarjetas_ajust['CLOSED_DATE'] = pd.to_datetime(
+            np.where(tarjetas_ajust['CLOSED_DATE'].dt.strftime('%Y%m') > \
+                    str(periodo),pd.NaT,tarjetas_ajust['CLOSED_DATE'])
+            )
+
+        tarjetas_ajust['DIAS'] = np.where(
+            pd.isna(tarjetas_ajust['FECHA_ESTADO']),
+            (pd.Timestamp(fecha_ini) + MonthEnd(0) - tarjetas_ajust['SUBSCRIPTION_DATE']).dt.days,
+            0
+        )
+
+        conditions = [
+            (tarjetas_ajust['CLOSED_DATE'].dt.strftime('%Y%m') == str(periodo)), #closed
+
+            (tarjetas_ajust['SUBSCRIPTION_DATE'].dt.strftime('%Y%m') == str(periodo)) &
+            (tarjetas_ajust['FECHA_ESTADO'].dt.strftime('%Y%m') == str(periodo)), #grow
+
+            (tarjetas_ajust['SUBSCRIPTION_DATE'].dt.strftime('%Y%m') == str(periodo)) &
+            (pd.isna(tarjetas_ajust['FECHA_ESTADO'])), #onboard
+
+            (tarjetas_ajust['SUBSCRIPTION_DATE'].dt.strftime('%Y%m') < str(periodo)) &
+            (tarjetas_ajust['FECHA_ESTADO'].dt.strftime('%Y%m') <= str(periodo)), #grow
+
+            (tarjetas_ajust['SUBSCRIPTION_DATE'].dt.strftime('%Y%m') < str(periodo)) &
+            (pd.isna(tarjetas_ajust['FECHA_ESTADO'])) &
+            (tarjetas_ajust['DIAS'] <= 28), #onboard
+
+            (tarjetas_ajust['SUBSCRIPTION_DATE'].dt.strftime('%Y%m') < str(periodo)) &
+            (pd.isna(tarjetas_ajust['FECHA_ESTADO'])) &
+            (tarjetas_ajust['DIAS'] > 28) #never_activated
+        ]
+
+        choices = [
+            'closed',
+            'grow',
+            'onboard',
+            'grow',
+            'onboard',
+            'never_activated'
+        ]
+
+        tarjetas_ajust['STATUS'] = np.select(
+            conditions,
+            choices,
+            default='sin_estado')
+
+        tarjetas_ajust['MONTHID'] = str(periodo)
+
+        estado_clientes = tarjetas_ajust[[
+            'CUSTOMER_KEY',
+            'CARD_ID',
+            'STATUS',
+            'MONTHID']]
+
+        createTableFromJSON(
+            table_ddl_json_path = os.path.join('gbq_objects', 'lifecycle_unipay.json'),
+            project = proyecto,
+            gbq_client = gbq_client,
+            if_exists = 'ignore'
+        )
+
+    elif int(periodo) > periodo_inicio:
+        tarjetas_ajust_copy = tarjetas_ajust.copy()
+
+        tarjetas_ajust_copy['FECHA_ESTADO'] = pd.to_datetime(
+            np.where(tarjetas_ajust_copy['FECHA_ESTADO'].dt.strftime('%Y%m') > \
+                     str(periodo),pd.NaT,tarjetas_ajust_copy['FECHA_ESTADO']))
+
+        tarjetas_ajust_copy['CLOSED_DATE'] = pd.to_datetime(
+            np.where(tarjetas_ajust_copy['CLOSED_DATE'].dt.strftime('%Y%m') > \
+                     str(periodo),pd.NaT,tarjetas_ajust_copy['CLOSED_DATE']))
+
+        tarjetas_ajust_copy['CLOSED_DATE_YYYYMM'] = \
+            tarjetas_ajust_copy['CLOSED_DATE'].dt.strftime('%Y%m')
+
+        tarjetas_ajust_copy['DIAS'] = np.where(
+        pd.isna(tarjetas_ajust_copy['FECHA_ESTADO']),
+        (pd.Timestamp(fecha_ini) + MonthEnd(0) - tarjetas_ajust_copy['SUBSCRIPTION_DATE']).dt.days,
+         0
+        )
+
+        # Se obtienen las compras realizadas por los clientes mediante
+        # la tarjeta Unipay en el mes anterior al periodo establecido y
+        # se agregan los clientes que no han realizado
+        # transacciones el mes anterior
+        compras_ajust_copy = compras_ajust.copy()
+
+        compras_ajust_copy['DATE_VALUE'] = pd.to_datetime(compras_ajust_copy['DATE_VALUE'])
+
+        compras_ajust_copy['TOT_SALE_AMT_UNIPAY'] = 0
+
+        compras_ajust_copy['TOT_SALE_AMT_UNIPAY'] = compras_ajust_copy['TOT_SALE_AMT'].where(
+            compras_ajust_copy['TNDR_TP_ID'].isin(['35','68','78']), 0)
+
+        no_compraron = tarjetas_ajust_copy[~tarjetas_ajust_copy['CARD_ID'].isin(
+            compras_ajust_copy['CARD_ID'])]
+
+        compras_ajust_copy = pd.concat([compras_ajust_copy, no_compraron], ignore_index=True)
+
+        compras_ajust_copy['TOT_SALE_AMT'] = compras_ajust_copy['TOT_SALE_AMT'].fillna(0.0)
+
+        compras_ajust_copy['TOT_SALE_AMT_UNIPAY'] = \
+            compras_ajust_copy['TOT_SALE_AMT_UNIPAY'].fillna(0.0)
+
+        compras_ajust_copy = compras_ajust_copy[[
+            'CUSTOMER_KEY',
+            'CARD_ID',
+            'DATE_VALUE',
+            'TNDR_TP_ID',
+            'TOT_SALE_AMT',
+            'TOT_SALE_AMT_UNIPAY']]
+
+        logging.info(' ')
+        logging.info('Inicia el proceso de calculo del SOW')
+
+        # Calculo del SOW de los clientes
+        sow = compras_ajust_copy.groupby(['CUSTOMER_KEY','CARD_ID']).agg(
+            TOT_SALE_AMT = ('TOT_SALE_AMT','sum'),
+            TOT_SALE_AMT_UNIPAY = ('TOT_SALE_AMT_UNIPAY','sum')
+        )
+
+        sow = sow.reset_index()
+
+        sow['SOW'] = round((sow['TOT_SALE_AMT_UNIPAY'] / sow['TOT_SALE_AMT']) * 100,0)
+        # Si el cliente no compro con UNIPAY en el mes anterior al actual
+        # el SOW es igual a 0.0
+        sow['SOW'] = sow['SOW'].fillna(0.0)
+
+        logging.info('Finaliza el proceso de calculo del SOW')
+
+        logging.info(' ')
+        logging.info('Inicia el proceso de calculo del Ciclo')
+
+        # Calculo del CICLO de los clientes
+        compras_unipay_ajust_copy = compras_unipay_ajust.copy()
+
+        compras_unipay_ajust_copy = compras_unipay_ajust_copy[
+            compras_unipay_ajust_copy['CARD_ID'].notna()]
+        compras_unipay_ajust_copy['DATE_VALUE'] = pd.to_datetime(
+            compras_unipay_ajust_copy['DATE_VALUE'])
+
+        ciclo = compras_unipay_ajust_copy.sort_values(
+            by=['CARD_ID','DATE_VALUE'],
+            ascending=True).groupby(['CUSTOMER_KEY','CARD_ID']).tail(1).copy()
+
+        ciclo = ciclo[['DATE_VALUE','CUSTOMER_KEY','CARD_ID']]
+
+        ciclo['PENULTIMA_COMPRA'] = compras_unipay_ajust_copy.sort_values(
+            by=['CARD_ID','DATE_VALUE'],
+            ascending=True).groupby(['CUSTOMER_KEY','CARD_ID'])['DATE_VALUE'].shift(1)
+
+        ciclo = ciclo.rename(columns={'DATE_VALUE':'ULTIMA_COMPRA'})
+
+        ciclo = ciclo.reset_index(drop=True)
+
+        # Esto se utilizo para el periodo = 202302,
+        # debido a las tarjetas de años anteriores para no tener problemas,
+        # dado que se le asigno el estado grow en el periodo 202301
+        if int(periodo) == 202302:
+            ciclo = ciclo.merge(
+                estados_n1,
+                on=['CUSTOMER_KEY','CARD_ID'],
+                how='left')
+            mask = (
+                ciclo['ULTIMA_COMPRA'].dt.strftime('%Y%m') == str(periodo)
+            ) & (
+                ciclo['STATUS'] == 'grow'
+            ) & (
+                ciclo['PENULTIMA_COMPRA'].isna()
+            )
+            ciclo.loc[mask, 'PENULTIMA_COMPRA'] = pd.Timestamp('2023-01-15')
+            ciclo = ciclo[[
+                'CUSTOMER_KEY',
+                'CARD_ID',
+                'ULTIMA_COMPRA',
+                'PENULTIMA_COMPRA']]
+
+        # Si el cliente no compro con UNIPAY el mes anterior al mes actual
+        # el CICLO queda como 500.0
+        ciclo['CICLO'] = np.where(
+            (pd.to_datetime(ciclo['ULTIMA_COMPRA']).dt.strftime('%Y%m') == str(periodo)),
+            (ciclo['ULTIMA_COMPRA'] - ciclo['PENULTIMA_COMPRA']).dt.days,500.0
+        )
+
+        logging.info('Finaliza el proceso de calculo del Ciclo')
+
+        logging.info(' ')
+        logging.info('Inicia el proceso para calcular el estado del ciclo de vida')
+
+        # Se realiza un merge entre sow, ciclo, TARJETAS_COPY y ESTADOS_N1
+        # para obtener el sow, ciclo, CREDIT LIMIT
+        # y el ESTADO (mes anterior) del cliente
+        riesgo = sow.merge(
+            ciclo,
+            on=['CUSTOMER_KEY','CARD_ID'],
+            how='left')
+
+        riesgo['CICLO'] = riesgo['CICLO'].fillna(500.0)
+
+        riesgo = riesgo.merge(
+            tarjetas_ajust_copy,
+            on=['CUSTOMER_KEY','CARD_ID'],
+            how='left')
+
+        riesgo = riesgo.merge(
+            estados_n1,
+            on=['CUSTOMER_KEY','CARD_ID'],
+            how='left')
+
+        riesgo = riesgo[[
+            'CUSTOMER_KEY',
+            'CARD_ID',
+            'SUBSCRIPTION_DATE',
+            'ACTIVATION_DATE',
+            'FECHA_ESTADO',
+            'STATUS',
+            'SOW',
+            'CICLO',
+            'CREDIT_LIMIT',
+            'DIAS']]
+
+        riesgo['STATUS'] = riesgo['STATUS'].fillna('sin_estado')
+
+        # Tarjetas que se cerraron en el periodo calculado
+        tarjetas_cerradas = tarjetas_ajust_copy[
+            tarjetas_ajust_copy['CLOSED_DATE_YYYYMM'] == str(periodo)]
+
+        # Obtenemos las tarjetas que no se cerraron en el mes anterior
+        tarjetas_clientes = riesgo[~riesgo['CARD_ID'].isin(tarjetas_cerradas['CARD_ID'])]
+
+        # Se asigna el valor del sow_PROM y ciclo_75
+        # dado el CREDIT_LIMIT de la tarjeta
+        conditions = [
+            (tarjetas_clientes['CREDIT_LIMIT'] >= 30000.0) &
+            (tarjetas_clientes['CREDIT_LIMIT'] < 50000.0),
+
+            (tarjetas_clientes['CREDIT_LIMIT'] >= 50000.0) &
+            (tarjetas_clientes['CREDIT_LIMIT'] < 100000.0),
+
+            (tarjetas_clientes['CREDIT_LIMIT'] >= 100000.0) &
+            (tarjetas_clientes['CREDIT_LIMIT'] < 150000.0),
+
+            (tarjetas_clientes['CREDIT_LIMIT'] >= 150000.0) &
+            (tarjetas_clientes['CREDIT_LIMIT'] < 200000.0),
+
+            (tarjetas_clientes['CREDIT_LIMIT'] >= 200000.0) &
+            (tarjetas_clientes['CREDIT_LIMIT'] < 300000.0),
+
+            (tarjetas_clientes['CREDIT_LIMIT'] >= 300000.0) &
+            (tarjetas_clientes['CREDIT_LIMIT'] < 600000.0),
+
+            (tarjetas_clientes['CREDIT_LIMIT'] >= 600000.0)
+        ]
+
+        sow_choices = [
+            10.0,
+            9.0,
+            21.0,
+            26.0,
+            29.0,
+            36.0,
+            47.0
+        ]
+
+        ciclo_choices = [
+            60.0,
+            55.0,
+            41.0,
+            35.0,
+            30.0,
+            24.0,
+            12.0
+        ]
+
+        tarjetas_clientes['SOW_PROM'] = np.select(
+            conditions,
+            sow_choices,
+            default=0.0
+        )
+
+        tarjetas_clientes['CICLO_75'] = np.select(
+            conditions,
+            ciclo_choices,
+            default=500.0
+        )
+
+        # Tarjetas que no se cerraron
+        v_cambio_estado = np.vectorize(cambio_estado)
+
+        conditions_lc = [
+            (tarjetas_clientes['STATUS'].isin(['grow','reward'])), #funcion
+
+            ((tarjetas_clientes['STATUS'] == 'retain') &
+             (tarjetas_clientes['SOW'] > 0.0)).astype(bool), #grow
+
+            ((tarjetas_clientes['STATUS'] == 'retain') &
+             (tarjetas_clientes['SOW'] == 0.0)).astype(bool), #lapsed
+
+            ((tarjetas_clientes['STATUS'] == 'lapsed') &
+             (tarjetas_clientes['SOW'] > 0.0)).astype(bool), #grow
+
+            ((tarjetas_clientes['STATUS'] == 'lapsed') &
+             (tarjetas_clientes['SOW'] == 0.0)).astype(bool), #lapsed
+
+            ((tarjetas_clientes['STATUS'] == 'never_activated') &
+             (tarjetas_clientes['SOW'] > 0.0)).astype(bool), #grow
+
+            ((tarjetas_clientes['STATUS'] == 'never_activated') &
+             (tarjetas_clientes['SOW'] == 0.0)).astype(bool), #never_activated
+
+            ((tarjetas_clientes['STATUS'] == 'onboard') &
+             (pd.isna(tarjetas_clientes['FECHA_ESTADO'])) &
+             (tarjetas_clientes['DIAS'] <= 28)).astype(bool), #onboard
+
+            ((tarjetas_clientes['STATUS'] == 'onboard') &
+             (pd.isna(tarjetas_clientes['FECHA_ESTADO'])) &
+             (tarjetas_clientes['DIAS'] > 28)).astype(bool), #never_activated
+
+            ((tarjetas_clientes['STATUS'] == 'onboard') &
+             (~pd.isna(tarjetas_clientes['FECHA_ESTADO']))).astype(bool), #grow
+
+            ((tarjetas_clientes['STATUS'] == 'sin_estado') &
+             (tarjetas_clientes['SOW'] == 0.0)).astype(bool), #onboard
+
+            ((tarjetas_clientes['STATUS'] == 'sin_estado') &
+             (tarjetas_clientes['SOW'] > 0.0)).astype(bool) #grow
+        ]
+
+        estado_choices = [
+            v_cambio_estado(
+                tarjetas_clientes['STATUS'],
+                tarjetas_clientes['SOW'],
+                tarjetas_clientes['SOW_PROM'],
+                tarjetas_clientes['CICLO'],
+                tarjetas_clientes['CICLO_75']
+                ),
+                np.full(len(tarjetas_clientes), 'grow'),
+                np.full(len(tarjetas_clientes), 'lapsed'),
+                np.full(len(tarjetas_clientes), 'grow'),
+                np.full(len(tarjetas_clientes), 'lapsed'),
+                np.full(len(tarjetas_clientes), 'grow'),
+                np.full(len(tarjetas_clientes), 'never_activated'),
+                np.full(len(tarjetas_clientes), 'onboard'),
+                np.full(len(tarjetas_clientes), 'never_activated'),
+                np.full(len(tarjetas_clientes), 'grow'),
+                np.full(len(tarjetas_clientes), 'onboard'),
+                np.full(len(tarjetas_clientes), 'grow')
+        ]
+
+        tarjetas_clientes['STATUS_NEW'] = np.select(
+            conditions_lc,
+            estado_choices,
+            default='sin_estado'
+        )
+
+        # Tarjetas cerradas
+        tarjetas_cerradas['STATUS_NEW'] = 'closed'
+
+        estado_clientes = pd.concat(
+            [tarjetas_clientes,tarjetas_cerradas], ignore_index=True
+        )
+
+        # Tabla con los estados del periodo en cuestion
+        estado_clientes = estado_clientes[[
+            'CUSTOMER_KEY',
+            'CARD_ID',
+            'STATUS_NEW']]
+
+        estado_clientes = estado_clientes.rename(
+            columns={'STATUS_NEW': 'STATUS'})
+
+        estado_clientes['MONTHID'] = periodo
+
+    logging.info(' ')
+    logging.info('--------------------')
+    logging.info('Termina el proceso del calculo de estado')
+    logging.info('--------------------')
+
+
+    logging.info(' ')
+    logging.info(f'Se borra la partición actual de {periodo}')
+    deleteFromTable(
+    table_ref='cl-bigdata-analytics-prod.UNIPAY.LIFECYCLE_UNIPAY_STATUS',
+    where_clause=f"monthid = '{periodo}'",
+    gbq_client=gbq_client,
+    )
+
+    logging.info(' ')
+    logging.info('Inicia la carga de datos a la tabla de GCP')
+
+    uploadFrame(
+    estado_clientes[['CUSTOMER_KEY','CARD_ID','STATUS','MONTHID']],
+    table_ddl_json_path=os.path.join('gbq_objects','lifecycle_unipay.json'),
+    project=proyecto,
+    gbq_client=gbq_client,
+    if_exists='append')
+
+    logging.info('Finaliza la carga de datos a la tabla de GCP')
+
+
+    logging.info(' ')
+    logging.info('Inicia el proceso para el envio de correo')
+
+    # credenciales Sharepoint
+    sp_cred = secretmanager.getSecret('bdaa_sharepoint_credentials',
+                                      project=proyecto)
+
+    # ruta carpeta
+    file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
+    file_site += 'Unipay/Ciclo Vida Unipay/Ejecucion'
+    remote_path = posixpath.join(file_site,'Ultimo Periodo Ejecucion.txt')
+
+    buffer = io.BytesIO()
+    buffer.write(periodo.encode('utf-8'))
+    buffer.seek(0)
+
+    sp_output = sp.SharePointFile(
+    **sp_cred,
+    server_relative_path=remote_path
+    )
+    sp_output.upload(content=buffer)
+
+    logging.info('Finaliza el proceso para el envio de correo')
+
+    logging.info('Proceso Finalizado con exito')
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+

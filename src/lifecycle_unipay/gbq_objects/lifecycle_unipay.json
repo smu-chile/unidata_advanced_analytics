@@ -1,0 +1,34 @@
+{
+    "schema": "UNIPAY",
+    "table": "LIFECYCLE_UNIPAY_STATUS",
+
+    "columns": [
+        {
+            "name": "CUSTOMER_KEY",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": "Identificador único del cliente en formato encriptado o codificado"
+        },
+        {
+            "name": "CARD_ID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Identificador único de la tarjeta del cliente"
+        },
+        {
+            "name": "STATUS",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Estado ciclo de vida del cliente"
+        },
+        {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Periodo de referencia en formato YYYYMM (año y mes)."
+        }
+        
+    ],
+
+    "clustering_fields": ["MONTHID"]
+}
