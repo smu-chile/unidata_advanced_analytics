@@ -130,7 +130,7 @@ def main() -> None:  # noqa: D103
                      'AceptaBasesConcursos',
                      'AceptaTyCClub',
                      'FechaValidacionEmail',
-                     'FechaValidacionWhatsapp'
+                     'FechaValidacionWhatsapp',
                      'FechaRegistro',
                      'FECHA_CARGA']],
             table_ddl_json_path=os.path.join('gbq_objects', json),
