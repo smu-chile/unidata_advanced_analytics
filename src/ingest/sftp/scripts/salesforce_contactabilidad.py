@@ -114,7 +114,7 @@ def main() -> None:  # noqa: D103
         os.remove(f'{csv_name}')
          # Upload data
         logging.info('Uploading data from Dataframe')
-        if formato == 'ALVI':
+        if formato == 'alvi':
             gbq_extended.uploadFrame(
                 df_file[['Rut',
                         'Nombre',
