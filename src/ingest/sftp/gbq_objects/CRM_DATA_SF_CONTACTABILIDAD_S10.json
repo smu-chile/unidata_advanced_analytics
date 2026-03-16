@@ -19,23 +19,8 @@
             "mode": "NULLABLE"
         },
         {
-            "name": "TIPO_RUT",
-            "field_type": "STRING",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "ESTADO_PERSONA",
-            "field_type": "STRING",
-            "mode": "NULLABLE"
-        },
-        {
             "name": "TELEFONO",
             "field_type": "STRING",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "TELEFONO_VERIFICADO",
-            "field_type": "BOOLEAN",
             "mode": "NULLABLE"
         },
         {
@@ -59,18 +44,18 @@
             "mode": "NULLABLE"
         },
         {
-            "name": "DIRECCION",
-            "field_type": "STRING",
-            "mode": "NULLABLE"
-        },
-        {
-            "name": "ACEPTA_BASES_CONCURSOS",
-            "field_type": "BOOLEAN",
-            "mode": "NULLABLE"
-        },
-        {
             "name": "ACEPTA_TYC_CLUB",
             "field_type": "BOOLEAN",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "BOLETA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "BOLETA2",
+            "field_type": "FLOAT",
             "mode": "NULLABLE"
         },
         {
@@ -79,7 +64,7 @@
             "mode": "NULLABLE"
         },
         {
-            "name": "FECHA_VALIDACION_WHATSAPP",
+            "name": "FECHA_NACIMIENTO",
             "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
