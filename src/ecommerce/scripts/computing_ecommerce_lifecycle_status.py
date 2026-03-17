@@ -781,7 +781,7 @@ def main() -> None:  # noqa: D103
     # Se agrega el formato y se sube a GCP
     seg_monthid['store_banner'] = formato
 
-    if last_month < '202408' or (last_month >= '202408' and formato == 'Alvi'):
+    if last_month < '202407' or (last_month >= '202407' and formato == 'Alvi'):
         seg_monthid['membresia_unimarc'] = None
 
         uploadFrame(
@@ -791,7 +791,7 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client,
             if_exists='append')
 
-    if last_month >= '202408' and formato == 'Unimarc':
+    if last_month >= '202407' and formato == 'Unimarc':
         membresias_unimarc = readBigQuery(SQL_QUERIES['query_membresia_unimarc'].substitute(
             proyecto = proyecto,
             last_month = last_month
