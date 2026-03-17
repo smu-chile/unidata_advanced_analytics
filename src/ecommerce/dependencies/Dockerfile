@@ -67,6 +67,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       nltk \
       numba \
       numpy \
+      office365-rest-python-client \
       openblas \
       orc \
       pandas \
@@ -74,6 +75,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       pytables \
       python \
       regex \
+      reportlab \
       requests \
       rtree \
       scikit-learn \
