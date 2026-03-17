@@ -110,13 +110,40 @@ SQL_QUERIES = QueryDict({
     #     correspondientes al periodo y banner indicados.
     # ---------------------------------------------------------------------
     'query_estado_anterior':
-"""
+    """
     SELECT *
     FROM `${path_table_lc}`
     WHERE monthid = '${last_month}'
       AND store_banner in ('${formato}')
 
-"""
+    """,
+
+    'query_membresia_unimarc':
+    """
+    WITH TEMP AS (
+        SELECT customer_key,fecha_inicio,fecha_fin,fecha_inactivacion,
+        CASE
+            WHEN fecha_inicio <= LAST_DAY(PARSE_DATE('%Y%m', '${last_month}'))
+                AND fecha_fin >= PARSE_DATE('%Y%m', '${last_month}')
+            THEN 1
+            ELSE 0
+        END AS aux
+        FROM `${proyecto}.ECOMMERCE.MARKET_DIAMOND_MEMBERSHIPS` A
+
+        INNER JOIN `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` B
+        ON A.rut = LTRIM(B.id_card_no,'0')
+    )
+
+    SELECT customer_key,fecha_inicio,fecha_fin,fecha_inactivacion
+    FROM (
+    SELECT *,
+    ROW_NUMBER() OVER (PARTITION BY customer_key ORDER BY fecha_inicio desc) rw
+    FROM TEMP
+    WHERE aux = 1
+    AND (fecha_inactivacion is null or FORMAT_DATE('%Y%m',fecha_inactivacion) > '${last_month}')
+    ) t
+    WHERE rw = 1
+    """
 })
 
 
@@ -754,14 +781,41 @@ def main() -> None:  # noqa: D103
     # Se agrega el formato y se sube a GCP
     seg_monthid['store_banner'] = formato
 
-    seg_monthid['membresia_unimarc'] = None
+    if last_month < '202408' or (last_month >= '202408' and formato == 'Alvi'):
+        seg_monthid['membresia_unimarc'] = None
 
-    uploadFrame(
-        seg_monthid[['customer_key','monthid','status','store_banner','membresia_unimarc']],
-        table_ddl_json_path=os.path.join('gbq_objects', 'ingest_ecommerce_lifecycle.json'),
-        project=proyecto,
-        gbq_client=gbq_client,
-        if_exists='append')
+        uploadFrame(
+            seg_monthid[['customer_key','monthid','status','store_banner','membresia_unimarc']],
+            table_ddl_json_path=os.path.join('gbq_objects', 'ingest_ecommerce_lifecycle.json'),
+            project=proyecto,
+            gbq_client=gbq_client,
+            if_exists='append')
+
+    if last_month >= '202408' and formato == 'Unimarc':
+        membresias_unimarc = readBigQuery(SQL_QUERIES['query_membresia_unimarc'].substitute(
+            proyecto = proyecto,
+            last_month = last_month
+            ),
+        user = usuario,
+        gbq_client = gbq_client
+        )
+
+        membresias_unimarc['membresia_unimarc'] = 'Si'
+
+        seg_monthid = seg_monthid.merge(
+        membresias_unimarc[['customer_key','membresia_unimarc']],
+        on='customer_key',
+        how='left'
+        )
+
+        seg_monthid['membresia_unimarc'] = seg_monthid['membresia_unimarc'].fillna('No')
+
+        uploadFrame(
+            seg_monthid[['customer_key','monthid','status','store_banner','membresia_unimarc']],
+            table_ddl_json_path=os.path.join('gbq_objects', 'ingest_ecommerce_lifecycle.json'),
+            project=proyecto,
+            gbq_client=gbq_client,
+            if_exists='append')
 
     logging.info(f'Se escribe la nueva particion de {monthid}')
 
