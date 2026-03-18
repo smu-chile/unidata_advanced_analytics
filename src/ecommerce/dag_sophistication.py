@@ -71,8 +71,8 @@ with DAG(**dag_args) as dag:
     computing_customer_segmentation_sophistication = []
 
     for store_banner in store_banners:
-        driver_cores = '8' if store_banner == 'Unimarc' else '4'
-        driver_memory = '35g' if store_banner == 'Unimarc' else '20g'
+        driver_cores = 8 if store_banner == 'Unimarc' else 4
+        driver_memory = 35 if store_banner == 'Unimarc' else 20
 
         ecommerce_sophistication = ExtendedDataprocCreateBatchOperator(
             task_id = 'ecommerce_segmentation_sophistication_'
