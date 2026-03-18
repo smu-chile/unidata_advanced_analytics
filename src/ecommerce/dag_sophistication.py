@@ -33,11 +33,11 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'ecommerce' # cambio a mismo nombre de la carpeta 
+PROJECT_NAME = 'ecommerce' # cambio a mismo nombre de la carpeta
 dag_args = {
     'dag_id': 'ecommerce_sophistication', # nombre lógico
     'schedule_interval': None,
-    'dagrun_timeout': None, 
+    'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
@@ -80,7 +80,7 @@ with DAG(**dag_args) as dag:
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 'scripts/'
-                'computing_customer_segmentation_sophistication_ecommerce.py' 
+                'computing_customer_segmentation_sophistication_ecommerce.py'
             ),
             dag_env_config=dag_env_config,
             docker_image_name=PROJECT_NAME,
@@ -96,7 +96,7 @@ with DAG(**dag_args) as dag:
 
             spark_executor_instances = 2,
             spark_executor_cores = 4,
-            spark_executor_memory = '4096m', 
+            spark_executor_memory = '4096m',
              # Driver config (dinámico por banner)
             spark_driver_cores = driver_cores,
             spark_driver_memory = driver_memory
