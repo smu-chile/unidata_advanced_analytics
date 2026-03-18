@@ -625,14 +625,14 @@ def main() -> None:  # noqa: D103
     usuario = 'sophistication_segmentation'
 
     # Proyecto en que se almacena
-    esquema = 'CONOCIMIENTO_CLIENTE'
-    tabla = 'CUSTOMER_SEGMENTATION_SOPHISTICATION'
+    esquema = 'ECOMMERCE'
+    tabla = 'ECOMMERCE_CUSTOMER_SEGMENTATION_SOPHISTICATION'
 
     # Ruta completa
     path_table = f'{proyecto}.{esquema}.{tabla}'
 
     # Nombre archivo Json
-    nombre_json = 'ingest_customer_segmentation_sophistication.json'
+    nombre_json = 'ecommerce_sophistication.json'
 
     #----------------------------------------------------------------------
     # ENDREGION
