@@ -14,7 +14,7 @@ from airflow.models.baseoperator import chain
 if platform.system() == 'Windows':
     from common.operators.dataproc_create_batch import (
         ExtendedDataprocCreateBatchOperator,
-    ) 
+    )
 elif platform.system() == 'Linux':
     ExtendedDataprocCreateBatchOperator = (importlib.import_module(
         'BRANCH_PLACEHOLDER.'
@@ -99,11 +99,10 @@ with DAG(**dag_args) as dag:
             spark_executor_memory = '4096m', 
              # Driver config (dinámico por banner)
             spark_driver_cores = driver_cores,
-            spark_driver_memory = driver_memory 
+            spark_driver_memory = driver_memory
 
         )
-        
-        computing_customer_segmentation_sophistication.append(ecommerce_sophistication)  
-    
+
+        computing_customer_segmentation_sophistication.append(ecommerce_sophistication)
+
     chain(computing_customer_segmentation_sophistication)
-    
