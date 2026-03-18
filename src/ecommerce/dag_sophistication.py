@@ -94,14 +94,6 @@ with DAG(**dag_args) as dag:
                 f'{PROJECT_NAME}/gbq_objects/'
             ],
 
-            runtime_config={
-                'properties': {
-                    'spark.executor.instances': '2',
-                    'spark.executor.cores': '4',
-                    'spark.executor.memory': '4096m'
-                }
-            },
-
              # Driver config (dinámico por banner)
             spark_driver_cores = driver_cores,
             spark_driver_memory = driver_memory
