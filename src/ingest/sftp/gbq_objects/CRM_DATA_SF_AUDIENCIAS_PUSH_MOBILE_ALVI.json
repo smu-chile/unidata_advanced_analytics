@@ -13,9 +13,5 @@
             "field_type": "DATE",
             "mode": "REQUIRED"
         }    
-    ],
-    "time_partitioning": {
-        "field": "FECHA_CARGA",
-        "type_": "DAY"
-    }
+    ]
 }

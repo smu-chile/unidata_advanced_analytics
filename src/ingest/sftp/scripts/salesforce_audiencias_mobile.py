@@ -53,7 +53,7 @@ def cleaning_func(df_file: pd.DataFrame, execution_date: str) -> pd.DataFrame:
     """
     logging.info('Before cleaning:', df_file)
 
-    df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y-%m-%d')
+    df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
     logging.info('After cleaning:', df_file)
 
 
