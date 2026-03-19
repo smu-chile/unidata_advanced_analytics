@@ -1,6 +1,6 @@
 {
-    "schema": "PRECIO_PROMOCIONES",
-    "table": "BALANCE_MATRIX",
+    "schema": "ECOMMERCE",
+    "table": "ECOMMERCE_BALANCE_MATRIX",
 
     "columns": [
         {

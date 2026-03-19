@@ -567,7 +567,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     # Usuario
-    usuario = 'product_sensibility'
+    usuario = 'ecommerce_product_sensibility'
 
     # Minimo de compras por categoria para considerar las compras de un
     # cliente en esa categora
