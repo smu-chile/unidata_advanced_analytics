@@ -111,18 +111,6 @@ def main() -> None:  # noqa: D103
          # Upload data
         logging.info('Uploading data from Dataframe')
 
-        project = gcp_project_id
-        schema = 'CRM'
-        table = 'CRM_DATA_SF_AUDIENCIAS_PUSH_MOBILE_'+str(formato_name)
-
-        gbq_extended.deleteFromTable(
-        table_ref=f'{project}.{schema}.{table}',
-        where_clause=f"""
-            FECHA_CARGA = '{execution_date}'
-        """,
-        gbq_client=gbq_client,
-        )
-
         gbq_extended.uploadFrame(
             df_file,
             table_ddl_json_path=os.path.join('gbq_objects', json),
