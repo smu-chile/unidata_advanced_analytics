@@ -101,7 +101,7 @@ def main() -> None:  # noqa: D103
         #get file
         logging.info(f'Getting file extract audiencias mobile push {formato.capitalize()}')
         csv_name = 'AUDIENCIAS_'+str(formato_name)+'_MOBILE_'+execution_date+'.csv'
-        ftp.get(f'/Import/{csv_name}',csv_name)
+        ftp.get(f'/Import/Reportes/AudienciasMobilePush/{csv_name}',csv_name)
         logging.info(F'Getting {csv_name} into Dataframe')
         df_file = pd.read_csv(f'{csv_name}', sep=',', encoding='UTF-16')
         df_file = cleaning_func(df_file, execution_date)
