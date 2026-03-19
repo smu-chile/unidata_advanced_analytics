@@ -112,13 +112,11 @@ def main() -> None:  # noqa: D103
         logging.info('Uploading data from Dataframe')
 
         project = gcp_project_id
-        schema = 'CRM'  # noqa: F841
-        table = 'CRM_DATA_SF_AUDIENCIAS_PUSH_MOBILE_'+str(formato_name)  # noqa: F841
-
-        table_ref = project.schema.table
+        schema = 'CRM'
+        table = 'CRM_DATA_SF_AUDIENCIAS_PUSH_MOBILE_'+str(formato_name)
 
         gbq_extended.deleteFromTable(
-        table_ref=table_ref,
+        table_ref=f'{project}.{schema}.{table}',
         where_clause=f"""
             FECHA_CARGA = '{execution_date}'
         """,
