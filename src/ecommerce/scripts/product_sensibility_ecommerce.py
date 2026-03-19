@@ -116,7 +116,7 @@ filtered_customers AS (
         SELECT
         CUSTOMER_KEY as CUSTOMER_KEY,
         CATEGORIA as CATEGORY_DESCRIPTION
-        FROM `${proyecto}.CONOCIMIENTO_CLIENTE.${tabla_sofisticacion}`
+        FROM `${proyecto}.ECOMMERCE.${tabla_sofisticacion}`
         WHERE store_banner = '${store_banner}'
         AND clasificacion_categoria in ('PRICE SENSITIVE')
         AND monthid = '${monthid_sofisticacion}'
@@ -580,8 +580,8 @@ def main() -> None:  # noqa: D103
     # superior que deben ser sus compras para entrar en outlier)
     factor_outliers = 10
 
-    esquema = 'ECOMMERCE'  #CAMBIO
-    tabla = 'ECOMMERCE_PRODUCT_SENSIBILITY' #CAMBIO
+    esquema = 'ECOMMERCE'
+    tabla = 'ECOMMERCE_PRODUCT_SENSIBILITY'
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -633,7 +633,7 @@ def main() -> None:  # noqa: D103
 
 
     # Taabla con info sofisticacion
-    tabla_sofisticacion = 'ECOMMERCE_CUSTOMER_SEGMENTATION_SOPHISTICATION' #CAMBIO
+    tabla_sofisticacion = 'ECOMMERCE_CUSTOMER_SEGMENTATION_SOPHISTICATION'
 
     # Se genera query definitiva
     query_principal = SQL_QUERIES['query_principal'].substitute(
@@ -669,7 +669,7 @@ def main() -> None:  # noqa: D103
     # REGION: Tabla familias
     #----------------------------------------------------------------------
 
-    esquema_pricing = 'PRECIO_PROMOCIONES'  #¿CAMBIAR A ECOMMERCE?
+    esquema_pricing = 'PRECIO_PROMOCIONES'
 
     query_genfix = SQL_QUERIES['query_genfix'].substitute(proyecto = proyecto,
                                                         esquema_pricing = esquema_pricing)
