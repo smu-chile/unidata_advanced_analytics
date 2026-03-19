@@ -1,0 +1,17 @@
+{
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_AUDIENCIAS_PUSH_MOBILE_UNIMARC",
+
+    "columns": [
+        {
+            "name": "SUBSCRIBER_KEY",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "REQUIRED"
+        }    
+    ]
+}
