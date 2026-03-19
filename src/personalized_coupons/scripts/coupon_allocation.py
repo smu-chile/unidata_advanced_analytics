@@ -1,6 +1,6 @@
 # Default
 import os
-import base64  # noqa: F401
+import base64
 import logging
 import argparse
 from logging import config
@@ -690,6 +690,14 @@ def main() -> None:
     customer_embeddings = customer_embeddings.rename(columns={
         'customer_key': 'customer_id'
     }).set_index('customer_id')
+
+    sku_embeddings['grupo_key'] = sku_embeddings['grupo_key'].apply(
+        base64.b64encode
+    ).str.decode('utf-8')
+
+    sku_embeddings['categoria_key'] = sku_embeddings['categoria_key'].apply(
+        base64.b64encode
+    ).str.decode('utf-8')
 
     # Create hierarchy df
     sku_hierarchy = sku_embeddings[[
