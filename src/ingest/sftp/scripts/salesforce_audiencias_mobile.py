@@ -116,7 +116,7 @@ def main() -> None:  # noqa: D103
             table_ddl_json_path=os.path.join('gbq_objects', json),
             project=gcp_project_id,
             gbq_client=gbq_client,
-            if_exists='append',
+            if_exists='replace',
         )
 
     #close sftp
