@@ -10,7 +10,6 @@ from logging import config
 
 import pandas as pd
 import paramiko
-import pendulum
 
 # pip
 from google.cloud import bigquery
@@ -67,9 +66,7 @@ def main() -> None:  # noqa: D103
     # Parse input variables
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
-    execution_date: pendulum.Date = pendulum.date(
-        *list(map(int, args['execution_date'].split('-')))
-    )
+    execution_date: str = args['execution_date']
     formatos = ['unimarc', 'alvi']
 
     # Set all clients
