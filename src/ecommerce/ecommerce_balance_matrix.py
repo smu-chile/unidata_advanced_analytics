@@ -75,7 +75,7 @@ with DAG(**dag_args) as dag:
     bm_tasks = []
 
     for store_banner in store_banners:
-        sensibility_tasks = ExtendedDataprocCreateBatchOperator(
+        sensibility_task = ExtendedDataprocCreateBatchOperator(
             task_id = 'ecommerce_sensibility'
             f'{store_banner.lower()}',
             python_script_path=(
@@ -101,7 +101,7 @@ with DAG(**dag_args) as dag:
 
         )
 
-        processed_data_tasks = ExtendedDataprocCreateBatchOperator(
+        processed_data_task = ExtendedDataprocCreateBatchOperator(
             task_id = 'processed_data_tasks'
             f'{store_banner.lower()}',
             python_script_path=(
@@ -127,7 +127,7 @@ with DAG(**dag_args) as dag:
 
         )
 
-        elasticity_tasks = ExtendedDataprocCreateBatchOperator(
+        elasticity_task = ExtendedDataprocCreateBatchOperator(
             task_id = 'elasticity_tasks'
             f'{store_banner.lower()}',
             python_script_path=(
@@ -153,7 +153,7 @@ with DAG(**dag_args) as dag:
 
         )
 
-        bm_tasks = ExtendedDataprocCreateBatchOperator(
+        bm_task = ExtendedDataprocCreateBatchOperator(
             task_id = 'bm_tasks'
             f'{store_banner.lower()}',
             python_script_path=(
@@ -179,9 +179,9 @@ with DAG(**dag_args) as dag:
 
         )
 
-        sensibility_tasks >> processed_data_tasks >> elasticity_tasks >> bm_tasks
+        sensibility_task >> processed_data_task >> elasticity_task >> bm_task
 
-        sensibility_tasks.append(sensibility_tasks)
-        processed_data_tasks.append(processed_data_tasks)
-        elasticity_tasks.append(elasticity_tasks)
-        bm_tasks.append(bm_tasks)
+        sensibility_tasks.append(sensibility_task)
+        processed_data_tasks.append(processed_data_task)
+        elasticity_tasks.append(elasticity_task)
+        bm_tasks.append(bm_task)
