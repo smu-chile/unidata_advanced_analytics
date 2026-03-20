@@ -890,7 +890,7 @@ def main() -> None:
                 'store_banner', 'ciclo', 'customer_key',
                 'offer_id', 'rank', 'campaign_type_id'
             ]].copy(),
-            table_ddl_json_path=os.path.join('gbq_objects', 'personalized_coupons.json'),
+            table_ddl_json_path=os.path.join('gbq_objects', 'tmp_personalized_coupons.json'),
             project=gcp_project,
             gbq_client=gbq_client,
             if_exists='append',
