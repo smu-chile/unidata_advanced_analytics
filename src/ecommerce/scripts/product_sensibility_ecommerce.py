@@ -387,11 +387,10 @@ FROM
 (
 SELECT
 *
-FROM
-`${proyecto}.CDA_VISTAS.VW_SALES_ITEM`
+FROM `${proyecto}.CDA_VISTAS.VW_SALES_ITEM`
 WHERE
-A.TRANSACTION_DATE >=     DATE('${fecha_inicial_str}')
-  AND A.TRANSACTION_DATE <= DATE('${fecha_final_str}')
+    TRANSACTION_DATE >=     DATE('${fecha_inicial_str}')
+    AND TRANSACTION_DATE <= DATE('${fecha_final_str}')
 ) A
 INNER JOIN distinct_products P
   ON A.EAN = P.EAN

@@ -76,7 +76,7 @@ with DAG(**dag_args) as dag:
 
     for store_banner in store_banners:
         sensibility_task = ExtendedDataprocCreateBatchOperator(
-            task_id = 'ecommerce_sensibility'
+            task_id = 'ecommerce_sensibility_'
             f'{store_banner.lower()}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
@@ -102,7 +102,7 @@ with DAG(**dag_args) as dag:
         )
 
         processed_data_task = ExtendedDataprocCreateBatchOperator(
-            task_id = 'processed_data_tasks'
+            task_id = 'processed_data_tasks_'
             f'{store_banner.lower()}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
@@ -128,7 +128,7 @@ with DAG(**dag_args) as dag:
         )
 
         elasticity_task = ExtendedDataprocCreateBatchOperator(
-            task_id = 'elasticity_tasks'
+            task_id = 'elasticity_tasks_'
             f'{store_banner.lower()}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
@@ -154,7 +154,7 @@ with DAG(**dag_args) as dag:
         )
 
         bm_task = ExtendedDataprocCreateBatchOperator(
-            task_id = 'bm_tasks'
+            task_id = 'bm_tasks_'
             f'{store_banner.lower()}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
