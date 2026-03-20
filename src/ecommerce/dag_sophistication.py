@@ -36,11 +36,11 @@ with open(
 PROJECT_NAME = 'ecommerce' # cambio a mismo nombre de la carpeta
 dag_args = {
     'dag_id': 'ecommerce_sophistication', # nombre lógico
-    'schedule_interval': None,
+    'schedule_interval': '0 9 2 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
-    'concurrency': 1,
+    'concurrency': 4,
     'tags': [PROJECT_NAME, 'abravom'], # cambio
     'default_args': {
         'project_id': dag_env_config['project_id'],
