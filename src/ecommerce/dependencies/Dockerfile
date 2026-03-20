@@ -69,6 +69,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       numpy \
       office365-rest-python-client \
       openblas \
+      openpyxl \
       orc \
       pandas \
       pyarrow \
@@ -82,11 +83,13 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       scipy \
       seaborn \
       sqlalchemy \
+      statsmodels \
       sympy \
       pendulum \
       awswrangler \
       pandas-gbq \
       virtualenv \
+      xlsxwriter \
     && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
 # (Optional) Install additional requirements
