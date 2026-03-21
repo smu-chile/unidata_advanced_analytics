@@ -884,13 +884,15 @@ def main() -> None:
 
         processed_rankings['store_banner'] = store_banner
 
+        processed_rankings = processed_rankings.drop_duplicates()
+
         # Upload
         uploadFrame(
             df=processed_rankings[[
                 'store_banner', 'ciclo', 'customer_key',
                 'offer_id', 'rank', 'campaign_type_id'
             ]].copy(),
-            table_ddl_json_path=os.path.join('gbq_objects', 'tmp_personalized_coupons.json'),
+            table_ddl_json_path=os.path.join('gbq_objects', 'personalized_coupons.json'),
             project=gcp_project,
             gbq_client=gbq_client,
             if_exists='append',
