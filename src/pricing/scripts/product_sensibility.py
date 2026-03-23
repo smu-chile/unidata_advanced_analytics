@@ -307,7 +307,7 @@ Select sku_padre,
         desc_padre,
         material,
         desc_material
-from ${proyecto}.${esquema_pricing}.TBL_PRICING_GENFIX
+from cl-bigdata-analytics-preprod.${esquema_pricing}.TBL_PRICING_GENFIX
 """,
 
 
