@@ -67,7 +67,7 @@ with DAG(**dag_args) as dag:
         python_script_path=(
             f'{PROJECT_NAME}/'
             'scripts/'
-            f'basket_topic_predict.py'
+            'basket_topic_predict.py'
         ),
         dag_env_config=dag_env_config,
         docker_image_name=PROJECT_NAME,
