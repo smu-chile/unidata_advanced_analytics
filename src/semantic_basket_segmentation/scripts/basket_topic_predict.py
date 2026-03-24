@@ -28,9 +28,11 @@ from common.gcp_extended.bigquery import (
 
 
 # -------------------------------------------------------------------------
-# Config
+#  Config
 # -------------------------------------------------------------------------
-# Parser
+# Logging config
+config.dictConfig(LOGGING_CONFIG)
+# Parser config
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--project_id', type=str,
