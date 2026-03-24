@@ -221,6 +221,9 @@ def main() -> None:  # noqa: D103
         gbq_client=gbq_client,
         if_exists='append')
 
+if __name__ == '__main__':
+    main()
+
 
 
 
