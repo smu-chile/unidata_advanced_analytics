@@ -131,7 +131,11 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     batch_size: int = args['batch_size']
 
+    monthid = (pd.to_datetime(execution_date[:8] + '01')
+        - pd.offsets.DateOffset(months=1)).strftime('%Y%m')
+
     logging.info(f'execution_date: {execution_date}')
+    logging.info(f'monthid: {monthid}')
 
     # Set gbq client for all subsequent queries
     gbq_client = Client()
@@ -213,11 +217,12 @@ def main() -> None:  # noqa: D103
             how='inner'
         )
 
+        topic_baskets['MONTHID'] = monthid
         topic_baskets['FECHA_CARGA'] = execution_date
 
         uploadFrame(
         topic_baskets[['CUSTOMER_KEY','MARKET_BASKET_KEY','TRANSACTION_DATE',
-                    0,1,2,3,4,5,'FECHA_CARGA']],
+                    0,1,2,3,4,5,'MONTHID','FECHA_CARGA']],
         table_ddl_json_path=os.path.join('gbq_objects','semantic_basket_topic.json'),
         project=gcp_project,
         gbq_client=gbq_client,

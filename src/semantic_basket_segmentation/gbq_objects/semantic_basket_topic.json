@@ -58,6 +58,12 @@
             "description": ""
         },
         {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
             "name": "FECHA_CARGA",
             "field_type": "DATE",
             "mode": "REQUIRED",
