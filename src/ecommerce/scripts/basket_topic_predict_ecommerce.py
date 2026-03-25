@@ -178,7 +178,7 @@ def main() -> None:  # noqa: D103
     )
 
     deleteFromTable(
-    table_ref='cl-bigdata-analytics-preprod.ECOMMERCE.SEMANTIC_BASKET_TOPIC',
+    table_ref='cl-bigdata-analytics-preprod.ECOMMERCE.ECOMMERCE_SEMANTIC_BASKET_TOPIC',
     where_clause=f"FECHA_CARGA = '{execution_date}'",
     gbq_client=gbq_client,
     )

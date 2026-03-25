@@ -69,7 +69,7 @@ SQL_QUERIES = QueryDict({
         AVG(TOPIC_3) AS TOPIC_3,
         AVG(TOPIC_4) AS TOPIC_4,
         AVG(TOPIC_5) AS TOPIC_5
-    FROM ${gcp_project}.ECOMMERCE.SEMANTIC_BASKET_TOPIC
+    FROM ${gcp_project}.ECOMMERCE.ECOMMERCE_SEMANTIC_BASKET_TOPIC
     WHERE
         MONTHID >= '${partition_start}'
         AND MONTHID <= '${partition_end}'
@@ -199,7 +199,7 @@ def main() -> None:  # noqa: D103
 
     # Remove past run if needed
     deleteFromTable(
-    table_ref='cl-bigdata-analytics-preprod.ECOMMERCE.SEMANTIC_CUSTOMER_TOPIC',
+    table_ref='cl-bigdata-analytics-preprod.ECOMMERCE.ECOMMERCE_SEMANTIC_CUSTOMER_TOPIC',
     where_clause=f"FECHA_CARGA = '{execution_date}'",
     gbq_client=gbq_client,
     )

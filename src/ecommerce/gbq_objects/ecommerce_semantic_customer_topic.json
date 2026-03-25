@@ -1,6 +1,6 @@
 {
     "schema": "ECOMMERCE",
-    "table": "SEMANTIC_CUSTOMER_TOPIC",
+    "table": "ECOMMERCE_SEMANTIC_CUSTOMER_TOPIC",
 
     "columns": [
         {
