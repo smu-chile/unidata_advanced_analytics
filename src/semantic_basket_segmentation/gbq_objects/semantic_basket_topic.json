@@ -10,8 +10,8 @@
             "description": ""
         },
         {
-            "name": "MARKET_BASKET_KEY",
-            "field_type": "BYTES",
+            "name": "TXN_KEY",
+            "field_type": "STRING",
             "mode": "REQUIRED",
             "description": ""
         },

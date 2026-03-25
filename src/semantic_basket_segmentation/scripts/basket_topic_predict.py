@@ -57,7 +57,7 @@ SQL_QUERIES = QueryDict({
     """
     SELECT
         a.CUSTOMER_KEY,
-        c.MARKET_BASKET_KEY,
+        c.TXN_KEY,
         MAX(a.TRANSACTION_DATE) TRANSACTION_DATE,
         array_agg(distinct SUB_CATEGORY_DESCRIPTION) as SUB_CATEGORY_DESCRIPTION
 
@@ -79,7 +79,7 @@ SQL_QUERIES = QueryDict({
             TRANSACTION_DATE >=  CAST(FORMAT_DATE('%Y-%m-%d', DATE_SUB(CAST('${transaction_date}' AS DATE), INTERVAL 1 MONTH)) AS DATE)
             AND TRANSACTION_DATE < CAST(FORMAT_DATE('%Y-%m-%d', CAST('${transaction_date}' AS DATE)) AS DATE)
     ) c
-    ON a.MARKET_BASKET_KEY = c.MARKET_BASKET_KEY
+    ON a.TXN_KEY = c.TXN_KEY
 
     INNER JOIN (
         SELECT
@@ -211,7 +211,7 @@ def main() -> None:  # noqa: D103
         # Add the customer_id, idx, basket_id and transaction_date cols
         ).join(
             semantic_baskets_batch[
-                ['CUSTOMER_KEY', 'MARKET_BASKET_KEY', 'TRANSACTION_DATE']
+                ['CUSTOMER_KEY', 'TXN_KEY', 'TRANSACTION_DATE']
             ],
             how='inner'
         )
@@ -220,7 +220,7 @@ def main() -> None:  # noqa: D103
         topic_baskets['FECHA_CARGA'] = execution_date
 
         uploadFrame(
-        topic_baskets[['CUSTOMER_KEY','MARKET_BASKET_KEY','TRANSACTION_DATE',
+        topic_baskets[['CUSTOMER_KEY','TXN_KEY','TRANSACTION_DATE',
                     0,1,2,3,4,5,'MONTHID','FECHA_CARGA']],
         table_ddl_json_path=os.path.join('gbq_objects','semantic_basket_topic.json'),
         project=gcp_project,
