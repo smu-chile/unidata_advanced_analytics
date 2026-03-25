@@ -246,7 +246,7 @@ def main() -> None:  # noqa: D103
         uploadFrame(
         mean_topic_baskets_batch[['CUSTOMER_KEY','MAIN_TOPIC',
                                 'MONTHID','FECHA_CARGA']],
-        table_ddl_json_path=os.path.join('gbq_objects','semantic_customer_topic.json'),
+        table_ddl_json_path=os.path.join('gbq_objects','ecommerce_semantic_customer_topic.json'),
         project=gcp_project,
         gbq_client=gbq_client,
         if_exists='append'
