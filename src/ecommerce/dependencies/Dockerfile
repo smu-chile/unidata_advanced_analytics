@@ -87,6 +87,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       sympy \
       pendulum \
       awswrangler \
+      gensim \
       pandas-gbq \
       virtualenv \
       xlsxwriter \
@@ -95,6 +96,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
 # (Optional) Install additional requirements
 # COPY requirements.txt .
 # RUN pip install --no-cache-dir -r requirements.txt
+RUN ${CONDA_HOME}/bin/python -m pip install gensim==4.4.0 --no-input
 
 # Set timezone
 ENV TZ="America/Santiago"

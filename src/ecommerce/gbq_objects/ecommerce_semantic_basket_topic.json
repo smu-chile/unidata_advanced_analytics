@@ -1,0 +1,80 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "SEMANTIC_BASKET_TOPIC",
+
+    "columns": [
+        {
+            "name": "CUSTOMER_KEY",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "MARKET_BASKET_KEY",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TRANSACTION_DATE",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TOPIC_0",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TOPIC_1",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TOPIC_2",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TOPIC_3",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TOPIC_4",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TOPIC_5",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+        
+    ],
+
+    "time_partitioning": {
+    "field": "FECHA_CARGA",
+    "type_": "DAY"
+    }
+
+}
