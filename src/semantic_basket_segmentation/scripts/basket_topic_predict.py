@@ -124,7 +124,7 @@ def download_blob(bucket_name, source_blob_name, destination_file_name):
 # Main function
 # -------------------------------------------------------------------------
 def main() -> None:  # noqa: D103
-    usuario = 'basket_topic_predict'
+    usuario = 'semantic_basket_segmentation'
     # parse input variables
     args = vars(parser.parse_args())
     gcp_project: str = args['project_id']
