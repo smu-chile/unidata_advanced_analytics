@@ -83,4 +83,28 @@ with DAG(**dag_args) as dag:
         ],
     )
 
+    semantic_customer_topic = ExtendedDataprocCreateBatchOperator(
+        task_id = 'customer_topic_predict',
+        python_script_path=(
+            f'{PROJECT_NAME}/'
+            'scripts/'
+            'customer_topic_predict.py'
+        ),
+        dag_env_config=dag_env_config,
+        docker_image_name=PROJECT_NAME,
+        pyspark_batch_args=[
+            '--project_id', dag_env_config['project_id'],
+            '--execution_date', EXECUTION_DATE,
+            '--rollback_months', "{{ dag_run.conf.get('rollback_months', 12) }}",
+            '--batch_size', "{{ dag_run.conf.get('batch_size', 1000000) }}",
+
+        ],
+        include_paths=[
+            'common/',
+            f'{PROJECT_NAME}/gbq_objects/'
+        ],
+    )
+
+    semantic_basket_topic >> semantic_customer_topic
+
 

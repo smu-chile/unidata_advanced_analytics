@@ -152,8 +152,7 @@ def main() -> None:  # noqa: D103
         'LDA_Topics_6.model',
         'LDA_Topics_6.model.id2word',
         'LDA_Topics_6.model.state',
-        'LDA_Topics_6.model.expElogbeta.npy',
-        'kmeans_Topicos_7C_20230719.pkl'
+        'LDA_Topics_6.model.expElogbeta.npy'
     ]
 
     for file_name in files_to_download:
