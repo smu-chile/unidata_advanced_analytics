@@ -288,14 +288,7 @@ SQL_QUERIES = QueryDict({
         ) B
         USING (EAN)
 
-        WHERE
-            A.store_banner = '${store_banner}'
-            AND A.customer_key IN (
-                FROM_BASE64('G3eG4XSovD/2EsL5eAP2wQ=='),
-                FROM_BASE64('eomAD4slCiWWkUDz/zwwLQ=='),
-                FROM_BASE64('5lvjTzd2D7/4Hzx9OOb3fg=='),
-                FROM_BASE64('zSQdiN4QvKm39gwe5zqxUA==')
-                )
+        WHERE A.store_banner = '${store_banner}'
     ),
 
     BASE_USUALS_2 AS (
@@ -440,28 +433,51 @@ SQL_QUERIES = QueryDict({
     ),
 
     USUALS AS (
+    SELECT
+        date,
+        customer_key,
+        CAST(ean AS INT) AS ean_aux,
+        relevance,
+        store_banner
+    FROM BASE_USUALS_5
+
+    UNION ALL
+
+    SELECT
+        date,
+        customer_key,
+        CAST(EAN_MP AS INT) AS ean_aux,
+        relevance + 0.5 AS relevance,
+        store_banner
+    FROM BASE_USUALS_5
+    WHERE
+        MARCA_PROPIA IS NULL
+        AND TIENE_MARCA_PROPIA = 'SI'
+        AND EAN_MP IS NOT NULL
+        AND aux_mp = 0
+    ),
+
+    USUALS_AUX AS (
+        SELECT *,
+            IF(relevance != FLOOR(relevance), 1, 0) AS marca_propia
+        FROM USUALS
+    ),
+
+    USUALS_FILTRADO AS (
+        SELECT *,
+            IF(marca_propia = 1,ROW_NUMBER() OVER(PARTITION BY customer_key,marca_propia ORDER BY relevance ASC), 1) AS rw
+        FROM USUALS_AUX
+    ),
+
+    USUALS_ADJ AS (
         SELECT
             date,
             customer_key,
-            CAST(ean AS INT) AS ean_aux,
+            ean_aux,
             relevance,
             store_banner
-        FROM BASE_USUALS_5
-
-        UNION ALL
-
-        SELECT
-            date,
-            customer_key,
-            CAST(EAN_MP AS INT) AS ean_aux,
-            relevance + 0.5 AS relevance,
-            store_banner
-        FROM BASE_USUALS_5
-        WHERE
-            MARCA_PROPIA IS NULL
-            AND TIENE_MARCA_PROPIA = 'SI'
-            AND EAN_MP IS NOT NULL
-            AND aux_mp = 0
+        FROM USUALS_FILTRADO
+        WHERE (marca_propia = 0 OR (marca_propia = 1 AND rw <= 5))
     )
 
     SELECT
@@ -470,18 +486,7 @@ SQL_QUERIES = QueryDict({
         ean_aux as ean,
         DENSE_RANK() OVER (PARTITION BY date,customer_key ORDER BY relevance ASC) AS relevance,
         store_banner
-    FROM USUALS
-
-    UNION ALL
-
-    SELECT *
-    FROM `${gcp_project}.TMP.TMP_BASE_MY_USUALS`
-    WHERE customer_key NOT IN (
-        FROM_BASE64('G3eG4XSovD/2EsL5eAP2wQ=='),
-        FROM_BASE64('eomAD4slCiWWkUDz/zwwLQ=='),
-        FROM_BASE64('5lvjTzd2D7/4Hzx9OOb3fg=='),
-        FROM_BASE64('zSQdiN4QvKm39gwe5zqxUA==')
-    )
+    FROM USUALS_ADJ
     """,# noqa: E501
 
     'usuals_partition':
