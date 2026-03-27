@@ -487,7 +487,6 @@ SQL_QUERIES = QueryDict({
         DENSE_RANK() OVER (PARTITION BY date,customer_key ORDER BY relevance ASC) AS relevance,
         store_banner
     FROM USUALS_ADJ
-    ORDER BY CUSTOMER_KEY,RELEVANCE ASC
     """,# noqa: E501
 
     'usuals_partition':
