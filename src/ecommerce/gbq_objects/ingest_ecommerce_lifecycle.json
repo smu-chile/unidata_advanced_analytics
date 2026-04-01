@@ -1,0 +1,41 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "ECOMMERCE_LIFECYCLE_STATUS",
+
+    "columns": [
+        {
+            "name": "CUSTOMER_KEY",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": "Identificador único del cliente en formato encriptado o codificado"
+        },
+        {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Periodo de referencia en formato YYYYMM (año y mes)."
+        },
+        {
+            "name": "STATUS",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Estado de ciclo de vida del cliente"
+        },
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece el cliente"
+        },
+        {
+            "name": "MEMBRESIA_UNIMARC",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Si el cliente tiene activa la membresia unimarc en el periodo correspondiente"
+        }
+
+        
+    ],
+
+    "clustering_fields": ["MONTHID", "STORE_BANNER"]
+}
