@@ -35,7 +35,7 @@ with open(
 PROJECT_NAME = 'ecommerce'
 dag_args = {
     'dag_id': 'ecommerce_semantic_basket_segmentation',
-    'schedule_interval': '0 10 1 * *',
+    'schedule_interval': '0 14 1 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,

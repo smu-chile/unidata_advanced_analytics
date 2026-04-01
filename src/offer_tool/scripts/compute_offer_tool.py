@@ -18,7 +18,12 @@ import common.gcp_extended.bigquery as gbq_extended  # noqa: F401
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.gcp_extended.bigquery import uploadFrame, readBigQuery, createTableAsSelect
+from common.gcp_extended.bigquery import (
+    uploadFrame,
+    readBigQuery,
+    deleteFromTable,
+    createTableAsSelect,
+)
 
 
 # -------------------------------------------------------------------------
@@ -1327,6 +1332,12 @@ def main() -> None:
     ranking.columns = ranking.columns.str.upper()
 
     if store_banner == 'Unimarc':
+        deleteFromTable(
+            table_ref='cl-bigdata-analytics-preprod.ML_LAB.DS_OFFER_TOOL_UNIMARC',
+            where_clause=f"monthid = '{monthid}'",
+            gbq_client=gbq_client,
+        )
+
         uploadFrame(
             ranking,
             table_ddl_json_path=os.path.join('gbq_objects','ds_offer_tool_unimarc.json'),
@@ -1336,6 +1347,12 @@ def main() -> None:
         )
 
     elif store_banner == 'Alvi':
+        deleteFromTable(
+            table_ref='cl-bigdata-analytics-preprod.ML_LAB.DS_OFFER_TOOL_ALVI',
+            where_clause=f"monthid = '{monthid}'",
+            gbq_client=gbq_client,
+        )
+
         uploadFrame(
             ranking,
             table_ddl_json_path=os.path.join('gbq_objects','ds_offer_tool_alvi.json'),
@@ -1345,6 +1362,12 @@ def main() -> None:
     )
 
     elif store_banner == 'Mayorista':
+        deleteFromTable(
+            table_ref='cl-bigdata-analytics-preprod.ML_LAB.DS_OFFER_TOOL_M10',
+            where_clause=f"monthid = '{monthid}'",
+            gbq_client=gbq_client,
+        )
+
         uploadFrame(
             ranking,
             table_ddl_json_path=os.path.join('gbq_objects','ds_offer_tool_m10.json'),
@@ -1354,6 +1377,12 @@ def main() -> None:
     )
 
     elif store_banner == 'Super 10':
+        deleteFromTable(
+            table_ref='cl-bigdata-analytics-preprod.ML_LAB.DS_OFFER_TOOL_S10',
+            where_clause=f"monthid = '{monthid}'",
+            gbq_client=gbq_client,
+        )
+
         uploadFrame(
             ranking,
             table_ddl_json_path=os.path.join('gbq_objects','ds_offer_tool_s10.json'),

@@ -37,7 +37,7 @@ store_banner_list = ['Unimarc', 'Alvi', 'Mayorista', 'Super 10']
 PROJECT_NAME = 'offer_tool'
 dag_args = {
     'dag_id': 'offer_tool',
-    'schedule_interval': '0 7 1 * *',
+    'schedule_interval': '0 16 1 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
@@ -62,7 +62,7 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date',dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
+    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date',dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
     offer_tool_tasks = []
 
