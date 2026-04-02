@@ -36,7 +36,7 @@ with open(
 PROJECT_NAME = 'ecommerce' # cambio a mismo nombre de la carpeta
 dag_args = {
     'dag_id': 'ecommerce_sophistication', # nombre lógico
-    'schedule_interval': '0 9 2 * *',
+    'schedule_interval': '0 10 2 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
