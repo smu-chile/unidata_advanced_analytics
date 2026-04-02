@@ -36,7 +36,7 @@ with open(
 PROJECT_NAME = 'ecommerce'
 dag_args = {
     'dag_id': 'ecommerce_lifecycle_status',
-    'schedule_interval': '0 0 2 * *',
+    'schedule_interval': '0 1 2 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
