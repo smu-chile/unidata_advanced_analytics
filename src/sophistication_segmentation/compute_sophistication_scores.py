@@ -83,6 +83,10 @@ with DAG(**dag_args) as dag:
                 'common/',
                 f'{PROJECT_NAME}/gbq_objects/'
             ],
+
+            # Driver config (dinámico por banner)
+            spark_driver_cores = 8 if store_banner == 'Unimarc' else 4,
+            spark_driver_memory = 35 if store_banner == 'Unimarc' else 20
         )
 
         for store_banner in [
@@ -114,6 +118,10 @@ with DAG(**dag_args) as dag:
                 'common/',
                 f'{PROJECT_NAME}/gbq_objects/'
             ],
+
+            # Driver config (dinámico por banner)
+            spark_driver_cores = 8 if store_banner == 'Unimarc' else 4,
+            spark_driver_memory = 35 if store_banner == 'Unimarc' else 20
         )
 
         for store_banner in [
@@ -125,4 +133,4 @@ with DAG(**dag_args) as dag:
     ]
 
 
-chain([*brand_compute_score_tasks, *customer_compute_score_tasks])
+chain([customer_compute_score_tasks,brand_compute_score_tasks])
