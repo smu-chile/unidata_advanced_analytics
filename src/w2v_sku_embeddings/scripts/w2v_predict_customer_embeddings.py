@@ -122,8 +122,10 @@ SQL_QUERIES = QueryDict({
         GROUP BY 1,2,3
     )
 
-    INNER JOIN ${gcp_project}.ML_LAB.W2V_SKU_EMBEDDINGS
+    INNER JOIN ${gcp_project}.ML_LAB.W2V_SKU_EMBEDDINGS sku_emb
     USING (sku)
+    WHERE sku_emb.date = DATE('${execution_date}')
+    and sku_emb.store_banner = '${store_banner}'
 
     GROUP BY 1,2,3
     """)  # noqa: E501
