@@ -109,7 +109,7 @@ SQL_QUERIES = QueryDict({
                 hm_pu_ppum * (total_category_value / (SUM(total_category_value) OVER (PARTITION BY customer_key))) AS ppum_pu_score
             FROM ${gcp_project}.ML_LAB.CUSTOMER_SOPHISTICATION_SCORE
             WHERE date = DATE('${execution_date}')
-            AND store_banner = '${store_banner}' 
+            AND store_banner = '${store_banner}'
         )
         USING (customer_key, category_description)
 
