@@ -52,7 +52,7 @@ SQL_QUERIES = QueryDict({
     'customer_embeddings': (
     dedent("""
     SELECT
-        DATE('${execution_date}') as date,
+        date,
         store_banner,
         customer_key,
     """)
