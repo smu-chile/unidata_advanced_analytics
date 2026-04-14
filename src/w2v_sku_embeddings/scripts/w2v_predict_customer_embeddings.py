@@ -62,31 +62,31 @@ SQL_QUERIES = QueryDict({
         ])
     + dedent("""
     FROM (
-        SELECT
-            customer_key,
-            CAST(sku_product AS BIGINT) AS sku,
-            ppum_pu_score,
-            COUNT(DISTINCT market_basket_key) AS frecuencia,
-            MIN(
-                LOG(2,
-                    -- Must add bc starts from 0
-                    2 + DATE_DIFF(
-                        DATE('${execution_date}'),
-                        transaction_date,
-                        ISOWEEK
+            SELECT
+                customer_key,
+                CAST(sku_product AS BIGINT) AS sku,
+                ppum_pu_score,
+                COUNT(DISTINCT market_basket_key) AS frecuencia,
+                MIN(
+                    LOG(2,
+                        -- Must add bc starts from 0
+                        2 + DATE_DIFF(
+                            DATE('${execution_date}'),
+                            transaction_date,
+                            ISOWEEK
+                        )
                     )
-                )
-            ) AS backwards_date_week_diff
+                ) AS backwards_date_week_diff
 
-        FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
+            FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
 
-        INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` dim_store
+        INNERS JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` dim_store
         USING (store_id)
 
         INNER JOIN (
             SELECT
                 sku_product,
-                MAX(grupo_dsc) AS category_description
+                MAX(cat_dsc) AS category_description
             FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
             GROUP BY 1
             HAVING MAX(neg_dsc) NOT IN ('SERVICIOS COMERCIALES', 'NO RETAIL')
@@ -108,6 +108,8 @@ SQL_QUERIES = QueryDict({
                 category_description,
                 hm_pu_ppum * (total_category_value / (SUM(total_category_value) OVER (PARTITION BY customer_key))) AS ppum_pu_score
             FROM ${gcp_project}.ML_LAB.CUSTOMER_SOPHISTICATION_SCORE
+            WHERE date = DATE('${execution_date}')
+            AND store_banner = '${store_banner}' 
         )
         USING (customer_key, category_description)
 
@@ -184,3 +186,5 @@ def main() -> None:  # noqa: D103
 
 if __name__ == '__main__':
     main()
+
+
