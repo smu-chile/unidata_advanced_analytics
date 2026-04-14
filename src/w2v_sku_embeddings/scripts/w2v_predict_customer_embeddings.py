@@ -116,7 +116,7 @@ SQL_QUERIES = QueryDict({
         WHERE sales_item.transaction_date >= DATE('${execution_date}') - INTERVAL ${month_interval} MONTH
             AND sales_item.transaction_date < DATE('${execution_date}')
             AND store_banner = '${store_banner}'
-            AND transaction_type IN ('TN','TF','BX','B','BE','F')
+            AND transaction_type IN ('TN','TF','BX','B','BE','F','NC')
             AND itm_txn_fcn_tp_dsc = 'V'
             AND from_other_ecommerce IS NULL
         GROUP BY 1,2,3
