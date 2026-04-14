@@ -32,7 +32,7 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-store_banner_list = ['Unimarc','Mayorista','Super 10']
+store_banner_list = ['Unimarc','Super 10']
 
 PROJECT_NAME = 'evaluate_promotions'
 dag_args = {
@@ -87,12 +87,7 @@ with DAG(**dag_args) as dag:
     pull_tasks = []
 
     for store_banner in store_banner_list:
-        if store_banner == 'Mayorista':
-            lower_banner = 'm10'
-        elif store_banner == 'Super 10':
-            lower_banner = 's10'
-        else:
-            lower_banner = store_banner.lower()
+        lower_banner = 's10' if store_banner == 'Super 10' else store_banner.lower()
 
         main_promotions_task = ExtendedDataprocCreateBatchOperator(
             task_id = f'get_main_promotions_{lower_banner}',
