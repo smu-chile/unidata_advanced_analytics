@@ -80,7 +80,7 @@ SQL_QUERIES = QueryDict({
 
             FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
 
-        INNERS JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` dim_store
+        INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` dim_store
         USING (store_id)
 
         INNER JOIN (
