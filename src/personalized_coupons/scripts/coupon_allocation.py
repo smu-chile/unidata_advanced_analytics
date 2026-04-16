@@ -151,7 +151,7 @@ SQL_QUERIES = QueryDict({
     # for products with valid offer_id
     """
     SELECT *
-    FROM ${gcp_project}.ML_LAB.W2V_SKU_EMBEDDINGS
+    FROM ${gcp_project}.TMP.W2V_SKU_EMBEDDINGS
 
     INNER JOIN (
         SELECT
