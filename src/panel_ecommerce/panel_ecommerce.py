@@ -36,7 +36,7 @@ with open(
 PROJECT_NAME = 'panel_ecommerce'
 dag_args = {
     'dag_id': 'panel_ecommerce_tables',
-    'schedule_interval': '0 7 * * +',
+    'schedule_interval': '0 7 * * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
@@ -63,11 +63,11 @@ dag_args = {
 with DAG(**dag_args) as dag:
     omnicanal_task = [
         ExtendedDataprocCreateBatchOperator(
-            task_id='transacciones_omnicanal',
+            task_id='panel_ecommerce',
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 'scripts/'
-                'transacciones_omnicanal.py'
+                'panel_ecommerce.py'
             ),
             dag_env_config=dag_env_config,
             docker_image_name=PROJECT_NAME,

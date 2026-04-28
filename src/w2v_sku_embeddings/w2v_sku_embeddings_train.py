@@ -37,7 +37,7 @@ with open(
 PROJECT_NAME = 'w2v_sku_embeddings'
 dag_args = {
     'dag_id': 'w2v_sku_embeddings_train',
-    'schedule_interval': '30 0 1 * *',
+    'schedule_interval': '30 1 1 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,

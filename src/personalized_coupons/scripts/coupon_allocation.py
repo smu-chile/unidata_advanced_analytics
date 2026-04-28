@@ -543,6 +543,19 @@ def reorganizeAllocations(
     ]).sort_values(by=[
         'customer_key', 'campaign_type_id'
     ])
+
+    # delete duplicates in customer_key and offer_id
+    processed_rankings = processed_rankings.drop_duplicates(
+        subset=['customer_key', 'offer_id'],
+        keep='first'
+    )
+
+    # ranking
+    processed_rankings['rank'] = (
+    processed_rankings.groupby(['customer_key', 'campaign_type_id'])
+    .cumcount() + 1
+    )
+
     # Get max_coupons per customer
     if 'Socio VIP' not in processed_rankings['nivel'].to_numpy():
         return processed_rankings.groupby('customer_key').head(max_coupons)

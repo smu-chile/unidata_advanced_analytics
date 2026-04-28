@@ -144,6 +144,7 @@ def main() -> None:  # noqa: D103
     execution_date = args['execution_date']
     store_banner = args['store_banner']
     month_interval = args['month_interval']
+
     logging.info(f'Execution date: {execution_date}')
     logging.info(f'Store banner: {store_banner}')
     logging.info(f'Month interval: {month_interval}')
