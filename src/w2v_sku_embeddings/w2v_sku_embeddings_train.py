@@ -37,17 +37,17 @@ with open(
 PROJECT_NAME = 'w2v_sku_embeddings'
 dag_args = {
     'dag_id': 'w2v_sku_embeddings_train',
-    'schedule_interval': '30 0 1 * *',
+    'schedule_interval': '30 1 1 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 4,
-    'tags': [PROJECT_NAME, 'abravom'],
+    'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
-        'email': ['abravom@unidata.cl'],
+        'email': ['ecastrot@unidata.cl'],
         'start_date': pendulum.datetime(
             2025, 5, 22,
             tz=pendulum.timezone('America/Santiago')

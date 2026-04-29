@@ -62,23 +62,23 @@ SQL_QUERIES = QueryDict({
         ])
     + dedent("""
     FROM (
-        SELECT
-            customer_key,
-            CAST(sku_product AS BIGINT) AS sku,
-            ppum_pu_score,
-            COUNT(DISTINCT market_basket_key) AS frecuencia,
-            MIN(
-                LOG(2,
-                    -- Must add bc starts from 0
-                    2 + DATE_DIFF(
-                        DATE('${execution_date}'),
-                        transaction_date,
-                        ISOWEEK
+            SELECT
+                customer_key,
+                CAST(sku_product AS BIGINT) AS sku,
+                ppum_pu_score,
+                COUNT(DISTINCT market_basket_key) AS frecuencia,
+                MIN(
+                    LOG(2,
+                        -- Must add bc starts from 0
+                        2 + DATE_DIFF(
+                            DATE('${execution_date}'),
+                            transaction_date,
+                            ISOWEEK
+                        )
                     )
-                )
-            ) AS backwards_date_week_diff
+                ) AS backwards_date_week_diff
 
-        FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
+            FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
 
         INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` dim_store
         USING (store_id)
@@ -86,7 +86,7 @@ SQL_QUERIES = QueryDict({
         INNER JOIN (
             SELECT
                 sku_product,
-                MAX(grupo_dsc) AS category_description
+                MAX(cat_dsc) AS category_description
             FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
             GROUP BY 1
             HAVING MAX(neg_dsc) NOT IN ('SERVICIOS COMERCIALES', 'NO RETAIL')
@@ -108,20 +108,24 @@ SQL_QUERIES = QueryDict({
                 category_description,
                 hm_pu_ppum * (total_category_value / (SUM(total_category_value) OVER (PARTITION BY customer_key))) AS ppum_pu_score
             FROM ${gcp_project}.ML_LAB.CUSTOMER_SOPHISTICATION_SCORE
+            WHERE date = DATE('${execution_date}')
+            AND store_banner = '${store_banner}'
         )
         USING (customer_key, category_description)
 
         WHERE sales_item.transaction_date >= DATE('${execution_date}') - INTERVAL ${month_interval} MONTH
             AND sales_item.transaction_date < DATE('${execution_date}')
             AND store_banner = '${store_banner}'
-            AND transaction_type IN ('TN','TF','BX','B','BE','F')
+            AND transaction_type IN ('TN','TF','BX','B','BE','F','NC')
             AND itm_txn_fcn_tp_dsc = 'V'
             AND from_other_ecommerce IS NULL
         GROUP BY 1,2,3
     )
 
-    INNER JOIN ${gcp_project}.ML_LAB.W2V_SKU_EMBEDDINGS
+    INNER JOIN ${gcp_project}.ML_LAB.W2V_SKU_EMBEDDINGS sku_emb
     USING (sku)
+    WHERE sku_emb.date = DATE('${execution_date}')
+    and sku_emb.store_banner = '${store_banner}'
 
     GROUP BY 1,2,3
     """)  # noqa: E501
@@ -140,6 +144,7 @@ def main() -> None:  # noqa: D103
     execution_date = args['execution_date']
     store_banner = args['store_banner']
     month_interval = args['month_interval']
+
     logging.info(f'Execution date: {execution_date}')
     logging.info(f'Store banner: {store_banner}')
     logging.info(f'Month interval: {month_interval}')
@@ -184,3 +189,5 @@ def main() -> None:  # noqa: D103
 
 if __name__ == '__main__':
     main()
+
+
