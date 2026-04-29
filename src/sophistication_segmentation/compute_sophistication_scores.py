@@ -42,12 +42,12 @@ dag_args = {
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 4,
-    'tags': [PROJECT_NAME, 'abravom'],
+    'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
-        'email': ['abravom@unidata.cl'],
+        'email': ['ecastrot@unidata.cl'],
         'start_date': pendulum.datetime(
             2023, 12, 5,
             tz=pendulum.timezone('America/Santiago')
@@ -83,6 +83,10 @@ with DAG(**dag_args) as dag:
                 'common/',
                 f'{PROJECT_NAME}/gbq_objects/'
             ],
+
+            # Driver config (dinámico por banner)
+            spark_driver_cores = 8 if store_banner == 'Unimarc' else 4,
+            spark_driver_memory = 35 if store_banner == 'Unimarc' else 20
         )
 
         for store_banner in [
@@ -114,6 +118,10 @@ with DAG(**dag_args) as dag:
                 'common/',
                 f'{PROJECT_NAME}/gbq_objects/'
             ],
+
+            # Driver config (dinámico por banner)
+            spark_driver_cores = 8 if store_banner == 'Unimarc' else 4,
+            spark_driver_memory = 35 if store_banner == 'Unimarc' else 20
         )
 
         for store_banner in [
@@ -125,4 +133,4 @@ with DAG(**dag_args) as dag:
     ]
 
 
-chain([*brand_compute_score_tasks, *customer_compute_score_tasks])
+chain(customer_compute_score_tasks,brand_compute_score_tasks)
