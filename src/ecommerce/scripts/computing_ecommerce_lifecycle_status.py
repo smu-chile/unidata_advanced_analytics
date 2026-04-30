@@ -690,7 +690,7 @@ def main() -> None:  # noqa: D103
 
 
     # Aplicar filtro de gasto >= 10.000
-    df_procesado = df_procesado[df_procesado['gasto_total'] >= 10_000].copy()
+    df_procesado = df_procesado[df_procesado['gasto_total'] >= 20_000].copy()
 
 
     # =========================
