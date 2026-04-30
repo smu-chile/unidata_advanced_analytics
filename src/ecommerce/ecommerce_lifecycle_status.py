@@ -85,7 +85,7 @@ with DAG(**dag_args) as dag:
         )
 
         for store_banner in [
-           ## 'Unimarc',
+            'Unimarc',
             'Alvi'
         ]
     ]
