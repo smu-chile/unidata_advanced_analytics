@@ -82,7 +82,7 @@ SQL_QUERIES = QueryDict({
     ON A.STORE_ID = D.STORE_ID
     WHERE TRANSACTION_DATE BETWEEN DATE_TRUNC(DATE_SUB(fecha_final, INTERVAL meses-1 MONTH), MONTH)
                             AND fecha_final
-    AND FNC_DOC_TP_DSC IN ('BX', 'BE', 'TF')
+    AND FNC_DOC_TP_DSC IN ('F','B','NC','FX','NE','BX','BE','FE')
     AND ITM_TXN_FCN_TP_DSC = 'V'
     AND MARKET_BASKET_KEY NOT IN (
         SELECT MARKET_BASKET_KEY
