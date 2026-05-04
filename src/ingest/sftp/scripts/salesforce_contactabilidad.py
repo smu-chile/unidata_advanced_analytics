@@ -140,6 +140,7 @@ def main() -> None:  # noqa: D103
                 if_exists='replace',
             )
         else:
+            df_file['Boleta2'] = pd.to_numeric(df_file['Boleta2'], errors='coerce')
             gbq_extended.uploadFrame(
                 df_file[['Rut',
                         'Nombre',
