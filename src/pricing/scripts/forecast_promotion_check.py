@@ -11,7 +11,6 @@ import argparse
 import warnings
 import posixpath
 import threading
-from typing import Union
 from logging import config
 
 # Pip
@@ -494,7 +493,8 @@ def ejecutar_query(
     'query_data_procesada' o 'query_promos_forecasting'.
     store_banner [str]: Se espera 'Unimarc'.
     categorias [str]: String con las promociones.
-    path_table [str]: Ruta a la tabla 'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
+    path_table [str]: Ruta a la tabla
+    'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
     usuario [str]: Se trabaja con 'pricing'
     gbq_client [Client]: Cliente de BigQuery apuntando al proyecto GCP.
 
@@ -765,7 +765,8 @@ def ordenar_por_ventas(df: pd.DataFrame) -> pd.DataFrame:
     df [pd.DataFrame]: Dataframe ya tratado.
 
     Outputs:
-    (pd.DataFrame) DataFrame reorganizado según venta total histórica por EAN.
+    (pd.DataFrame) DataFrame reorganizado según venta total
+    histórica por EAN.
 
     """
     df = df.copy()
@@ -816,7 +817,8 @@ def generarDataFrame(
     store_banner [str]: Se espera 'Unimarc'.
     categorias [str]: String con las promociones.
     gbq_client [Client]: Cliente de BigQuery apuntando al proyecto GCP.
-    path_table [str]: Ruta a la tabla 'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
+    path_table [str]: Ruta a la tabla
+    'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
     usuario [str]: Se espera 'pricing'
 
     Outputs:
@@ -831,17 +833,14 @@ def generarDataFrame(
     df = agregarFeriados(df)
     df = reordenar_columnas(df)
     df = ordenar_por_ventas(df)
-    df = tipar_columnas(df)
-
-    return df
-
+    return tipar_columnas(df)
 
 #3.1
 def cargar_promos_forecasting(
     string_promos: str,
     gbq_client: Client
 ) -> pd.DataFrame:
-    """P3.F1: Función encargado de ejecutar la query recibida 
+    """P3.F1: Función encargado de ejecutar la query recibida
     y de entregar el DataFrame correspondiente.
 
     Inputs:
@@ -934,8 +933,8 @@ def calcular_precios_minimos(df_base: pd.DataFrame) -> pd.DataFrame:
         """P3.F3 Aux 1: Función auxiliar pensada para aplicar por
 
         Inputs:
-        df_aux (pd.DataFrame):Contiene la información de todas las promociones 
-        activas para un mismo producto en un mismo día.
+        df_aux (pd.DataFrame):Contiene la información de todas las
+        promociones activas para un mismo producto en un mismo día.
 
         Outputs:
         (pd.Series) Retorna 'precio_promocional_minimo' y 'desc_promocion_
@@ -1313,8 +1312,8 @@ def registro_iteracion(promo: str,
 
 #4.5
 def calcular_gap_dias_y_rango(
-    fecha_fin_hist: Union[str, pd.Timestamp],
-    fecha_inicio_promo: Union[str, pd.Timestamp]
+    fecha_fin_hist: str | pd.Timestamp,
+    fecha_inicio_promo: str | pd.Timestamp
 ) -> tuple[int, str]:
     """Calcula la cantidad de días entre dos fechas y clasifica
     el rango temporal según criterios de negocio.
@@ -1365,10 +1364,11 @@ def entrenar_modelo_material(df_prod: pd.DataFrame,
                              ean: str,
                              fecha_limite: str,
                              fecha_inicial_entrenamiento: str):
-    """Entrena un modelo econométrico (WLS log-log) para un material 
+    """Entrena un modelo econométrico (WLS log-log) para un material
     específico
 
-    Esta función actúa como wrapper sobre `obtenerModeloOLS` y se encarga de:
+    Esta función actúa como wrapper sobre `obtenerModeloOLS` y
+    se encarga de:
     - Ejecutar el entrenamiento
     - Extraer métricas resumidas del modelo (R² ajustado, elasticidad)
     - Manejar el caso en que el modelo no sea entrenable
@@ -1423,9 +1423,11 @@ def obtenerModeloOLS(
     pesos_log: bool = False,
     pesos_percent: bool = False
 ) -> tuple[pd.DataFrame, sm.regression.linear_model.RegressionResultsWrapper] | None:
-    """Ajusta un modelo econométrico WLS (log-log) de demanda diaria para un EAN.
+    """Ajusta un modelo econométrico WLS (log-log) de demanda diaria para
+     un EAN.
 
-    El modelo se entrena únicamente con datos previos al inicio de una promoción,
+    El modelo se entrena únicamente con datos previos al inicio
+    de una promoción,
     utilizando pesos temporales para priorizar observaciones más recientes.
 
     La especificación incluye:
@@ -1460,7 +1462,8 @@ def obtenerModeloOLS(
     Returns
     -------
     tuple[pd.DataFrame, RegressionResultsWrapper] | None
-        (X utilizado en el ajuste, modelo entrenado) o None si no entrenable.
+        (X utilizado en el ajuste, modelo entrenado) o None si
+        no entrenable.
     """
 
     # -------------------------------------------------------------
@@ -1526,7 +1529,7 @@ def obtenerModeloOLS(
     fixed_vars = [
         v for v in fixed_vars
         if (v == 'log_precio') or (v in df_ean.columns and
-                                  df_ean[v].nunique() > 1)
+                                  df_ean[v].nunique() > 1)  # noqa: PD101
     ]
 
     if 'log_precio' not in fixed_vars:
@@ -1540,7 +1543,7 @@ def obtenerModeloOLS(
     ]
     meses_vars = [
         m for m in meses_vars
-        if m in df_ean.columns and df_ean[m].nunique() > 1
+        if m in df_ean.columns and df_ean[m].nunique() > 1  # noqa: PD101
     ]
 
     # Verificar cobertura completa por mes (>= 5 días)
@@ -1559,14 +1562,14 @@ def obtenerModeloOLS(
     sust_vars = []
     for v in ['variacion_top1_sustituto', 'variacion_top3_sustitutos']:
         if v in df_ean.columns and not df_ean[v].isna().any():
-            sust_vars.append(v)
+            sust_vars.append(v)  # noqa: PERF401
 
     current_vars = fixed_vars + meses_vars + sust_vars
 
     # -------------------------------------------------------------
     # 4) Ajuste del modelo WLS
     # -------------------------------------------------------------
-    X = sm.add_constant(df_ean[current_vars], has_constant='add')
+    X = sm.add_constant(df_ean[current_vars], has_constant='add')  # noqa: N806
     y = df_ean['log_cantidad']
 
     pesos = construir_pesos_wls(
@@ -1629,13 +1632,13 @@ def obtenerDfDefaultProyeccion(
     fecha_final_proyeccion: str,
     considerar_feriados: bool = True
 ) -> pd.DataFrame:
-    """Construye el DataFrame de proyección compatible con un modelo 
+    """Construye el DataFrame de proyección compatible con un modelo
     econométrico ya entrenado.
 
     La función:
     - Usa el histórico del material
     - Construye filas conocidas y futuras
-    - Asegura que las variables coincidan exactamente con las usadas 
+    - Asegura que las variables coincidan exactamente con las usadas
     en el modelo
     - Marca filas conocidas vs proyectadas
 
