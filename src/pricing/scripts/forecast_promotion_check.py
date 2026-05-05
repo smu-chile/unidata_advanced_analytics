@@ -1995,9 +1995,6 @@ def loop_promociones(
 
     filas_resumen = []
 
-    if len(promos_existentes) > 1:
-        promos_existentes = promos_existentes[:2]
-
     for idx, promo in enumerate(promos_existentes, start=1):
         df_promo = df_resultado[df_resultado['n_promocion'] == promo]
         nombre_promo = str(df_promo['nombre_promocion'].iloc[0])
