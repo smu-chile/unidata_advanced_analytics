@@ -1898,7 +1898,7 @@ def obtenerProyeccionV2(
 
     if not np.isfinite(x.values).all():
         logging.warning('X contiene valores no finitos antes de la predicción')
-        print(df_pred.head())
+        print(df_pred[x_vars])
         print('x_vars:', x_vars)
 
     df_pred['log_cantidad_predicha'] = modelo.predict(x)
