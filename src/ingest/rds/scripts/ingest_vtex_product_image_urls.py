@@ -1,54 +1,34 @@
-# Default
 import os
+import asyncio
 import logging
 import argparse
 from io import BytesIO
 from logging import config
-from concurrent.futures import ThreadPoolExecutor
 
-# pip
-import pendulum
+import aiohttp
+import pendulum  # noqa: F401
 from PIL import Image
-from tqdm import tqdm
-from requests import get
+from tqdm import tqdm  # noqa: F401
 from google.cloud.bigquery import Client
 
 # Own
 from common.constants import LOGGING_CONFIG
-from common.utils.requests import safeGet
 from common.databases.queries import QueryDict
 from common.databases.postgresql import readPostgresQuery
 from common.gcp_extended.bigquery import uploadFrame
 from common.gcp_extended.secretsmanager import getSecret
 
 
-# -------------------------------------------------------------------------
-#  Config
-# -------------------------------------------------------------------------
-# Logging config
 config.dictConfig(LOGGING_CONFIG)
-# Parser config
+
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    '--project_id', type=str,
-    help='GCP project in which the script will be executed'
-)
-parser.add_argument(
-    '--execution_date', type=str,
-    help='DAG execution date'
-)
-parser.add_argument(
-    '--max_workers', default=8, type=int,
-    help='Number of CPU threads to be used'
-)
+parser.add_argument('--project_id', type=str, help='GCP project')
+parser.add_argument('--execution_date', type=str, help='DAG date')
+parser.add_argument('--max_workers', default=100, type=int, help='Concurrent requests')
+parser.add_argument('--batch_size', default=5000, type=int, help='URLs per batch')
 
-
-# -------------------------------------------------------------------------
-# SQL Queries
-# -------------------------------------------------------------------------
 SQL_QUERIES = QueryDict({
-    'get_image_data':
-    """
+    'get_image_data': """
     SELECT
         CAST(regexp_replace(ref_id, '-.*', '', 'gi') AS BIGINT) AS sku,
         CAST(ean_primario AS BIGINT) AS ean,
@@ -57,56 +37,56 @@ SQL_QUERIES = QueryDict({
         LOWER(etiqueta) AS etiqueta,
         orden
     FROM ecommdata.imagenes_sku
-    INNER JOIN ecommdata.skus
-    USING (ref_id)
-    WHERE
-        LENGTH(ean_primario) < LENGTH('9223372036854775807')
+    INNER JOIN ecommdata.skus USING (ref_id)
+    WHERE LENGTH(ean_primario) < LENGTH('9223372036854775807')
     GROUP BY 1,2,3,4,5,6
     """,
 })
 
+# -------------------------------------------------------------------------
+# Lógica de Verificación de Integridad
+# -------------------------------------------------------------------------
+
+async def verify_image_integrity(session, url, semaphore):
+    """Descarga y verifica que el archivo sea una imagen válida"""
+    async with semaphore:
+        try:
+            # Usamos GET porque para verify()
+            # necesitamos el contenido binario
+            async with session.get(url, timeout=15) as response:
+                if response.status == 200:
+                    content = await response.read()
+                    # PIL abre la imagen en memoria y la verifica
+                    with Image.open(BytesIO(content)) as img:
+                        img.verify()
+                    return 200
+                return response.status
+        except Exception:  # noqa: BLE001
+            # 415: Unsupported Media Type o 410: Gone (corrupta/error)
+            return 415
+
+async def process_batch(urls, max_concurrent):
+    """Procesa un subconjunto de URLs de forma asíncrona"""
+    semaphore = asyncio.Semaphore(max_concurrent)
+    connector = aiohttp.TCPConnector(limit_per_host=20)
+
+    async with aiohttp.ClientSession(connector=connector) as session:
+        tasks = [verify_image_integrity(session, url, semaphore) for url in urls]
+        # Usamos gather para mantener el orden exacto de la lista original
+        return await asyncio.gather(*tasks)
 
 # -------------------------------------------------------------------------
-# Functions and classes
+# Main
 # -------------------------------------------------------------------------
-def request_function(url, **kwargs):
-    """Get image url and verify its contents"""
-    # Get url
-    requested_url = get(url, **kwargs)  # noqa: S113
-    # PIL image verification
-    try:
-        Image.open(BytesIO(requested_url.content)).verify()
-        return requested_url.status_code
-    except:  # noqa: E722
-        return 410
-
-def personalizedSafeGet(url):
-    return safeGet(
-        url=url,
-        request_function=request_function,
-        error_handling='silent'
-    )
-
-
-
-# -------------------------------------------------------------------------
-# Main function
-# -------------------------------------------------------------------------
-def main() -> None:  # noqa: D103
-    user = 'ingest-ecommerce'  # noqa: F841
-    # Parse input variables
+def main() -> None:
     args = vars(parser.parse_args())
-    gcp_project_id: str = args['project_id']
-    execution_date = pendulum.date(*map(int, args['execution_date'].split('-')))
+    gcp_project_id = args['project_id']
     max_workers = args['max_workers']
-    logging.info(f'execution_date: {execution_date}')
-    logging.info(f'max_workers: {max_workers}')
+    batch_size = args['batch_size']
 
-    # Static variables
     gbq_client = Client()
 
-    # Get image data
-    logging.info('Sending query...')
+    logging.info('Extrayendo datos de Postgres...')
     image_urls = readPostgresQuery(
         query=SQL_QUERIES['get_image_data'].substitute(),
         credentials_dict=getSecret(
@@ -114,35 +94,45 @@ def main() -> None:  # noqa: D103
             project=gcp_project_id,
         )
     )
-    logging.info(f'#(retrieved VTEX image links): {image_urls.shape[0]:,}')
 
-    # Multithreaded url verification
-    logging.info('Starting image verification')
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        image_urls['http_status'] = list(
-            tqdm(
-                executor.map(personalizedSafeGet, image_urls['url'].to_list()),
-                total=len(image_urls),
-                desc='Reviewing image urls',
-                unit='urls',
-            )
-        )
-    logging.info(f"There are {(image_urls['http_status'] == 200).sum():,} usable images")
+    total_urls = len(image_urls)
+    logging.info(f'Total de URLs a procesar: {total_urls:,}')
 
-    logging.info('Uploading frame to GBQ...')
+    # Procesamiento por Batches
+    all_statuses = []
+
+    for i in range(0, total_urls, batch_size):
+        batch_df = image_urls.iloc[i : i + batch_size]
+        batch_list = batch_df['url'].to_list()
+
+        logging.info(f'Procesando batch {i//batch_size + 1} (URLs {i} a {i+len(batch_list)})')
+
+        # Ejecutar el batch asíncronamente
+        batch_results = asyncio.run(process_batch(batch_list, max_workers))
+        all_statuses.extend(batch_results)
+
+        # Pequeña pausa opcional para dejar respirar
+        # al worker de Composer/Red
+        # asyncio.run(asyncio.sleep(1))  # noqa: ERA001
+
+    image_urls['http_status'] = all_statuses
+
+    # Filtrado final: solo las que pasaron la prueba de PIL (200)
+    df_final = image_urls[image_urls['http_status'] == 200][
+        ['sku', 'ean', 'name', 'url', 'etiqueta', 'orden']
+    ]
+
+    logging.info(f'Imágenes válidas encontradas: {len(df_final):,}')
+
+    logging.info('Subiendo resultados a BigQuery...')
     uploadFrame(
-        image_urls[
-            image_urls['http_status'] == 200
-        ][
-            ['sku', 'ean', 'name', 'url', 'etiqueta', 'orden']
-        ],
+        df_final,
         table_ddl_json_path=os.path.join('gbq_objects', 'dim_vtex_product_image_urls.json'),
         project=gcp_project_id,
         gbq_client=gbq_client,
         if_exists='replace'
     )
     logging.info('Done!')
-
 
 if __name__ == '__main__':
     main()
