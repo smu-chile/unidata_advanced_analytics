@@ -327,19 +327,19 @@ def cargar_input_sharepoint(
 
 #1.6
 def validar_input_promociones(
-    df: pd.DataFrame
+    df_inp: pd.DataFrame
 ) -> list[str]:
     """P1.F6 Valida columnas obligatorias y cantidad de promos > 0
 
     Inputs:
-    df [pd.DataFrame] Dataframe con la data del .xlsx importado
+    df_inp [pd.DataFrame] Dataframe con la data del .xlsx importado
 
     Outputs:
-    [list] Lista de promociones contenidas en df
+    [list] Lista de promociones contenidas en df_inp
     """
 
     cols_requeridas = {'n_promocion', 'generar_proyeccion'}
-    faltantes = cols_requeridas - set(df.columns)
+    faltantes = cols_requeridas - set(df_inp.columns)
 
     text_val_1 = f'Faltan columnas en el Excel: {sorted(faltantes)}'
     text_val_2 = 'No se encontraron promociones en el archivo.'
@@ -347,8 +347,7 @@ def validar_input_promociones(
     if faltantes:
         raise ValueError(text_val_1)
 
-    promociones = (
-        df['n_promocion'].dropna().astype(str).unique().tolist())
+    promociones = (df_inp['n_promocion'].dropna().astype(str).unique().tolist())
 
     if not promociones:
         raise ValueError(text_val_2)
@@ -524,7 +523,7 @@ def ejecutar_query(
     hilo_logger.start()
 
     try:
-        df = readBigQuery(
+        df_read = readBigQuery(
             query=query,
             user=usuario,
             gbq_client=gbq_client
@@ -534,11 +533,11 @@ def ejecutar_query(
 
     logging.info('✅ Query finalizada correctamente')
 
-    print('[2.1] Ejecutar query df shape: ', df.shape)
-    return df
+    print('[2.1] Ejecutar query df shape: ', df_read.shape)
+    return df_read
 
 #2.2
-def limpiar_datos_base(df: pd.DataFrame) -> pd.DataFrame:
+def limpiar_datos_base(df_clean: pd.DataFrame) -> pd.DataFrame:
     """P2.F2: Función de tratamiento de los datos.
     (1) Formatea nombres y dtypes
     (2) Crea la columna 'product_description_ean'
@@ -549,28 +548,28 @@ def limpiar_datos_base(df: pd.DataFrame) -> pd.DataFrame:
     Outputs:
     (pd.DataFrame): DataFrame tratado,
     """
-    df = df.copy()
+    df_clean = df_clean.copy()
 
-    df.columns = df.columns.str.lower()
+    df_clean.columns = df_clean.columns.str.lower()
 
     # EAN y descripción
-    df['ean'] = df['ean'].astype(str)
-    df['product_description_ean'] = (
-        df['product_description'] + ' - ' + df['ean']
+    df_clean['ean'] = df_clean['ean'].astype(str)
+    df_clean['product_description_ean'] = (
+        df_clean['product_description'] + ' - ' + df_clean['ean']
     )
 
-    df['multiplicador_x05'] = df['multiplicador_x05'].astype(int)
+    df_clean['multiplicador_x05'] = df_clean['multiplicador_x05'].astype(int)
 
     logging.info('Limpieza base aplicada')
-    return df
+    return df_clean
 
 #2.3
-def agregar_features_temporales(df: pd.DataFrame) -> pd.DataFrame:
+def agregar_features_temporales(df_temp: pd.DataFrame) -> pd.DataFrame:
     """P2.F3: Función que incluye el tratamiento e inclusión
     de variables temporables a nivel de día, mes y año.
 
     Inputs:
-    df [pd.DataFrame]: DataFrame con los resultados de la query.
+    df_temp [pd.DataFrame]: DataFrame con los resultados de la query.
 
     Outputs:
     (pd.DataFrame) DataFrame con la inclusión de los nuevos features
@@ -582,36 +581,35 @@ def agregar_features_temporales(df: pd.DataFrame) -> pd.DataFrame:
     - 1 variable [p_year]
 
     """
-    df = df.copy()
+    df_temp = df_temp.copy()
 
-    df['p_date'] = pd.to_datetime(df['p_date'])
-    dow = df['p_date'].dt.dayofweek #Extra el día de la semana codigicado 0 al 6
-
+    df_temp['p_date'] = pd.to_datetime(df_temp['p_date'])
+    dow = df_temp['p_date'].dt.dayofweek #Extra el día de la semana codigicado 0 al 6
 
     # Agrupaciones
-    df['fds'] = dow.isin([4, 5, 6]).astype(int) #1 para fds, 0 resto
-    df['l_m_w'] = dow.isin([0, 1, 2]).astype(int) #1 para l_m_w, 0 resto
+    df_temp['fds'] = dow.isin([4, 5, 6]).astype(int) #1 para fds, 0 resto
+    df_temp['l_m_w'] = dow.isin([0, 1, 2]).astype(int) #1 para l_m_w, 0 resto
 
     # Dummies por día
     for nombre, valor in DIAS_SEMANA.items():
-        df[nombre] = (dow == valor).astype(int)
+        df_temp[nombre] = (dow == valor).astype(int)
 
     logging.info('Dummies de días creados')
 
     # Dummies por mes
-    mes_num = df['p_month'].astype(str).str[4:].astype(int) #Extrae num de mes
+    mes_num = df_temp['p_month'].astype(str).str[4:].astype(int) #Extrae num de mes
     for i, nombre in enumerate(MESES, start=1):
-        df[nombre] = (mes_num == i).astype(int)
+        df_temp[nombre] = (mes_num == i).astype(int)
 
     logging.info('Dummies de meses creados')
 
     # Dummies por año
-    df['p_year'] = df['p_date'].dt.year.astype(str)
-    dummies_year = pd.get_dummies(df['p_year'], prefix='', prefix_sep='').astype(int)
-    df = pd.concat([df, dummies_year], axis=1)
+    df_temp['p_year'] = df_temp['p_date'].dt.year.astype(str)
+    dummies_year = pd.get_dummies(df_temp['p_year'], prefix='', prefix_sep='').astype(int)
+    df_temp = pd.concat([df_temp, dummies_year], axis=1)
 
     logging.info('Dummies de años creados')
-    return df
+    return df_temp
 
 #2.4
 def agregarFeriados(df_datos: pd.DataFrame) -> pd.DataFrame:
@@ -708,7 +706,7 @@ def agregarFeriados(df_datos: pd.DataFrame) -> pd.DataFrame:
     return df_datos_feriados
 
 #2.5
-def reordenar_columnas(df: pd.DataFrame) -> pd.DataFrame:
+def reordenar_columnas(df_cols: pd.DataFrame) -> pd.DataFrame:
     """P2.F4: Función auxiliar encargada de reordenadar las columnas
     existentes según orden dado.
 
@@ -749,56 +747,56 @@ def reordenar_columnas(df: pd.DataFrame) -> pd.DataFrame:
         'variacion_top1_sustituto','variacion_top3_sustitutos'
     ]
 
-    columnas_existentes = [c for c in columnas_deseadas if c in df.columns]
-    df = df[columnas_existentes]
+    columnas_existentes = [c for c in columnas_deseadas if c in df_cols.columns]
+    df_cols = df_cols[columnas_existentes]
 
     logging.info('Columnas reordenadas')
-    return df
+    return df_cols
 
 #2.6
-def ordenar_por_ventas(df: pd.DataFrame) -> pd.DataFrame:
+def ordenar_por_ventas(df_ord: pd.DataFrame) -> pd.DataFrame:
     """P2.F5: Ordena el DataFrame colocando primero los EAN con mayor venta
     total histórica. No se agregan ni eliminan filas; solo se reorganiza
     el orden.
 
     inputs:
-    df [pd.DataFrame]: Dataframe ya tratado.
+    df_ord [pd.DataFrame]: Dataframe ya tratado.
 
     Outputs:
     (pd.DataFrame) DataFrame reorganizado según venta total
     histórica por EAN.
 
     """
-    df = df.copy()
+    df_ord = df_ord.copy()
 
-    suma_ventas = df.groupby('ean')['ventas_totales_producto'].sum()
-    df['__suma_ventas'] = df['ean'].map(suma_ventas)
+    suma_ventas = df_ord.groupby('ean')['ventas_totales_producto'].sum()
+    df_ord['__suma_ventas'] = df_ord['ean'].map(suma_ventas)
 
-    df = df.sort_values('__suma_ventas', ascending=False)
-    df = df.drop(columns='__suma_ventas')
+    df_ord = df_ord.sort_values('__suma_ventas', ascending=False)
+    df_ord = df_ord.drop(columns='__suma_ventas')
 
     logging.info('Ordenado por ventas')
-    return df
+    return df_ord
 
 #2.7
-def tipar_columnas(df: pd.DataFrame) -> pd.DataFrame:
+def tipar_columnas(df_tip: pd.DataFrame) -> pd.DataFrame:
     """P2.F6: Función auxiliar encargada de aisgnar explícitamente el tipo
     a cada columna de interés.
 
     Inputs:
-    df [pd.DataFrame]: DataFrame ya tratado en su última fase.
+    df_tip [pd.DataFrame]: DataFrame ya tratado en su última fase.
 
     Outputs:
     (pd.DataFrame) Dataframe con los dtypes deseados.
     """
-    df = df.copy()
+    df_tip = df_tip.copy()
 
     for col, dtype in DTYPES_DICT.items():
-        if col in df.columns:
-            df[col] = df[col].astype(dtype)
+        if col in df_tip.columns:
+            df_tip[col] = df_tip[col].astype(dtype)
 
     logging.info('Tipos asignados correctamente')
-    return df
+    return df_tip
 
 # Main Parte 2
 def generarDataFrame(
@@ -827,13 +825,13 @@ def generarDataFrame(
 
 
 
-    df = ejecutar_query(query,store_banner, categorias, path_table, usuario, gbq_client)
-    df = limpiar_datos_base(df)
-    df = agregar_features_temporales(df)
-    df = agregarFeriados(df)
-    df = reordenar_columnas(df)
-    df = ordenar_por_ventas(df)
-    return tipar_columnas(df)
+    df_p2 = ejecutar_query(query,store_banner, categorias, path_table, usuario, gbq_client)
+    df_p2 = limpiar_datos_base(df_p2)
+    df_p2 = agregar_features_temporales(df_p2)
+    df_p2 = agregarFeriados(df_p2)
+    df_p2 = reordenar_columnas(df_p2)
+    df_p2 = ordenar_por_ventas(df_p2)
+    return tipar_columnas(df_p2)
 
 #3.1
 def cargar_promos_forecasting(
@@ -864,12 +862,12 @@ def cargar_promos_forecasting(
     )
 
 #3.2
-def preparar_promos_base(df: pd.DataFrame) -> pd.DataFrame:
+def preparar_promos_base(df_prep: pd.DataFrame) -> pd.DataFrame:
     """ P3.F2: Limpia datos de promociones y los expande a granularidad
     diaria.
 
     Inputs:
-    df [pd.DataFrame]: DataFrame resultado de la query
+    df_prep [pd.DataFrame]: DataFrame resultado de la query
 
     Outputs:
     (pd.DataFrame) DataFrame limpio y tratado.
@@ -880,23 +878,23 @@ def preparar_promos_base(df: pd.DataFrame) -> pd.DataFrame:
 
     logging.info('[3.2] Preparando base de promociones...')
 
-    df = df.copy()
+    df_prep = df_prep.copy()
 
     # Cambio de tipos
-    df['precio_promocional'] = df['precio_promocional'].astype(int)
-    df['precio_modal'] = df['precio_modal'].astype(int)
+    df_prep['precio_promocional'] = df_prep['precio_promocional'].astype(int)
+    df_prep['precio_modal'] = df_prep['precio_modal'].astype(int)
 
 
-    df['fecha_inicio_de_promocion'] = pd.to_datetime(df['fecha_inicio_de_promocion'])
-    df['fecha_fin_de_promocion'] = pd.to_datetime(df['fecha_fin_de_promocion'])
+    df_prep['fecha_inicio_de_promocion'] = pd.to_datetime(df_prep['fecha_inicio_de_promocion'])
+    df_prep['fecha_fin_de_promocion'] = pd.to_datetime(df_prep['fecha_fin_de_promocion'])
 
     # Clave producto
-    df['clave_material'] = (
-        df['material'].astype(str) + '_' + df['un_medida_venta']
+    df_prep['clave_material'] = (
+        df_prep['material'].astype(str) + '_' + df_prep['un_medida_venta']
     )
 
     # Expansión diaria (dataset todavía contenido)
-    df['p_date'] = df.apply(
+    df_prep['p_date'] = df_prep.apply(
         lambda r: pd.date_range(
             start=r['fecha_inicio_de_promocion'],
             end=r['fecha_fin_de_promocion']
@@ -904,9 +902,9 @@ def preparar_promos_base(df: pd.DataFrame) -> pd.DataFrame:
         axis=1
     )
 
-    df = df.explode('p_date')
+    df_prep = df_prep.explode('p_date')
 
-    return df[[
+    return df_prep[[
         'n_promocion', 'nombre_promocion', 'desc_categoria',
         'material', 'desc_material', 'un_medida_venta',
         'clave_material', 'desc_promocion',
@@ -995,6 +993,7 @@ def filtrar_promos_proyectables(
     Outpus:
     (pd.DataFrame) df_promos filtrado cuyas promociones tienen como valor
     'generar_proyección' = 'sí' en df_promos_importado.
+    (list) listado de promos válidas para proyección.
 
     """
     logging.info('[3.4] Filtrado de promos proyectables...')
@@ -1003,7 +1002,7 @@ def filtrar_promos_proyectables(
         'n_promocion'
     ].unique()
 
-    return df_promos[df_promos['n_promocion'].isin(promos_ok)]
+    return df_promos[df_promos['n_promocion'].isin(promos_ok)],promos_ok
 
 #3.5
 def construir_universo_filtrado(
@@ -1046,16 +1045,17 @@ def generar_dataset_promos_proyectables(
     tratado y filtrado.
     df_universo [pd.DataFrame] Dataframe de productos filtrado por
     categorías coincidentes con df_base.
+    promos_validas [list] Listado de promociones válidas para proyección.
     """
 
     df_promos = cargar_promos_forecasting(string_promos, gbq_client)
     df_base = preparar_promos_base(df_promos)
     df_base = calcular_precios_minimos(df_base)
-    df_base = filtrar_promos_proyectables(df_base, df_promos_importado)
+    df_base, promos_validas = filtrar_promos_proyectables(df_base, df_promos_importado)
 
     df_universo = construir_universo_filtrado(df_final, df_base)
 
-    return df_base, df_universo
+    return df_base, df_universo, promos_validas
 
 
 #4.1
@@ -1387,11 +1387,11 @@ def entrenar_modelo_material(df_prod: pd.DataFrame,
     Returns
     -------
     tuple
-        (df_x, modelo, r2, elasticidad) si el modelo es entrenable.
+        (modelo, r2, elasticidad) si el modelo es entrenable.
         (None, None, None) si no lo es.
     """
 
-    df_x, modelo = obtenerModeloOLS(
+    modelo = obtenerModeloOLS(
         df_prod,
         ean,
         fecha_limite,
@@ -1410,11 +1410,11 @@ def entrenar_modelo_material(df_prod: pd.DataFrame,
         if hasattr(modelo, 'params') and 'log_precio' in modelo.params.index
         else None
     )
-    return df_x, modelo, r2, elasticidad
+    return modelo, r2, elasticidad
 
 #4.6.1
 def obtenerModeloOLS(
-    df: pd.DataFrame,
+    df_ool: pd.DataFrame,
     ean: str,
     fecha_limite: str,
     fecha_inicial_entrenamiento: str,
@@ -1442,7 +1442,7 @@ def obtenerModeloOLS(
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df_ool : pd.DataFrame
         Histórico completo del material.
     ean : str
         Código EAN a modelar.
@@ -1469,7 +1469,7 @@ def obtenerModeloOLS(
     # -------------------------------------------------------------
     # 1) Filtrado inicial del histórico
     # -------------------------------------------------------------
-    df_ean = df[df['ean'] == ean].copy()
+    df_ean = df_ool[df_ool['ean'] == ean].copy()
 
     df_ean = df_ean[
         (df_ean['p_date'] >= fecha_inicial_entrenamiento) &
@@ -1579,9 +1579,8 @@ def obtenerModeloOLS(
         pesos_percent=pesos_percent
     )
 
-    modelo = sm.WLS(y, X, weights=pesos).fit()
+    return sm.WLS(y, X, weights=pesos).fit()
 
-    return df_ean[[*current_vars, 'p_date']], modelo
 
 #4.7
 def clasificar_elasticidad(elasticidad: float | None) -> str:
@@ -1996,6 +1995,9 @@ def loop_promociones(
 
     filas_resumen = []
 
+    if len(promos_existentes) > 1:
+        promos_existentes = promos_existentes[:2]
+
     for idx, promo in enumerate(promos_existentes, start=1):
         df_promo = df_resultado[df_resultado['n_promocion'] == promo]
         nombre_promo = str(df_promo['nombre_promocion'].iloc[0])
@@ -2003,6 +2005,8 @@ def loop_promociones(
         logging.info('-----------------------------------------')
         logging.info(f'[{idx}/{len(promos_existentes)}] PROMO {promo} - {nombre_promo}')
         logging.info('-----------------------------------------')
+
+        nombre_promo = str(df_promo['nombre_promocion'].iloc[0])
 
         claves = df_promo['clave_material'].unique()
         total_claves = len(claves)
@@ -2061,7 +2065,7 @@ def loop_promociones(
             # -----------------------------
             # 2) Entrenamiento del modelo
             # -----------------------------
-            df_x, modelo, r2, elasticidad = entrenar_modelo_material(
+            modelo, r2, elasticidad = entrenar_modelo_material(
                 df_hist_prod,
                 contexto['ean_promocion'],
                 contexto['fecha_limite'],
@@ -2136,7 +2140,7 @@ def loop_promociones(
 
             filas_resumen.append(logs_iteracion)
 
-    return df_x,pd.DataFrame(filas_resumen)
+    return pd.DataFrame(filas_resumen)
 
 
 def generar_excel_buffer(
@@ -2228,19 +2232,17 @@ def main():
 
     # ---- Parte 3: Construcción de df_resultado y df_universo ---- #
     logging.info('[3/5]: Construcción de df_resultado y df_universo...')
-    df_resultado, df_universo  = generar_dataset_promos_proyectables(string_promos,
+    df_resultado, df_universo, promos_validas  = generar_dataset_promos_proyectables(string_promos,
                                     df_input,
                                     df_final,
                                     gbq_client)
 
-    ### temporal
-    promos_existentes = lista_promos
     fecha_inicial_entrenamiento = df_universo['p_date'].min().strftime('%Y-%m-%d')
 
     # ---- Parte 4: Loop Promoción-Material ---- #
     logging.info('[4/5]: Loop Promociones...')
-    _, df_proyecciones = loop_promociones(
-        promos_existentes,
+    df_proyecciones = loop_promociones(
+        promos_validas,
         df_resultado,
         df_universo,
         fecha_inicial_entrenamiento)
