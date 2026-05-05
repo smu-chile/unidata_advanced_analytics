@@ -1896,6 +1896,9 @@ def obtenerProyeccionV2(
     x = df_pred[x_vars].fillna(0)
     x = sm.add_constant(x, has_constant='add')
 
+    if not np.isfinite(x.values).all():
+        logging.warning('X contiene valores no finitos antes de la predicción')
+
     df_pred['log_cantidad_predicha'] = modelo.predict(x)
     df_pred['cantidad_total_predicha'] = np.exp(df_pred['log_cantidad_predicha'])
     df_pred['ventas_totales_producto_predicha'] = (
@@ -1994,7 +1997,9 @@ def loop_promociones(
 ) -> pd.DataFrame:
 
     filas_resumen = []
-
+    logging.info('-----------------------------------------')
+    logging.info(f'[Parche: ] Cantidad de promociones: {len(promos_existentes)}')
+    logging.info('-----------------------------------------')
     for idx, promo in enumerate(promos_existentes, start=1):
         df_promo = df_resultado[df_resultado['n_promocion'] == promo]
         nombre_promo = str(df_promo['nombre_promocion'].iloc[0])
@@ -2006,6 +2011,7 @@ def loop_promociones(
         nombre_promo = str(df_promo['nombre_promocion'].iloc[0])
 
         claves = df_promo['clave_material'].unique()
+        #claves = ['610485_ST', '610486_ST']  # noqa: ERA001
         total_claves = len(claves)
         porcentaje_anterior = -10
 
@@ -2019,7 +2025,7 @@ def loop_promociones(
             # 1) Subset promo material
             # -----------------------------
             df_ean = df_promo[df_promo['clave_material'] == clave]
-
+            logging.info(f'Procesando material {clave} ({j}/{total_claves})')
             contexto = extraer_contexto_material(df_ean)
 
             df_hist_prod = df_universo[
@@ -2199,7 +2205,8 @@ def main():
     tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
     path_table = f'{proyecto}.{esquema}.{tabla}'
 
-    gbq_client = Client()
+    # Nota: local queda definido, en producción se inyecta desde Airflow
+    gbq_client = Client(project='cl-cda-unidata-dev')
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'proyecto: {proyecto}')
     logging.info(f'store_banner: {store_banner}')
@@ -2229,6 +2236,7 @@ def main():
 
     # ---- Parte 3: Construcción de df_resultado y df_universo ---- #
     logging.info('[3/5]: Construcción de df_resultado y df_universo...')
+
     df_resultado, df_universo, promos_validas  = generar_dataset_promos_proyectables(string_promos,
                                     df_input,
                                     df_final,
