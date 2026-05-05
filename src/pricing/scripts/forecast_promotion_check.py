@@ -2199,7 +2199,7 @@ def main():
     tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
     path_table = f'{proyecto}.{esquema}.{tabla}'
 
-    gbq_client = Client(project='cl-cda-unidata-dev')
+    gbq_client = Client()
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'proyecto: {proyecto}')
     logging.info(f'store_banner: {store_banner}')
