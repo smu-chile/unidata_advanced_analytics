@@ -28,7 +28,7 @@ start_date = [2025, 6 , 20]
 store_banner_list = ['Unimarc']
 
 # Task 1
-script1 = 'forecast_promotion_check'
+script1 = 'forecast_promotion'
 
 # Argumentos
 dag_args = {
