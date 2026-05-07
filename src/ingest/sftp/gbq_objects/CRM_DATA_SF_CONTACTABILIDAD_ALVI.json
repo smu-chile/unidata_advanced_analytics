@@ -6,8 +6,7 @@
         {
             "name": "RUT",
             "field_type": "STRING",
-            "mode": "REQUIRED",
-            "bigqueryPolicyTags": ["projects/cl-cda-qa/locations/us/taxonomies/3933141009802020086/policyTags/6088334250513318514"]
+            "mode": "REQUIRED"
         },
         {
             "name": "NOMBRE",
@@ -32,8 +31,7 @@
         {
             "name": "TELEFONO",
             "field_type": "STRING",
-            "mode": "NULLABLE",
-            "bigqueryPolicyTags": ["projects/cl-cda-qa/locations/us/taxonomies/3933141009802020086/policyTags/6253420231310872902"]
+            "mode": "NULLABLE"
         },
         {
             "name": "TELEFONO_VERIFICADO",
