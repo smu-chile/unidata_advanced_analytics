@@ -331,13 +331,15 @@ def uploadFrame(
     with open(table_ddl_json_path, encoding=json_encoding) as table_ddl_file:
         table_ddl = json.load(table_ddl_file)
 
-    table_schema = [{
-            'name': x['name'],
-            'type': x['field_type'],
-            'policy_tags': {
-            'names': x.get('bigqueryPolicyTags', [])
-            } if x.get('bigqueryPolicyTags') else None
-        }
+    table_schema = [
+        bigquery.SchemaField(
+            name=x['name'],
+            field_type=x['field_type'],
+            mode=x.get('mode', 'NULLABLE'),
+            policy_tags=bigquery.SchemaFieldPolicyTags(
+                names=x['bigqueryPolicyTags']
+            ) if x.get('bigqueryPolicyTags') else None
+        )
         for x in table_ddl['columns']
     ]
 
