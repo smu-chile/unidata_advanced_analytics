@@ -75,6 +75,8 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     formatos = ['alvi', 'm10s10']
 
+    logging.info('google-cloud-bigquery version: %s', bigquery.__version__)
+
     # Set all clients
 
     gbq_client = bigquery.Client()
