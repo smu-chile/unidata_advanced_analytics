@@ -333,7 +333,10 @@ def uploadFrame(
 
     table_schema = [{
             'name': x['name'],
-            'type': x['field_type']
+            'type': x['field_type'],
+            'policy_tags': {
+            'names': x.get('bigqueryPolicyTags', [])
+            } if x.get('bigqueryPolicyTags') else None
         }
         for x in table_ddl['columns']
     ]
