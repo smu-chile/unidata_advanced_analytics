@@ -25,7 +25,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--project_id', type=str, help='GCP project')
 parser.add_argument('--execution_date', type=str, help='DAG date')
 parser.add_argument('--max_workers', default=100, type=int, help='Concurrent requests')
-parser.add_argument('--batch_size', default=5000, type=int, help='URLs per batch')
 
 SQL_QUERIES = QueryDict({
     'get_image_data': """
@@ -82,7 +81,6 @@ def main() -> None:
     args = vars(parser.parse_args())
     gcp_project_id = args['project_id']
     max_workers = args['max_workers']
-    batch_size = args['batch_size']
 
     gbq_client = Client()
 
@@ -100,6 +98,7 @@ def main() -> None:
 
     # Procesamiento por Batches
     all_statuses = []
+    batch_size = 5000
 
     for i in range(0, total_urls, batch_size):
         batch_df = image_urls.iloc[i : i + batch_size]
