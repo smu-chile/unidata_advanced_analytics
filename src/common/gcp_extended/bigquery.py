@@ -11,6 +11,7 @@ import pandas_gbq
 from pendulum import DateTime
 from google.cloud import bigquery, bigquery_storage
 from google.cloud.exceptions import NotFound, BadRequest
+from google.cloud.bigquery.schema import PolicyTagList  # noqa: F401
 
 # Own
 from ..databases.queries import QueryDict  # noqa: TID252
