@@ -337,7 +337,7 @@ def uploadFrame(
             name=x['name'],
             field_type=x['field_type'],
             mode=x.get('mode', 'NULLABLE'),
-            policy_tags=bigquery.schema.PolicyTagList(
+            policy_tags=bigquery.PolicyTagList(
                 names=x['bigqueryPolicyTags']
             ) if x.get('bigqueryPolicyTags') else None
         )
