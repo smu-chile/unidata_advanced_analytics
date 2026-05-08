@@ -4,9 +4,9 @@ from datetime import timedelta
 
 # pip
 import pendulum
-from airflow.sdk import chain
 from airflow.models import DAG
 from airflow.configuration import conf
+from airflow.models.baseoperator import chain
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateBatchOperator,
 )
@@ -139,4 +139,4 @@ with DAG(**dag_args) as dag:
 
         computing_customer_segmentation_sophistication.append(task)
 
-    chain(computing_customer_segmentation_sophistication)
+    chain(computing_customer_segmentation_sophistication)  # noqa: AIR311
