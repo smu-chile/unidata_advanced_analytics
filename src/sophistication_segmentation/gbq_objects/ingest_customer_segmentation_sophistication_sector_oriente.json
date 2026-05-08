@@ -1,0 +1,58 @@
+{
+    "schema": "CONOCIMIENTO_CLIENTE",
+    "table": "CUSTOMER_SEGMENTATION_SOPHISTICATION_SECTOR_ORIENTE",
+
+    "columns": [
+        {
+            "name": "CUSTOMER_KEY",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": "Cliente"
+        },
+        {
+            "name": "CLASIFICACION_CLIENTE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Mes asociado"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoría en la que el cliente es clasificado"
+        },
+        {
+            "name": "CLASIFICACION_CATEGORIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Clasificación GLOBAL del cliente"
+        },
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Clasificación del cliente en la categoria"
+        },
+        {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Periodo de referencia en formato YYYYMM (año y mes)."
+        },
+        {
+            "name": "DATE",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "[PARTICIONADO] Columna auxiliar para particionar"
+        }
+
+        
+    ],
+    
+    "time_partitioning": {
+        "field": "DATE",
+        "type_": "DAY"
+    },
+    
+    "clustering_fields": ["STORE_BANNER","CATEGORIA"]
+}
