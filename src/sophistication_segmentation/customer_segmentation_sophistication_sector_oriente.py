@@ -61,9 +61,6 @@ with DAG(**dag_args) as dag:
     computing_customer_segmentation_sophistication = []
 
     for store_banner in store_banners:
-        # driver_cores = '8' if store_banner == 'Unimarc' else '4'
-        # driver_memory = '35g' if store_banner == 'Unimarc' else '20g'
-
         task = DataprocCreateBatchOperator(
             task_id=(
                 'computing_customer_segmentation_sophistication_sector_oriente'
