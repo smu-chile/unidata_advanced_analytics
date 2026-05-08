@@ -1396,7 +1396,6 @@ def entrenar_modelo_material(df_prod: pd.DataFrame,
         ean,
         fecha_limite,
         fecha_inicial_entrenamiento,
-        pesos_percent=True,
         considerar_feriados=True,
     )
 
@@ -1898,7 +1897,7 @@ def obtenerProyeccionV2(
 
     if not np.isfinite(x.values).all():
         logging.warning('X contiene valores no finitos antes de la predicción')
-        print(df_pred[x_vars])
+        print(df_pred[['log_precio','precio_promedio']])
         print('x_vars:', x_vars)
 
     df_pred['log_cantidad_predicha'] = modelo.predict(x)
@@ -1999,9 +1998,7 @@ def loop_promociones(
 ) -> pd.DataFrame:
 
     filas_resumen = []
-    logging.info('-----------------------------------------')
-    logging.info(f'[Parche: ] Cantidad de promociones: {len(promos_existentes)}')
-    logging.info('-----------------------------------------')
+
     for idx, promo in enumerate(promos_existentes, start=1):
         df_promo = df_resultado[df_resultado['n_promocion'] == promo]
         nombre_promo = str(df_promo['nombre_promocion'].iloc[0])
@@ -2009,8 +2006,6 @@ def loop_promociones(
         logging.info('-----------------------------------------')
         logging.info(f'[{idx}/{len(promos_existentes)}] PROMO {promo} - {nombre_promo}')
         logging.info('-----------------------------------------')
-
-        nombre_promo = str(df_promo['nombre_promocion'].iloc[0])
 
         claves = df_promo['clave_material'].unique()
         #claves = ['610485_ST', '610486_ST']  # noqa: ERA001
@@ -2208,7 +2203,7 @@ def main():
     path_table = f'{proyecto}.{esquema}.{tabla}'
 
     # Nota: local queda definido, en producción se inyecta desde Airflow
-    gbq_client = Client()
+    gbq_client = Client(project='cl-cda-unidata-dev')
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'proyecto: {proyecto}')
     logging.info(f'store_banner: {store_banner}')
