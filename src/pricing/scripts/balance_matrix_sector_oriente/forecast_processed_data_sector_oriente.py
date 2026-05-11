@@ -112,7 +112,7 @@ with DAG(**dag_args) as dag:
                     'us-east1-docker.pkg.dev/'
                     f'{dag_env_config["project_id"]}/'
                     'dataproc-worker-images/'
-                    f"{PROJECT_NAME.replace('_', '-')}-{SUBPROJECT_NAME}:latest"
+                    f"{PROJECT_NAME.replace('_', '-')}:latest"
                 ),
                 # Executor hardware config
                 'properties' : {
