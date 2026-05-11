@@ -76,7 +76,7 @@ with DAG(**dag_args) as dag:
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    f'{SUBPROJECT_NAME}'
+                    f'{SUBPROJECT_NAME}/'
                     'scripts/'
                     f'{script1}.py'
                 ),
