@@ -21,6 +21,7 @@ with open(
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
 PROJECT_NAME = 'pricing'
+SUBPROJECT_NAME = 'balance_matrix_sector_oriente'
 #Parche 1: nombre del DAG ajustado.
 dag_id = 'elasticity_processed_data_sector_oriente'
 schedule_interval = None
@@ -40,7 +41,7 @@ dag_args = {
     'catchup': catchup,
     'max_active_runs': 1,
     'concurrency': 4,
-    'tags': [PROJECT_NAME, 'rlagosg'], #Parche 3: owner ajustado.
+    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'rlagosg'], #Parche 3: owner ajustado.
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
@@ -75,6 +76,8 @@ with DAG(**dag_args) as dag:
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/'
                     'scripts/'
+                    f'{SUBPROJECT_NAME}'
+                    'scripts/'
                     f'{script1}.py'
                 ),
                 # Common files
@@ -86,6 +89,8 @@ with DAG(**dag_args) as dag:
                     (
                         f'gs://{dag_env_config["scripts_gcs"]}/'
                         f'{PROJECT_NAME}/'
+                        'scripts/'
+                        f'{SUBPROJECT_NAME}/'
                         'gbq_objects/'
                     )
                 ],
@@ -107,7 +112,7 @@ with DAG(**dag_args) as dag:
                     'us-east1-docker.pkg.dev/'
                     f'{dag_env_config["project_id"]}/'
                     'dataproc-worker-images/'
-                    f"{PROJECT_NAME.replace('_', '-')}:latest"
+                    f"{PROJECT_NAME.replace('_', '-')}-{SUBPROJECT_NAME}:latest"
                 ),
                 # Executor hardware config
                 'properties' : {
