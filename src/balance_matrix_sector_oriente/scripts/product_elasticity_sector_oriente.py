@@ -425,10 +425,12 @@ def main() -> None:  # noqa: D103
 
 
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'PRODUCT_ELASTICITY'
+    # Parche 2: Nombre tabla ajustada para sector oriente
+    tabla = 'PRODUCT_ELASTICITY_SECTOR_ORIENTE'
 
     # Tabla con data procesada
-    table_processed_data = f'{proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY'
+    # Parche 3: tabla con data procesada ajustada para sector oriente
+    table_processed_data=f'{proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_SECTOR_ORIENTE'
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -1055,10 +1057,11 @@ def main() -> None:  # noqa: D103
 
 
     # Se carga en BQ con los datos recalculados
+    # Parche
     uploadFrame(
         df_gcp,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'ingest_product_elasticity.json'),
+                                         'ingest_product_elasticity_sector_oriente.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='append'
