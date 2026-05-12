@@ -47,17 +47,19 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 #  SQL Queries
 # -------------------------------------------------------------------------
+## Parche 1: Nombre de las tablas ajustado a Sector Oriente.
+
 SQL_QUERIES = QueryDict({    # Region: Explicación de query
 
  'query_sensibilidad':
 """
-SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY`
+SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY_SECTOR_ORIENTE`
 where STORE_BANNER = '${store_banner}'
 """,
 
 'query_elasticidad':
 """
-SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY`
+SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY_SECTOR_ORIENTE`
 where STORE_BANNER = '${store_banner}'
 """,
 
@@ -66,7 +68,7 @@ where STORE_BANNER = '${store_banner}'
 WITH tabla_fecha_max AS (
   SELECT
     MAX(P_DATE) AS fecha_max
-  FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY`
+  FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_SECTOR_ORIENTE`
   WHERE STORE_BANNER = '${store_banner}'
 )
 
@@ -74,7 +76,7 @@ SELECT
   MATERIAL,
   EAN,
   SUM(VENTAS_TOTALES_PRODUCTO) AS ventas_totales
-FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY`
+FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_SECTOR_ORIENTE`
 CROSS JOIN tabla_fecha_max
 WHERE STORE_BANNER = '${store_banner}'
   AND P_DATE BETWEEN DATE_SUB(
@@ -308,6 +310,7 @@ def main() -> None:  # noqa: D103
 
 
 
+    #Parche 2: Ajuste de ruta en SharePoint para sector oriente
     sp.SharePointFile(
         **getSecret(
             'bdaa_sharepoint_credentials',
@@ -318,8 +321,8 @@ def main() -> None:  # noqa: D103
             'BigDatayAdvancedAnalytics/'
             'Documentos%20compartidos/'
             'Pricing/'
-            'Balance Matrix AA - GCP/'
-            f'Balance_Matrix_AA_{store_banner}.xlsx'
+            'Balance Matrix AA Sector Oriente/'
+            f'Balance_Matrix_AA_{store_banner}_sector_oriente.xlsx'
         )
     ).upload(buffer)
     logging.info('Tabla subida en Sharepoint')
@@ -334,8 +337,9 @@ def main() -> None:  # noqa: D103
     where_clause = f"store_banner = '{store_banner}'"
 
     # Parametros
+    # Parche 3: Tabla ajustada a sector oriente
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'BALANCE_MATRIX'
+    tabla = 'BALANCE_MATRIX_SECTOR_ORIENTE'
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
@@ -345,13 +349,15 @@ def main() -> None:  # noqa: D103
 
 
     # Se carga en BQ con los datos recalculados
+    # Parche 4: json ajustado a sector oriente
+    # Parche 5: append -> replace.
     uploadFrame(
         df_balance_matrix_sp,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'ingest_product_balance_matrix.json'),
+                                         'ingest_product_balance_matrix_sector_oriente.json'),
         project=proyecto,
         gbq_client=gbq_client,
-        if_exists='append'
+        if_exists='replace'
     )
 
     logging.info('Se sube la tabla a GCP')
