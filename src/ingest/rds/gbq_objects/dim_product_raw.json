@@ -1,0 +1,31 @@
+{
+    "schema": "TMP",
+    "table": "DIM_PRODUCT_RAW",
+    "columns": [
+        {"name": "EAN", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "NM", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "BRAND_DESC", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "ANCHO", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "LONGITUD", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "ALTURA", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "CONT_CONV_UMB", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "CONTENIDO_BRUTO", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "UM_CONTENIDO", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "UNIDAD_DE_MEDIDA", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "INDIC_EAN_PPAL", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "SKU_PRODUCT", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "GRUPO_ID", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "GRUPO_DSC", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "CAT_ID", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "CAT_DSC", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "LIN_ID", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "LIN_DESC", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "SEC_DSC", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "NEG_DSC", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "CAT_H_DSC", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "CAT_H_ID", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "LIN_H_DSC", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "LIN_H_ID", "field_type": "STRING", "mode": "NULLABLE"},
+        {"name": "SKU_DESCRIPTION", "field_type": "STRING", "mode": "NULLABLE"}
+    ]
+}
