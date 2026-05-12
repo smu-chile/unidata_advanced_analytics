@@ -48,16 +48,16 @@ def main() -> None:
     logging.info('Starting DIM_PRODUCT ingestion...')
     gbq_client = Client(project=gcp_project_id)
     logging.info('Reading BigQuery source table...')
-    df = readBigQuery(
+    df_dim_product = readBigQuery(
         SQL_QUERIES['dim_product'].substitute(),
         user='ilopeze',
         gbq_client=gbq_client
     )
 
-    logging.info(f'Total rows extracted: {len(df)}')
+    logging.info(f'Total rows extracted: {len(df_dim_product)}')
     logging.info('Uploading RAW table...')
     uploadFrame(
-        df=df,
+        df=df_dim_product,
         table_ddl_json_path=os.path.join(
             'gbq_objects',
             'dim_product_raw.json'
