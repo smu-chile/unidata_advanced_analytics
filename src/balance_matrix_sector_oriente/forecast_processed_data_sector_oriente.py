@@ -75,7 +75,6 @@ with DAG(**dag_args) as dag:
                 'main_python_file_uri': (
                     f'gs://{dag_env_config["scripts_gcs"]}/'
                     f'{PROJECT_NAME}/'
-                    f'{SUBPROJECT_NAME}/'
                     'scripts/'
                     f'{script1}.py'
                 ),
@@ -88,7 +87,6 @@ with DAG(**dag_args) as dag:
                     (
                         f'gs://{dag_env_config["scripts_gcs"]}/'
                         f'{PROJECT_NAME}/'
-                        f'{SUBPROJECT_NAME}/'
                         'gbq_objects/'
                     )
                 ],
@@ -110,7 +108,7 @@ with DAG(**dag_args) as dag:
                     'us-east1-docker.pkg.dev/'
                     f'{dag_env_config["project_id"]}/'
                     'dataproc-worker-images/'
-                    f"{PROJECT_NAME.replace('_', '-')}-{SUBPROJECT_NAME}:latest"
+                    f'{PROJECT_NAME.replace("_", "-")}:latest'
                 ),
                 # Executor hardware config
                 'properties' : {
