@@ -34,7 +34,7 @@ use = 'ELASTICITY'
 store_banner_list = ['Unimarc']
 
 dag_args = {
-    'dag_id': dag_id,
+    'dag_id': 'elasticity_processed_data_sector_oriente',
     'schedule_interval': schedule_interval,
     'dagrun_timeout': None,
     'catchup': catchup,
