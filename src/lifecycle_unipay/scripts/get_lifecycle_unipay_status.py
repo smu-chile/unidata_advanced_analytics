@@ -260,6 +260,7 @@ def main():
 
     # Variables de tiempo relacionadas a las queries
     fecha = pendulum.parse(execution_date)
+    monthid = fecha.strftime('%Y%m')
     periodo = fecha.subtract(months=1).strftime('%Y%m')
     periodo_n1 = fecha.subtract(months=2).strftime('%Y%m')
     fecha_ini = fecha.subtract(months=1).start_of('month').strftime('%Y-%m-%d')
@@ -267,7 +268,7 @@ def main():
 
     logging.info(' ')
     logging.info('--------------------')
-    logging.info(f'Se inicia el proceso para el periodo: {periodo}')
+    logging.info(f'Se inicia el proceso para el periodo: {monthid}')
     logging.info(f'Con el parametro periodo_n1: {periodo_n1}')
     logging.info(f'Con el parametro fecha inicial: {fecha_ini}')
     logging.info(f'Con el parametro fecha final: {fecha_fin}')
@@ -1043,7 +1044,7 @@ def main():
         estado_clientes = estado_clientes.rename(
             columns={'STATUS_NEW': 'STATUS'})
 
-        estado_clientes['MONTHID'] = periodo
+        estado_clientes['MONTHID'] = monthid
 
     logging.info(' ')
     logging.info('--------------------')
@@ -1052,10 +1053,10 @@ def main():
 
 
     logging.info(' ')
-    logging.info(f'Se borra la partición actual de {periodo}')
+    logging.info(f'Se borra la partición actual de {monthid}')
     deleteFromTable(
     table_ref='cl-bigdata-analytics-preprod.UNIPAY.LIFECYCLE_UNIPAY_STATUS',
-    where_clause=f"monthid = '{periodo}'",
+    where_clause=f"monthid = '{monthid}'",
     gbq_client=gbq_client,
     )
 
