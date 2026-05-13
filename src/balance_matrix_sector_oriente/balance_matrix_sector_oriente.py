@@ -44,7 +44,6 @@ script3 = 'product_elasticity_sector_oriente'
 # Task 4
 script4 = 'balance_matrix_sector_oriente'
 
-PROJECT_NAME = 'pricing'
 dag_id = 'balance_matrix_sector_oriente'
 schedule_interval = None
 catchup = False
