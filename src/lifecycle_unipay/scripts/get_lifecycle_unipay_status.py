@@ -257,7 +257,7 @@ def main() -> None:  # noqa: D103
     gbq_client = Client()
 
     # Periodo inicial ciclo vida unipay
-    periodo_inicio = 202301
+    periodo_inicio = 202302
 
     # Variables de tiempo relacionadas a las queries
     fecha = pendulum.parse(execution_date)
@@ -831,8 +831,8 @@ def main() -> None:  # noqa: D103
 
         # Esto se utilizo para el periodo = 202302,
         # debido a las tarjetas de años anteriores para no tener problemas,
-        # dado que se le asigno el estado grow en el periodo 202301
-        if int(periodo) == 202302:
+        # dado que se le asigno el estado grow en el periodo 202302
+        if int(periodo) == 202303:
             ciclo = ciclo.merge(
                 estados_n1,
                 on=['CUSTOMER_KEY','CARD_ID'],
