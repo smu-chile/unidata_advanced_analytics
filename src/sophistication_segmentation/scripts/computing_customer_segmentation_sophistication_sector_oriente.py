@@ -592,9 +592,11 @@ def main() -> None:  # noqa: D103
     #---
 
     # Usuario
+    # Parche 1: Usuario ajustado a sector oriente
     usuario = 'sophistication_segmentation_sector_oriente'
 
     # Proyecto en que se almacena
+    # Parche 2: tabla ajustada a sector oriente
     esquema = 'CONOCIMIENTO_CLIENTE'
     tabla = 'CUSTOMER_SEGMENTATION_SOPHISTICATION_SECTOR_ORIENTE'
 
@@ -602,6 +604,7 @@ def main() -> None:  # noqa: D103
     path_table = f'{proyecto}.{esquema}.{tabla}'
 
     # Nombre archivo Json
+    # Parche 3: nombre del json ajustado a sector oriente
     nombre_json = 'ingest_customer_segmentation_sophistication_sector_oriente.json'
 
     #----------------------------------------------------------------------

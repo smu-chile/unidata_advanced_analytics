@@ -29,7 +29,7 @@ dag_args = {
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 4,
-    'tags': [PROJECT_NAME, 'rlagosg'],
+    'tags': [PROJECT_NAME, 'rlagosg'], #parche 1
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
@@ -63,7 +63,7 @@ with DAG(**dag_args) as dag:
     for store_banner in store_banners:
         task = DataprocCreateBatchOperator(
             task_id=(
-                'computing_customer_segmentation_sophistication_sector_oriente'
+                'computing_customer_segmentation_sophistication_sector_oriente' #parche 2
                 f'{store_banner.replace(" ", "_").lower()}'
             ),
             batch={
@@ -73,7 +73,7 @@ with DAG(**dag_args) as dag:
                         f'gs://{dag_env_config["scripts_gcs"]}/'
                         f'{PROJECT_NAME}/'
                         'scripts/'
-                        'computing_customer_segmentation_sophistication_sector_oriente.py'
+                        'computing_customer_segmentation_sophistication_sector_oriente.py'#parche 3
                     ),
                     # Common files
                     'python_file_uris': [
