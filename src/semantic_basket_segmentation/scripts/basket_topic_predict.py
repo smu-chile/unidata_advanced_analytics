@@ -131,8 +131,7 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     batch_size: int = args['batch_size']
 
-    monthid = (pd.to_datetime(execution_date[:8] + '01')
-        - pd.offsets.DateOffset(months=1)).strftime('%Y%m')
+    monthid = pd.to_datetime(execution_date[:8] + '01').strftime('%Y%m')
 
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'monthid: {monthid}')
