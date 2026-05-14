@@ -1,6 +1,6 @@
 {
     "schema": "ECOMMERCE",
-    "table": "ECOMMERCE_SEMANTIC_BASKET_TOPIC",
+    "table": "ECOMMERCE_SEMANTIC_BASKET_TOPIC_K6",
 
     "columns": [
         {
@@ -16,43 +16,61 @@
             "description": ""
         },
         {
+            "name": "BASKET_VALUE",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
             "name": "TRANSACTION_DATE",
             "field_type": "DATE",
             "mode": "REQUIRED",
             "description": ""
         },
         {
-            "name": "TOPIC_0",
+            "name": "WEEKDAY_NAME",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "SUB_CATEGORY_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "FRUTAS_VERDURAS",
             "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": ""
         },
         {
-            "name": "TOPIC_1",
+            "name": "CONGELADOS",
             "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": ""
         },
         {
-            "name": "TOPIC_2",
+            "name": "HIDRATACION_SALUDABLES",
             "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": ""
         },
         {
-            "name": "TOPIC_3",
+            "name": "HOGAR",
             "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": ""
         },
         {
-            "name": "TOPIC_4",
+            "name": "CELEBRACION",
             "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": ""
         },
         {
-            "name": "TOPIC_5",
+            "name": "COLACIONES",
             "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": ""
