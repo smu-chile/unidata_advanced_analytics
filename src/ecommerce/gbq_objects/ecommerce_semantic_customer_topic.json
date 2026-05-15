@@ -1,0 +1,38 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "ECOMMERCE_SEMANTIC_CUSTOMER_TOPIC",
+
+    "columns": [
+        {
+            "name": "CUSTOMER_KEY",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TOPIC",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+        
+    ],
+
+    "time_partitioning": {
+    "field": "FECHA_CARGA",
+    "type_": "DAY"
+    }
+
+}
