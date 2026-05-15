@@ -133,13 +133,22 @@ def createTableFromJSON(
 
 
     # Configure table location and columns
+    schema_fields = []
+
+    for column_config in ddl_config['columns']:
+        col = column_config.copy()
+
+        # 👇 NUEVO: manejar policy tags
+        if 'policy_tags' in col:
+            col['policy_tags'] = bigquery.PolicyTagList(
+                names=col['policy_tags']['names']
+            )
+
+        schema_fields.append(bigquery.SchemaField(**col))
+
     table = bigquery.Table(
         table_ref=table_ref,
-        schema=[
-            bigquery.SchemaField(**colum_config)
-            for colum_config
-            in ddl_config['columns']
-        ]
+        schema=schema_fields
     )
 
     # Configure time partition if given
