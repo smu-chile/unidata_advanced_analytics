@@ -76,7 +76,6 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       regex \
       requests \
       rtree \
-      scikit-learn \
       scipy \
       sqlalchemy \
       statsmodels \
@@ -91,6 +90,9 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
 # (Optional) Install additional requirements
 # COPY requirements.txt .
 # RUN pip install --no-cache-dir --no-cache -r requirements.txt
+RUN ${CONDA_HOME}/bin/python -m pip install --no-cache-dir \
+  scikit-learn==1.7.1 \
+  --no-input
 
 # Set timezone
 ENV TZ="America/Santiago"

@@ -119,7 +119,7 @@ SQL_QUERIES = QueryDict({
         AND c.value > 0
         AND c.transaction_type IN ('TN','TF','BX','B','BE','F','NC')
         AND a.itm_txn_fcn_tp_dsc = 'V'
-    GROUP BY 1, 2
+    GROUP BY 1, 2, 3, 5
     """, # noqa: E501
 
     'semantic_customer_baskets_k6':
