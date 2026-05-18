@@ -6,10 +6,7 @@
         {
             "name": "MOBILE",
             "field_type": "INTEGER",
-            "mode": "REQUIRED",
-            "policy_tags": {
-                "names": ["projects/cl-cda-qa/locations/us/taxonomies/3933141009802020086/policyTags/6253420231310872902"]
-            }
+            "mode": "REQUIRED"
         },
         {
             "name": "FECHA",

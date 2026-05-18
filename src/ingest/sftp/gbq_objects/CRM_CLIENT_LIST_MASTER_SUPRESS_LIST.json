@@ -31,10 +31,7 @@
          {
             "name": "EMAIL",
             "field_type": "STRING",
-            "mode": "NULLABLE",
-            "policy_tags": {
-                "names": ["projects/cl-cda-qa/locations/us/taxonomies/3933141009802020086/policyTags/7176328952841298660"]
-            }
+            "mode": "NULLABLE"
         },
         {
             "name": "BOUNCE_COUNT",
