@@ -1,0 +1,134 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "ECOMMERCE_SEMANTIC_BASKET_TOPIC_K12",
+
+    "columns": [
+        {
+            "name": "CUSTOMER_KEY",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TXN_KEY",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "BASKET_VALUE",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TRANSACTION_DATE",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "WEEKDAY_NAME",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "SUB_CATEGORY_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "HIGIENE",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "FRUTAS_VERDURAS",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "ALCOHOL",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "GALLETAS_CHOCOLATES",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "CONGELADOS",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "BEBIDAS_HELADOS",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "CARNES",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "HIDRATACION_SALUDABLES",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "DESPENSA",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "LIMPIEZA",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "COLACIONES",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "APERITIVOS_SNACKS",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "MONTHID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+        
+    ],
+
+    "time_partitioning": {
+    "field": "FECHA_CARGA",
+    "type_": "DAY"
+    }
+
+}

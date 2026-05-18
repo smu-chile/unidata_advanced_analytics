@@ -1,0 +1,86 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "ECOMMERCE_BALANCE_MATRIX",
+
+    "columns": [
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la información"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoría a la que pertenece el producto"
+        },
+        {
+            "name": "DESCRIPCION_MATERIAL",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre o descripción del producto"
+        },
+        {
+            "name": "MATERIAL",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Código del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "UMV",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Unidad del display"
+        },
+        {
+            "name": "EAN",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Código del producto diferenciado por display"
+        },
+        {
+            "name": "VENTAS",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Ventas de los últimos 12 meses del producto en el formato"
+        },
+        {
+            "name": "INDICE_SENSIBILIDAD",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Índice propio de sensibilidad del producto (media geométrica)"
+        },
+        {
+            "name": "ELASTICIDAD",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Valor númerico de la elasticidad del producto o contagio de otro producto similar"
+        },
+        {
+            "name": "KVI",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Cluster al que pertenece el producto según su índice de sensibilidad de familia"
+        },        {
+            "name": "CODIGO_SENSIBILIDAD",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Cluster al que pertenece con otra notación"
+        },
+        {
+            "name": "SEGMENTO_ELASTICIDAD",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Cluster al que pertenece el producto según su elasticidad"
+        },
+        {
+            "name": "SEGMENTO_BM",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Cluster al que pertenece el producto según cruce de elasticidad y sensibilidad"
+        }
+    ],
+
+    "clustering_fields": ["STORE_BANNER"]
+}
