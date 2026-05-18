@@ -1,3 +1,4 @@
+"""Defines the DAG that allocates my usuals products."""
 # Default
 import json
 import platform
@@ -34,21 +35,22 @@ with open(
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
 PROJECT_NAME = 'ecommerce'
+SUBPROJECT_NAME = 'my_usuals'
 dag_args = {
-    'dag_id': 'ecommerce_lifecycle_status',
-    'schedule_interval': '0 1 2 * *',
+    'dag_id': 'my_usuals_allocation',
+    'schedule_interval': '0 9 * * 3',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
-    'concurrency': 4,
-    'tags': [PROJECT_NAME, 'abravom'],
+    'concurrency': 2,
+    'tags': [PROJECT_NAME,SUBPROJECT_NAME,'ecastrot'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
-        'email': ['abravom@unidata.cl'],
+        'email': ['ecastrot@unidata.cl'],
         'start_date': pendulum.datetime(
-            2023, 6, 20,
+            2023, 12, 5,
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
@@ -61,33 +63,38 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-
-    computing_ecommerce_lifecycle_status = [
+    train_tasks = [
         ExtendedDataprocCreateBatchOperator(
-            task_id = f"computing_ecommerce_lifecycle_status_{store_banner.replace(' ', '_').lower()}",  # noqa: E501
+            task_id=f"compute_score_{store_banner.replace(' ', '_').lower()}",
             python_script_path=(
                 f'{PROJECT_NAME}/'
+                f'{SUBPROJECT_NAME}/'
                 'scripts/'
-                'computing_ecommerce_lifecycle_status.py'
+                'my_usuals.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
+            docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
             pyspark_batch_args=[
-                '--project_id', dag_env_config['project_id'],
-                '--execution_date', EXECUTION_DATE,
+                '--project_name', PROJECT_NAME,
+                '--gcp_project', dag_env_config['project_id'],
+                '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).next(3).strftime('%Y-%m-%d')) }}",  # noqa: E501
                 '--store_banner', store_banner,
+                '--rollback_months', "{{ dag_run.conf.get('rollback_months', 6) }}",
+                '--rollback_months_filter', "{{ dag_run.conf.get('rollback_months_filter', 12) }}",
+                '--min_transacted_months', "{{ dag_run.conf.get('min_transacted_months', 2) }}",
+                '--top_n', "{{ dag_run.conf.get('top_n', 100) }}",
             ],
             include_paths=[
                 'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
+                f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'
             ],
         )
 
         for store_banner in [
             'Unimarc',
-            'Alvi'
+            'Alvi',
         ]
     ]
 
-chain(computing_ecommerce_lifecycle_status)
+
+chain(train_tasks)

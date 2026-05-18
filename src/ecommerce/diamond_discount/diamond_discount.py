@@ -34,6 +34,7 @@ with open(
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
 PROJECT_NAME = 'ecommerce'
+SUBPROJECT_NAME = 'diamond_discount'
 dag_args = {
     'dag_id': 'diamond_discount',
     'schedule_interval': '00 3 * * *',
@@ -41,7 +42,7 @@ dag_args = {
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME, 'ecastrot'],
+    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'ecastrot'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
@@ -65,11 +66,12 @@ with DAG(**dag_args) as dag:
         task_id='compute_diamond_discount',
         python_script_path=(
             f'{PROJECT_NAME}/'
+            f'{SUBPROJECT_NAME}/'
             'scripts/'
             'compute_diamond_discount.py'
         ),
         dag_env_config=dag_env_config,
-        docker_image_name=PROJECT_NAME,
+        docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
         pyspark_batch_args=[
             '--project_name', PROJECT_NAME,
             '--gcp_project', dag_env_config['project_id'],
@@ -77,6 +79,6 @@ with DAG(**dag_args) as dag:
         ],
         include_paths=[
             'common/',
-            f'{PROJECT_NAME}/gbq_objects/'
+            f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'
         ],
     )

@@ -34,6 +34,7 @@ with open(
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
 PROJECT_NAME = 'ecommerce' # cambio a mismo nombre de la carpeta
+SUBPROJECT_NAME = 'sophistication_segmentation'
 dag_args = {
     'dag_id': 'ecommerce_sophistication', # nombre lógico
     'schedule_interval': '0 10 2 * *',
@@ -41,7 +42,7 @@ dag_args = {
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 4,
-    'tags': [PROJECT_NAME, 'abravom'], # cambio
+    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'abravom'], # cambio
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
@@ -79,11 +80,12 @@ with DAG(**dag_args) as dag:
             f'{store_banner.lower()}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
+                f'{SUBPROJECT_NAME}/'
                 'scripts/'
                 'computing_customer_segmentation_sophistication_ecommerce.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
+            docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
             pyspark_batch_args=[
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
@@ -91,7 +93,7 @@ with DAG(**dag_args) as dag:
             ],
             include_paths=[
                 'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
+                f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'
             ],
 
              # Driver config (dinámico por banner)

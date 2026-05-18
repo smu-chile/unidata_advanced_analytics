@@ -33,9 +33,10 @@ with open(
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
 PROJECT_NAME = 'ecommerce'
+SUBPROJECT_NAME = 'semantic_basket_segmentation'
 dag_args = {
-    'dag_id': 'ecommerce_basket_topic_predict',
-    'schedule_interval': None,
+    'dag_id': 'ecommerce_semantic_basket_segmentation',
+    'schedule_interval': '0 14 1 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
@@ -60,21 +61,42 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date',dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
+    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date',dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
     semantic_basket_topic_ecommerce = ExtendedDataprocCreateBatchOperator(
         task_id = 'basket_topic_predict_ecommerce',
         python_script_path=(
             f'{PROJECT_NAME}/'
+            f'{SUBPROJECT_NAME}/'
             'scripts/'
             'basket_topic_predict_ecommerce.py'
         ),
         dag_env_config=dag_env_config,
-        docker_image_name=PROJECT_NAME,
+        docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
         pyspark_batch_args=[
             '--project_id', dag_env_config['project_id'],
             '--execution_date', EXECUTION_DATE,
-            '--batch_size', "{{ dag_run.conf.get('batch_size', 1000000) }}",
+
+        ],
+        include_paths=[
+            'common/',
+            f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'
+        ],
+    )
+
+    semantic_customer_topic_ecommerce = ExtendedDataprocCreateBatchOperator(
+        task_id = 'customer_topic_predict_ecommerce',
+        python_script_path=(
+            f'{PROJECT_NAME}/'
+            f'{SUBPROJECT_NAME}/'
+            'scripts/'
+            'customer_topic_predict_ecommerce.py'
+        ),
+        dag_env_config=dag_env_config,
+        docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
+        pyspark_batch_args=[
+            '--project_id', dag_env_config['project_id'],
+            '--execution_date', EXECUTION_DATE,
 
         ],
         include_paths=[
@@ -82,5 +104,7 @@ with DAG(**dag_args) as dag:
             f'{PROJECT_NAME}/gbq_objects/'
         ],
     )
+
+    semantic_basket_topic_ecommerce >> semantic_customer_topic_ecommerce
 
 

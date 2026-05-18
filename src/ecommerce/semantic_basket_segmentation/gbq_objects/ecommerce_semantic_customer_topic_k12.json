@@ -1,6 +1,6 @@
 {
     "schema": "ECOMMERCE",
-    "table": "ECOMMERCE_SEMANTIC_CUSTOMER_TOPIC",
+    "table": "ECOMMERCE_SEMANTIC_CUSTOMER_TOPIC_K12",
 
     "columns": [
         {

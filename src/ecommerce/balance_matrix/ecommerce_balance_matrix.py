@@ -33,6 +33,7 @@ with open(
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
 PROJECT_NAME = 'ecommerce'
+SUBPROJECT_NAME = 'balance_matrix'
 
 dag_args = {
     'dag_id': 'ecommerce_balance_matrix', # nombre lógico
@@ -41,7 +42,7 @@ dag_args = {
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME, 'abravom'], # cambio
+    'tags': [PROJECT_NAME, SUBPROJECT_NAME, 'abravom'], # cambio
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
@@ -80,11 +81,12 @@ with DAG(**dag_args) as dag:
             f'{store_banner.lower()}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
+                f'{SUBPROJECT_NAME}/'
                 'scripts/'
                 'product_sensibility_ecommerce.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
+            docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
             pyspark_batch_args=[
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
@@ -92,7 +94,7 @@ with DAG(**dag_args) as dag:
             ],
             include_paths=[
                 'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
+                f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'
             ],
 
              # Driver config (dinámico por banner)
@@ -106,11 +108,12 @@ with DAG(**dag_args) as dag:
             f'{store_banner.lower()}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
+                f'{SUBPROJECT_NAME}/'
                 'scripts/'
                 'ecommerce_processed_regression_data.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
+            docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
             pyspark_batch_args=[
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
@@ -119,7 +122,7 @@ with DAG(**dag_args) as dag:
             ],
             include_paths=[
                 'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
+                f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'
             ],
 
              # Driver config (dinámico por banner)
@@ -133,11 +136,12 @@ with DAG(**dag_args) as dag:
             f'{store_banner.lower()}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
+                f'{SUBPROJECT_NAME}/'
                 'scripts/'
                 'product_elasticity_ecommerce.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
+            docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
             pyspark_batch_args=[
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
@@ -145,7 +149,7 @@ with DAG(**dag_args) as dag:
             ],
             include_paths=[
                 'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
+                f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'
             ],
 
              # Driver config (dinámico por banner)
@@ -159,11 +163,12 @@ with DAG(**dag_args) as dag:
             f'{store_banner.lower()}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
+                f'{SUBPROJECT_NAME}/'
                 'scripts/'
                 'balance_matrix_ecommerce.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
+            docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
             pyspark_batch_args=[
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
@@ -171,7 +176,7 @@ with DAG(**dag_args) as dag:
             ],
             include_paths=[
                 'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
+                f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'
             ],
 
              # Driver config (dinámico por banner)
