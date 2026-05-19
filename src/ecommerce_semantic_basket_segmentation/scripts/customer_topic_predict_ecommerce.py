@@ -164,7 +164,7 @@ def main() -> None:  # noqa: D103
 
     baskets_topics_k12_numeric = baskets_topics_k12.select_dtypes(include=['float64'])
 
-    baskets_topics_k12['TOPIC_FINAL'] = baskets_topics_k12_numeric.apply(
+    baskets_topics_k12['TOPIC'] = baskets_topics_k12_numeric.apply(
         clasificar_dominante, axis=1
     )
 
@@ -201,7 +201,7 @@ def main() -> None:  # noqa: D103
 
     baskets_topics_k6_numeric = baskets_topics_k6.select_dtypes(include=['float64'])
 
-    baskets_topics_k6['TOPIC_FINAL'] = baskets_topics_k6_numeric.apply(
+    baskets_topics_k6['TOPIC'] = baskets_topics_k6_numeric.apply(
         clasificar_dominante, axis=1
     )
 
