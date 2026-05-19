@@ -337,6 +337,7 @@ def main() -> None:  # noqa: D103
     logging.info('Inicio Proceso Calculo Topicos K6')
 
     semantic_baskets_k6 = readBigQuery(SQL_QUERIES['semantic_customer_baskets_k6'].substitute(
+        gcp_project = gcp_project,
         fecha_carga = execution_date
         ),
     user = usuario,
