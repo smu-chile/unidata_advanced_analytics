@@ -216,7 +216,7 @@ def main() -> None:  # noqa: D103
         if_exists='append'
     )
 
-    logging.info('Finaliza Proceso Calculo Topicos K12')
+    logging.info('Finaliza Proceso Calculo Topicos K6')
 
 
 if __name__ == '__main__':
