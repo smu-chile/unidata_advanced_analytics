@@ -18,7 +18,11 @@ import common.gcp_extended.bigquery as gbq_extended  # noqa: F401
 import common.office365_extended.sharepoint as sp
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.gcp_extended.bigquery import readBigQuery, createTableAsSelect
+from common.gcp_extended.bigquery import (
+    readBigQuery,
+    setTableExpiration,
+    createTableAsSelect,
+)
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -991,7 +995,7 @@ SQL_QUERIES = QueryDict({
 # -------------------------------------------------------------------------
 
 def main():
-    usuario = 'halo_efect'  # noqa: F841
+    usuario = 'pull_foward'  # noqa: F841
     # parse input variables
     args = vars(parser.parse_args())
     execution_date: str = args['execution_date']
@@ -1045,6 +1049,8 @@ def main():
     logging.info(f'result_date: {result_date}')
     logging.info(f'month_date: {month_date}')
 
+    logging.info('subcat_um')
+
     _ = createTableAsSelect(
     query=SQL_QUERIES['subcat_um'].substitute(
         gcp_project = 'cl-bigdata-analytics-preprod',
@@ -1059,6 +1065,17 @@ def main():
     create_disposition='CREATE_IF_NEEDED',
     write_disposition = 'WRITE_TRUNCATE'
     )
+
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{proyecto}.TMP.TMP_SUBCAT_UM_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
+    )
+
+    logging.info('clientes_subcat_unidades_sin_promo')
 
     _ = createTableAsSelect(
     query=SQL_QUERIES['clientes_subcat_unidades_sin_promo'].substitute(
@@ -1083,6 +1100,17 @@ def main():
     write_disposition = 'WRITE_TRUNCATE'
     )
 
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{proyecto}.TMP.TMP_CLIENTES_SUBCAT_UNIDADES_SIN_PROMO_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
+    )
+
+    logging.info('sobrestock')
+
     _ = createTableAsSelect(
     query=SQL_QUERIES['sobrestock'].substitute(
         gcp_project_1 = 'cl-cda-prod',
@@ -1103,6 +1131,15 @@ def main():
     use_legacy_sql = False,
     create_disposition='CREATE_IF_NEEDED',
     write_disposition = 'WRITE_TRUNCATE'
+    )
+
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{proyecto}.TMP.TMP_SOBRESTOCK_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
     )
 
     pull_foward = readBigQuery(SQL_QUERIES['pull_foward'].substitute(
