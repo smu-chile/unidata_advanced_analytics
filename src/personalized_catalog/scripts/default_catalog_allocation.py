@@ -163,7 +163,8 @@ def main() -> None:  # noqa: D103
     logging.info('Get catalog campaing name and start/end dates')
 
     campaign_name, start_date, end_date = readBigQuery(SQL_QUERIES['next_catalog_info'].substitute(
-        execution_date = execution_date
+        execution_date = execution_date,
+        gcp_project = gcp_project
         ),
     user = usuario,
     gbq_client = gbq_client
@@ -192,7 +193,8 @@ def main() -> None:  # noqa: D103
         start_date=start_date,
         end_date=end_date,
         fecha_sku_emb = fecha_sku_emb,
-        store_banner = store_banner
+        store_banner = store_banner,
+        gcp_project = gcp_project
         ),
     user = usuario,
     gbq_client = gbq_client
@@ -215,7 +217,8 @@ def main() -> None:  # noqa: D103
 
     topic_embeddings = readBigQuery(SQL_QUERIES['build_generic_topic_embedding'].substitute(
         start_date=start_date,
-        store_banner = store_banner
+        store_banner = store_banner,
+        gcp_project = gcp_project
         ),
     user = usuario,
     gbq_client = gbq_client

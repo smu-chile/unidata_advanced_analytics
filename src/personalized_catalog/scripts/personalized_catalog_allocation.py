@@ -343,7 +343,8 @@ def main() -> None:  # noqa: D103
     logging.info('Get catalog campaing name and start/end dates')
 
     campaign_name, start_date, end_date = readBigQuery(SQL_QUERIES['next_catalog_info'].substitute(
-        execution_date = execution_date
+        execution_date = execution_date,
+        gcp_project = gcp_project
         ),
     user = usuario,
     gbq_client = gbq_client
@@ -371,7 +372,8 @@ def main() -> None:  # noqa: D103
         start_date=start_date,
         end_date=end_date,
         fecha_sku_emb = fecha_sku_emb,
-        store_banner = store_banner
+        store_banner = store_banner,
+        gcp_project = gcp_project
         ),
     user = usuario,
     gbq_client = gbq_client
@@ -399,7 +401,8 @@ def main() -> None:  # noqa: D103
         end_date=end_date,
         month_interval=month_interval,
         store_banner = store_banner,
-        organization_id = organization_id
+        organization_id = organization_id,
+        gcp_project = gcp_project
         ),
     user = usuario,
     gbq_client = gbq_client
@@ -412,7 +415,8 @@ def main() -> None:  # noqa: D103
 
     customer_emb = readBigQuery(SQL_QUERIES['customer_embedding_matrix'].substitute(
         start_date=start_date,
-        store_banner = store_banner
+        store_banner = store_banner,
+        gcp_project = gcp_project
         ),
     user = usuario,
     gbq_client = gbq_client
@@ -441,7 +445,8 @@ def main() -> None:  # noqa: D103
 
     topic_default_alloc = readBigQuery(SQL_QUERIES['topic_catalog_alloc'].substitute(
         start_date = start_date,
-        upper_store_banner = upper_store_banner
+        upper_store_banner = upper_store_banner,
+        gcp_project = gcp_project
         ),
     user = usuario,
     gbq_client = gbq_client
@@ -484,7 +489,8 @@ def main() -> None:  # noqa: D103
     logging.info('Get the max number of clients with transactions')
 
     max_n_customers = readBigQuery(SQL_QUERIES['n_clients_with_transactions'].substitute(
-        upper_store_banner = upper_store_banner
+        upper_store_banner = upper_store_banner,
+        gcp_project = gcp_project
         ),
     user = usuario,
     gbq_client = gbq_client
@@ -510,7 +516,8 @@ def main() -> None:  # noqa: D103
         transactions = readBigQuery(SQL_QUERIES['query_transactions'].substitute(
             upper_store_banner = upper_store_banner,
             start_idx=n_batch*batch_size,
-            end_idx=(n_batch + 1)*batch_size
+            end_idx=(n_batch + 1)*batch_size,
+            gcp_project = gcp_project
             ),
         user = usuario,
         gbq_client = gbq_client
