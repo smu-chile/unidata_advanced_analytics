@@ -1,0 +1,44 @@
+{
+    "schema": "PERSONALIZED_CATALOG",
+    "table": "TOPIC_DEFAULT_CATALOG_UNIMARC",
+
+    "columns": [
+        {
+            "name": "TOPIC",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "EAN",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "RELEVANCE",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "CAMPAIGN_NAME",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "FECHA",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+        
+    ],
+
+    "time_partitioning": {
+    "field": "FECHA",
+    "type_": "DAY"
+    }
+
+}
