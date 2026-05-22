@@ -466,7 +466,8 @@ def main() -> None:  # noqa: D103
             month_interval=month_interval,
             campaign_name=campaign_name,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            gcp_project = gcp_project
         ),
         table_ref=f'{gcp_project}.TMP.TMP_LAST_N_MONTH_TRANSACTIONS_{upper_store_banner}',
         create_disposition='CREATE_IF_NEEDED',
