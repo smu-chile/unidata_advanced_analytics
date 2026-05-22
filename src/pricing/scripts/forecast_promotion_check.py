@@ -2000,6 +2000,12 @@ def loop_promociones(
     filas_resumen = []
 
     for idx, promo in enumerate(promos_existentes, start=1):
+
+        #Parche temporal: vis promos vacías.
+        logging.info('-----------------------------------------')
+        logging.info(f'[{idx}/{len(promos_existentes)}] PROMO {promo}')
+        logging.info('-----------------------------------------')
+
         df_promo = df_resultado[df_resultado['n_promocion'] == promo]
         nombre_promo = str(df_promo['nombre_promocion'].iloc[0])
 
