@@ -56,6 +56,10 @@ parser.add_argument(
     help='Number of months of past transactions from the execution date to view'
 )
 parser.add_argument(
+    '--sku_per_category', default=1, type=int,
+    help='Number of products per category to allocate'
+)
+parser.add_argument(
     '--batch_size', type=int,
     help='Batch size for the allocation execution'
 )
