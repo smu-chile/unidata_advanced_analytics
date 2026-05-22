@@ -34,8 +34,6 @@ with open(
 
 PROJECT_NAME = 'personalized_catalog'
 
-store_banner_list = ['Unimarc']
-
 dag_args = {
     'dag_id': 'personalized_catalog_allocation',
     'schedule_interval': None,
@@ -69,14 +67,15 @@ with DAG(**dag_args) as dag:
     month_interval = "{{ dag_run.conf.get('month_interval', 12) }}"
     batch_size = "{{ dag_run.conf.get('batch_size', 50000) }}"
 
+    store_banner_list = ['Unimarc']
+
     default_catalog_tasks = []
     personalized_catalog_tasks = []
 
     for store_banner in store_banner_list:
         banner_suffix = store_banner.replace(' ', '_').lower()
 
-
-        default_catalog_tasks = ExtendedDataprocCreateBatchOperator(
+        default_catalog_task = ExtendedDataprocCreateBatchOperator(
             task_id = f'default_catalog_allocation_{banner_suffix}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
@@ -98,7 +97,7 @@ with DAG(**dag_args) as dag:
             ],
         )
 
-        personalized_catalog_tasks = ExtendedDataprocCreateBatchOperator(
+        personalized_catalog_task = ExtendedDataprocCreateBatchOperator(
             task_id = f'personalized_catalog_allocation__{banner_suffix}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
@@ -122,7 +121,7 @@ with DAG(**dag_args) as dag:
             ],
         )
 
-        default_catalog_tasks >> personalized_catalog_tasks
+        default_catalog_task >> personalized_catalog_task
 
-        default_catalog_tasks.append(default_catalog_tasks)
-        personalized_catalog_tasks.append(personalized_catalog_tasks)
+        default_catalog_tasks.append(default_catalog_task)
+        personalized_catalog_tasks.append(personalized_catalog_task)
