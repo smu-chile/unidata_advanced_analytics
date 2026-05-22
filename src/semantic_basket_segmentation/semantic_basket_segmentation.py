@@ -35,7 +35,7 @@ with open(
 PROJECT_NAME = 'semantic_basket_segmentation'
 dag_args = {
     'dag_id': 'semantic_basket_segmentation',
-    'schedule_interval': '30 14 1 * *',
+    'schedule_interval': '30 2 2 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,

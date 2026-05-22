@@ -1,0 +1,45 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "DIAMOND_DISCOUNT",
+
+    "columns": [
+        {
+            "name": "HASH_STRING",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "TRANSACTION_DATE",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "MARKET_BASKET_KEY",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "STORE_ID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "BASKET_VALUE",
+            "field_type": "INT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "BASKET_DISCOUNT",
+            "field_type": "INT",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+
+        
+    ]
+}

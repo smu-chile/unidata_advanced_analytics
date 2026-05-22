@@ -8,7 +8,7 @@ from io import BytesIO
 from logging import config
 
 import pandas as pd
-import pendulum  # noqa: F401
+import pendulum
 from google.cloud import bigquery  # noqa: F401
 from google.cloud.bigquery import Client
 
@@ -18,7 +18,11 @@ import common.gcp_extended.bigquery as gbq_extended  # noqa: F401
 import common.office365_extended.sharepoint as sp
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.gcp_extended.bigquery import readBigQuery, createTableAsSelect
+from common.gcp_extended.bigquery import (
+    readBigQuery,
+    setTableExpiration,
+    createTableAsSelect,
+)
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -1427,6 +1431,15 @@ def main():
     write_disposition = 'WRITE_TRUNCATE'
     )
 
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{proyecto}.TMP.TMP_PROMO_EVAL_BEHAVIOR_LAST_12_MONTHS_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
+    )
+
     logging.info('step_1')
 
     _ = createTableAsSelect(
@@ -1450,6 +1463,15 @@ def main():
     write_disposition = 'WRITE_TRUNCATE'
     )
 
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{proyecto}.TMP.TMP_PROMO_EVAL_HALO_STEP_1_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
+    )
+
     logging.info('step_2')
 
     _ = createTableAsSelect(
@@ -1465,6 +1487,15 @@ def main():
     write_disposition = 'WRITE_TRUNCATE'
     )
 
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{proyecto}.TMP.TMP_PROMO_EVAL_HALO_STEP_2_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
+    )
+
     logging.info('step_3')
 
     _ = createTableAsSelect(
@@ -1478,6 +1509,15 @@ def main():
     use_legacy_sql = False,
     create_disposition='CREATE_IF_NEEDED',
     write_disposition = 'WRITE_TRUNCATE'
+    )
+
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{proyecto}.TMP.TMP_PROMO_EVAL_HALO_STEP_3_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
     )
 
     logging.info('promotional_sales')

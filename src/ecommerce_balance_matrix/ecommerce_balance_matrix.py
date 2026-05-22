@@ -32,16 +32,16 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'ecommerce'
+PROJECT_NAME = 'ecommerce_balance_matrix'
 
 dag_args = {
-    'dag_id': 'ecommerce_balance_matrix', # nombre lógico
+    'dag_id': 'ecommerce_balance_matrix',
     'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME, 'abravom'], # cambio
+    'tags': [PROJECT_NAME, 'abravom'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
@@ -84,7 +84,7 @@ with DAG(**dag_args) as dag:
                 'product_sensibility_ecommerce.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
+            docker_image_name=f'{PROJECT_NAME}',
             pyspark_batch_args=[
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
@@ -110,7 +110,7 @@ with DAG(**dag_args) as dag:
                 'ecommerce_processed_regression_data.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
+            docker_image_name=f'{PROJECT_NAME}',
             pyspark_batch_args=[
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
@@ -137,7 +137,7 @@ with DAG(**dag_args) as dag:
                 'product_elasticity_ecommerce.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
+            docker_image_name=f'{PROJECT_NAME}',
             pyspark_batch_args=[
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
@@ -163,7 +163,7 @@ with DAG(**dag_args) as dag:
                 'balance_matrix_ecommerce.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
+            docker_image_name=f'{PROJECT_NAME}',
             pyspark_batch_args=[
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,

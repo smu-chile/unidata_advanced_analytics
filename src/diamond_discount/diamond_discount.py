@@ -1,3 +1,4 @@
+"""Defines the DAG that allocates my usuals products."""
 # Default
 import json
 import platform
@@ -32,27 +33,28 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'ecommerce'
+PROJECT_NAME = 'diamond_discount'
+
 dag_args = {
-    'dag_id': 'ecommerce_basket_topic_predict',
-    'schedule_interval': None,
+    'dag_id': 'diamond_discount',
+    'schedule_interval': '00 3 * * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME, 'abravom'],
+    'tags': [PROJECT_NAME, 'ecastrot'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
-        'email': ['abravom@unidata.cl'],
+        'email': ['ecastrot@unidata.cl'],
         'start_date': pendulum.datetime(
-            2025, 1, 1,
+            2023, 12, 5,
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
         'catchup': False,
-        'email_on_failure': False,
+        'email_on_failure': True,
         'email_on_retry': False,
         'retries': 0,
         'retry_delay': timedelta(minutes=5)
@@ -60,27 +62,22 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date',dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}"  # noqa: E501
-
-    semantic_basket_topic_ecommerce = ExtendedDataprocCreateBatchOperator(
-        task_id = 'basket_topic_predict_ecommerce',
+    ExtendedDataprocCreateBatchOperator(
+        task_id='compute_diamond_discount',
         python_script_path=(
             f'{PROJECT_NAME}/'
             'scripts/'
-            'basket_topic_predict_ecommerce.py'
+            'compute_diamond_discount.py'
         ),
         dag_env_config=dag_env_config,
-        docker_image_name=PROJECT_NAME,
+        docker_image_name=f'{PROJECT_NAME}',
         pyspark_batch_args=[
-            '--project_id', dag_env_config['project_id'],
-            '--execution_date', EXECUTION_DATE,
-            '--batch_size', "{{ dag_run.conf.get('batch_size', 1000000) }}",
-
+            '--project_name', PROJECT_NAME,
+            '--gcp_project', dag_env_config['project_id'],
+            '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_start).strftime('%Y-%m-%d')) }}",  # noqa: E501
         ],
         include_paths=[
             'common/',
             f'{PROJECT_NAME}/gbq_objects/'
         ],
     )
-
-

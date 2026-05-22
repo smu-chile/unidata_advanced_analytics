@@ -8,7 +8,7 @@ from io import BytesIO
 from logging import config
 
 import pandas as pd
-import pendulum  # noqa: F401
+import pendulum
 from google.cloud import bigquery  # noqa: F401
 from google.cloud.bigquery import Client
 
@@ -18,7 +18,11 @@ import common.gcp_extended.bigquery as gbq_extended  # noqa: F401
 import common.office365_extended.sharepoint as sp
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.gcp_extended.bigquery import readBigQuery, createTableAsSelect
+from common.gcp_extended.bigquery import (
+    readBigQuery,
+    setTableExpiration,
+    createTableAsSelect,
+)
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -1494,6 +1498,8 @@ def main():
     logging.info(f'result_date: {result_date}')
     logging.info(f'month_date: {month_date}')
 
+    logging.info('promo_eval_behavior_last_12_months')
+
     _ = createTableAsSelect(
     query=SQL_QUERIES['promo_eval_behavior_last_12_months'].substitute(
         gcp_project_1 = 'cl-cda-prod',
@@ -1512,6 +1518,17 @@ def main():
     create_disposition='CREATE_IF_NEEDED',
     write_disposition = 'WRITE_TRUNCATE'
     )
+
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{proyecto}.TMP.TMP_PROMO_EVAL_BEHAVIOR_LAST_12_MONTHS_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
+    )
+
+    logging.info('step_1')
 
     _ = createTableAsSelect(
     query=SQL_QUERIES['step_1'].substitute(
@@ -1535,6 +1552,17 @@ def main():
     write_disposition = 'WRITE_TRUNCATE'
     )
 
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{proyecto}.TMP.TMP_PROMO_EVAL_HALO_STEP_1_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
+    )
+
+    logging.info('step_2')
+
     _ = createTableAsSelect(
     query=SQL_QUERIES['step_2'].substitute(
         gcp_project = proyecto,
@@ -1548,6 +1576,17 @@ def main():
     write_disposition = 'WRITE_TRUNCATE'
     )
 
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{proyecto}.TMP.TMP_PROMO_EVAL_HALO_STEP_2_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
+    )
+
+    logging.info('step_3')
+
     _ = createTableAsSelect(
     query=SQL_QUERIES['step_3'].substitute(
         gcp_project = proyecto,
@@ -1560,6 +1599,17 @@ def main():
     create_disposition='CREATE_IF_NEEDED',
     write_disposition = 'WRITE_TRUNCATE'
     )
+
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{proyecto}.TMP.TMP_PROMO_EVAL_HALO_STEP_3_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
+    )
+
+    logging.info('promotional_sales')
 
     df_get_step_3_data = readBigQuery(SQL_QUERIES['get_step_3_data'].substitute(
         gcp_project = 'cl-bigdata-analytics-preprod',

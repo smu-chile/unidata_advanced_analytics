@@ -34,7 +34,8 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'ecommerce'
+PROJECT_NAME = 'ecommerce_my_usuals'
+
 dag_args = {
     'dag_id': 'my_usuals_allocation',
     'schedule_interval': '0 9 * * 3',
@@ -42,12 +43,12 @@ dag_args = {
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 2,
-    'tags': [PROJECT_NAME, 'ecastrot'],
+    'tags': [PROJECT_NAME,'abravom'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
-        'email': ['ecastrot@unidata.cl'],
+        'email': ['abravom@unidata.cl'],
         'start_date': pendulum.datetime(
             2023, 12, 5,
             tz=pendulum.timezone('America/Santiago')
@@ -71,7 +72,7 @@ with DAG(**dag_args) as dag:
                 'my_usuals.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
+            docker_image_name=f'{PROJECT_NAME}',
             pyspark_batch_args=[
                 '--project_name', PROJECT_NAME,
                 '--gcp_project', dag_env_config['project_id'],

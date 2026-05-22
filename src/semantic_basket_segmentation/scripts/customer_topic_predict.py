@@ -126,6 +126,7 @@ def main() -> None:  # noqa: D103
     rollback_months: int = args['rollback_months']
     batch_size: int = args['batch_size']
 
+    execution_date = pd.to_datetime(execution_date[:8] + '01').strftime('%Y-%m-%d')
     monthid = pd.to_datetime(execution_date[:8] + '01').strftime('%Y%m')
 
     # Construct the baskets dates to be reviewed
