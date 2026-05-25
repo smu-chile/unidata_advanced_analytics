@@ -1154,6 +1154,7 @@ def main():
 
     if store_banner == 'Unimarc':
 
+        logging.info('Base my usuals')
         createTableAsSelect(
             query=SQL_QUERIES['base_my_usuals'].substitute(
                 gcp_project=gcp_project,
@@ -1171,6 +1172,7 @@ def main():
             gbq_client=gbq_client,
         )
 
+        logging.info('Marcas propias')
         createTableAsSelect(
             query=SQL_QUERIES['marcas_propias'].substitute(
                 gcp_project=gcp_project,
@@ -1185,6 +1187,7 @@ def main():
             gbq_client=gbq_client
         )
 
+        logging.info('Base my usuals adj')
         createTableAsSelect(
             query=SQL_QUERIES['base_my_usuals_adj'].substitute(
                 gcp_project=gcp_project,
@@ -1216,6 +1219,7 @@ def main():
             gbq_client=gbq_client,
         )
 
+        logging.info('usuals 5 prod mp')
         createTableAsSelect(
             query=SQL_QUERIES['usuals_5_prod_mp'].substitute(
                 gcp_project=gcp_project,
@@ -1227,7 +1231,7 @@ def main():
             ),
             table_ref=table_prod_mp,
             create_disposition='CREATE_IF_NEEDED',
-            write_disposition='WRITE_APPEND',
+            write_disposition='WRITE_TRUNCATE',
             use_legacy_sql=False,
             gbq_client=gbq_client,
         )
