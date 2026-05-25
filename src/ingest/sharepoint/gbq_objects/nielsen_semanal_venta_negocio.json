@@ -1,0 +1,113 @@
+{
+    "schema": "MARKET_SHARE",
+    "table": "NIELSEN_SEMANAL_VENTA_NEGOCIO",
+
+    "columns": [
+        {
+            "name": "negocio",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Negocio"
+        },
+        {
+            "name": "cl_total_store",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "periodos",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Periodo que comprende el dato obtenido desde Nielsen"
+        },
+        {
+            "name": "total_mercado_vtas_valor",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de ventas del mercado"
+        },
+        {
+            "name": "total_mercado_vtas_unit",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de unidades vendidas del mercado"
+        },
+        {
+            "name": "unimarc_vtas_valor",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de ventas de Unimarc"
+        },
+        {
+            "name": "unimarc_vtas_unit",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de unidades vendidas de Unimarc"
+        },
+        {
+            "name": "m10s10_vtas_valor",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de ventas de M10/S10"
+        },
+        {
+            "name": "m10s10_vtas_unit",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de unidades vendidas de M10/S10"
+        },
+        {
+            "name": "unimarc_internet_vtas_valor",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de ventas de Unimarc ecommerce"
+        },
+        {
+            "name": "unimarc_internet_vtas_unit",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de unidades vendidas de Unimarc ecommerce"
+        },
+        {
+            "name": "total_internet_vtas_valor",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de ventas de mercado ecommerce"
+        },
+        {
+            "name": "total_internet_vtas_unit",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de unidades vendidas de mercado ecommerce"
+        },
+        {
+            "name": "total_mercado_internet_vtas_valor",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de ventas de mercado ecommerce y local"
+        },
+        {
+            "name": "total_mercado_internet_vtas_unit",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de unidades vendidas de mercado ecommerce y local"
+        },
+        {
+            "name": "fin_periodo",
+            "field_type": "DATE",
+            "mode": "NULLABLE",
+            "description": "Fecha fin periodo de datos obtenidos Nielsen"
+        },
+        {
+            "name": "semana_carga",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Semana datos obtenidos Nielsen"
+        }
+
+    ],
+    "time_partitioning": {
+        "field": "fin_periodo",
+        "type_": "DAY"
+    }
+}

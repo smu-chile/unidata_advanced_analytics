@@ -1,0 +1,133 @@
+{
+    "schema": "MARKET_SHARE",
+    "table": "NIELSEN_ANUAL_VENTA_MERCADO_JERARQUIA_UPC",
+
+    "columns": [
+        {
+            "name": "departamento",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Departamento"
+        },
+        {
+            "name": "cl_xc_categoria",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoria"
+        },
+        {
+            "name": "segmento",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Segmento"
+        },
+        {
+            "name": "negocio",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Negocio"
+        },
+        {
+            "name": "item_code",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Item Code"
+        },
+        {
+            "name": "item",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Descripcion material/item"
+        },
+        {
+            "name": "subsegmento",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Subsegmento"
+        },
+        {
+            "name": "tamano",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Tamano"
+        },
+        {
+            "name": "tipo",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Tipo"
+        },
+        {
+            "name": "variedad",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Variedad"
+        },
+        {
+            "name": "upc",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "UPC"
+        },
+        {
+            "name": "cl_xc_marca",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Marca"
+        },
+        {
+            "name": "dermo",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "envase",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "level_4_nielsen",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "sabores",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "submarca",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "periodos",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Periodo que comprende el dato obtenido desde Nielsen"
+        },
+        {
+            "name": "total_mercado_vtas_valor",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de ventas del mercado"
+        },
+        {
+            "name": "total_chile_cadena_unimarc_vtas_valor",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "year",
+            "field_type": "DATE",
+            "mode": "NULLABLE",
+            "description": "Año que comprende el dato obtenido desde Nielsen"
+        }
+
+    ],
+    "time_partitioning": {
+        "field": "year",
+        "type_": "YEAR"
+    }
+    
+}

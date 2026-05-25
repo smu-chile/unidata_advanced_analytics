@@ -1,0 +1,108 @@
+{
+    "schema": "MARKET_SHARE",
+    "table": "NIELSEN_ANUAL_VENTA_MERCADO_JERARQUIA_YTD",
+
+    "columns": [
+        {
+            "name": "departamento",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Departamento"
+        },
+        {
+            "name": "cl_xc_categoria",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoria"
+        },
+        {
+            "name": "segmento",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Segmento"
+        },
+        {
+            "name": "negocio",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Negocio"
+        },
+        {
+            "name": "item_code",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Item Code"
+        },
+        {
+            "name": "item",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Descripcion material/item"
+        },
+        {
+            "name": "subsegmento",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Subsegmento"
+        },
+        {
+            "name": "tamano",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Tamano"
+        },
+        {
+            "name": "tipo",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Tipo"
+        },
+        {
+            "name": "variedad",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Variedad"
+        },
+        {
+            "name": "periodos",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Periodo que comprende el dato obtenido desde Nielsen"
+        },
+        {
+            "name": "total_mercado_vtas_valor",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de ventas del mercado"
+        },
+        {
+            "name": "total_mercado_vtas_unit",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de unidades vendidas del mercado"
+        },
+        {
+            "name": "total_supermercados_amp_internet_vtas_valor",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de ventas del mercado e internet"
+        },
+        {
+            "name": "total_supermercados_amp_internet_vtas_unit",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Total de unidades vendidas del mercado e internet"
+        },
+        {
+            "name": "year",
+            "field_type": "DATE",
+            "mode": "NULLABLE",
+            "description": "Año que comprende el dato obtenido desde Nielsen"
+        }
+
+    ],
+    "time_partitioning": {
+        "field": "year",
+        "type_": "YEAR"
+    }
+}
