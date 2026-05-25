@@ -69,7 +69,7 @@ SQL_QUERIES = QueryDict({
         tipo,
         variedad,
         upc
-    FROM cl-bigdata-analytics-preprod.MARKET_SHARE.NIELSEN_ANUAL_VENTA_MERCADO_JERARQUIA_UPC
+    FROM ${gcp_project}.MARKET_SHARE.NIELSEN_ANUAL_VENTA_MERCADO_JERARQUIA_UPC
     """,
 
     'product_names_sap':
