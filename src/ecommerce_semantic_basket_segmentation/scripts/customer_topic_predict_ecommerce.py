@@ -74,12 +74,12 @@ SQL_QUERIES = QueryDict({
         AVG(APERITIVOS_SNACKS) AS APERITIVOS_SNACKS
     FROM `${gcp_project}.ECOMMERCE.ECOMMERCE_SEMANTIC_BASKET_TOPIC_K12`
     WHERE CUSTOMER_KEY IN (
-        SELECT CUSTOMER_KEY
+        SELECT DISTINCT CUSTOMER_KEY
         FROM `${gcp_project}.ECOMMERCE.ECOMMERCE_SEMANTIC_BASKET_TOPIC_K12`
         WHERE FECHA_CARGA = '${fecha_carga}'
     )
     AND FECHA_CARGA >= '${fecha_carga_3m}'
-    AND FECHA_CARGA < '${fecha_carga}'
+    AND FECHA_CARGA <= '${fecha_carga}'
     GROUP BY CUSTOMER_KEY
     """,
 
@@ -95,12 +95,12 @@ SQL_QUERIES = QueryDict({
         AVG(COLACIONES) AS COLACIONES
     FROM `${gcp_project}.ECOMMERCE.ECOMMERCE_SEMANTIC_BASKET_TOPIC_K6`
     WHERE CUSTOMER_KEY IN (
-        SELECT CUSTOMER_KEY
+        SELECT DISTINCT CUSTOMER_KEY
         FROM `${gcp_project}.ECOMMERCE.ECOMMERCE_SEMANTIC_BASKET_TOPIC_K6`
         WHERE FECHA_CARGA = '${fecha_carga}'
     )
     AND FECHA_CARGA >= '${fecha_carga_3m}'
-    AND FECHA_CARGA < '${fecha_carga}'
+    AND FECHA_CARGA <= '${fecha_carga}'
     GROUP BY CUSTOMER_KEY
     """
 
@@ -133,7 +133,7 @@ def main() -> None:  # noqa: D103
 
     execution_date = pd.to_datetime(execution_date[:8] + '01').strftime('%Y-%m-%d')
     execution_date_3m = (
-        pd.to_datetime(execution_date[:8] + '01') - pd.DateOffset(months=3)
+        pd.to_datetime(execution_date[:8] + '01') - pd.DateOffset(months=2)
     ).strftime('%Y-%m-%d')
     monthid = pd.to_datetime(execution_date[:8] + '01').strftime('%Y%m')
 
