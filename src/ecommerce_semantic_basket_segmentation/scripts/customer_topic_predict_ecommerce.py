@@ -209,7 +209,7 @@ def main() -> None:  # noqa: D103
     )
 
     uploadFrame(
-        baskets_topics_k12[['CUSTOMER_KEY','TOPIC','MONTHID','FECHA_CARGA']],
+        baskets_topics_k6[['CUSTOMER_KEY','TOPIC','MONTHID','FECHA_CARGA']],
         table_ddl_json_path=os.path.join('gbq_objects','ecommerce_semantic_customer_topic_k6.json'),
         project=gcp_project,
         gbq_client=gbq_client,
