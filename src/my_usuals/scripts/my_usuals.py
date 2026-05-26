@@ -1,4 +1,5 @@
-from __future__ import annotations  # noqa: D100
+"""."""
+from __future__ import annotations
 
 # Default
 import os
@@ -254,6 +255,288 @@ SQL_QUERIES = QueryDict({
     WHERE EAN IN (SELECT EAN FROM MARCAS_PROPIAS_VENTAS)
     """,
 
+    'usuals_5_prod_mp':
+    """
+    WITH SUB_CAT_MP AS (
+        SELECT DISTINCT GRUPO_DSC
+        FROM `${gcp_project}.TMP.TMP_MARCAS_PROPIAS_${upper_store_banner}`
+    ),
+
+    BASE_USUALS_1 AS (
+        SELECT
+            A.date,
+            A.customer_key,
+            A.ean,
+            A.relevance,
+            A.store_banner,
+            B.GRUPO_DSC,
+            B.SKU_PRODUCT,
+            B.NM
+        FROM `${gcp_project}.TMP.TMP_BASE_MY_USUALS` A
+
+        INNER JOIN  (
+            SELECT *
+            FROM (
+                SELECT
+                    CAST(ean AS INT64) AS ean,
+                    sku_product,
+                    GRUPO_DSC,
+                    NM,
+                    ROW_NUMBER() OVER (PARTITION BY ean ORDER BY CAST(LTRIM(sku_product, '0') AS INT64)) AS ean_index
+                FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
+                )
+            WHERE ean_index = 1
+        ) B
+        USING (EAN)
+
+        WHERE A.store_banner = '${store_banner}'
+    ),
+
+    BASE_USUALS_2 AS (
+        SELECT
+            A.*,
+            CASE
+                WHEN B.EAN IS NOT NULL THEN 'ES MARCA PROPIA'
+            END AS MARCA_PROPIA,
+            CASE
+                WHEN C.GRUPO_DSC IS NOT NULL THEN 'SI' ELSE 'NO'
+            END AS TIENE_MARCA_PROPIA
+        FROM BASE_USUALS_1 A
+
+        LEFT JOIN `${gcp_project}.TMP.TMP_MARCAS_PROPIAS_${upper_store_banner}` B
+        ON CAST(A.EAN AS STRING) = B.EAN
+
+        LEFT JOIN SUB_CAT_MP C
+        ON A.GRUPO_DSC = C.GRUPO_DSC
+    ),
+
+    SUSTITUTOS AS (
+        SELECT
+            A.*,
+            B.GRUPO_DSC AS GRUPO_DSC_SKU,
+            C.GRUPO_DSC AS GRUPO_DSC_SUBSTITUTE
+        FROM `${gcp_project}.ML_LAB.SKU_SUBSTITUTES_BY_CATEGORY` A
+
+        INNER JOIN (
+        SELECT DISTINCT SKU_PRODUCT,GRUPO_DSC
+        FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
+        ) B
+        ON A.sku = CAST(ltrim(b.SKU_PRODUCT, '0') AS INT)
+
+        INNER JOIN (
+        SELECT DISTINCT SKU_PRODUCT,GRUPO_DSC
+        FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
+        ) C
+        ON A.substitute = CAST(ltrim(c.SKU_PRODUCT, '0') AS INT)
+
+        WHERE
+            date = '${inicio_mes}'
+            AND store_banner = '${store_banner}'
+    ),
+
+    SUSTITUTOS_ADJ AS (
+        SELECT *
+        FROM SUSTITUTOS
+        WHERE GRUPO_DSC_SKU = GRUPO_DSC_SUBSTITUTE
+    ),
+
+    PROD_MP AS (
+        SELECT
+            sku,
+            substitute as material_mp,
+            substitution_score,
+            EAN as ean_mp,
+            NM AS nm_mp
+        FROM (
+            SELECT *,
+            row_number() over (PARTITION BY sku ORDER BY substitution_rank asc) as rw
+            FROM SUSTITUTOS_ADJ
+            WHERE sku IN (
+                SELECT CAST(ltrim(SKU_PRODUCT, '0') AS INT)
+                FROM BASE_USUALS_2
+                WHERE MARCA_PROPIA IS NULL
+                AND TIENE_MARCA_PROPIA = 'SI'
+            )
+            AND substitute IN (
+                SELECT CAST(MATERIAL AS INT)
+                FROM `${gcp_project}.TMP.TMP_MARCAS_PROPIAS_UNIMARC`
+            )
+        ) t
+
+        INNER JOIN `${gcp_project}.TMP.TMP_MARCAS_PROPIAS_UNIMARC` b
+        ON CAST(t.substitute AS INT) = CAST(b.MATERIAL AS INT)
+        WHERE rw = 1
+    ),
+
+    BASE_USUALS_3 AS (
+        SELECT
+            date,
+            customer_key,
+            ean,
+            relevance,
+            store_banner,
+            GRUPO_DSC,
+            SKU_PRODUCT,
+            NM,MARCA_PROPIA,
+            TIENE_MARCA_PROPIA,
+            sku,
+            material_mp,
+            ean_mp,
+            nm_mp
+        FROM (
+            SELECT *,
+            row_number() over (PARTITION BY customer_key,ean ORDER BY ean_mp asc) as rw
+            FROM BASE_USUALS_2 A
+            LEFT JOIN PROD_MP B
+            ON CAST(ltrim(A.SKU_PRODUCT, '0') AS INT) = CAST(B.sku AS INT)
+        ) t
+        WHERE rw = 1
+    ),
+
+    BASE_USUALS_4 AS (
+        SELECT
+            date,
+            customer_key,
+            ean,
+            relevance,
+            store_banner,
+            GRUPO_DSC,
+            SKU_PRODUCT,
+            NM,
+            MARCA_PROPIA,
+            TIENE_MARCA_PROPIA,
+            CASE WHEN rw = 1 THEN sku ELSE NULL END AS sku,
+            CASE WHEN rw = 1 THEN material_mp ELSE NULL END AS material_mp,
+            CASE WHEN rw = 1 THEN ean_mp ELSE NULL END AS ean_mp,
+            CASE WHEN rw = 1 THEN nm_mp ELSE NULL END AS nm_mp
+        FROM (
+            SELECT *,
+                ROW_NUMBER() OVER(PARTITION BY customer_key,GRUPO_DSC,MATERIAL_MP ORDER BY RELEVANCE ASC) AS rw
+            FROM BASE_USUALS_3
+        )
+    ),
+
+    ean_por_cliente as (
+        SELECT DISTINCT customer_key,ean
+        FROM BASE_USUALS_4
+    ),
+
+    BASE_USUALS_5 AS (
+        SELECT
+            A.*,
+            IF(B.ean IS NOT NULL, 1, 0) AS aux_mp
+        FROM BASE_USUALS_4 AS A
+
+        LEFT JOIN ean_por_cliente AS B
+        ON
+            A.customer_key = B.customer_key
+            AND CAST(A.ean_mp AS INT) = B.ean
+    ),
+
+    USUALS AS (
+    SELECT
+        date,
+        customer_key,
+        CAST(ean AS INT) AS ean_aux,
+        relevance,
+        store_banner
+    FROM BASE_USUALS_5
+
+    UNION ALL
+
+    SELECT
+        date,
+        customer_key,
+        CAST(EAN_MP AS INT) AS ean_aux,
+        relevance + 0.5 AS relevance,
+        store_banner
+    FROM BASE_USUALS_5
+    WHERE
+        MARCA_PROPIA IS NULL
+        AND TIENE_MARCA_PROPIA = 'SI'
+        AND EAN_MP IS NOT NULL
+        AND aux_mp = 0
+    ),
+
+    USUALS_AUX AS (
+        SELECT *,
+            IF(relevance != FLOOR(relevance), 1, 0) AS marca_propia
+        FROM USUALS
+    ),
+
+    USUALS_FILTRADO AS (
+        SELECT *,
+            IF(marca_propia = 1,ROW_NUMBER() OVER(PARTITION BY customer_key,marca_propia ORDER BY relevance ASC), 1) AS rw
+        FROM USUALS_AUX
+    ),
+
+    PROD_MP_COMPRAS AS (
+        SELECT
+            prod_mp.*,
+            CASE
+                WHEN sales_item.customer_key IS NOT NULL THEN 1
+                ELSE 0
+            END AS compra
+        FROM `${gcp_project}.TMP.TMP_USUALS_5_PROD_MP` prod_mp
+
+        LEFT JOIN `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
+            ON prod_mp.customer_key = sales_item.CUSTOMER_KEY
+            AND prod_mp.ean_aux = CAST(sales_item.EAN AS INT)
+            -- Los filtros de fecha y tipo deben ir en el JOIN para no eliminar filas de 'prod_mp'
+            AND sales_item.TRANSACTION_DATE >= '${inicio_mes_n1}'
+            AND sales_item.TRANSACTION_DATE < '${execution_date}'
+            AND sales_item.TRANSACTION_TYPE IN ('NE','FX','BX','B ','BE','FE','F ','NC','TN','TF')
+            AND sales_item.ITM_TXN_FCN_TP_DSC = 'V'
+            AND sales_item.VALUE > 0
+
+        LEFT JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` dim_store
+            ON sales_item.store_id = dim_store.store_id
+            AND dim_store.STORE_BANNER = '${store_banner}'
+
+        LEFT JOIN `${gcp_project}.CDA_VISTAS.VW_FACT_MARKET_BASKET_E_COMMERCE` ecommerce
+            ON sales_item.market_basket_key = ecommerce.market_basket_key
+            AND ecommerce.CANAL_VENTA = 'E-COMMERCE'
+    ),
+
+    USUALS_FILTRADO_2 AS (
+
+        SELECT a.*,b.compra
+        FROM USUALS_FILTRADO a
+
+        LEFT JOIN PROD_MP_COMPRAS b
+        ON a.customer_key = b.customer_key
+        AND a.ean_aux = b.ean_aux
+    ),
+
+    USUALS_ADJ AS (
+        SELECT
+            date,
+            customer_key,
+            ean_aux,
+            relevance,
+            store_banner
+        FROM USUALS_FILTRADO_2
+        WHERE marca_propia = 0
+
+        UNION ALL
+
+        SELECT
+            date,
+            customer_key,
+            ean_aux,
+            relevance,
+            store_banner
+        FROM USUALS_FILTRADO_2
+        WHERE marca_propia = 1
+        AND (compra <> 0 OR compra IS NULL)
+        QUALIFY ROW_NUMBER() OVER(PARTITION BY customer_key ORDER BY relevance ASC) <= 5
+    )
+
+    SELECT *
+    FROM USUALS_ADJ
+    WHERE MOD(CAST(relevance AS NUMERIC), 1) = 0.5
+    """, # noqa: E501
+
     'base_my_usuals_adj':
     """
     WITH SUB_CAT_MP AS (
@@ -469,6 +752,42 @@ SQL_QUERIES = QueryDict({
         FROM USUALS_AUX
     ),
 
+    PROD_MP_COMPRAS AS (
+        SELECT
+            prod_mp.*,
+            CASE
+                WHEN sales_item.customer_key IS NOT NULL THEN 1
+                ELSE 0
+            END AS compra
+        FROM `${gcp_project}.TMP.TMP_USUALS_5_PROD_MP` prod_mp
+
+        LEFT JOIN `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
+            ON prod_mp.customer_key = sales_item.CUSTOMER_KEY
+            AND prod_mp.ean_aux = CAST(sales_item.EAN AS INT)
+            AND sales_item.TRANSACTION_DATE >= '${inicio_mes_n1}'
+            AND sales_item.TRANSACTION_DATE < '${execution_date}'
+            AND sales_item.TRANSACTION_TYPE IN ('NE','FX','BX','B ','BE','FE','F ','NC','TN','TF')
+            AND sales_item.ITM_TXN_FCN_TP_DSC = 'V'
+            AND sales_item.VALUE > 0
+
+        LEFT JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` dim_store
+            ON sales_item.store_id = dim_store.store_id
+            AND dim_store.STORE_BANNER = 'Unimarc'
+
+        LEFT JOIN `${gcp_project}.CDA_VISTAS.VW_FACT_MARKET_BASKET_E_COMMERCE` ecommerce
+            ON sales_item.market_basket_key = ecommerce.market_basket_key
+            AND ecommerce.CANAL_VENTA = 'E-COMMERCE'
+    ),
+
+    USUALS_FILTRADO_2 AS (
+        SELECT a.*,b.compra
+        FROM USUALS_FILTRADO a
+
+        LEFT JOIN PROD_MP_COMPRAS b
+        ON a.customer_key = b.customer_key
+        AND a.ean_aux = b.ean_aux
+    ),
+
     USUALS_ADJ AS (
         SELECT
             date,
@@ -476,8 +795,21 @@ SQL_QUERIES = QueryDict({
             ean_aux,
             relevance,
             store_banner
-        FROM USUALS_FILTRADO
-        WHERE (marca_propia = 0 OR (marca_propia = 1 AND rw <= 5))
+        FROM USUALS_FILTRADO_2
+        WHERE marca_propia = 0
+
+        UNION ALL
+
+        SELECT
+            date,
+            customer_key,
+            ean_aux,
+            relevance,
+            store_banner
+        FROM USUALS_FILTRADO_2
+        WHERE marca_propia = 1
+        AND (compra <> 0 OR compra IS NULL)
+        QUALIFY ROW_NUMBER() OVER(PARTITION BY customer_key ORDER BY relevance ASC) <= 5
     )
 
     SELECT
@@ -746,7 +1078,7 @@ SQL_QUERIES = QueryDict({
 # -------------------------------------------------------------------------
 #                        Main Function
 # -------------------------------------------------------------------------
-def main() -> None:  # noqa: D103
+def main():  # noqa: ANN201, D103
     # ----------
     # Parameters
     # ----------
@@ -771,20 +1103,23 @@ def main() -> None:  # noqa: D103
 
     execution_date_3n = execution_date.subtract(months=3).replace(day=1)
     inicio_mes = execution_date.replace(day=1)
+    inicio_mes_n1 = execution_date.subtract(months=1).replace(day=1)
     upper_store_banner = store_banner.upper()
 
     # Hardcoded
     gbq_client = Client()
-    table_ref=f'{gcp_project}.ECOMMERCE.MY_USUALS'
-    table_base_ref=f'{gcp_project}.TMP.TMP_BASE_MY_USUALS'
-    table_base_adj_ref=f'{gcp_project}.TMP.TMP_BASE_MY_USUALS_ADJ'
-    table_mp_ref=f'{gcp_project}.TMP.TMP_MARCAS_PROPIAS_{upper_store_banner}'
+    table_ref = f'{gcp_project}.ECOMMERCE.MY_USUALS'
+    table_base_ref = f'{gcp_project}.TMP.TMP_BASE_MY_USUALS'
+    table_base_adj_ref = f'{gcp_project}.TMP.TMP_BASE_MY_USUALS_ADJ'
+    table_mp_ref = f'{gcp_project}.TMP.TMP_MARCAS_PROPIAS_{upper_store_banner}'
+    table_prod_mp= f'{gcp_project}.TMP.TMP_USUALS_5_PROD_MP'
 
     logging.info(f'gcp_project = {gcp_project}')
     logging.info(f'gcp_project_cda = {gcp_project_cda}')
     logging.info(f'execution_date = {execution_date}')
     logging.info(f'execution_date_3n = {execution_date_3n}')
     logging.info(f'inicio_mes = {inicio_mes}')
+    logging.info(f'inicio_mes_n1 = {inicio_mes_n1}')
     logging.info(f'store_banner = {store_banner}')
     logging.info(f'rollback_months: {rollback_months}')
     logging.info(f'rollback_months_filter: {rollback_months_filter}')
@@ -820,6 +1155,7 @@ def main() -> None:  # noqa: D103
 
     if store_banner == 'Unimarc':
 
+        logging.info('Base my usuals')
         createTableAsSelect(
             query=SQL_QUERIES['base_my_usuals'].substitute(
                 gcp_project=gcp_project,
@@ -837,6 +1173,7 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client,
         )
 
+        logging.info('Marcas propias')
         createTableAsSelect(
             query=SQL_QUERIES['marcas_propias'].substitute(
                 gcp_project=gcp_project,
@@ -851,10 +1188,13 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client
         )
 
+        logging.info('Base my usuals adj')
         createTableAsSelect(
             query=SQL_QUERIES['base_my_usuals_adj'].substitute(
                 gcp_project=gcp_project,
                 inicio_mes = inicio_mes,
+                inicio_mes_n1 = inicio_mes_n1,
+                execution_date = execution_date,
                 store_banner = store_banner,
                 upper_store_banner = upper_store_banner
             ),
@@ -876,6 +1216,23 @@ def main() -> None:  # noqa: D103
             table_ref=table_ref,
             create_disposition='CREATE_IF_NEEDED',
             write_disposition='WRITE_APPEND',
+            use_legacy_sql=False,
+            gbq_client=gbq_client,
+        )
+
+        logging.info('usuals 5 prod mp')
+        createTableAsSelect(
+            query=SQL_QUERIES['usuals_5_prod_mp'].substitute(
+                gcp_project=gcp_project,
+                inicio_mes = inicio_mes,
+                inicio_mes_n1 = inicio_mes_n1,
+                execution_date = execution_date,
+                store_banner = store_banner,
+                upper_store_banner = upper_store_banner
+            ),
+            table_ref=table_prod_mp,
+            create_disposition='CREATE_IF_NEEDED',
+            write_disposition='WRITE_TRUNCATE',
             use_legacy_sql=False,
             gbq_client=gbq_client,
         )
