@@ -97,7 +97,9 @@ SQL_QUERIES = QueryDict({
             workflow.categoria
         FROM `${gcp_project}.CDA_VISTAS.VW_FACT_WORKFLOW` workflow
 
-        INNER JOIN `${gcp_project}.ECOMMERCE.DIM_VTEX_PRODUCT_IMAGE_URLS` image_urls
+        INNER JOIN (
+            SELECT DISTINCT ean from `${gcp_project}.ECOMMERCE.DIM_VTEX_PRODUCT_IMAGE_URLS`
+        ) image_urls
         ON CAST(workflow.ean AS BIGINT) = image_urls.ean
 
         INNER JOIN (
