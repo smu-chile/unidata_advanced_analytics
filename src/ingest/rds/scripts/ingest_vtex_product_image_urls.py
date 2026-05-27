@@ -63,9 +63,16 @@ def main() -> None:
     total_urls = len(image_urls)
     logging.info(f'Total de URLs a procesar: {total_urls:,}')
 
+    urls_out = 'foto-en-preparacion'
+    image_urls_final = image_urls[~image_urls['url'].str.contains(urls_out,case=False,na=False)]
+
+    total_urls_final = len(image_urls_final)
+
+    logging.info(f'Total de URLs a cargar: {total_urls_final:,}')
     logging.info('Subiendo resultados a BigQuery...')
+
     uploadFrame(
-        image_urls,
+        image_urls_final,
         table_ddl_json_path=os.path.join('gbq_objects', 'dim_vtex_product_image_urls.json'),
         project=gcp_project_id,
         gbq_client=gbq_client,
