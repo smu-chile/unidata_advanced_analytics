@@ -27,13 +27,13 @@ SQL_QUERIES = QueryDict({
         CAST(regexp_replace(ref_id, '-.*', '', 'gi') AS BIGINT) AS sku,
         CAST(ean_primario AS BIGINT) AS ean,
         nombre_producto AS name,
-        'https://unimarc.vteximg.com.br' || imagen AS url,
+        'https://unimarc.vtexassets.com' || imagen AS url,
         LOWER(etiqueta) AS etiqueta,
         orden
     FROM ecommdata.imagenes_sku
     INNER JOIN ecommdata.skus USING (ref_id)
     WHERE LENGTH(ean_primario) < LENGTH('9223372036854775807')
-    AND 'https://unimarc.vteximg.com.br' || imagen NOT LIKE '%PREPARACION%'
+    AND 'https://unimarc.vtexassets.com' || imagen NOT LIKE '%PREPARACION%'
     AND nombre_producto <> 'PRUEBA'
     GROUP BY 1,2,3,4,5,6
     """,
@@ -46,6 +46,10 @@ SQL_QUERIES = QueryDict({
 def main() -> None:
     args = vars(parser.parse_args())
     gcp_project_id = args['project_id']
+    execution_date: pendulum.Date = pendulum.date(
+        *list(map(int, args['execution_date'].split('-')))
+    )
+    logging.info(f'execution_date: {execution_date}')
 
     gbq_client = Client()
 
