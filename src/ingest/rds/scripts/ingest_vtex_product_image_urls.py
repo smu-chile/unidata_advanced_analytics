@@ -33,8 +33,6 @@ SQL_QUERIES = QueryDict({
     FROM ecommdata.imagenes_sku
     INNER JOIN ecommdata.skus USING (ref_id)
     WHERE LENGTH(ean_primario) < LENGTH('9223372036854775807')
-    AND 'https://unimarc.vtexassets.com' || imagen NOT LIKE '%PREPARACION%'
-    AND nombre_producto <> 'PRUEBA'
     GROUP BY 1,2,3,4,5,6
     """,
 })
