@@ -62,7 +62,6 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    MAX_WORKERS = '100'
 
     ingest_data = ExtendedDataprocCreateBatchOperator(
         task_id = 'ingest_data',
@@ -77,7 +76,6 @@ with DAG(**dag_args) as dag:
         pyspark_batch_args=[
             '--project_id', dag_env_config['project_id'],
             '--execution_date', EXECUTION_DATE,
-            '--max_workers', MAX_WORKERS,
         ],
         include_paths=[
             'common/',

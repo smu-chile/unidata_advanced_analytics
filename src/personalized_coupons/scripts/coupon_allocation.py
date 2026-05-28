@@ -605,6 +605,7 @@ def main() -> None:
     }[gcp_project]
 
     logging.info(f'execution_date: {execution_date}')
+    logging.info(f'store_banner: {store_banner}')
 
     # ---------------------------------------------------------------------
     #                       Stage 1: Data load
