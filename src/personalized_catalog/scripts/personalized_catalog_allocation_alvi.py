@@ -427,9 +427,11 @@ def main() -> None:  # noqa: D103
     logging.info('Get customer embeddings')
 
     customer_emb = readBigQuery(SQL_QUERIES['customer_embedding_matrix'].substitute(
+        gcp_project = gcp_project,
         start_date=start_date,
         store_banner = store_banner,
-        gcp_project = gcp_project
+        monthid = monthid
+
         ),
     user = usuario,
     gbq_client = gbq_client
