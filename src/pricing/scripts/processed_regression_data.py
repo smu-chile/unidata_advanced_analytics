@@ -453,7 +453,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     # Cantidad de meses
-    # Parche temporal
+    # Parche
     cant_meses = 29 + 12
 
     if use == 'FORECAST':
