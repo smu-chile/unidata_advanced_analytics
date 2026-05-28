@@ -141,8 +141,8 @@ def main() -> None:  # noqa: D103
     upper_store_banner = store_banner.upper()
     lower_store_banner = store_banner.lower()
 
-    logging.info(f'execution_date: {execution_date}')
     logging.info(f'gcp_project: {gcp_project}')
+    logging.info(f'execution_date: {execution_date}')
     logging.info(f'store_banner: {store_banner}')
     logging.info(f'top_n: {top_n}')
     logging.info(f'sku_per_category: {sku_per_category}')

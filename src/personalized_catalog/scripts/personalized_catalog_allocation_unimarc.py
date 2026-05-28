@@ -327,8 +327,8 @@ def main() -> None:  # noqa: D103
     if store_banner == 'Unimarc':
         organization_id = '01'
 
-    logging.info(f'execution_date: {execution_date}')
     logging.info(f'gcp_project: {gcp_project}')
+    logging.info(f'execution_date: {execution_date}')
     logging.info(f'store_banner: {store_banner}')
     logging.info(f'organization_id: {organization_id}')
     logging.info(f'top_n: {top_n}')
