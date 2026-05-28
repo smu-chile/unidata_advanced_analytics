@@ -139,15 +139,11 @@ def main() -> None:  # noqa: D103
     sku_per_category: int = args['sku_per_category']
 
     upper_store_banner = store_banner.upper()
-
-    if store_banner == 'Unimarc':
-        organization_id = '01'
-
+    lower_store_banner = store_banner.lower()
 
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'gcp_project: {gcp_project}')
     logging.info(f'store_banner: {store_banner}')
-    logging.info(f'organization_id: {organization_id}')
     logging.info(f'top_n: {top_n}')
     logging.info(f'sku_per_category: {sku_per_category}')
 
@@ -321,7 +317,7 @@ def main() -> None:  # noqa: D103
 
     uploadFrame(
         distances,
-        table_ddl_json_path = os.path.join('gbq_objects','default_catalog_allocation.json'),
+        table_ddl_json_path = os.path.join('gbq_objects',f'default_catalog_allocation_{lower_store_banner}.json'),  # noqa: E501
         project = gcp_project,
         gbq_client = gbq_client,
         if_exists = 'append'

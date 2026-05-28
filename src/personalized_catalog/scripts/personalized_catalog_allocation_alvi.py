@@ -79,8 +79,8 @@ SQL_QUERIES = QueryDict({
     WHERE
         fecha_inicio_de_promocion > CAST('${execution_date}' AS DATE)
         AND registro_valido = 'X'
-        AND descripcion_mecanica='CATALOGO UNIMARC'
-        AND descripcion_evento_promocional = 'UNI CATALOGO'
+        AND descripcion_mecanica='CICLO ALVI'
+        AND descripcion_evento_promocional = 'ALVI CICLO'
         --AND nombre_promocion LIKE 'PRECIO OFERTA%'
     ORDER BY fecha_inicio_de_promocion, nombre_promocion
     LIMIT 1
@@ -114,7 +114,8 @@ SQL_QUERIES = QueryDict({
 
         WHERE
             registro_valido = 'X'
-            AND descripcion_mecanica='CATALOGO UNIMARC'
+            AND descripcion_mecanica='CICLO ALVI'
+            AND descripcion_evento_promocional='ALVI CICLO'
             AND fecha_inicio_de_promocion >= CAST('${start_date}' AS DATE)
             AND fecha_fin_de_promocion <= CAST('${end_date}' AS DATE)
             AND nombre_promocion = '${campaign_name}'
@@ -132,14 +133,15 @@ SQL_QUERIES = QueryDict({
     """
     SELECT *
     FROM `${gcp_project}.ML_LAB.W2V_CUSTOMER_EMBEDDINGS` customer_emb
+    INNER JOIN  (
+        SELECT customer_id,rubro
+        FROM `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_FACT_MONTH_CUSTOMER_ORGANIZATION_PROFILE_VF_II`
+        WHERE month_id = ${monthid}
+    ) customer_rubro
+    ON customer_emb.customer_key = customer_rubro.customer_id
 
-    INNER JOIN `${gcp_project}.SEMANTIC_BASKET_SEGMENTATION.SEMANTIC_CUSTOMER_TOPIC` customer_topic
-    USING (customer_key)
-
-    WHERE
-        customer_emb.date = DATE_TRUNC(DATE '${start_date}', MONTH)
-        AND customer_topic.fecha_carga = DATE_TRUNC(DATE '${start_date}', MONTH)
-        AND customer_emb.store_banner = '${store_banner}'
+    WHERE customer_emb.date = DATE_TRUNC(DATE '${start_date}', MONTH)
+    AND customer_emb.store_banner = '${store_banner}'
     """, # noqa: E501
 
     'contactable_customer_pool':
@@ -213,7 +215,8 @@ SQL_QUERIES = QueryDict({
                 WHERE CANAL_VENTA IN ('PEDIDOS YA','UBER EATS','RAPPI','RAPPI TURBO')
             )
             AND registro_valido = 'X'
-            AND descripcion_mecanica='CATALOGO UNIMARC'
+            AND descripcion_mecanica='CICLO ALVI'
+            AND descripcion_evento_promocional='ALVI CICLO'
             AND nombre_promocion = '${campaign_name}'
     )
 
@@ -256,7 +259,7 @@ SQL_QUERIES = QueryDict({
     'topic_catalog_alloc':
     """
     SELECT *
-    FROM `${gcp_project}.PERSONALIZED_CATALOG.TOPIC_DEFAULT_CATALOG_${upper_store_banner}`
+    FROM `${gcp_project}.PERSONALIZED_CATALOG.RUBRO_DEFAULT_CATALOG_${upper_store_banner}`
     WHERE FECHA = '${start_date}'
     """,  # noqa: E501
 
@@ -322,9 +325,10 @@ def main() -> None:  # noqa: D103
     batch_size: int = args['batch_size']
 
     upper_store_banner = store_banner.upper()
+    lower_store_banner = store_banner.lower()
 
-    if store_banner == 'Unimarc':
-        organization_id = '01'
+    if store_banner == 'Alvi':
+        organization_id = '08'
 
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'gcp_project: {gcp_project}')
@@ -444,12 +448,12 @@ def main() -> None:  # noqa: D103
     logging.info(f'#(filtered last {month_interval} months customers with embedding): {customer_pool_emb.shape[0]:,}')  # noqa: E501
 
     # ---------------------------------------------------------------------
-    # Get the default recommendations per topic
+    # Get the default recommendations per rubro
     # ---------------------------------------------------------------------
 
-    logging.info('Get the default recommendations per topic')
+    logging.info('Get the default recommendations per rubro')
 
-    topic_default_alloc = readBigQuery(SQL_QUERIES['topic_catalog_alloc'].substitute(
+    rubro_default_alloc = readBigQuery(SQL_QUERIES['rubro_catalog_alloc'].substitute(
         start_date = start_date,
         upper_store_banner = upper_store_banner,
         gcp_project = gcp_project
@@ -458,7 +462,7 @@ def main() -> None:  # noqa: D103
     gbq_client = gbq_client
     )
 
-    topic_default_alloc.columns = topic_default_alloc.columns.str.lower()
+    rubro_default_alloc.columns = rubro_default_alloc.columns.str.lower()
 
 
     logging.info('Rebuilding tmp_last_year_transactions table...')
@@ -617,14 +621,14 @@ def main() -> None:  # noqa: D103
         )
 
         # -----------------------------------------------------------------
-        # Fill with default offers taken from customer topics
+        # Fill with default offers taken from customer rubro
         # -----------------------------------------------------------------
         logging.info('Filling up missing offers...')
         # Join every customer in the batch with the default offers using
-        # their semantic topic
-        default_offers: pd.DataFrame = topic_default_alloc.merge(
-            customer_pool_emb_batch[['customer_key', 'topic']].drop_duplicates(),
-            on='topic',
+        # their semantic rubro
+        default_offers: pd.DataFrame = rubro_default_alloc.merge(
+            customer_pool_emb_batch[['customer_key', 'rubro']].drop_duplicates(),
+            on='rubro',
             how='inner'
         )[
         # Get only the relevant columns
@@ -692,7 +696,7 @@ def main() -> None:  # noqa: D103
 
         uploadFrame(
             distances,
-            table_ddl_json_path=os.path.join('gbq_objects','personalized_catalog_allocation.json'),
+            table_ddl_json_path=os.path.join('gbq_objects',f'personalized_catalog_allocation_{lower_store_banner}.json'),
             project = gcp_project,
             gbq_client = gbq_client,
             if_exists = 'append'

@@ -67,7 +67,7 @@ with DAG(**dag_args) as dag:
     month_interval = "{{ dag_run.conf.get('month_interval', 12) }}"
     batch_size = "{{ dag_run.conf.get('batch_size', 50000) }}"
 
-    store_banner_list = ['Unimarc']
+    store_banner_list = ['Unimarc','Alvi']
 
     default_catalog_tasks = []
     personalized_catalog_tasks = []
@@ -80,7 +80,7 @@ with DAG(**dag_args) as dag:
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 'scripts/'
-                'default_catalog_allocation.py'
+                f'default_catalog_allocation_{banner_suffix}.py'
             ),
             dag_env_config=dag_env_config,
             docker_image_name=f'{PROJECT_NAME}',
@@ -98,11 +98,11 @@ with DAG(**dag_args) as dag:
         )
 
         personalized_catalog_task = ExtendedDataprocCreateBatchOperator(
-            task_id = f'personalized_catalog_allocation__{banner_suffix}',
+            task_id = f'personalized_catalog_allocation_{banner_suffix}',
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 'scripts/'
-                'personalized_catalog_allocation.py'
+                f'personalized_catalog_allocation_{banner_suffix}.py'
             ),
             dag_env_config=dag_env_config,
             docker_image_name=f'{PROJECT_NAME}',
