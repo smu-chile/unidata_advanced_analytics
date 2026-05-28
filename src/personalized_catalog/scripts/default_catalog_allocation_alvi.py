@@ -142,7 +142,7 @@ def main() -> None:  # noqa: D103
     upper_store_banner = store_banner.upper()
     lower_store_banner = store_banner.lower()
 
-    monthid = pd.to_datetime(execution_date[:8] + '01').strftime('%Y%m').astype(int)
+    monthid = int(pd.to_datetime(execution_date[:8] + '01').strftime('%Y%m'))
 
     logging.info(f'gcp_project: {gcp_project}')
     logging.info(f'execution_date: {execution_date}')
