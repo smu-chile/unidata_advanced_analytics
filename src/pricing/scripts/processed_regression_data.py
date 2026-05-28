@@ -417,11 +417,13 @@ def main() -> None:  # noqa: D103
     store_banner_tabla = 'Super_10' if store_banner == 'Super 10' else store_banner
 
     esquema = 'TMP'
+    #PARCHE TEMPORAL
     tabla = f'TMP_REGRESSION_DATA_{use}_aux_{store_banner_tabla}'
     tmp_path_table_aux = f'{proyecto}.{esquema}.{tabla}'
 
     # Tabla temporal final
     esquema = 'TMP'
+    # PARCHE TEMPORAL
     tabla = f'TMP_REGRESSION_DATA_{use}'
     tmp_path_table = f'{proyecto}.{esquema}.{tabla}'
 
@@ -451,6 +453,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     # Cantidad de meses
+    # Parche
     cant_meses = 29
 
     if use == 'FORECAST':

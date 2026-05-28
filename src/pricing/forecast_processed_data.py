@@ -108,14 +108,15 @@ with DAG(**dag_args) as dag:
                     f"{PROJECT_NAME.replace('_', '-')}:latest"
                 ),
                 # Executor hardware config
+                # parche cores: 4 -> 8 y driver.memory -> 20 a 40g
                 'properties' : {
                     # Executor instances
                     'spark.executor.instances': '2',
                     'spark.executor.cores': '4',
                     'spark.executor.memory': '4096m',
                     # Dirver instances
-                    'spark.driver.cores': '4',
-                    'spark.driver.memory': '20g',
+                    'spark.driver.cores': '8',
+                    'spark.driver.memory': '40g',
                 }},
 
             # Privileges config
