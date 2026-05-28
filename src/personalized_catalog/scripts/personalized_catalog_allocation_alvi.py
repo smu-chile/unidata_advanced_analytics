@@ -256,7 +256,7 @@ SQL_QUERIES = QueryDict({
         AND customer_key_index < ${end_idx}
     """,
 
-    'topic_catalog_alloc':
+    'rubro_catalog_alloc':
     """
     SELECT *
     FROM `${gcp_project}.PERSONALIZED_CATALOG.RUBRO_DEFAULT_CATALOG_${upper_store_banner}`
