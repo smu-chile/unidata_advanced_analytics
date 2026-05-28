@@ -418,13 +418,13 @@ def main() -> None:  # noqa: D103
 
     esquema = 'TMP'
     #PARCHE TEMPORAL
-    tabla = f'TMP_REGRESSION_DATA_{use}_aux_{store_banner_tabla}_EXPANDED'
+    tabla = f'TMP_REGRESSION_DATA_{use}_aux_{store_banner_tabla}'
     tmp_path_table_aux = f'{proyecto}.{esquema}.{tabla}'
 
     # Tabla temporal final
     esquema = 'TMP'
     # PARCHE TEMPORAL
-    tabla = f'TMP_REGRESSION_DATA_{use}_EXPANDED'
+    tabla = f'TMP_REGRESSION_DATA_{use}'
     tmp_path_table = f'{proyecto}.{esquema}.{tabla}'
 
 
@@ -454,7 +454,7 @@ def main() -> None:  # noqa: D103
 
     # Cantidad de meses
     # Parche
-    cant_meses = 29 + 12
+    cant_meses = 29
 
     if use == 'FORECAST':
         # Convertir fecha de ejecución
