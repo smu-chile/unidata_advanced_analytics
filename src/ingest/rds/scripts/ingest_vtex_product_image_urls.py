@@ -68,7 +68,7 @@ def main() -> None:
 
     total_urls_final = len(image_urls_final)
 
-    total_urls_final.dropna(subset=['url'], inplace=True)
+    image_urls_final.dropna(subset=['url'], inplace=True)
 
     logging.info(f'Total de URLs a cargar: {total_urls_final:,}')
     logging.info('Subiendo resultados a BigQuery...')
