@@ -1,133 +1,94 @@
-"""DAG SFMC Publication List SFTP -> GCS."""
+import os  # noqa: F401
 
-import json
-from datetime import timedelta
-
-import pendulum
-from airflow.models import DAG
-from airflow.configuration import conf
-from airflow.providers.google.cloud.operators.dataproc import (
-    DataprocCreateBatchOperator,
-)
+from airflow import DAG
+from airflow.utils.dates import days_ago
+from airflow.operators.python import PythonOperator
+from airflow.providers.sftp.hooks.sftp import SFTPHook
+from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
 
 
-PROJECT_NAME = 'ingest'
-SUBPROJECT_NAME = 'sftp'
+# =========================
+# CONFIG
+# =========================
 
-with open(
-    f'{conf.get("core", "dags_folder")}/'
-    'BRANCH_PLACEHOLDER/'
-    'smu-chile/unidata_advanced_analytics/src/common/constants/dag_env_config.json'
-) as f:
-    dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
+PROJECT_ID = 'cl-bigdata-analytics-preprod'
 
-GCP_PROJECT_ID = dag_env_config['project_id']
-REGION = dag_env_config['region']
-SCRIPTS_GCS = dag_env_config['scripts_gcs']
-SERVICE_ACCOUNT = dag_env_config['g_service_account']
-NETWORK = dag_env_config['network']
-SUBNETWORK = dag_env_config['subnetwork']
+BUCKET = 'cl-bigdata-analytics-preprod-us-sandbox-datasets'
 
-dag_args = {
-    'dag_id': 'salesforce_sfmc_publist_sftp_to_gcs',
-    'schedule_interval': None,
-    'dagrun_timeout': None,
-    'catchup': False,
-    'max_active_runs': 1,
-    'concurrency': 1,
-    'tags': [
-        PROJECT_NAME,
-        SUBPROJECT_NAME,
-        'sfmc',
-        'sftp',
-        'gcs'
-    ],
-    'default_args': {
-        'project_id': GCP_PROJECT_ID,
-        'region': REGION,
-        'owner': 'BIGDATA_ANALYTICS',
-        'start_date': pendulum.datetime(
-            2026,
-            6,
-            1,
-            tz=pendulum.timezone(
-                'America/Santiago'
-            )
-        ),
-        'depends_on_past': False,
-        'catchup': False,
-        'email_on_failure': True,
-        'email_on_retry': False,
-        'retries': 0,
-        'retry_delay': timedelta(minutes=5),
-    }
+REMOTE_FILE = 'Import/PublicationListAutomation/PUBLICATION_LIST_AUTOMATION_20260601.csv'
+
+LOCAL_FILE = '/tmp/PUBLICATION_LIST_AUTOMATION_20260601.csv'  # noqa: S108
+
+GCS_PATH = 'CRM/PUBLICATION_LIST_AUTOMATION_20260601.csv'
+
+BQ_DATASET = 'crm'
+BQ_TABLE = 'CRM_DATA_SFMC_PUBLIST'
+
+# =========================
+# DAG
+# =========================
+
+default_args = {
+    'owner': 'ingest',
 }
 
-with DAG(**dag_args) as dag:
+with DAG(  # noqa: AIR311
+    dag_id='salesforce_sfmc_publist_sftp_to_gcs',
+    default_args=default_args,
+    start_date=days_ago(1),  # noqa: AIR301
+    schedule_interval=None,  # noqa: AIR301
+    catchup=False,
+    tags=['sftp', 'gcs', 'bigquery', 'sfmc'],
+) as dag:
 
-    EXECUTION_DATE = (
-        "{{ dag_run.conf.get("
-        "'execution_date', "
-        "dag.timezone.convert("
-        "data_interval_end"
-        ").strftime('%Y%m%d')) }}"
+    # =========================
+    # 1. SFTP → LOCAL
+    # =========================
+    def download_from_sftp():
+        hook = SFTPHook(ssh_conn_id='sftp_conn')
+        hook.retrieve_file(
+            remote_full_path=REMOTE_FILE,
+            local_full_path=LOCAL_FILE,
+        )
+
+    task_sftp_download = PythonOperator(  # noqa: AIR001, AIR312
+        task_id='sftp_to_local',
+        python_callable=download_from_sftp,
     )
 
-    sfmc_publist_sftp_to_gcs = (
-        DataprocCreateBatchOperator(
-            task_id='sfmc_publist_sftp_to_gcs',
-
-            batch={
-                'pyspark_batch': {
-
-                    'main_python_file_uri': (
-                        f'gs://{SCRIPTS_GCS}/'
-                        f'{PROJECT_NAME}/'
-                        f'{SUBPROJECT_NAME}/'
-                        'scripts/'
-                        'salesforce_sfmc_publist_sftp_to_gcs.py'
-                    ),
-
-                    'python_file_uris': [
-                        (
-                            f'gs://{SCRIPTS_GCS}/'
-                            'common/'
-                        )
-                    ],
-
-                    'args': [
-                        '--project_id',
-                        GCP_PROJECT_ID,
-
-                        '--execution_date',
-                        EXECUTION_DATE
-                    ]
-                },
-
-                'runtime_config': {
-                    'version': '2.2',
-                    'container_image': (
-                        'us-east1-docker.pkg.dev/'
-                        f'{GCP_PROJECT_ID}/'
-                        'dataproc-worker-images/'
-                        f'{PROJECT_NAME}-{SUBPROJECT_NAME}:latest'
-                    )
-                },
-
-                'environment_config': {
-                    'execution_config': {
-                        'service_account': SERVICE_ACCOUNT,
-                        'network_uri': NETWORK,
-                        'subnetwork_uri': SUBNETWORK,
-                        'ttl': '14400s'
-                    }
-                }
-            },
-
-            batch_id='batch-{{ macros.uuid.uuid4() }}',
-
-            project_id=GCP_PROJECT_ID,
-
-            deferrable=True
+    # =========================
+    # 2. LOCAL → GCS
+    # =========================
+    def upload_to_gcs():
+        hook = GCSHook()
+        hook.upload(
+            bucket_name=BUCKET,
+            object_name=GCS_PATH,
+            filename=LOCAL_FILE,
         )
-    )  # noqa: W292
+
+    task_upload_gcs = PythonOperator(  # noqa: AIR001, AIR312
+        task_id='local_to_gcs',
+        python_callable=upload_to_gcs,
+    )
+
+    # =========================
+    # 3. GCS → BIGQUERY
+    # =========================
+    task_load_bq = GCSToBigQueryOperator(
+        task_id='gcs_to_bigquery',
+        bucket=BUCKET,
+        source_objects=[GCS_PATH],
+        destination_project_dataset_table=f'{PROJECT_ID}:{BQ_DATASET}.{BQ_TABLE}',
+        source_format='CSV',
+        skip_leading_rows=1,
+        write_disposition='WRITE_TRUNCATE',
+        autodetect=True,
+    )
+
+    # =========================
+    # FLOW
+    # =========================
+
+    task_sftp_download >> task_upload_gcs >> task_load_bq  # noqa: W292
