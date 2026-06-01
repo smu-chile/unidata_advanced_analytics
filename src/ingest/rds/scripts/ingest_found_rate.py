@@ -1,3 +1,4 @@
+"""Contains the script that loads the found rate table from ecommerce."""
 import os
 import logging
 import argparse
@@ -38,24 +39,20 @@ SQL_QUERIES = QueryDict({
     """
     SELECT
         fecha_facturacion,
-        store_banner,
-        id_tienda AS store_id,
-        orden,
         ref_id,
-        (CASE
+        id_tienda AS store_id,
+        CASE
             WHEN ref_id = '000000000000651953-UN' THEN '7807975004117'
             ELSE ean_primario
-        END)::FLOAT::BIGINT AS ean,
+        END AS ean,
         unidades_completadas AS ordenes_completadas,
-        unidades_solicitadas AS ordenes_solicitadas
-    FROM
-    (
+        unidades_solicitadas AS ordenes_solicitadas,
+        found_rate
+    FROM (
         SELECT
             fecha_facturacion,
             id_tienda,
-            orden,
             ref_id,
-            'Unimarc' AS store_banner,
 
             SUM(CASE
                 WHEN estado_foundrate = 3 THEN 1
@@ -65,55 +62,21 @@ SQL_QUERIES = QueryDict({
             SUM(CASE
                 WHEN producto_substituto = false THEN 1
                 ELSE 0
-            END) AS unidades_solicitadas
+            END) AS unidades_solicitadas,
+
+            SUM(CASE
+                WHEN estado_foundrate = 3 THEN 1
+                ELSE 0
+            END)::numeric * 1.0 / SUM(CASE
+                WHEN producto_substituto = false THEN 1
+                ELSE 0
+            END)::numeric AS found_rate
 
         FROM operaciones_unimarc.found_rate_productos
         WHERE fecha_facturacion >= '${execution_date}'::timestamp - '1 month'::interval
-        GROUP BY 1,2,3,4
-    ) found_rate_unimarc
+        GROUP BY 1,2,3
+    ) found_rate_productos
     LEFT JOIN ecommdata.skus USING(ref_id)
-    WHERE
-        unidades_solicitadas > 0
-        AND length(ean_primario) < 19
-
-    UNION ALL
-
-    SELECT
-        fecha_facturacion,
-        store_banner,
-        id_tienda AS store_id,
-        orden,
-        ref_id,
-        (CASE
-            WHEN ref_id = '000000000000651953-UN' THEN '7807975004117'
-            ELSE ean_primario
-        END)::FLOAT::BIGINT AS ean,
-        unidades_completadas AS ordenes_completadas,
-        unidades_solicitadas AS ordenes_solicitadas
-    FROM
-    (
-        SELECT
-            fecha_facturacion,
-            id_tienda,
-            orden,
-            ref_id,
-            'Alvi' AS store_banner,
-
-            SUM(CASE
-                WHEN estado_foundrate = 3 THEN 1
-                ELSE 0
-            END) AS unidades_completadas,
-
-            SUM(CASE
-                WHEN producto_substituto = false THEN 1
-                ELSE 0
-            END) AS unidades_solicitadas
-
-        FROM operaciones_alvi.found_rate_productos
-        WHERE fecha_facturacion >= '${execution_date}'::timestamp - '1 month'::interval
-        GROUP BY 1,2,3,4
-    ) found_rate_alvi
-    LEFT JOIN ecommdata_alvi.skus USING(ref_id)
     WHERE
         unidades_solicitadas > 0
         AND length(ean_primario) < 19
@@ -125,7 +88,7 @@ SQL_QUERIES = QueryDict({
 # -------------------------------------------------------------------------
 #  Main function
 # -------------------------------------------------------------------------
-def main() -> None:
+def main() -> None:  # noqa: D103
     user = 'ingest-rds'  # noqa: F841
     # Parse input variables
     args = vars(parser.parse_args())
@@ -148,7 +111,9 @@ def main() -> None:
             secret_name='ecommerce_postgres_credentials',  # noqa: S106
             project=gcp_project_id,
         )
-    )
+    ).astype({
+        'ean': 'Int64',
+    })
     logging.info('Data collected!')
 
     if data.isna().sum().sum():
@@ -158,7 +123,7 @@ def main() -> None:
     # Deleting past data if exist
     logging.info('Deleting past run data if exists...')
     deleteFromTable(
-        table_ref=os.path.join('gbq_objects', 'found_rate.json'),
+        table_ref=os.path.join('gbq_objects', 'found_rate_product_store_date.json'),
         project=gcp_project_id,
         where_clause=f'fecha_facturacion >= "{execution_date.add(months=-1).isoformat()}"',
         gbq_client=gbq_client,
@@ -170,7 +135,7 @@ def main() -> None:
     logging.info('Uploading frame to GBQ...')
     uploadFrame(
         data,
-        table_ddl_json_path=os.path.join('gbq_objects', 'found_rate.json'),
+        table_ddl_json_path=os.path.join('gbq_objects', 'found_rate_product_store_date.json'),
         project=gcp_project_id,
         gbq_client=gbq_client,
         if_exists='append',

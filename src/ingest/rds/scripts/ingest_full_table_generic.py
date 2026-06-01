@@ -40,7 +40,7 @@ parser.add_argument(
 # -------------------------------------------------------------------------
 #  Main function
 # -------------------------------------------------------------------------
-def main() -> None:
+def main() -> None:  # noqa: D103
     user = 'ingest-ecommerce'  # noqa: F841
     # Parse input variables
     args = vars(parser.parse_args())

@@ -49,6 +49,16 @@
             "mode": "NULLABLE"
         },
         {
+            "name": "BOLETA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "BOLETA2",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE"
+        },
+        {
             "name": "FECHA_VALIDACION_EMAIL",
             "field_type": "DATETIME",
             "mode": "NULLABLE"

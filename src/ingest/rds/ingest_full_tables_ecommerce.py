@@ -1,3 +1,4 @@
+"""Declares DAG that moves various complete tables from RDS to GBQ."""
 # Default
 import json
 import platform
@@ -167,35 +168,6 @@ with DAG(**dag_args) as dag:
             plan_ordenes,
             forecast_venta
         FROM forecast_and_planning.plan_venta_lastmillers
-        """,
-
-        'tickets_zendesk': """
-        SELECT
-            store_banner,
-            fecha_creacion,
-            fecha_cierre,
-            id_ticket,
-            estado,
-            motivo,
-            canal,
-            numero_pedido,
-            tipo1,
-            tipo2,
-            tipo3,
-            total_dias_hasta_resolucion,
-            cerrado_por_merge,
-            id_ticket_fusionado,
-            ids_tickets_hijos
-
-        FROM (
-            SELECT 'Unimarc' AS store_banner, *
-            FROM analytics_and_growth.tickets_zendesk
-
-            UNION ALL
-
-            SELECT 'Alvi' AS store_banner, *
-            FROM analytics_and_growth.tickets_zendesk_alvi
-        ) foo
         """,
     }
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501

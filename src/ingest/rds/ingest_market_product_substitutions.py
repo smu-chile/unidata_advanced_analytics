@@ -1,3 +1,4 @@
+"""Declares DAG that moves the real product subsitution table from RDS."""
 # Default
 import json
 import platform

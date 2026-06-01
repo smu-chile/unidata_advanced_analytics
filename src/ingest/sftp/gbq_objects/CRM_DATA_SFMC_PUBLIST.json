@@ -1,0 +1,73 @@
+{
+    "table_name": "CRM_DATA_SFMC_PUBLIST",
+    "schema": "CRM",
+    "description": "Salesforce SFMC Publication List",
+    "partition_by": "CREATEDDATE",
+    "fields": [
+        {
+            "name": "SUBSCRIBERID",
+            "type": "INTEGER",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "SUBSCRIBERKEY",
+            "type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "ADDEDBY",
+            "type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ADDMETHOD",
+            "type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "CREATEDDATE",
+            "type": "TIMESTAMP",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "DATEUNSUBSCRIBED",
+            "type": "TIMESTAMP",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "EMAILADDRESS",
+            "type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "LISTID",
+            "type": "INTEGER",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "LISTNAME",
+            "type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "LISTTYPE",
+            "type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "STATUS",
+            "type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "SUBSCRIBERTYPE",
+            "type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_CARGA",
+            "type": "DATE",
+            "mode": "NULLABLE"
+        }
+    ]
+}

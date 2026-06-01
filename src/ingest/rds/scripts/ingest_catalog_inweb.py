@@ -1,3 +1,4 @@
+"""Contains script that loads the catalog inweb table from ecommerce."""
 import os
 import logging
 import argparse
@@ -80,6 +81,12 @@ SQL_QUERIES = QueryDict({
 #  Main function
 # -------------------------------------------------------------------------
 def main() -> None:
+    """Load catalog inweb table from ecommerce to BigQuery.
+
+    Extracts data from PostgreSQL ecommerce database, validates for missing
+    values, deletes any existing data for the execution date, and uploads
+    the new data to BigQuery.
+    """
     user = 'ingest-rds'  # noqa: F841
     # Parse input variables
     args = vars(parser.parse_args())

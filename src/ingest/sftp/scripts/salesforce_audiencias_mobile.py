@@ -1,6 +1,6 @@
 """Script ingesta SFTP.
 
-Archivo de contactabilidad Alvi en sftp Salesforce hacia BigQuery.
+Archivo de Audiencias Mobile en sftp Salesforce hacia BigQuery.
 """
 # Default
 import os
@@ -13,7 +13,6 @@ import paramiko
 
 # pip
 from google.cloud import bigquery
-from google.cloud.bigquery.schema import PolicyTagList  # noqa: F401
 
 import common.gcp_extended.bigquery as gbq_extended
 import common.gcp_extended.secretsmanager as secretmanager
@@ -54,12 +53,6 @@ def cleaning_func(df_file: pd.DataFrame, execution_date: str) -> pd.DataFrame:
     """
     logging.info('Before cleaning:', df_file)
 
-    campos_fechas = ['FechaRegistro', 'FechaValidacionEmail',
-                     'FechaNacimiento','FechaValidacionWhatsapp']
-    for campo in campos_fechas:
-        if campo in df_file.columns:
-            df_file[campo] = pd.to_datetime(df_file[campo],format='ISO8601', dayfirst= True)
-
     df_file['FECHA_CARGA'] = pd.to_datetime(execution_date, format='%Y%m%d')
     logging.info('After cleaning:', df_file)
 
@@ -74,16 +67,18 @@ def main() -> None:  # noqa: D103
     args = vars(parser.parse_args())
     gcp_project_id: str = args['project_id']
     execution_date: str = args['execution_date']
-    formatos = ['alvi', 'm10s10']
+    formatos = ['unimarc', 'alvi']
 
     # Set all clients
 
     gbq_client = bigquery.Client()
+
+    logging.info(f'execution_date = {execution_date}')
+
     #input files
 
-
     for formato in formatos:
-        logging.info(f'Starting extraction of contactabilidad csv {formato} from SFTP SF')
+        logging.info(f'Starting extraction of audiencias mobile push csv {formato} from SFTP SF')
         sftp_secret = secretmanager.getSecret('salesforce_sftp_credentials',project=gcp_project_id)
          #connect
         logging.info('Connecting to sftp')
@@ -98,15 +93,15 @@ def main() -> None:  # noqa: D103
         ftp = paramiko.SFTPClient.from_transport(
             ssh_session
         )
-        formato = formato.replace('m10','')
+
         formato_name = formato.upper()
         #table definitions jsons
-        json = f'CRM_DATA_SF_CONTACTABILIDAD_{formato_name}.json'
+        json = f'CRM_DATA_SF_AUDIENCIAS_PUSH_MOBILE_{formato_name}.json'
 
         #get file
-        logging.info(f'Getting file extract_contactabilidad {formato.capitalize()}')
-        csv_name = 'extract_contactabilidad.csv'
-        ftp.get(f'/Import/{csv_name}',csv_name)
+        logging.info(f'Getting file extract audiencias mobile push {formato.capitalize()}')
+        csv_name = 'AUDIENCIAS_'+str(formato_name)+'_MOBILE_'+execution_date+'.csv'
+        ftp.get(f'/Import/Reportes/AudienciasMobilePush/{csv_name}',csv_name)
         logging.info(F'Getting {csv_name} into Dataframe')
         df_file = pd.read_csv(f'{csv_name}', sep=',', encoding='UTF-16')
         df_file = cleaning_func(df_file, execution_date)
@@ -115,55 +110,14 @@ def main() -> None:  # noqa: D103
         os.remove(f'{csv_name}')
          # Upload data
         logging.info('Uploading data from Dataframe')
-        if formato == 'alvi':
-            gbq_extended.uploadFrame(
-                df_file[['Rut',
-                        'Nombre',
-                        'Apellido',
-                        'TipoRut',
-                        'EstadoPersona',
-                        'Telefono',
-                        'TelefonoVerificado',
-                        'Email',
-                        'EmailVerificado',
-                        'Region',
-                        'Comuna',
-                        'Direccion',
-                        'AceptaBasesConcursos',
-                        'AceptaTyCClub',
-                        'FechaValidacionEmail',
-                        'FechaValidacionWhatsapp',
-                        'FechaRegistro',
-                        'FECHA_CARGA']],
-                table_ddl_json_path=os.path.join('gbq_objects', json),
-                project=gcp_project_id,
-                gbq_client=gbq_client,
-                if_exists='replace',
-            )
-        else:
-            df_file['Boleta'] = pd.to_numeric(df_file['Boleta'], errors='coerce')
-            df_file['Boleta2'] = pd.to_numeric(df_file['Boleta2'], errors='coerce')
-            gbq_extended.uploadFrame(
-                df_file[['Rut',
-                        'Nombre',
-                        'Apellido',
-                        'Telefono',
-                        'Email',
-                        'EmailVerificado',
-                        'Region',
-                        'Comuna',
-                        'AceptaTyCClub',
-                        'Boleta',
-                        'Boleta2',
-                        'FechaValidacionEmail',
-                        'FechaNacimiento',
-                        'FechaRegistro',
-                        'FECHA_CARGA']],
-                table_ddl_json_path=os.path.join('gbq_objects', json),
-                project=gcp_project_id,
-                gbq_client=gbq_client,
-                if_exists='replace',
-            )
+
+        gbq_extended.uploadFrame(
+            df_file,
+            table_ddl_json_path=os.path.join('gbq_objects', json),
+            project=gcp_project_id,
+            gbq_client=gbq_client,
+            if_exists='replace',
+        )
 
     #close sftp
     ssh_session.close()

@@ -1,3 +1,4 @@
+"""Contains the DAG that loads the catalog inweb table from ecommerce."""
 # Default
 import json
 import platform

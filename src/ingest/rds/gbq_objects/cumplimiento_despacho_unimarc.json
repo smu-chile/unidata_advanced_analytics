@@ -1,0 +1,86 @@
+{
+  "dataset_name": "ECOMMERCE",
+  "table_name": "CUMPLIMIENTO_DESPACHO_UNIMARC",
+  "fields": [
+    {
+      "name": "id_orden",
+      "type": "INTEGER",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "fecha_facturacion",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "tipo_despacho",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "id_tienda",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "glosa_tienda",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "id_transportadora",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "nombre_transportadora",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "fecha_despacho",
+      "type": "DATE",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "hora_despacho",
+      "type": "TIME",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "fecha_entrega",
+      "type": "DATE",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "hora_entrega",
+      "type": "TIME",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "inicio_ventana",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "termino_ventana",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "comuna",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "cumplimiento_ondate",
+      "type": "INTEGER",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "cumplimiento_ontime",
+      "type": "INTEGER",
+      "mode": "REQUIRED"
+    }
+  ]
+}
