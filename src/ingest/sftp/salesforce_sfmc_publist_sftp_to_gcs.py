@@ -5,7 +5,9 @@ from airflow.utils.dates import days_ago
 from airflow.operators.python import PythonOperator
 from airflow.providers.sftp.hooks.sftp import SFTPHook
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
-from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
+from airflow.providers.google.cloud.transfers.gcs_to_bigquery import (
+    GCSToBigQueryOperator,
+)
 
 
 # =========================
