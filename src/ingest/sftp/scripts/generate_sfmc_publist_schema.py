@@ -85,19 +85,19 @@ def infer_bq_type(series: pd.Series) -> str:
 # ---------------------------------------------------------------------
 # Normalize columns
 # ---------------------------------------------------------------------
-def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+def normalize_columns(df_sf: pd.DataFrame) -> pd.DataFrame:
     """Normalize dataframe columns."""
-    df.columns = [
+    df_sf.columns = [
         col.strip()
         .replace('\ufeff', '')
         .replace('"', '')
         .upper()
         .replace(' ', '_')
         .replace('-', '_')
-        for col in df.columns
+        for col in df_sf.columns
     ]
 
-    return df
+    return df_sf
 
 
 # ---------------------------------------------------------------------
@@ -217,7 +217,7 @@ def main() -> None:
             errors='ignore'
         )
 
-        df = pd.read_csv(
+        df_sf = pd.read_csv(
             io.StringIO(decoded_text),
             sep=',',
             nrows=10,
@@ -228,33 +228,33 @@ def main() -> None:
         # -------------------------------------------------------------
         # Normalize columns
         # -------------------------------------------------------------
-        df = normalize_columns(df)
+        df_sf = normalize_columns(df_sf)
 
         # -------------------------------------------------------------
         # Use unimarc as official structure
         # -------------------------------------------------------------
         if formato == 'unimarc':
 
-            expected_columns = list(df.columns)
+            expected_columns = list(df_sf.columns)
 
         else:
 
-            df.columns = expected_columns
+            df_sf.columns = expected_columns
 
         # -------------------------------------------------------------
         # Keep only expected columns
         # -------------------------------------------------------------
-        df = df[expected_columns]
+        df_sf = df_sf[expected_columns]
 
         # -------------------------------------------------------------
         # Add formato
         # -------------------------------------------------------------
-        df['FORMATO'] = formato
+        df_sf['FORMATO'] = formato
 
         # -------------------------------------------------------------
         # Save dataframe
         # -------------------------------------------------------------
-        dfs.append(df)
+        dfs.append(df_sf)
 
         # -------------------------------------------------------------
         # Generate JSON ONLY using unimarc
@@ -267,10 +267,10 @@ def main() -> None:
 
             fields = []
 
-            for column in df.columns:
+            for column in df_sf.columns:
 
                 bq_type = infer_bq_type(
-                    df[column]
+                    df_sf[column]
                 )
 
                 field = {

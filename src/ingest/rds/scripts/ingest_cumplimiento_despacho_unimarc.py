@@ -106,7 +106,7 @@ def main() -> None:
     data = readPostgresQuery(
         query=SQL_QUERIES['extract_data'],
         credentials_dict=getSecret(
-            secret_name='ecommerce_postgres_credentials',
+            secret_name='ecommerce_postgres_credentials',  # noqa: S106
             project=gcp_project_id,
         )
     )

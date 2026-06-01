@@ -130,4 +130,4 @@ with DAG(**dag_args) as dag:
 
             deferrable=True
         )
-    )
+    )  # noqa: W292
