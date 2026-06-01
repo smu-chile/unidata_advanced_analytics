@@ -66,6 +66,8 @@ def main() -> None:
     urls_out = 'foto-en-preparacion'
     image_urls_final = image_urls[~image_urls['url'].str.contains(urls_out,case=False,na=False)]
 
+    image_urls_final.dropna(subset=['url'], inplace=True)
+
     total_urls_final = len(image_urls_final)
 
     logging.info(f'Total de URLs a cargar: {total_urls_final:,}')
