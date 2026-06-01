@@ -6,7 +6,10 @@
         {
             "name": "RUT",
             "field_type": "STRING",
-            "mode": "REQUIRED"
+            "mode": "REQUIRED",
+            "policy_tags": {
+                "names": ["projects/cl-cda-qa/locations/us/taxonomies/3933141009802020086/policyTags/6088334250513318514"]
+            }
         },
         {
             "name": "NOMBRE",
@@ -21,12 +24,18 @@
         {
             "name": "TELEFONO",
             "field_type": "STRING",
-            "mode": "NULLABLE"
+            "mode": "NULLABLE",
+            "policy_tags": {
+                "names": ["projects/cl-cda-qa/locations/us/taxonomies/3933141009802020086/policyTags/6253420231310872902"]
+            }
         },
         {
             "name": "EMAIL",
             "field_type": "STRING",
-            "mode": "NULLABLE"
+            "mode": "NULLABLE",
+            "policy_tags": {
+                "names": ["projects/cl-cda-qa/locations/us/taxonomies/3933141009802020086/policyTags/7176328952841298660"]
+            }
         },
         {
             "name": "EMAIL_VERIFICADO",
