@@ -1,4 +1,5 @@
-"""Contains the DAG that loads the cumplimiento despacho unimarc from PostgreSQL to BigQuery."""
+"""Contains the DAG that loads the cumplimiento despacho unimarc from
+PostgreSQL to BigQuery."""
 
 # -------------------------------------------------------------------------
 # Imports
@@ -85,7 +86,8 @@ dag_args = {
 # DAG Definition
 # -------------------------------------------------------------------------
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', data_interval_end.strftime('%Y-%m-%d')) }}"
+    EXECUTION_DATE="{{dag_run.conf.get('execution_date'," \
+        "data_interval_end.strftime('%Y-%m-%d')) }}"  # noqa: ISC002
 
     ingest_cumplimiento_despacho = ExtendedDataprocCreateBatchOperator(
         task_id='ingest_cumplimiento_despacho_unimarc',
