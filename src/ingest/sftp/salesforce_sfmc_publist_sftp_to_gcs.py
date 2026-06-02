@@ -1,95 +1,115 @@
+"""DAG SFMC Publication List SFTP -> GCS."""
 
-from airflow import DAG
-from airflow.utils.dates import days_ago
-from airflow.operators.python import PythonOperator
-from airflow.providers.sftp.hooks.sftp import SFTPHook
-from airflow.providers.google.cloud.hooks.gcs import GCSHook
-from airflow.providers.google.cloud.transfers.gcs_to_bigquery import (
-    GCSToBigQueryOperator,
-)
+# Default
+import json
+import platform
+import importlib
+from datetime import timedelta
+
+# pip
+import pendulum
+from airflow.sdk import DAG
+from airflow.configuration import conf
 
 
-# =========================
-# CONFIG
-# =========================
+if platform.system() == 'Windows':
+    from common.operators.dataproc_create_batch import (
+        ExtendedDataprocCreateBatchOperator,
+    )
+elif platform.system() == 'Linux':
+    ExtendedDataprocCreateBatchOperator = (
+        importlib.import_module(
+            'BRANCH_PLACEHOLDER.'
+            'smu-chile.unidata_advanced_analytics.'
+            'src.common.operators.dataproc_create_batch'
+        )
+    ).ExtendedDataprocCreateBatchOperator
+else:
+    err_msg = 'Only Linux and Windows are supported.'
+    raise NotImplementedError(err_msg)
 
-PROJECT_ID = 'cl-bigdata-analytics-preprod'
+# Globals
+with open(
+    f'{conf.get("core", "dags_folder")}/'
+    'BRANCH_PLACEHOLDER/'
+    'smu-chile/unidata_advanced_analytics/'
+    'src/common/constants/dag_env_config.json'
+) as f:
+    dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-BUCKET = 'cl-bigdata-analytics-preprod-us-sandbox-datasets'
+PROJECT_NAME = 'ingest'
+SUBPROJECT_NAME = 'sftp'
 
-REMOTE_FILE = 'Import/PublicationListAutomation/PUBLICATION_LIST_AUTOMATION_20260601.csv'
+GCP_PROJECT_ID = dag_env_config['project_id']
+REGION = dag_env_config['region']
 
-LOCAL_FILE = '/tmp/PUBLICATION_LIST_AUTOMATION_20260601.csv'  # noqa: S108
-
-GCS_PATH = 'CRM/PUBLICATION_LIST_AUTOMATION_20260601.csv'
-
-BQ_DATASET = 'crm'
-BQ_TABLE = 'CRM_DATA_SFMC_PUBLIST'
-
-# =========================
-# DAG
-# =========================
-
-default_args = {
-    'owner': 'ingest',
+dag_args = {
+    'dag_id': 'salesforce_sfmc_publist_sftp_to_gcs',
+    'schedule_interval': None,
+    'dagrun_timeout': None,
+    'catchup': False,
+    'max_active_runs': 1,
+    'concurrency': 1,
+    'tags': [
+        PROJECT_NAME,
+        SUBPROJECT_NAME,
+        'sfmc',
+        'sftp',
+        'gcs',
+        'ilopeze'
+    ],
+    'default_args': {
+        'project_id': GCP_PROJECT_ID,
+        'region': REGION,
+        'owner': 'BIGDATA_ANALYTICS',
+        'email': ['ilopeze@unidata.cl'],
+        'start_date': pendulum.datetime(
+            2026,
+            6,
+            1,
+            tz=pendulum.timezone(
+                'America/Santiago'
+            ),
+        ),
+        'depends_on_past': False,
+        'catchup': False,
+        'email_on_failure': True,
+        'email_on_retry': False,
+        'retries': 0,
+        'retry_delay': timedelta(minutes=5),
+    },
 }
 
-with DAG(  # noqa: AIR311
-    dag_id='salesforce_sfmc_publist_sftp_to_gcs',
-    default_args=default_args,
-    start_date=days_ago(1),  # noqa: AIR301
-    schedule_interval=None,  # noqa: AIR301
-    catchup=False,
-    tags=['sftp', 'gcs', 'bigquery', 'sfmc'],
-) as dag:
+with DAG(**dag_args) as dag:  # noqa: AIR002
 
-    # =========================
-    # 1. SFTP → LOCAL
-    # =========================
-    def download_from_sftp():
-        hook = SFTPHook(ssh_conn_id='sftp_conn')
-        hook.retrieve_file(
-            remote_full_path=REMOTE_FILE,
-            local_full_path=LOCAL_FILE,
+    EXECUTION_DATE = (
+        "{{ dag_run.conf.get("
+        "'execution_date', "
+        "dag.timezone.convert("
+        "data_interval_end"
+        ").strftime('%Y%m%d')) }}"
+    )
+
+    sfmc_publist_sftp_to_gcs = (
+        ExtendedDataprocCreateBatchOperator(
+            task_id='sfmc_publist_sftp_to_gcs',
+            python_script_path=(
+                f'{PROJECT_NAME}/'
+                f'{SUBPROJECT_NAME}/'
+                'scripts/'
+                'salesforce_sfmc_publist_sftp_to_gcs.py'
+            ),
+            dag_env_config=dag_env_config,
+            docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
+            pyspark_batch_args=[
+                '--project_id',
+                GCP_PROJECT_ID,
+                '--execution_date',
+                EXECUTION_DATE,
+            ],
+            include_paths=[
+            'common/',
+            f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/',
+            ],
         )
-
-    task_sftp_download = PythonOperator(  # noqa: AIR001, AIR312
-        task_id='sftp_to_local',
-        python_callable=download_from_sftp,
     )
-
-    # =========================
-    # 2. LOCAL → GCS
-    # =========================
-    def upload_to_gcs():
-        hook = GCSHook()
-        hook.upload(
-            bucket_name=BUCKET,
-            object_name=GCS_PATH,
-            filename=LOCAL_FILE,
-        )
-
-    task_upload_gcs = PythonOperator(  # noqa: AIR001, AIR312
-        task_id='local_to_gcs',
-        python_callable=upload_to_gcs,
-    )
-
-    # =========================
-    # 3. GCS → BIGQUERY
-    # =========================
-    task_load_bq = GCSToBigQueryOperator(
-        task_id='gcs_to_bigquery',
-        bucket=BUCKET,
-        source_objects=[GCS_PATH],
-        destination_project_dataset_table=f'{PROJECT_ID}:{BQ_DATASET}.{BQ_TABLE}',
-        source_format='CSV',
-        skip_leading_rows=1,
-        write_disposition='WRITE_TRUNCATE',
-        autodetect=True,
-    )
-
-    # =========================
-    # FLOW
-    # =========================
-
-    task_sftp_download >> task_upload_gcs >> task_load_bq  # noqa: W292
