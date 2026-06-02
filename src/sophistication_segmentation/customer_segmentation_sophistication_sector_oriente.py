@@ -24,7 +24,7 @@ PROJECT_NAME = 'sophistication_segmentation' #tiene que coincidir con la carpeta
 
 dag_args = {
     'dag_id': 'customer_segmentation_sophisticaction_sector_oriente',
-    'schedule_interval': '0 9 2 * *',
+    'schedule_interval': '0 11 2 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
