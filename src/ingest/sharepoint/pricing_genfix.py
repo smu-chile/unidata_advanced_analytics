@@ -1,31 +1,44 @@
 # Default
 import json
+import platform
+import importlib
 from datetime import timedelta
 
 # pip
 import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
-from airflow.providers.google.cloud.operators.dataproc import (
-    DataprocCreateBatchOperator,
-)
 
+
+if platform.system() == 'Windows':
+    from common.operators.dataproc_create_batch import (
+        ExtendedDataprocCreateBatchOperator,
+    )
+elif platform.system() == 'Linux':
+    ExtendedDataprocCreateBatchOperator = (importlib.import_module(
+        'BRANCH_PLACEHOLDER.'
+        'smu-chile.unidata_advanced_analytics.'
+        'src.common.operators.dataproc_create_batch'
+    )).ExtendedDataprocCreateBatchOperator
+else:
+    err_msg = 'Only Linux and Windows are supported.'
+    raise NotImplementedError(err_msg)
 
 # Globals
-PROJECT_NAME = 'ingest'
-SUBPROJECT_NAME = 'sharepoint'
 with open(
     f'{conf.get("core", "dags_folder")}/'
     'BRANCH_PLACEHOLDER/'
     'smu-chile/unidata_advanced_analytics/src/common/constants/dag_env_config.json'
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
+
+
+# Globals
+PROJECT_NAME = 'ingest'
+SUBPROJECT_NAME = 'sharepoint'
+
 GCP_PROJECT_ID = dag_env_config['project_id']
 REGION = dag_env_config['region']
-SCRIPTS_GCS =  dag_env_config['scripts_gcs']
-SERVICE_ACCOUNT = dag_env_config['g_service_account']
-NETWORK = dag_env_config['network']
-SUBNETWORK = dag_env_config['subnetwork']
 
 dag_args = {
     'dag_id': 'ingest_data_pricing_genfix',
@@ -56,64 +69,22 @@ dag_args = {
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
-    ingest_pricing_genfix = DataprocCreateBatchOperator(
-        task_id = 'ingest_pricing_genfix',
-
-        batch = {
-            'pyspark_batch': {
-                # Main file to run in the dataproc pod
-                'main_python_file_uri': (
-                     f'gs://{SCRIPTS_GCS}/'
-                    f'{PROJECT_NAME}/'
-                    f'{SUBPROJECT_NAME}/'
-                    'scripts/'
-                    'pricing_genfix.py'
-                ),
-                # Common files
-                'python_file_uris': [
-                    (
-                         f'gs://{SCRIPTS_GCS}/'
-                        'common/'
-                    ),
-                    (
-                         f'gs://{SCRIPTS_GCS}/'
-                        f'{PROJECT_NAME}/'
-                        f'{SUBPROJECT_NAME}/'
-                        'gbq_objects/'
-                    )
-                ],
-                # For Google Big Query read/write
-                'jar_file_uris': ['gs://spark-lib/bigquery/spark-3.5-bigquery-0.42.2.jar'],
-                # Main file arguments
-                'args': [
-                    '--project_id', GCP_PROJECT_ID,
-                    '--execution_date', EXECUTION_DATE
-                ],
-            },
-            # Docker image to be used in the dataproc pod
-            'runtime_config': {
-                'version': '2.2',
-                'container_image': (
-                    'us-east1-docker.pkg.dev/'
-                    f'{GCP_PROJECT_ID}/'
-                    'dataproc-worker-images/'
-                    f"{PROJECT_NAME.replace('_', '-')}-{SUBPROJECT_NAME}:latest"
-                ),
-            },
-
-            # Privileges config
-            'environment_config': {
-                'execution_config': {
-                    'service_account': SERVICE_ACCOUNT,
-                    'network_uri': NETWORK,
-                    'subnetwork_uri': SUBNETWORK,
-                    'ttl': '14400s',
-                },
-            },
-        },
-
-        # Batch ID
-        batch_id = 'batch-{{ macros.uuid.uuid4() }}',
-        project_id = GCP_PROJECT_ID,
-        deferrable = True,
+    ingest_data = ExtendedDataprocCreateBatchOperator(
+        task_id = 'ingest_data',
+        python_script_path=(
+            f'{PROJECT_NAME}/'
+            f'{SUBPROJECT_NAME}/'
+            'scripts/'
+            'pricing_genfix.py'
+        ),
+        dag_env_config=dag_env_config,
+        docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
+        pyspark_batch_args=[
+            '--project_id', GCP_PROJECT_ID,
+            '--execution_date', EXECUTION_DATE,
+        ],
+        include_paths=[
+            'common/',
+            f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'
+        ],
     )
