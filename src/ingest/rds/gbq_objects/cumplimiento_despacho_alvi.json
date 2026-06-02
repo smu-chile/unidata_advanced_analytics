@@ -3,27 +3,20 @@
   "table": "CUMPLIMIENTO_DESPACHO_ALVI",
   "columns": [
       {"name": "id_orden", "field_type": "INTEGER", "mode": "REQUIRED"},
-      {"name": "fecha_facturacion", "field_type": "TIMESTAMP", "mode": "REQUIRED"},
+      {"name": "fecha_facturacion", "field_type": "DATE", "mode": "NULLABLE"},
       {"name": "tipo_despacho", "field_type": "STRING", "mode": "NULLABLE"},
       {"name": "id_tienda", "field_type": "STRING", "mode": "NULLABLE"},
       {"name": "glosa_tienda", "field_type": "STRING", "mode": "NULLABLE"},
       {"name": "id_transportadora", "field_type": "STRING", "mode": "NULLABLE"},
       {"name": "nombre_transportadora", "field_type": "STRING", "mode": "NULLABLE"},
       {"name": "fecha_despacho", "field_type": "DATE", "mode": "NULLABLE"},
-      {"name": "hora_despacho", "field_type": "TIME", "mode": "NULLABLE"},
+      {"name": "hora_despacho", "field_type": "STRING", "mode": "NULLABLE"},
       {"name": "fecha_entrega", "field_type": "DATE", "mode": "NULLABLE"},
-      {"name": "hora_entrega", "field_type": "TIME", "mode": "NULLABLE"},
-      {"name": "inicio_ventana", "field_type": "TIMESTAMP", "mode": "NULLABLE"},
-      {"name": "termino_ventana", "field_type": "TIMESTAMP", "mode": "NULLABLE"},
+      {"name": "hora_entrega", "field_type": "STRING", "mode": "NULLABLE"},
+      {"name": "inicio_ventana", "field_type": "DATETIME", "mode": "NULLABLE"},
+      {"name": "termino_ventana", "field_type": "DATETIME", "mode": "NULLABLE"},
       {"name": "comuna", "field_type": "STRING", "mode": "NULLABLE"},
       {"name": "cumplimiento_ondate", "field_type": "INTEGER", "mode": "REQUIRED"},
       {"name": "cumplimiento_ontime", "field_type": "INTEGER", "mode": "REQUIRED"}
-  ],
-  "time_partitioning": {
-        "field": "fecha_facturacion",
-        "type_": "DAY"
-    },
-    "clustering_fields": [
-        "id_orden", "id_tienda"
-    ]
+  ]
 }
