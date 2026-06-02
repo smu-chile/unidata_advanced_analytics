@@ -1,72 +1,70 @@
 {
-    "table_name": "CRM_DATA_SFMC_PUBLIST",
+    "table": "CRM_DATA_SFMC_PUBLIST",
     "schema": "CRM",
-    "description": "Salesforce SFMC Publication List",
-    "partition_by": "CREATEDDATE",
-    "fields": [
+    "columns": [
         {
             "name": "SUBSCRIBERID",
-            "type": "INTEGER",
+            "field_type": "INTEGER",
             "mode": "REQUIRED"
         },
         {
             "name": "SUBSCRIBERKEY",
-            "type": "STRING",
+            "field_type": "STRING",
             "mode": "REQUIRED"
         },
         {
             "name": "ADDEDBY",
-            "type": "INTEGER",
+            "field_type": "INTEGER",
             "mode": "NULLABLE"
         },
         {
             "name": "ADDMETHOD",
-            "type": "STRING",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
             "name": "CREATEDDATE",
-            "type": "TIMESTAMP",
+            "field_type": "TIMESTAMP",
             "mode": "REQUIRED"
         },
         {
             "name": "DATEUNSUBSCRIBED",
-            "type": "TIMESTAMP",
+            "field_type": "TIMESTAMP",
             "mode": "NULLABLE"
         },
         {
             "name": "EMAILADDRESS",
-            "type": "STRING",
+            "field_type": "STRING",
             "mode": "REQUIRED"
         },
         {
             "name": "LISTID",
-            "type": "INTEGER",
+            "field_type": "INTEGER",
             "mode": "REQUIRED"
         },
         {
             "name": "LISTNAME",
-            "type": "STRING",
+            "field_type": "STRING",
             "mode": "REQUIRED"
         },
         {
             "name": "LISTTYPE",
-            "type": "STRING",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
             "name": "STATUS",
-            "type": "STRING",
+            "field_type": "STRING",
             "mode": "REQUIRED"
         },
         {
             "name": "SUBSCRIBERTYPE",
-            "type": "STRING",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
             "name": "FECHA_CARGA",
-            "type": "DATE",
+            "field_type": "DATE",
             "mode": "NULLABLE"
         }
     ]
