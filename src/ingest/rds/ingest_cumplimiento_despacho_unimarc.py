@@ -76,7 +76,7 @@ dag_args = {
             tz=pendulum.timezone('America/Santiago')
         ),
         'depends_on_past': False,
-        'retries': 2,
+        'retries': 0,
         'retry_delay': timedelta(minutes=5),
         'execution_timeout': timedelta(minutes=30)
     }
