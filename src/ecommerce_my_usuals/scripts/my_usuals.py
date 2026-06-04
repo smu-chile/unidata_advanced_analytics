@@ -519,16 +519,22 @@ SQL_QUERIES = QueryDict({
 
         UNION ALL
 
-        SELECT
-            date,
-            customer_key,
-            ean_aux,
-            relevance,
-            store_banner
-        FROM USUALS_FILTRADO_2
-        WHERE marca_propia = 1
-        AND (compra <> 0 OR compra IS NULL)
-        QUALIFY ROW_NUMBER() OVER(PARTITION BY customer_key ORDER BY relevance ASC) <= 5
+    SELECT
+        date,
+        customer_key,
+        ean_aux,
+        relevance,
+        store_banner
+    FROM USUALS_FILTRADO_2
+    WHERE marca_propia = 1
+    AND (compra <> 0 OR compra IS NULL)
+    QUALIFY ROW_NUMBER() OVER(
+        PARTITION BY customer_key
+        ORDER BY
+            CASE WHEN compra <> 0 THEN 1 ELSE 2 END ASC,
+            CASE WHEN compra <> 0 THEN relevance END DESC,
+            CASE WHEN compra IS NULL THEN RAND() END
+        ) <= 5
     )
 
     SELECT *
@@ -808,7 +814,13 @@ SQL_QUERIES = QueryDict({
         FROM USUALS_FILTRADO_2
         WHERE marca_propia = 1
         AND (compra <> 0 OR compra IS NULL)
-        QUALIFY ROW_NUMBER() OVER(PARTITION BY customer_key ORDER BY relevance ASC) <= 5
+        QUALIFY ROW_NUMBER() OVER(
+            PARTITION BY customer_key
+            ORDER BY
+                CASE WHEN compra <> 0 THEN 1 ELSE 2 END ASC,
+                CASE WHEN compra <> 0 THEN relevance END DESC,
+                CASE WHEN compra IS NULL THEN RAND() END
+        ) <= 5
     )
 
     SELECT
