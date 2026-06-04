@@ -24,12 +24,12 @@
         },
         {
             "name": "CREATEDDATE",
-            "field_type": "TIMESTAMP",
+            "field_type": "DATETIME",
             "mode": "REQUIRED"
         },
         {
             "name": "DATEUNSUBSCRIBED",
-            "field_type": "TIMESTAMP",
+            "field_type": "DATETIME",
             "mode": "NULLABLE"
         },
         {

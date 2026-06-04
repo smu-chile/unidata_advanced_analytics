@@ -1,20 +1,21 @@
-"""Download SFMC files from SFTP and upload ONLY first 100 lines to GCS.
-
+"""Download complete SFMC files from SFTP and upload to GCS.
 Flow:
-SFTP -> memory (100 lines) -> GCS
+SFTP -> archivo temporal local -> GCS
 """
 
 # ---------------------------------------------------------------------
 # Imports
 # ---------------------------------------------------------------------
-import io  # noqa: F401
+import time
 import logging
 import datetime
+import tempfile
+from pathlib import Path
 
 import paramiko
 from google.cloud import storage
 
-from common.gcp_extended import secretsmanager  # noqa: F401
+from common.gcp_extended import secretsmanager
 
 
 # ---------------------------------------------------------------------
@@ -34,12 +35,7 @@ def main() -> None:
     # -----------------------------------------------------------------
     # Config
     # -----------------------------------------------------------------
-    formatos = [
-        'unimarc',
-        'alvi',
-        'unipay',
-        'm10s10'
-    ]
+    formatos = ['alvi']
 
     remote_path = '/Import/PublicationListAutomation'
 
@@ -94,61 +90,87 @@ def main() -> None:
         logging.info('SFTP connection established')
 
         # -------------------------------------------------------------
-        # Read ONLY first 100 lines (NO DATAFRAME)
+        # Download full file from SFTP
         # -------------------------------------------------------------
-        logging.info(
-            'Reading first 100 lines from remote file'
-        )
+        start_time = time.time()
 
-        with sftp.open(remote_file, 'rb') as remote_stream:
+        logging.info(f'Downloading full file: {remote_file}')
 
-            text_stream = io.TextIOWrapper(
-                remote_stream,
-                encoding='utf-16'
-            )
+        file_info = sftp.stat(remote_file)
 
-            sample_lines = []
-
-            for i, line in enumerate(text_stream):
-
-                sample_lines.append(line)
-
-                if i >= 99:
-                    break
+        remote_size_mb = (file_info.st_size / 1024 / 1024)
 
         logging.info(
-            f'Lines read: {len(sample_lines)}'
+            f'Remote file size: '
+            f'{remote_size_mb:.2f} MB')
+
+        local_tmp_file = (
+            Path(tempfile.gettempdir())
+            / f'{formato}_{csv_name}')
+
+        logging.info(f'Local temp file: {local_tmp_file}')
+
+        start_download = datetime.datetime.now()  # noqa: DTZ005
+
+        sftp.get(
+            remote_file,
+            str(local_tmp_file)
         )
 
-        # -------------------------------------------------------------
-        # Upload sample to GCS
-        # -------------------------------------------------------------
-        sample_content = ''.join(
-            sample_lines
+        download_seconds = (
+            datetime.datetime.now() - start_download).total_seconds()  # noqa: DTZ005
+
+        logging.info(
+            f'Download time: '
+            f'{download_seconds:.2f} seconds')
+
+        logging.info(
+            f'Average speed: '
+            f'{remote_size_mb / download_seconds:.2f} MB/s'
         )
 
+        elapsed_time = (time.time() - start_time)
+
+        file_size_mb = (
+            Path(local_tmp_file).stat().st_size
+            / 1024
+            / 1024
+        )
+        logging.info(
+            f'File downloaded successfully. '
+            f'Size: {file_size_mb:.2f} MB')
+        logging.info(
+            f'Download time: '
+            f'{elapsed_time:.2f} seconds')
+        logging.info(
+            f'Average speed: '
+            f'{file_size_mb / elapsed_time:.2f} MB/s')
+
+        # -------------------------------------------------------------
+        # Upload complete file to GCS
+        # -------------------------------------------------------------
         destination_blob = (
             f'{bucket_path}/'
-            f'CRM_DATA_SFMC_PUBLIST_{formato}_sample.csv'
+            f'CRM_DATA_SFMC_PUBLIST_'
+            f'{formato.upper()}_'
+            f'{execution_date}.csv'
         )
 
         logging.info(
-            f'Uploading sample file to '
+            f'Uploading file to '
             f'gs://{bucket_name}/{destination_blob}'
         )
 
-        blob = bucket.blob(
-            destination_blob
-        )
+        blob = bucket.blob(destination_blob)
+        blob.upload_from_filename(local_tmp_file)
 
-        blob.upload_from_string(
-            sample_content,
-            content_type='text/csv'
-        )
+        logging.info('File uploaded successfully to GCS')
 
-        logging.info(
-            'Sample upload completed successfully'
-        )
+        # -------------------------------------------------------------
+        # Remove temp file
+        # -------------------------------------------------------------
+        Path(local_tmp_file).unlink(missing_ok=True)
+        logging.info('Temporary file removed')
 
         # -------------------------------------------------------------
         # Close connections

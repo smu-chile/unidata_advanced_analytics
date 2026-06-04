@@ -53,7 +53,7 @@ dag_args = {
     'tags': [
         PROJECT_NAME,
         SUBPROJECT_NAME,
-        'sfmc',
+        'salesforce',
         'sftp',
         'gcs',
         'ilopeze'
