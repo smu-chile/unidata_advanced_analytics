@@ -1,0 +1,66 @@
+{
+    "table": "CRM_DATA_SFMC_PUBLIST_STG",
+    "schema": "CRM",
+    "columns": [
+        {
+            "name": "SUBSCRIBERID",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SUBSCRIBERKEY",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ADDEDBY",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ADDMETHOD",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "CREATEDDATE",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DATEUNSUBSCRIBED",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "EMAILADDRESS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "LISTID",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "LISTNAME",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "LISTTYPE",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "STATUS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SUBSCRIBERTYPE",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        }
+    ]
+}

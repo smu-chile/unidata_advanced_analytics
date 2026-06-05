@@ -100,15 +100,23 @@ def main() -> None:
         start_download = datetime.datetime.now()  # noqa: DTZ005
         sftp.get(remote_file, str(local_tmp_file))
 
-        download_seconds = (
-            datetime.datetime.now() - start_download).total_seconds()  # noqa: DTZ005
+        # -------------------------------------------------------------
+        # Convert UTF-16 -> UTF-8
+        # -------------------------------------------------------------
+        logging.info('Converting file from UTF-16 to UTF-8')
 
-        logging.info(f'Download time: {download_seconds:.2f} seconds')
-
-        logging.info(
-            f'Average speed: '
-            f'{remote_size_mb / download_seconds:.2f} MB/s'
+        utf8_file = (
+            Path(tempfile.gettempdir())
+            / f'{formato}_{csv_name}_utf8.csv'
         )
+
+        with open(local_tmp_file, 'r', encoding='utf-16') as src:  # noqa: UP015
+            content = src.read()
+
+        with open(utf8_file, 'w', encoding='utf-8', newline='') as dst:
+            dst.write(content)
+
+        logging.info(f'UTF-8 file created: {utf8_file}')
 
         # -------------------------------------------------------------
         # Upload complete file to GCS
@@ -124,7 +132,7 @@ def main() -> None:
             f'gs://{bucket_name}/{destination_blob}'
         )
         blob = bucket.blob(destination_blob)
-        blob.upload_from_filename(local_tmp_file)
+        blob.upload_from_filename(str(utf8_file))
         logging.info('File uploaded successfully to GCS')
 
         # -------------------------------------------------------------
