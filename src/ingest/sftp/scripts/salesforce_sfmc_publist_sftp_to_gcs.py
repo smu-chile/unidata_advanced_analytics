@@ -97,7 +97,6 @@ def main() -> None:
             / f'{formato}_{csv_name}')
 
         logging.info(f'Local temp file: {local_tmp_file}')
-        start_download = datetime.datetime.now()  # noqa: DTZ005
         sftp.get(remote_file, str(local_tmp_file))
 
         # -------------------------------------------------------------
