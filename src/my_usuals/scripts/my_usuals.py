@@ -124,7 +124,7 @@ SQL_QUERIES = QueryDict({
         )
         USING (customer_key)
         WHERE in_filter IS NULL
-            AND unimarc_logged = 1
+            AND ${store_banner}_logged = 1
         GROUP BY 1
 
         UNION ALL
@@ -945,7 +945,7 @@ SQL_QUERIES = QueryDict({
         )
         USING (customer_key)
         WHERE in_filter IS NULL
-            AND unimarc_logged = 1
+            AND ${store_banner}_logged = 1
         GROUP BY 1
 
         UNION ALL
