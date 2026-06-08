@@ -4,7 +4,7 @@
     "columns": [
         {
             "name": "SUBSCRIBERID",
-            "field_type": "INTEGER",
+            "field_type": "INT64",
             "mode": "REQUIRED"
         },
         {
@@ -14,7 +14,7 @@
         },
         {
             "name": "ADDEDBY",
-            "field_type": "INTEGER",
+            "field_type": "INT64",
             "mode": "NULLABLE"
         },
         {
@@ -39,7 +39,7 @@
         },
         {
             "name": "LISTID",
-            "field_type": "INTEGER",
+            "field_type": "INT64",
             "mode": "REQUIRED"
         },
         {
@@ -65,7 +65,7 @@
         {
             "name": "FECHA_CARGA",
             "field_type": "DATE",
-            "mode": "NULLABLE"
+            "mode": "REQUIRED"
         }
     ]
 }
