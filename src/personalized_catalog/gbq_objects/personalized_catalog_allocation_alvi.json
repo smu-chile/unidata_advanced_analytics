@@ -16,6 +16,18 @@
             "description": ""
         },
         {
+            "name": "SUBCATEGORIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
             "name": "RELEVANCE",
             "field_type": "FLOAT",
             "mode": "REQUIRED",

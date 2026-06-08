@@ -263,6 +263,15 @@ SQL_QUERIES = QueryDict({
     WHERE FECHA = '${start_date}'
     """,  # noqa: E501
 
+    'dim_product':
+    """
+    SELECT DISTINCT
+        CAST(EAN AS INT) AS ean,
+        GRUPO_DSC AS SUBCATEGORIA,
+        CAT_DSC AS CATEGORIA
+    FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
+    """
+
 })
 
 # -------------------------------------------------------------------------
@@ -522,6 +531,13 @@ def main() -> None:  # noqa: D103
         gbq_client=gbq_client,
     )
 
+    dim_product = readBigQuery(SQL_QUERIES['dim_product'].substitute(
+        gcp_project = gcp_project
+        ),
+    user = usuario,
+    gbq_client = gbq_client
+    )
+
     for n_batch in range(total_batches):
         logging.info('--------------------------------------------------------')
         logging.info(f'Batch {n_batch+1} of {total_batches}')
@@ -699,8 +715,21 @@ def main() -> None:  # noqa: D103
 
         distances['fecha'] = start_date
 
+        distances = distances.merge(
+            dim_product,
+            on = 'ean',
+            how = 'inner'
+        )
+
         uploadFrame(
-            distances,
+            distances[[
+                'customer_key',
+                'ean',
+                'SUBCATEGORIA',
+                'CATEGORIA',
+                'final_rank',
+                'campaign_name',
+                'fecha']],
             table_ddl_json_path=os.path.join('gbq_objects',f'personalized_catalog_allocation_{lower_store_banner}.json'),
             project = gcp_project,
             gbq_client = gbq_client,
