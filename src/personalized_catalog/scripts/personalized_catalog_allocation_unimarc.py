@@ -239,19 +239,19 @@ SQL_QUERIES = QueryDict({
     # of the total batch count
     """
     SELECT MAX(customer_key_index) AS max_customers
-    FROM `${gcp_project}.TMP.TMP_LAST_N_MONTH_TRANSACTIONS_${upper_store_banner}`
-    """,
+    FROM `${gcp_project}.TMP.TMP_LAST_N_MONTH_TRANSACTIONS_PERSONALIZED_CATALOG_${upper_store_banner}`
+    """, # noqa: E501
 
     'query_transactions':
     # Queries a batch of customer transactions associated to batch_size
     # customer ids
     """
     SELECT customer_key, material
-    FROM `${gcp_project}.TMP.TMP_LAST_N_MONTH_TRANSACTIONS_${upper_store_banner}`
+    FROM `${gcp_project}.TMP.TMP_LAST_N_MONTH_TRANSACTIONS_PERSONALIZED_CATALOG_${upper_store_banner}`
     WHERE
         customer_key_index >= ${start_idx}
         AND customer_key_index < ${end_idx}
-    """,
+    """, # noqa: E501
 
     'topic_catalog_alloc':
     """
@@ -480,7 +480,7 @@ def main() -> None:  # noqa: D103
             end_date=end_date,
             gcp_project = gcp_project
         ),
-        table_ref=f'{gcp_project}.TMP.TMP_LAST_N_MONTH_TRANSACTIONS_{upper_store_banner}',
+        table_ref=f'{gcp_project}.TMP.TMP_LAST_N_MONTH_TRANSACTIONS_PERSONALIZED_CATALOG_{upper_store_banner}',
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_TRUNCATE',
         use_legacy_sql=False,
@@ -491,7 +491,7 @@ def main() -> None:  # noqa: D103
     expiration = now.add(minutes=1440)
 
     setTableExpiration(
-        table_ref = f'{gcp_project}.TMP.TMP_LAST_N_MONTH_TRANSACTIONS_{upper_store_banner}',
+        table_ref = f'{gcp_project}.TMP.TMP_LAST_N_MONTH_TRANSACTIONS_PERSONALIZED_CATALOG_{upper_store_banner}',  # noqa: E501
         expiration = expiration,
         gbq_client= gbq_client
     )
