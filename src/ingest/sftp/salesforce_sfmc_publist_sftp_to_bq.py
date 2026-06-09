@@ -93,8 +93,6 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
     sfmc_publist_sftp_to_gcs = (
         ExtendedDataprocCreateBatchOperator(
             task_id='sfmc_publist_sftp_to_gcs',
-            project_id=GCP_PROJECT_ID,
-            region=REGION,
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 f'{SUBPROJECT_NAME}/'
@@ -119,8 +117,6 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
     sfmc_publist_gcs_to_bq_stg = (
         ExtendedDataprocCreateBatchOperator(
             task_id='sfmc_publist_gcs_to_bq_stg',
-            project_id=GCP_PROJECT_ID,
-            region=REGION,
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 f'{SUBPROJECT_NAME}/'
@@ -145,8 +141,6 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
     sfmc_publist_stg_to_bq_final = (
         ExtendedDataprocCreateBatchOperator(
             task_id='sfmc_publist_stg_to_bq_final',
-            project_id=GCP_PROJECT_ID,
-            region=REGION,
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 f'{SUBPROJECT_NAME}/'
