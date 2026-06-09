@@ -43,7 +43,7 @@ GCP_PROJECT_ID = dag_env_config['project_id']
 REGION = dag_env_config['region']
 
 dag_args = {
-    'dag_id': 'salesforce_sfmc_publist',
+    'dag_id': 'salesforce_sfmc_publist_sftp_to_bq',
     'schedule_interval': '0 8 * * 1-5',
     'dagrun_timeout': None,
     'catchup': False,
@@ -93,6 +93,8 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
     sfmc_publist_sftp_to_gcs = (
         ExtendedDataprocCreateBatchOperator(
             task_id='sfmc_publist_sftp_to_gcs',
+            project_id=GCP_PROJECT_ID,
+            region=REGION,
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 f'{SUBPROJECT_NAME}/'
@@ -103,61 +105,65 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
             docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
             pyspark_batch_args=[
                 '--project_id',
-            GCP_PROJECT_ID,
-            '--execution_date',
-            EXECUTION_DATE,
-        ],
-        include_paths=[
-            'common/',
-            f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/',
-        ],
+                GCP_PROJECT_ID,
+                '--execution_date',
+                EXECUTION_DATE,
+            ],
+            include_paths=[
+                'common/',
+                f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/',
+            ],
+        )
     )
-)
 
-sfmc_publist_gcs_to_bq_stg = (
-    ExtendedDataprocCreateBatchOperator(
-        task_id='sfmc_publist_gcs_to_bq_stg',
-        python_script_path=(
-            f'{PROJECT_NAME}/'
-            f'{SUBPROJECT_NAME}/'
-            'scripts/'
-            'salesforce_sfmc_publist_gcs_to_bq.py'
-        ),
-        dag_env_config=dag_env_config,
-        docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
-        pyspark_batch_args=[
-            '--project_id',
-            GCP_PROJECT_ID,
-            '--execution_date',
-            EXECUTION_DATE,
-        ],
-        include_paths=[
-            'common/',
-            f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/',
-        ],
+    sfmc_publist_gcs_to_bq_stg = (
+        ExtendedDataprocCreateBatchOperator(
+            task_id='sfmc_publist_gcs_to_bq_stg',
+            project_id=GCP_PROJECT_ID,
+            region=REGION,
+            python_script_path=(
+                f'{PROJECT_NAME}/'
+                f'{SUBPROJECT_NAME}/'
+                'scripts/'
+                'salesforce_sfmc_publist_gcs_to_bq.py'
+            ),
+            dag_env_config=dag_env_config,
+            docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
+            pyspark_batch_args=[
+                '--project_id',
+                GCP_PROJECT_ID,
+                '--execution_date',
+                EXECUTION_DATE,
+            ],
+            include_paths=[
+                'common/',
+                f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/',
+            ],
+        )
     )
-)
 
-sfmc_publist_stg_to_bq_final = (
-    ExtendedDataprocCreateBatchOperator(
-        task_id='sfmc_publist_stg_to_bq_final',
-        python_script_path=(
-            f'{PROJECT_NAME}/'
-            f'{SUBPROJECT_NAME}/'
-            'scripts/'
-            'salesforce_sfmc_publist_stg_to_bq.py'
-        ),
-        dag_env_config=dag_env_config,
-        docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
-        pyspark_batch_args=[
-            '--project_id',
-            GCP_PROJECT_ID,
-            '--execution_date',
-            EXECUTION_DATE,
-        ],
-        include_paths=[
-            'common/',
-            f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/',
-        ],
+    sfmc_publist_stg_to_bq_final = (
+        ExtendedDataprocCreateBatchOperator(
+            task_id='sfmc_publist_stg_to_bq_final',
+            project_id=GCP_PROJECT_ID,
+            region=REGION,
+            python_script_path=(
+                f'{PROJECT_NAME}/'
+                f'{SUBPROJECT_NAME}/'
+                'scripts/'
+                'salesforce_sfmc_publist_stg_to_bq.py'
+            ),
+            dag_env_config=dag_env_config,
+            docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
+            pyspark_batch_args=[
+                '--project_id',
+                GCP_PROJECT_ID,
+                '--execution_date',
+                EXECUTION_DATE,
+            ],
+            include_paths=[
+                'common/',
+                f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/',
+            ],
+        )
     )
-)
