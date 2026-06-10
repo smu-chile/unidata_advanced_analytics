@@ -60,7 +60,6 @@ SQL_QUERIES = QueryDict({
             SUM(CASE WHEN producto_substituto = false THEN 1
             ELSE 0 END) AS unidades_solicitadas
         FROM operaciones_unimarc.found_rate_productos
-        WHERE fecha_facturacion >= '${execution_date}'::timestamp - '1 month'::interval
         GROUP BY 1,2,3, 4
     ) found_rate_productos
     LEFT JOIN ecommdata.skus USING(ref_id)
@@ -116,10 +115,6 @@ def main() -> None:  # noqa: D103
             'found_rate_tmp.json'
         ),
         project=gcp_project_id,
-        where_clause=(
-            f'fecha_facturacion >= '
-            f'"{execution_date.add(months=-1).isoformat()}"'
-        ),
         gbq_client=gbq_client,
         if_not_exists='ignore'
     )
@@ -149,10 +144,6 @@ def main() -> None:  # noqa: D103
             'found_rate_new.json'
         ),
         project=gcp_project_id,
-        where_clause=(
-            f'fecha_facturacion >= '
-            f'"{execution_date.add(months=-1).isoformat()}"'
-        ),
         gbq_client=gbq_client,
         if_not_exists='ignore'
     )
