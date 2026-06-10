@@ -838,11 +838,11 @@ def main() -> None:  # noqa: D103
         'variacion_porcentual_2',
         'variacion_porcentual_3',
         'variacion_porcentual_4',
-        'variacion_porcentual_5'
-        'variacion_porcentual_6'
-        'variacion_porcentual_7'
-        'variacion_porcentual_8'
-        'variacion_porcentual_9'
+        'variacion_porcentual_5',
+        'variacion_porcentual_6',
+        'variacion_porcentual_7',
+        'variacion_porcentual_8',
+        'variacion_porcentual_9',
         'variacion_porcentual_10'
     ]
     var_array = df_datos[cols_var].to_numpy()
