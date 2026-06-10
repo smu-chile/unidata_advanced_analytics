@@ -121,7 +121,7 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
                 f'{PROJECT_NAME}/'
                 f'{SUBPROJECT_NAME}/'
                 'scripts/'
-                'salesforce_sfmc_publist_gcs_to_bq.py'
+                'salesforce_sfmc_publist_gcs_to_stg.py'
             ),
             dag_env_config=dag_env_config,
             docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
