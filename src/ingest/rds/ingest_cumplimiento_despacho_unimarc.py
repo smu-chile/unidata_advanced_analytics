@@ -50,7 +50,7 @@ SCRIPT_NAME = 'ingest_cumplimiento_despacho_unimarc.py'
 
 dag_args = {
     'dag_id': 'ingest_cumplimiento_despacho_unimarc',
-    'schedule_interval': '0 9 * * SUN',
+    'schedule_interval': '0 8 * * *',
     'dagrun_timeout': timedelta(hours=2),
     'catchup': False,
     'max_active_runs': 1,
