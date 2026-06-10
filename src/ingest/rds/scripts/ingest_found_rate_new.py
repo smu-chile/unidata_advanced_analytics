@@ -33,33 +33,36 @@ parser.add_argument(
 #  Config
 # -------------------------------------------------------------------------
 SQL_QUERIES = QueryDict({
-    'extract_data':
-    """
+'extract_data':
+"""
+SELECT
+    fecha_facturacion,
+    ref_id,
+    orden,
+    id_tienda AS store_id,
+    CASE
+        WHEN ref_id = '000000000000651953-UN' THEN '7807975004117'
+        ELSE ean_primario
+    END AS ean,
+    unidades_completadas AS ordenes_completadas,
+    unidades_solicitadas AS ordenes_solicitadas
+FROM (
     SELECT
         fecha_facturacion,
+        id_tienda,
         ref_id,
         orden,
-        id_tienda AS store_id,
-        CASE
-            WHEN ref_id = '000000000000651953-UN' THEN '7807975004117'
-            ELSE ean_primario
-        END AS ean,
-        unidades_completadas AS ordenes_completadas,
-        unidades_solicitadas AS ordenes_solicitadas
-    FROM (  SELECT
-                fecha_facturacion,
-                id_tienda,
-                ref_id,
-                orden,
-                SUM(CASE WHEN estado_foundrate = 3 THEN 1
-                ELSE 0 END) AS unidades_completadas,
-                SUM(CASE WHEN producto_substituto = false THEN 1
-                ELSE 0 END) AS unidades_solicitadas
-            FROM operaciones_unimarc.found_rate_productos
-            GROUP BY 1,2,3, 4) found_rate_productos
-    LEFT JOIN ecommdata.skus USING(ref_id)
-    WHERE unidades_solicitadas > 0 AND length(ean_primario) < 19
-    """,
+        SUM(CASE WHEN estado_foundrate = 3 THEN 1
+        ELSE 0 END) AS unidades_completadas,
+        SUM(CASE WHEN producto_substituto = false THEN 1
+        ELSE 0 END) AS unidades_solicitadas
+    FROM operaciones_unimarc.found_rate_productos
+    WHERE fecha_facturacion
+        >= '${execution_date}'::timestamp - '1 month'::interval
+    GROUP BY 1,2,3, 4) found_rate_productos
+LEFT JOIN ecommdata.skus USING(ref_id)
+WHERE unidades_solicitadas > 0 AND length(ean_primario) < 19
+""",
 })
 
 # -------------------------------------------------------------------------
@@ -137,7 +140,10 @@ def main() -> None:  # noqa: D103
             'found_rate_new.json'
         ),
         project=gcp_project_id,
-        where_clause='1=1',
+        where_clause=(
+            f'fecha_facturacion >= '
+            f'"{execution_date.add(months=-1).isoformat()}"'
+        ),
         gbq_client=gbq_client,
         if_not_exists='ignore'
     )
