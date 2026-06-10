@@ -147,6 +147,36 @@
             "mode": "NULLABLE",
             "description": "Codigo EAN del sustituto 5"
         },
+        {   
+            "name": "EAN_SUSTITUTO_6",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 6"
+        },     
+        {   
+            "name": "EAN_SUSTITUTO_7",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 7"
+        },
+        {   
+            "name": "EAN_SUSTITUTO_8",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 8"
+        },
+        {   
+            "name": "EAN_SUSTITUTO_9",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 9"
+        },
+        {   
+            "name": "EAN_SUSTITUTO_10",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 10"
+        },
         {
             "name": "VARIACION_PORCENTUAL_SUBCATEGORIA",
             "field_type": "FLOAT64",
