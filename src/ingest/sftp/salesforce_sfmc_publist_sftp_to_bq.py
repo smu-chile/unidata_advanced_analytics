@@ -161,3 +161,10 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
             ],
         )
     )
+
+# ------------------------------------------------------------------
+# Task Dependencies
+# ------------------------------------------------------------------
+
+sfmc_publist_sftp_to_gcs >> sfmc_publist_gcs_to_bq_stg
+sfmc_publist_gcs_to_bq_stg >> sfmc_publist_stg_to_bq_final
