@@ -115,6 +115,7 @@ def main() -> None:  # noqa: D103
             'found_rate_tmp.json'
         ),
         project=gcp_project_id,
+        where_clause='1=1',
         gbq_client=gbq_client,
         if_not_exists='ignore'
     )
@@ -144,6 +145,7 @@ def main() -> None:  # noqa: D103
             'found_rate_new.json'
         ),
         project=gcp_project_id,
+        where_clause='1=1',
         gbq_client=gbq_client,
         if_not_exists='ignore'
     )
