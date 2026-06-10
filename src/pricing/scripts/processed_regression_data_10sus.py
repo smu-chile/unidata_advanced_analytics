@@ -1019,6 +1019,8 @@ def main() -> None:  # noqa: D103
     # Crear el nuevo dataframe
     df_final = df_datos[columnas_existentes].copy()
 
+    print('COLUMNAS df final: ',df_final.columns)
+
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
