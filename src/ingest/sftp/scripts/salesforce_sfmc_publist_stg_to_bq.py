@@ -107,9 +107,7 @@ def main() -> None:
     schema_file = args['schema_file']
 
     json_path = os.path.join(
-        os.path.dirname(
-            os.path.dirname(__file__)
-        ),
+        os.path.dirname(__file__),
         'gbq_objects',
         schema_file)
 
