@@ -80,8 +80,7 @@ dag_args = {
     },
 }
 
-with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
-
+with DAG(**dag_args) as dag:
     EXECUTION_DATE = (
         "{{ dag_run.conf.get("
         "'execution_date', "
