@@ -1,25 +1,18 @@
+import os
 import json
 import logging
-from pathlib import Path
+import argparse
 
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 
 
+# ---------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-
-PROJECT_ID = 'cl-bigdata-analytics-preprod'
-DATASET_ID = 'CRM'
-STG_TABLE = (f'{PROJECT_ID}.{DATASET_ID}.CRM_DATA_SFMC_PUBLIST_STG')
-FINAL_TABLE = (f'{PROJECT_ID}.{DATASET_ID}.CRM_DATA_SFMC_PUBLIST')
-
-JSON_FILE = (
-    Path(__file__).parents[1]
-    / 'gbq_objects'
-    / 'CRM_DATA_SFMC_PUBLIST.json')
+    format='%(asctime)s - %(levelname)s - %(message)s')
 
 def build_select(columns):
 
@@ -95,31 +88,70 @@ def build_select(columns):
             )
         select_fields.append(expression)
     return ',\n'.join(select_fields)
-def main():
-    logging.info(f'Loading schema: {JSON_FILE}')
 
-    with open(JSON_FILE, encoding='utf-8') as f:
+# ---------------------------------------------------------------------
+# Arguments
+# ---------------------------------------------------------------------
+parser = argparse.ArgumentParser()
+parser.add_argument('--project_id', required=True)
+parser.add_argument('--schema_file', required=True)
+parser.add_argument('--execution_date', required=False)
+
+# ---------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------
+def main() -> None:
+
+    args = vars(parser.parse_args())
+    project_id = args['project_id']
+    schema_file = args['schema_file']
+
+    json_path = os.path.join(
+        os.path.dirname(
+            os.path.dirname(__file__)
+        ),
+        'gbq_objects',
+        schema_file)
+
+    logging.info(f'Loading schema: {json_path}')
+
+    with open(json_path, encoding='utf-8') as f:
         metadata = json.load(f)
-
     columns = metadata['columns']
+    dataset_id = metadata['schema']
+    final_table_name = metadata['table']
 
-    client = bigquery.Client(project=PROJECT_ID)
+    stg_table_name = 'CRM_DATA_SFMC_PUBLIST_STG'
+
+    final_table = (
+        f'{project_id}.'
+        f'{dataset_id}.'
+        f'{final_table_name}')
+
+    stg_table = (
+        f'{project_id}.'
+        f'{dataset_id}.'
+        f'{stg_table_name}')
+
+
+
+    client = bigquery.Client(project=project_id)
 
     try:
-        client.get_table(FINAL_TABLE)
+        client.get_table(final_table)
         logging.info('Target table exists')
 
     except NotFound:
-        raise Exception(f'Table not found: {FINAL_TABLE}')  # noqa: B904, EM102
+        raise Exception(f'Table not found: {final_table}')  # noqa: B904, EM102
 
     select_sql = (build_select(columns))
 
     query = f"""
-    TRUNCATE TABLE `{FINAL_TABLE}`;
-    INSERT INTO `{FINAL_TABLE}`
+    TRUNCATE TABLE `{final_table}`;
+    INSERT INTO `{final_table}`
     SELECT
     {select_sql}
-    FROM `{STG_TABLE}`
+    FROM `{stg_table}`
     """  # noqa: S608
 
     logging.info('Executing transformation')

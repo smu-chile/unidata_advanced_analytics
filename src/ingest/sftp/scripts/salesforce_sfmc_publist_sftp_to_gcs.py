@@ -52,6 +52,21 @@ def main() -> None:
         project='cl-bigdata-analytics-preprod'
     )
 
+    # -------------------------------------------------------------
+    # Clean bucket folder
+    # -------------------------------------------------------------
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blobs = bucket.list_blobs(prefix=f'{bucket_path}/')
+    logging.info(f'Cleaning gs://{bucket_name}/{bucket_path}/')
+
+    for blob in blobs:
+        if blob.name.startswith(
+            f'{bucket_path}/CRM_DATA_SFMC_PUBLIST_'):
+            blob.delete()
+
+        logging.info('Bucket folder cleaned')
+
     # -----------------------------------------------------------------
     # GCS client
     # -----------------------------------------------------------------

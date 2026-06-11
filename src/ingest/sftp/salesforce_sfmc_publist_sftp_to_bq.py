@@ -130,6 +130,8 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
                 GCP_PROJECT_ID,
                 '--execution_date',
                 EXECUTION_DATE,
+                '--schema_file',
+                'CRM_DATA_SFMC_PUBLIST_STG.json'
             ],
             include_paths=[
                 'common/',
@@ -154,6 +156,8 @@ with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
                 GCP_PROJECT_ID,
                 '--execution_date',
                 EXECUTION_DATE,
+                '--schema_file',
+                'CRM_DATA_SFMC_PUBLIST.json'
             ],
             include_paths=[
                 'common/',

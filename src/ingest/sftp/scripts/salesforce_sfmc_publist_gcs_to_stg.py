@@ -4,10 +4,10 @@ Flow: GCS -> STG
 # ---------------------------------------------------------------------
 # Imports
 # ---------------------------------------------------------------------
+import os
 import json
 import logging
-import datetime
-from pathlib import Path
+import argparse
 
 from google.cloud import bigquery
 
@@ -17,36 +17,37 @@ from google.cloud import bigquery
 # ---------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+    format='%(asctime)s - %(levelname)s - %(message)s')
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--project_id', required=True)
+parser.add_argument('--execution_date', required=True)
+parser.add_argument('--schema_file', required=True)
 
 # ---------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------
 def main() -> None:
 
-    project_id = 'cl-bigdata-analytics-preprod'
+    args = vars(parser.parse_args())
+    project_id = args['project_id']
+    execution_date = args['execution_date']
+    schema_file = args['schema_file']  # noqa: F841
 
     bucket_name = ('cl-bigdata-analytics-preprod-us-sandbox-datasets')
     bucket_path = 'CRM'
-
-    execution_date = (
-        datetime.datetime.now(
-            datetime.UTC
-        ).strftime('%Y%m%d')
-    )
 
     formatos = ['UNIMARC', 'ALVI', 'UNIPAY', 'M10S10']
     # -------------------------------------------------------------
     # Load STG schema
     # -------------------------------------------------------------
-    json_path = (
-        Path(__file__).resolve().parents[1]
-        / 'gbq_objects'
-        / 'CRM_DATA_SFMC_PUBLIST_STG.json'
-    )
+    json_path = f'gbq_objects/{schema_file}'
 
     logging.info(f'Loading schema: {json_path}')
+
+    logging.info(f'Current working directory: {os.getcwd()}')
+
+    logging.info(f'Files: {os.listdir(".")}')
 
     with open(
         json_path,
@@ -58,9 +59,7 @@ def main() -> None:
         )
 
     dataset_id = table_config['schema']
-
     table_name = table_config['table']
-
     table_id = (
         f'{project_id}.'
         f'{dataset_id}.'
