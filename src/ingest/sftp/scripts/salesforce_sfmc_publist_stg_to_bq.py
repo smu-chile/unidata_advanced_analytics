@@ -115,12 +115,23 @@ def main() -> None:
 
     logging.info(f'Loading schema: {json_path}')
 
+
+    logging.info(f'__file__ = {__file__}')
+    logging.info(f'parent = {os.path.dirname(__file__)}')
+    logging.info(f'parent parent = '
+        f'{os.path.dirname(os.path.dirname(__file__))}')
+    logging.info(f'json_path = {json_path}')
+
+    logging.info(
+        f'current_dir_files = '
+        f'{os.listdir(os.path.dirname(__file__))}'
+    )
+
     with open(json_path, encoding='utf-8') as f:
         metadata = json.load(f)
     columns = metadata['columns']
     dataset_id = metadata['schema']
     final_table_name = metadata['table']
-
     stg_table_name = 'CRM_DATA_SFMC_PUBLIST_STG'
 
     final_table = (
@@ -132,8 +143,6 @@ def main() -> None:
         f'{project_id}.'
         f'{dataset_id}.'
         f'{stg_table_name}')
-
-
 
     client = bigquery.Client(project=project_id)
 

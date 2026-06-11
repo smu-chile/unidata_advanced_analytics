@@ -65,7 +65,8 @@ def main() -> None:
             f'{bucket_path}/CRM_DATA_SFMC_PUBLIST_'):
             blob.delete()
 
-        logging.info('Bucket folder cleaned')
+
+    logging.info('Bucket folder cleaned')
 
     # -----------------------------------------------------------------
     # GCS client
@@ -164,7 +165,7 @@ def main() -> None:
         logging.info('SFTP connection closed')
 
     logging.info('=' * 60)
-    logging.info('TEST PROCESS COMPLETED SUCCESSFULLY')
+    logging.info('PROCESS COMPLETED SUCCESSFULLY')
 # ---------------------------------------------------------------------
 if __name__ == '__main__':
     main()

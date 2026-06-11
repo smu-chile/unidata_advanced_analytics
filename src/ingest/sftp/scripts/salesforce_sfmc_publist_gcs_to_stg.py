@@ -42,12 +42,7 @@ def main() -> None:
     # Load STG schema
     # -------------------------------------------------------------
     json_path = f'gbq_objects/{schema_file}'
-
     logging.info(f'Loading schema: {json_path}')
-
-    logging.info(f'Current working directory: {os.getcwd()}')
-
-    logging.info(f'Files: {os.listdir(".")}')
 
     with open(
         json_path,
@@ -122,9 +117,7 @@ def main() -> None:
             f'{execution_date}.csv'
         )
 
-        logging.info(
-            f'Loading file: {source_uri}'
-        )
+        logging.info(f'Loading file: {source_uri}')
 
         if formato == 'M10S10':  # noqa: SIM108
             skip_rows = 0
@@ -158,7 +151,6 @@ def main() -> None:
         )
 
         load_job.result()
-
         logging.info(f'{formato} loaded successfully')
 
     logging.info('STG LOAD COMPLETED')
