@@ -1,0 +1,71 @@
+{
+    "table": "CRM_DATA_SFMC_PUBLIST",
+    "schema": "CRM",
+    "columns": [
+        {
+            "name": "SUBSCRIBERID",
+            "field_type": "INT64",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "SUBSCRIBERKEY",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "ADDEDBY",
+            "field_type": "INT64",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ADDMETHOD",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "CREATEDDATE",
+            "field_type": "DATETIME",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "DATEUNSUBSCRIBED",
+            "field_type": "DATETIME",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "EMAILADDRESS",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "LISTID",
+            "field_type": "INT64",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "LISTNAME",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "LISTTYPE",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "STATUS",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "SUBSCRIBERTYPE",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "REQUIRED"
+        }
+    ]
+}
