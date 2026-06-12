@@ -1,0 +1,30 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "PERSONALIZED_PRODUCTS",
+    "columns": [
+        {
+            "name": "customer_key",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "ean",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "cosine_distance",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "relevance",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+    ]
+}
