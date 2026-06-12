@@ -454,7 +454,7 @@ def main() -> None:  # noqa: D103
 
     # Cantidad de meses
     # Parche
-    cant_meses = 29
+    cant_meses = 29 + 12
 
     if use == 'FORECAST':
         # Convertir fecha de ejecución
