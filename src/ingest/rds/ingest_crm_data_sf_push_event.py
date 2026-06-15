@@ -1,5 +1,4 @@
-
-import json
+import json  # noqa: D100
 import platform
 import importlib
 from datetime import timedelta
@@ -67,7 +66,7 @@ dag_args = {
     }
 }
 
-with DAG(**dag_args) as dag:  # noqa: AIR002, AIR311
+with DAG(**dag_args) as dag:
 
     ingest_data = ExtendedDataprocCreateBatchOperator(
         task_id='ingest_data',
