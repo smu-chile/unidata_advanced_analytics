@@ -294,6 +294,7 @@ def main() -> None:
     logging.info('')
 
     sku_emb = readBigQuery(SQL_QUERIES['sku_embeddings'].substitute(
+        gcp_project = gcp_project,
         fecha_emb = fecha_emb,
         store_banner = store_banner
         ),
@@ -306,6 +307,7 @@ def main() -> None:
     logging.info('')
 
     prod_prom = readBigQuery(SQL_QUERIES['productos_promocion'].substitute(
+        gcp_project = gcp_project,
         fecha_ini_prom1 = fecha_emb,
         fecha_ini_prom2 = execution_date,
         ),
