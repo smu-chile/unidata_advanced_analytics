@@ -609,7 +609,7 @@ def main() -> None:
                 'cosine_distance',
                 'relevance'
                 ]],
-            table_ddl_json_path=os.path.join('gbq_objects','tmp_personalized_products.json'),
+            table_ddl_json_path=os.path.join('gbq_objects','personalized_products.json'),
             project = gcp_project,
             gbq_client = gbq_client,
             if_exists = 'append'
