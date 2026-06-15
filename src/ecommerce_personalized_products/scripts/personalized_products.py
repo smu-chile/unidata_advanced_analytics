@@ -331,6 +331,7 @@ def main() -> None:
 
     createTableAsSelect(
         query=SQL_QUERIES['last_n_month_transactions'].substitute(
+            gcp_project = gcp_project,
             fecha_emb = fecha_emb,
             execution_date = execution_date,
             month_interval = month_interval,
@@ -344,6 +345,7 @@ def main() -> None:
     )
 
     customer_emb = readBigQuery(SQL_QUERIES['customer_embeddings'].substitute(
+        gcp_project = gcp_project,
         fecha_emb = fecha_emb,
         store_banner = store_banner,
         upper_store_banner = upper_store_banner
@@ -353,8 +355,8 @@ def main() -> None:
     )
 
     max_n_customers = readBigQuery(SQL_QUERIES['max_customer_index'].substitute(
-        upper_store_banner = upper_store_banner,
-        gcp_project = gcp_project
+        gcp_project = gcp_project,
+        upper_store_banner = upper_store_banner
         ),
     user = usuario,
     gbq_client = gbq_client
@@ -389,6 +391,7 @@ def main() -> None:
 
         # Get all the transactions for the first batch_size clients
         transactions_ean = readBigQuery(SQL_QUERIES['transactions_ean'].substitute(
+            gcp_project = gcp_project,
             upper_store_banner = upper_store_banner,
             start_idx=n_batch*batch_size,
             end_idx=(n_batch + 1)*batch_size,
@@ -398,6 +401,7 @@ def main() -> None:
         )
 
         transactions_grupo = readBigQuery(SQL_QUERIES['transactions_grupo'].substitute(
+            gcp_project = gcp_project,
             upper_store_banner = upper_store_banner,
             start_idx=n_batch*batch_size,
             end_idx=(n_batch + 1)*batch_size,
