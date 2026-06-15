@@ -22,9 +22,10 @@ from common.databases.queries import QueryDict
 from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
-    deleteFromTable,  # noqa: F401
-    setTableExpiration,  # noqa: F401
+    deleteFromTable,
+    setTableExpiration,
     createTableAsSelect,
+    createTableFromJSON,
 )
 
 
@@ -60,7 +61,7 @@ parser.add_argument(
     help='Number of products per category to allocate'
 )
 parser.add_argument(
-    '--batch_size', default = 50000, type=int,
+    '--batch_size', default = 70000, type=int,
     help='Batch size for the allocation execution'
 )
 
@@ -253,6 +254,58 @@ SQL_QUERIES = QueryDict({
         AND customer_key_index < ${end_idx}
     GROUP BY customer_key, grupo_dsc
     """,  # noqa: E501
+
+    'allocation_personalized_products':
+    """
+    SELECT
+        customer_key,
+        hash_string,
+        CAST(sku_product AS INT64) AS sku_product,
+        ean,
+        relevance,
+        CASE
+            WHEN store_banner = 'Unimarc' THEN 1
+            WHEN store_banner = 'Mayorista' THEN 4
+            WHEN store_banner = 'Alvi' THEN 5
+            WHEN store_banner = 'Super 10' THEN 15
+        END AS store_banner,
+        CASE
+            WHEN unidad_de_medida LIKE '%ST%' THEN LPAD(sku_product, 18, '0') || '-' || 'UN'
+            ELSE LPAD(sku_product, 18, '0') || '-' || unidad_de_medida
+        END AS vtexrefid
+
+    FROM `${gcp_project}.TMP.BASE_PERSONALIZED_PRODUCTS`
+
+    INNER JOIN  (
+        SELECT *
+        FROM (
+            SELECT
+                CAST(ean AS INT64) AS ean,
+                sku_product,
+                unidad_de_medida,
+                ROW_NUMBER() OVER (PARTITION BY ean) AS ean_index
+            FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
+        )
+        WHERE ean_index = 1
+    )
+    USING (ean)
+
+    INNER JOIN (
+        SELECT
+            customer_key,
+            pda_customer_key AS customer_id
+        FROM `${gcp_project_cda}.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID`
+    )
+    USING (customer_key)
+
+    INNER JOIN (
+        SELECT
+            customer_id,
+            hash_string
+        FROM `${gcp_project_cda}.DS_PROD_CLIENTES_IC.CL_HASH`
+    )
+    USING (customer_id)
+    """
 })
 
 # -------------------------------------------------------------------------
@@ -272,6 +325,8 @@ def main() -> None:
         *list(map(int, args['execution_date'].split('-')))
     )
 
+    gcp_project_cda = 'cl-cda-unidata-prod'
+
     fecha_emb = execution_date.replace(day=1)
 
     upper_store_banner = store_banner.upper()
@@ -290,6 +345,15 @@ def main() -> None:
 
     # Usuario
     usuario = 'personalized_products'
+
+    # Create table using DDL JSON
+    logging.info('Creating table schema if needed')
+    createTableFromJSON(
+        table_ddl_json_path=os.path.join('gbq_objects', 'personalized_products.json'),
+        project=gcp_project,
+        gbq_client=gbq_client,
+        if_exists='ignore',
+    )
 
     logging.info('')
 
@@ -602,18 +666,60 @@ def main() -> None:
             .astype('int8')
         )
 
+        distances_all_final['store_banner'] = store_banner
+        distances_all_final['date'] = execution_date
+
         uploadFrame(
             distances_all_final[[
+                'date',
                 'customer_key',
                 'ean',
-                'cosine_distance',
-                'relevance'
+                'relevance',
+                'store_banner'
                 ]],
-            table_ddl_json_path=os.path.join('gbq_objects','personalized_products.json'),
+            table_ddl_json_path=os.path.join('gbq_objects','base_personalized_products.json'),
             project = gcp_project,
             gbq_client = gbq_client,
             if_exists = 'append'
         )
+
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'{gcp_project}.TMP.BASE_PERSONALIZED_PRODUCTS',
+        expiration = expiration,
+        gbq_client= gbq_client
+    )
+
+    store_banner_numbers = {
+            'Unimarc': 1,
+            'Mayorista': 4,
+            'Alvi': 5,
+            'Super 10': 15,
+    }
+
+    deleteFromTable(
+        table_ref = f'{gcp_project}.ECOMMERCE.PERSONALIZED_PRODUCTS',
+        where_clause=f"""
+            date = '{execution_date}'
+            AND store_banner = {store_banner_numbers[store_banner]}
+        """,
+        gbq_client=gbq_client,
+    )
+
+    logging.info('Creating new partition')
+    createTableAsSelect(
+        query=SQL_QUERIES['allocation_personalized_products'].substitute(
+            gcp_project=gcp_project,
+            gcp_project_cda=gcp_project_cda
+        ),
+        table_ref = f'{gcp_project}.ECOMMERCE.PERSONALIZED_PRODUCTS',
+        create_disposition='CREATE_IF_NEEDED',
+        write_disposition='WRITE_APPEND',
+        use_legacy_sql=False,
+        gbq_client=gbq_client,
+    )
 
 if __name__ == '__main__':
     main()

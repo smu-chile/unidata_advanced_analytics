@@ -1,0 +1,36 @@
+{
+    "schema": "TMP",
+    "table": "BASE_PERSONALIZED_PRODUCTS",
+    "columns": [
+        {
+            "name": "date",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "[PARTITIONED] Date in which the personalized products go live"
+        },
+        {
+            "name": "customer_key",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": "ID of the client in GCP"
+        },
+        {
+            "name": "ean",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "EAN of the product"
+        },
+        {
+            "name": "relevance",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Rank of the relevance for the product (lower is better)"
+        },
+        {
+            "name": "store_banner",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "SMU subsidiary"
+        }
+    ]
+}
