@@ -56,7 +56,7 @@ parser.add_argument(
     help='Number of months of past transactions from the execution date to view'
 )
 parser.add_argument(
-    '--sku_per_category', default=2, type=int,
+    '--ean_per_subcategory', default=2, type=int,
     help='Number of products per category to allocate'
 )
 parser.add_argument(
@@ -459,7 +459,7 @@ def main() -> None:
         )
 
         distances_ean_final = distances_ean_final.loc[
-            distances_ean_final['rank_subcat'] <= 2
+            distances_ean_final['rank_subcat'] <= ean_per_subcategory
         ]
 
         distances_ean_final['rank_total_cliente'] = (
@@ -469,7 +469,7 @@ def main() -> None:
         )
 
         distances_ean_final = distances_ean_final.loc[
-            distances_ean_final['rank_total_cliente'] <= 35
+            distances_ean_final['rank_total_cliente'] <= top_n
         ]
 
         distances_ean_final = distances_ean_final.drop(
@@ -490,14 +490,14 @@ def main() -> None:
         )
 
         # 2. Identificar grupos saturados (>=2 ean)
-        grupos_saturados = conteo[conteo >= 2]
+        grupos_saturados = conteo[conteo >= ean_per_subcategory]
 
         # 3. Crear índice para distances_cat
         idx = pd.MultiIndex.from_frame(distances_cat[['customer_key', 'grupo_dsc']])
 
         # 4. Filtrar grupos saturados + calcular disponibilidad
         # disponibilidad = 2 - conteo  # noqa: ERA001
-        disponibilidad = (2 - conteo).clip(lower=0)
+        disponibilidad = (ean_per_subcategory - conteo).clip(lower=0)
 
         # 5. Aplicar filtro y asignar ean_disponible
         mask = ~idx.isin(grupos_saturados.index)
@@ -509,7 +509,7 @@ def main() -> None:
 
         distances_cat_filtrado['ean_disponible'] = (
             disponibilidad.reindex(idx_filtrado)  # noqa: PD011
-            .fillna(2)
+            .fillna(ean_per_subcategory)
             .astype('int8')
             .values
         )
@@ -565,7 +565,7 @@ def main() -> None:
         fijos_count = mask_fijos.groupby(distances_all['customer_key']).transform('sum')
 
         # 3. Cupos disponibles
-        distances_all['cupos'] = (35 - fijos_count).clip(lower=0)
+        distances_all['cupos'] = (top_n - fijos_count).clip(lower=0)
 
         # 4. Condición final
         mask_keep = (
