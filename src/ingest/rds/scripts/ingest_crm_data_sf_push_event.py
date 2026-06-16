@@ -1,15 +1,22 @@
 import logging  # noqa: D100
+import argparse
 
 from google.cloud import bigquery
 
 
-PROJECT_ID = 'cl-bigdata-analytics-prod'
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+    '--project_id',
+    type=str,
+    required=True,
+    help='GCP project id'
+)
+
 SOURCE_TABLE = (
     'cl-cda-unidata-dev.DS_DESA_LOCAL_JTORRESCE.CRM_DATA_SF_PUSH_EVENT')
-TARGET_TABLE = (
-    'cl-bigdata-analytics-prod.CRM.CRM_DATA_SF_PUSH_EVENT')
+TARGET_TABLE = ('{project_id}.CRM.CRM_DATA_SF_PUSH_EVENT')
 DATE_FIELD = 'FECHA_CARGA'
-
 
 def get_max_date(client):  # noqa: ANN001, ANN201, D103
 
@@ -23,6 +30,7 @@ def get_max_date(client):  # noqa: ANN001, ANN201, D103
     for row in result:
         return row.max_date
     return None
+
 
 
 def get_pending_count(client, max_date):  # noqa: ANN001, ANN201, D103
@@ -54,11 +62,27 @@ def insert_new_records(client, max_date):  # noqa: ANN001, ANN201, D103
 
     job.result()
 
+def test_source_access(client):  # noqa: ANN001, ANN201, D103
+    query = f""" SELECT COUNT(*) AS total FROM `{SOURCE_TABLE}`"""  # noqa: S608
+
+    result = client.query(query).result()
+
+    for row in result:
+        logging.info(f'Registros encontrados en origen: {row.total}')
+
 
 def main():  # noqa: ANN201, D103
 
     logging.basicConfig(level=logging.INFO)
-    client = bigquery.Client(project=PROJECT_ID)
+    args = vars(parser.parse_args())
+    project_id = args['project_id']
+    logging.info(f'Project ID: {project_id}')
+
+    client = bigquery.Client(project=project_id)
+    test_source_access(client)
+    return
+
+
     max_date = get_max_date(client)
     logging.info(f'Fecha máxima encontrada en destino: {max_date}')
     pending_rows = get_pending_count(client, max_date)
