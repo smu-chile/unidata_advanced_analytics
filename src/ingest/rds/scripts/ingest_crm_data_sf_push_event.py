@@ -15,7 +15,8 @@ parser.add_argument(
 
 SOURCE_TABLE = (
     'cl-cda-unidata-dev.DS_DESA_LOCAL_JTORRESCE.CRM_DATA_SF_PUSH_EVENT')
-TARGET_TABLE = ('{project_id}.CRM.CRM_DATA_SF_PUSH_EVENT')
+TARGET_TABLE = (
+    'cl-bigdata-analytics-prod.CRM.CRM_DATA_SF_PUSH_EVENT')
 DATE_FIELD = 'FECHA_CARGA'
 
 def get_max_date(client):  # noqa: ANN001, ANN201, D103

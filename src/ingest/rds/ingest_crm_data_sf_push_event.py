@@ -69,16 +69,20 @@ dag_args = {
 with DAG(**dag_args) as dag:
 
     ingest_data = ExtendedDataprocCreateBatchOperator(
-        task_id='ingest_data',
-        python_script_path=(
-            f'{PROJECT_NAME}/'
-            f'{SUBPROJECT_NAME}/'
-            'scripts/'
-            'ingest_crm_data_sf_push_event.py'
-        ),
-        dag_env_config=dag_env_config,
-        docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
-        include_paths=[
-            'common/'
-        ],
-    )
+    task_id='ingest_data',
+    python_script_path=(
+        f'{PROJECT_NAME}/'
+        f'{SUBPROJECT_NAME}/'
+        'scripts/'
+        'ingest_crm_data_sf_push_event.py'
+    ),
+    dag_env_config=dag_env_config,
+    docker_image_name=f'{PROJECT_NAME}-{SUBPROJECT_NAME}',
+    pyspark_batch_args=[
+        '--project_id',
+        dag_env_config['project_id'],
+    ],
+    include_paths=[
+        'common/'
+    ],
+)
