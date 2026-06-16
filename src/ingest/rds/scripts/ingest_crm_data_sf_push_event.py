@@ -1,7 +1,17 @@
 import logging  # noqa: D100
+import argparse  # noqa: F401
 
 from google.cloud import bigquery
 
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+    '--project_id',
+    type=str,
+    required=True,
+    help='GCP project id'
+)
 
 PROJECT_ID = 'cl-bigdata-analytics-prod'
 SOURCE_TABLE = (
@@ -11,18 +21,17 @@ TARGET_TABLE = (
 DATE_FIELD = 'FECHA_CARGA'
 
 
-def get_max_date(client):  # noqa: ANN001, ANN201, D103
+def get_max_date(client):  # noqa: ANN001, ANN201, D103, RET503
 
     query = f"""
-        SELECT COALESCE(MAX({DATE_FIELD}), DATE('1900-01-01')) AS max_date
+        SELECT COUNT(*) AS total
         FROM `{TARGET_TABLE}`
     """  # noqa: S608
 
     result = client.query(query).result()
 
     for row in result:
-        return row.max_date
-    return None
+        return row.total
 
 
 def get_pending_count(client, max_date):  # noqa: ANN001, ANN201, D103
@@ -58,7 +67,13 @@ def insert_new_records(client, max_date):  # noqa: ANN001, ANN201, D103
 def main():  # noqa: ANN201, D103
 
     logging.basicConfig(level=logging.INFO)
-    client = bigquery.Client(project=PROJECT_ID)
+    args = vars(parser.parse_args())
+    project_id = args['project_id']
+    logging.info(f'Project ID: {project_id}')
+
+    client = bigquery.Client(project=project_id)
+
+
     max_date = get_max_date(client)
     logging.info(f'Fecha máxima encontrada en destino: {max_date}')
     pending_rows = get_pending_count(client, max_date)
