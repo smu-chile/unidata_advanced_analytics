@@ -61,7 +61,7 @@ parser.add_argument(
     help='Number of products per category to allocate'
 )
 parser.add_argument(
-    '--batch_size', default = 70000, type=int,
+    '--batch_size', default = 50000, type=int,
     help='Batch size for the allocation execution'
 )
 

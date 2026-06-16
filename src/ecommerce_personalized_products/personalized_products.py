@@ -66,7 +66,7 @@ with DAG(**dag_args) as dag:
     ean_per_subcategory = "{{ dag_run.conf.get('ean_per_subcategory', 2) }}"
     top_n = "{{ dag_run.conf.get('top_n', 35) }}"
     month_interval = "{{ dag_run.conf.get('month_interval', 6) }}"
-    batch_size = "{{ dag_run.conf.get('batch_size', 70000) }}"
+    batch_size = "{{ dag_run.conf.get('batch_size', 50000) }}"
 
     store_banner_list = ['Unimarc']
 
