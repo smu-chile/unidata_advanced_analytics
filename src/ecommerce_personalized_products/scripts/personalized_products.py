@@ -127,11 +127,12 @@ SQL_QUERIES = QueryDict({
     FROM `${gcp_project}.CDA_VISTAS.VW_FACT_WORKFLOW`
     WHERE
         organizacion_ventas = '1000'
-        AND canal_distribucion = '10'
+        AND canal_distribucion IN ('10','70')
         AND registro_valido = 'X'
         AND FECHA_INICIO_DE_PROMOCION >= '${fecha_ini_prom1}'
         AND FECHA_INICIO_DE_PROMOCION <= '${fecha_ini_prom2}'
         AND FECHA_FIN_DE_PROMOCION >= '${fecha_ini_prom2}'
+        AND FECHA_FIN_DE_PROMOCION <= '${fin_mes_n1}'
     ) t
 
     INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT` AS dim_prod
@@ -328,12 +329,14 @@ def main() -> None:
     gcp_project_cda = 'cl-cda-unidata-prod'
 
     fecha_emb = execution_date.replace(day=1)
+    fin_mes_n1 = execution_date.add(months=1).end_of('month')
 
     upper_store_banner = store_banner.upper()
 
     logging.info(f'gcp_project: {gcp_project}')
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'fecha_emb: {fecha_emb}')
+    logging.info(f'fin_mes_n1: {fin_mes_n1}')
     logging.info(f'store_banner: {store_banner}')
     logging.info(f'top_n: {top_n}')
     logging.info(f'month_interval: {month_interval}')
@@ -355,7 +358,7 @@ def main() -> None:
         if_exists='ignore',
     )
 
-    logging.info('')
+    logging.info('Query SKU Embeddings')
 
     sku_emb = readBigQuery(SQL_QUERIES['sku_embeddings'].substitute(
         gcp_project = gcp_project,
@@ -368,12 +371,13 @@ def main() -> None:
 
     sku_emb = sku_emb.drop(columns=['date','store_banner'])
 
-    logging.info('')
+    logging.info('Query Productos en Promocion')
 
     prod_prom = readBigQuery(SQL_QUERIES['productos_promocion'].substitute(
         gcp_project = gcp_project,
         fecha_ini_prom1 = fecha_emb,
         fecha_ini_prom2 = execution_date,
+        fin_mes_n1 = fin_mes_n1
         ),
     user = usuario,
     gbq_client = gbq_client
@@ -391,7 +395,9 @@ def main() -> None:
     sku_emb = sku_emb.drop_duplicates(subset=['material'])
     sku_emb = sku_emb.drop(columns=['sku'])
 
-    logging.info(f'#(skus en promocion con embeddings): {sku_emb.shape[0]:,}')
+    logging.info(f'#skus en promocion con embeddings: {sku_emb.shape[0]:,}')
+
+    logging.info('Creacion Tabla Transacciones Clientes')
 
     createTableAsSelect(
         query=SQL_QUERIES['last_n_month_transactions'].substitute(
@@ -407,6 +413,8 @@ def main() -> None:
         use_legacy_sql=False,
         gbq_client=gbq_client,
     )
+
+    logging.info('Query Customer Embeddings')
 
     customer_emb = readBigQuery(SQL_QUERIES['customer_embeddings'].substitute(
         gcp_project = gcp_project,
@@ -428,6 +436,8 @@ def main() -> None:
 
     total_batches = int(np.ceil(max_n_customers / batch_size))
 
+    logging.info('Inicio Proceso Productos Personalizados')
+
     for n_batch in range(total_batches):
         print('--------------------------------------------------------')
         print(f'Batch {n_batch+1} of {total_batches}')
@@ -441,7 +451,7 @@ def main() -> None:
 
         print(f'customer_emb_batch: {customer_emb_batch.shape}')
 
-        # Get all the transactions for the first batch_size clients
+        # Transacciones de los Clientes
         transactions = readBigQuery(SQL_QUERIES['get_batch'].substitute(
             upper_store_banner = upper_store_banner,
             start_idx=n_batch*batch_size,
@@ -453,7 +463,7 @@ def main() -> None:
         )
         print(f'OK: Retrieved transactions. Dimension: {transactions.shape}')
 
-        # Get all the transactions for the first batch_size clients
+        # EANs Comprados por los Clientes
         transactions_ean = readBigQuery(SQL_QUERIES['transactions_ean'].substitute(
             gcp_project = gcp_project,
             upper_store_banner = upper_store_banner,
@@ -464,6 +474,7 @@ def main() -> None:
         gbq_client = gbq_client
         )
 
+        # Subcategorias Compradas por los Clientes
         transactions_grupo = readBigQuery(SQL_QUERIES['transactions_grupo'].substitute(
             gcp_project = gcp_project,
             upper_store_banner = upper_store_banner,
@@ -474,6 +485,7 @@ def main() -> None:
         gbq_client = gbq_client
         )
 
+        # Distancias entre customers y SKUs
         distances = pd.DataFrame(
             data=cosine_distances(
                 customer_emb_batch[[f'dim_{i}' for i in range(100)]],
@@ -504,6 +516,8 @@ def main() -> None:
 
         distances = distances.drop_duplicates(subset=['customer_key','material'])
 
+        # Proceso de distances_ean, que asigna los eans mas comprados
+        # por los clientes, tomando como maximo 2 EANs por subcategoria
         distances_ean = distances.merge(
             transactions_ean,
             on = ['customer_key','ean'],
@@ -546,7 +560,8 @@ def main() -> None:
             columns=['n_compras_ean','rank_subcat','rank_total_cliente']
         ).reset_index(drop=True)
 
-        distances_cat = distances.merge(
+        # Proceso de distances_subcat
+        distances_subcat = distances.merge(
             transactions_grupo,
             on = ['customer_key','grupo_dsc'],
             how = 'inner'
@@ -562,8 +577,8 @@ def main() -> None:
         # 2. Identificar grupos saturados (>=2 ean)
         grupos_saturados = conteo[conteo >= ean_per_subcategory]
 
-        # 3. Crear índice para distances_cat
-        idx = pd.MultiIndex.from_frame(distances_cat[['customer_key', 'grupo_dsc']])
+        # 3. Crear índice para distances_subcat
+        idx = pd.MultiIndex.from_frame(distances_subcat[['customer_key', 'grupo_dsc']])
 
         # 4. Filtrar grupos saturados + calcular disponibilidad
         # disponibilidad = 2 - conteo  # noqa: ERA001
@@ -572,50 +587,49 @@ def main() -> None:
         # 5. Aplicar filtro y asignar ean_disponible
         mask = ~idx.isin(grupos_saturados.index)
 
-        distances_cat_filtrado = distances_cat[mask].copy()
+        distances_subcat_final = distances_subcat[mask].copy()
 
         idx_filtrado = pd.MultiIndex.from_frame(
-            distances_cat_filtrado[['customer_key', 'grupo_dsc']])
+            distances_subcat_final[['customer_key', 'grupo_dsc']])
 
-        distances_cat_filtrado['ean_disponible'] = (
+        distances_subcat_final['ean_disponible'] = (
             disponibilidad.reindex(idx_filtrado)  # noqa: PD011
             .fillna(ean_per_subcategory)
             .astype('int8')
             .values
         )
 
-        idx_cat = pd.MultiIndex.from_frame(distances_cat_filtrado[['customer_key', 'ean']])
+        idx_cat = pd.MultiIndex.from_frame(distances_subcat_final[['customer_key', 'ean']])
         idx_ean_final = pd.MultiIndex.from_frame(distances_ean_final[['customer_key', 'ean']])
 
         mask_no_asignados = ~idx_cat.isin(idx_ean_final)
-        distances_cat_filtrado = distances_cat_filtrado[mask_no_asignados]
+        distances_subcat_final = distances_subcat_final[mask_no_asignados]
 
         # 1. ordenar
-        distances_cat_filtrado = distances_cat_filtrado.sort_values(
+        distances_subcat_final = distances_subcat_final.sort_values(
             by=['customer_key','relevance_grupo','cosine_distance'],
             ascending=[True, True, True]
         )
 
         # 2. Generar ranking por grupo
-        distances_cat_filtrado['rank'] = distances_cat_filtrado.groupby(
+        distances_subcat_final['rank'] = distances_subcat_final.groupby(
             ['customer_key', 'grupo_dsc']
         ).cumcount()
 
         # 3. Filtrar según disponibilidad
-        distances_cat_filtrado = distances_cat_filtrado[
-            distances_cat_filtrado['rank'] < distances_cat_filtrado['ean_disponible']
+        distances_subcat_final = distances_subcat_final[
+            distances_subcat_final['rank'] < distances_subcat_final['ean_disponible']
         ].drop(columns=['n_compras_grupo','ean_disponible','rank']).reset_index(drop=True)
 
-        # Concatenar
+        #####################################################################################
+        # Concatenar distances_ean con distances_subcat
         distances_all = pd.concat(
-            [distances_ean_final, distances_cat_filtrado],
+            [distances_ean_final, distances_subcat_final],
             ignore_index=False)
 
         distances_all['origen'] = np.where(
             distances_all['relevance_ean'].notna(),0,1
         ).astype('int8')
-
-        distances_all['relevance_grupo'] = distances_all['relevance_grupo'].fillna(999999)
 
         # Orden: primero los que podrían eliminarse
         distances_all = distances_all.sort_values(
@@ -648,26 +662,92 @@ def main() -> None:
 
         distances_all_final = distances_all[mask_keep].copy()
 
-        distances_all_final = distances_all_final.sort_values(
-        [
+        # Busqueda de clientes que no tienen
+        # asignados 35 productos personalizados
+        counts = distances_all_final.groupby('customer_key').size().rename('n_ean')
+        needs_fill = counts[counts < 35].reset_index()
+        needs_fill['prod_fill'] = 35 - needs_fill['n_ean']
+
+        customer_fill = distances_all_final[
+            distances_all_final['customer_key'].isin(set(needs_fill['customer_key']))
+        ]
+
+        customer_fill = customer_fill[[
+            'customer_key','material','cosine_distance',
+            'ean','grupo_dsc','cat_dsc','origen'
+        ]]
+
+        distances_fill = distances[
+            distances['customer_key'].isin(set(needs_fill['customer_key']))
+        ]
+
+        # Crear índices compuestos (NO copies innecesarias si ya existen)
+        idx_dist = pd.MultiIndex.from_frame(distances_fill[['customer_key', 'grupo_dsc']])
+        idx_fill = pd.MultiIndex.from_frame(customer_fill[['customer_key', 'grupo_dsc']])
+
+        # Filtrar (anti join)
+        distances_fill = distances_fill[~idx_dist.isin(idx_fill)]
+
+        distances_fill = distances_fill.merge(
+            needs_fill[['customer_key','prod_fill']],
+            on = 'customer_key',
+            how = 'inner'
+        )
+
+        # 1. ordenar para priorizar menor distancia
+        distances_fill = distances_fill.sort_values(
+            by=['customer_key','cosine_distance'],
+            ascending=[True,True]
+        )
+
+        # 2. quedarte con 1 ean por subcategoria (el más cercano)
+        distances_fill= distances_fill.drop_duplicates(
+            subset=['customer_key', 'grupo_dsc'],
+            keep='first'
+        )
+
+        # 3. ranking por cliente
+        distances_fill['relevance_fill'] = distances_fill.groupby('customer_key').cumcount() + 1
+
+        # 4. filtrar por cupo
+        distances_fill = distances_fill[
+            distances_fill['relevance_fill'] <= distances_fill['prod_fill']
+        ]
+
+        # 5. agregar columna para orden de relevance
+        distances_fill['origen'] = 2
+
+        #6. Eliminar columnas innecesarias
+        distances_fill = distances_fill.drop(columns=['prod_fill'])
+
+        distances_fill = distances_fill.reset_index(drop=True)
+
+
+        # PARTE FINAL ASIGNACION DE PRODUCTOS PERSONALIZADOS
+        distances_all_final = pd.concat(
+            [distances_all_final, distances_fill], ignore_index=False
+        )
+
+        distances_all_final = distances_all_final.sort_values([
             'customer_key',
             'origen',
             'relevance_ean',
             'relevance_grupo',
-            'cosine_distance'
-        ],
-        ascending=[True, True, True, True, True]
-        )
+            'relevance_fill'
+            ],
+            ascending=[True, True, True, True, True]
+        ).reset_index(drop=True)
+
+        distances_all_final['store_banner'] = store_banner
+        distances_all_final['date'] = execution_date
 
         distances_all_final['relevance'] = (
             distances_all_final
             .groupby('customer_key')
             .cumcount()
+            .add(1)
             .astype('int8')
         )
-
-        distances_all_final['store_banner'] = store_banner
-        distances_all_final['date'] = execution_date
 
         uploadFrame(
             distances_all_final[[
