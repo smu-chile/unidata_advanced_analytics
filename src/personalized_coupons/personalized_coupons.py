@@ -37,7 +37,7 @@ with open(
 PROJECT_NAME = 'personalized_coupons'
 dag_args = {
     'dag_id': 'personalized_coupons',
-    'schedule_interval': '0 20 * * 1-5',
+    'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
