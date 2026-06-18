@@ -90,8 +90,8 @@ SQL_QUERIES = QueryDict({
         FROM ${gcp_project}.FIDELIZACION.EAN_POR_OFFER_ID_CUPONES_PERSONALIZADOS
         WHERE
             fecha_inicio_ciclo = '${cycle_start_date}'
-        AND store_banner = '${store_banner}'
-        AND tipo_oferta LIKE '%PERSONALIZA%'
+            AND store_banner = '${store_banner}'
+            AND tipo_oferta LIKE '%PERSONALIZA%'
     )
 
     INNER JOIN (
@@ -119,7 +119,7 @@ SQL_QUERIES = QueryDict({
         WHERE
             fecha_inicio_ciclo = '${cycle_start_date}'
             AND store_banner = '${store_banner}'
-            AND tipo_oferta = 'PERSONALIZADA'
+            AND tipo_oferta LIKE '%PERSONALIZA%'
 
         GROUP BY 1
     )
