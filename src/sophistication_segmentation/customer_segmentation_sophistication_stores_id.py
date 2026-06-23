@@ -101,7 +101,7 @@ with DAG(**dag_args) as dag:
                         '--store_banner',
                         store_banner,
                         '--store_id',
-                        dag_env_config['store_id'] #parche 5
+                        '{{ dag_run.conf.get("store_id", []) | tojson }}' #parche 5
                     ],
                 },
                 # Docker image to be used in the dataproc pod

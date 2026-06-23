@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import json
 import logging
 import argparse
 from logging import config
@@ -49,8 +50,9 @@ parser.add_argument(
 
 #PARCHE 1
 parser.add_argument(
-    '--store_id', type=tuple,
-    help='Store id'
+    '--store_id',
+    type=str,
+    help='Store id en formato JSON'
 )
 
 
@@ -583,9 +585,12 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']  # noqa: F841
     formato:str = args['store_banner']
-    store_id:tuple = args['store_id'] #PARCHE
+    store_id = json.loads(args.store_id)
+
+    store_id = '(' + ','.join("'" + s + "'" for s in store_id) + ')'
 
     logging.info(f'execution_date: {execution_date}')
+    logging.info(f'store_id_sql: {store_id}')
 
 
     # Set gbq client for all subsequent queries
