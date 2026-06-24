@@ -135,7 +135,7 @@ category_counts AS (
     A.TRANSACTION_DATE >= DATE('${fecha_inicial_ano}')
     AND A.TRANSACTION_DATE < DATE_ADD(DATE('${fecha_inicial_ano}'), INTERVAL  12 MONTH)
     AND DS.STORE_BANNER = '${formato}'
-    AND DS.STORE_ID IN ${store_id}
+    AND DS.STORE_ID IN (${store_id})
   GROUP BY A.CUSTOMER_KEY, P.CATEGORY_DESCRIPTION
   HAVING COUNT(*) >= ${minimo_items_categoria}
 
@@ -209,7 +209,7 @@ WHERE
                 WHERE CANAL_VENTA IN ('PEDIDOS YA','UBER EATS','RAPPI','RAPPI TURBO')
             )
   AND D.STORE_BANNER = '${formato}'
-  AND D.STORE_ID IN ${store_id}
+  AND D.STORE_ID IN (${store_id})
   AND A.CUSTOMER_KEY <> MD5('CST^CL^-1')
   )
 
@@ -587,7 +587,7 @@ def main() -> None:  # noqa: D103
     formato:str = args['store_banner']
     store_id = json.loads(args['store_id'])
 
-    store_id = '(' + ','.join("'" + s + "'" for s in store_id) + ')'
+    store_id = ','.join("'" + s + "'" for s in store_id)
 
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'store_id_sql: {store_id}')
