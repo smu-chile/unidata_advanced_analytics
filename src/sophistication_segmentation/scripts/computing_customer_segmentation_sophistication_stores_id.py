@@ -586,9 +586,9 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']  # noqa: F841
     formato:str = args['store_banner']
-    store_id = json.loads(args['store_id'])
+    store_id_list = json.loads(args['store_id'])
 
-    store_id = ','.join(f"'{s!s}'" for s in store_id)
+    store_id = ','.join(f"'{s!s}'" for s in store_id_list)
 
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'store_id_sql: {store_id}')
@@ -917,7 +917,7 @@ def main() -> None:  # noqa: D103
                                         'formato':'store_banner'})
 
     print('Hola mundo testing')
-    df_final['store_id'] = store_id
+    df_final['store_id'] = ','.join(store_id_list)
 
     df_final.columns = df_final.columns.str.lower()
 
