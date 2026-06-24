@@ -587,7 +587,7 @@ def main() -> None:  # noqa: D103
     formato:str = args['store_banner']
     store_id = json.loads(args['store_id'])
 
-    store_id = ','.join("'" + s + "'" for s in store_id)
+    store_id = ','.join(f"'{s!s}'" for s in store_id)
 
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'store_id_sql: {store_id}')
@@ -691,6 +691,9 @@ def main() -> None:  # noqa: D103
             proyecto =  proyecto
     )
 
+    #Parche
+    print(store_id)
+    print(query_sophistication)
 
     # Se realiza la query en caso de no existir
 
@@ -912,6 +915,7 @@ def main() -> None:  # noqa: D103
     df_final = df_final.rename(columns={'category_description':'categoria',
                                         'formato':'store_banner'})
 
+    print('Hola mundo testing')
     df_final['store_id'] = store_id
 
     df_final.columns = df_final.columns.str.lower()
