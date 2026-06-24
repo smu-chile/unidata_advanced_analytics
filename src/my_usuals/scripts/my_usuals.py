@@ -16,6 +16,7 @@ from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.gcp_extended.bigquery import (
     deleteFromTable,
+    setTableExpiration,
     createTableAsSelect,
     createTableFromJSON,
 )
@@ -1185,6 +1186,15 @@ def main():  # noqa: ANN201, D103
             gbq_client=gbq_client,
         )
 
+        now = pendulum.now()
+        expiration = now.add(minutes=1440)
+
+        setTableExpiration(
+            table_ref = table_base_ref,
+            expiration = expiration,
+            gbq_client= gbq_client
+        )
+
         logging.info('Marcas propias')
         createTableAsSelect(
             query=SQL_QUERIES['marcas_propias'].substitute(
@@ -1198,6 +1208,15 @@ def main():  # noqa: ANN201, D103
             write_disposition='WRITE_TRUNCATE',
             use_legacy_sql=False,
             gbq_client=gbq_client
+        )
+
+        now = pendulum.now()
+        expiration = now.add(minutes=1440)
+
+        setTableExpiration(
+            table_ref = table_mp_ref,
+            expiration = expiration,
+            gbq_client= gbq_client
         )
 
         logging.info('Base my usuals adj')
@@ -1215,6 +1234,15 @@ def main():  # noqa: ANN201, D103
             write_disposition='WRITE_TRUNCATE',
             use_legacy_sql=False,
             gbq_client=gbq_client
+        )
+
+        now = pendulum.now()
+        expiration = now.add(minutes=1440)
+
+        setTableExpiration(
+            table_ref = table_base_adj_ref,
+            expiration = expiration,
+            gbq_client= gbq_client
         )
 
         # Create the table
@@ -1247,6 +1275,15 @@ def main():  # noqa: ANN201, D103
             write_disposition='WRITE_TRUNCATE',
             use_legacy_sql=False,
             gbq_client=gbq_client,
+        )
+
+        now = pendulum.now()
+        expiration = now.add(minutes=1440)
+
+        setTableExpiration(
+            table_ref = table_prod_mp,
+            expiration = expiration,
+            gbq_client= gbq_client
         )
 
         logging.info('Done!')
