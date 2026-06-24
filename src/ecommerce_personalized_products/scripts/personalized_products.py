@@ -549,7 +549,7 @@ def main() -> None:
 
     uploadFrame(
         sku_emb,
-        table_ddl_json_path=os.path.join('gbq_objects','tmp_sku_emb.json'),
+        table_ddl_json_path=os.path.join('gbq_objects','sku_emb.json'),
         project = gcp_project,
         gbq_client = gbq_client,
         if_exists = 'replace'
