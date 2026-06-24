@@ -34,12 +34,6 @@
             "description": "Clasificación del cliente en la categoria"
         },
         {
-            "name": "STORE_ID",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "Información store ID"
-        },
-        {
             "name": "MONTHID",
             "field_type": "STRING",
             "mode": "REQUIRED",
@@ -50,8 +44,13 @@
             "field_type": "DATE",
             "mode": "REQUIRED",
             "description": "[PARTICIONADO] Columna auxiliar para particionar"
+        },
+        {
+            "name": "STORE_ID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Información store ID"
         }
-
         
     ],
     
