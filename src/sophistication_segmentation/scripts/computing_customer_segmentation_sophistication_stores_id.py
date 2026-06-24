@@ -209,7 +209,7 @@ WHERE
                 WHERE CANAL_VENTA IN ('PEDIDOS YA','UBER EATS','RAPPI','RAPPI TURBO')
             )
   AND D.STORE_BANNER = '${formato}'
-  AND D.STORE_ID IN '${store_id}'
+  AND D.STORE_ID IN ${store_id}
   AND A.CUSTOMER_KEY <> MD5('CST^CL^-1')
   )
 
