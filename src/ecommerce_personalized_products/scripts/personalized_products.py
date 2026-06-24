@@ -625,6 +625,7 @@ def main() -> None:
         )
 
         distances_ean = readBigQuery(SQL_QUERIES['distances_ean'].substitute(
+            gcp_project = gcp_project
             ),
         user = usuario,
         gbq_client = gbq_client
@@ -669,6 +670,7 @@ def main() -> None:
         gc.collect()
 
         distances_grupo = readBigQuery(SQL_QUERIES['distances_grupo'].substitute(
+            gcp_project = gcp_project
             ),
         user = usuario,
         gbq_client = gbq_client
@@ -813,6 +815,7 @@ def main() -> None:
         gc.collect()
 
         distances_fill = readBigQuery(SQL_QUERIES['distances_fill'].substitute(
+            gcp_project = gcp_project
             ),
         user = usuario,
         gbq_client = gbq_client
