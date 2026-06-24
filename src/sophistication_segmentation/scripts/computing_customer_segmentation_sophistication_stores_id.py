@@ -585,12 +585,16 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']  # noqa: F841
     formato:str = args['store_banner']
-    store_id_list = json.loads(args['store_id'])
+    store_id_list = sorted(json.loads(args['store_id']), key=int)
 
-    store_id = ','.join(f"'{s!s}'" for s in store_id_list)
+    store_id_sql = ','.join(f"'{s}'" for s in store_id_list)
+    store_id_str = ','.join(store_id_list)
+
+    logging.info(f'store_id list: {store_id_list}'.ljust(45))
+    logging.info(f'store_id sql: {store_id_sql}'.ljust(45))
+    logging.info(f'store_id str: {store_id_str}'.ljust(45))
 
     logging.info(f'execution_date: {execution_date}')
-    logging.info(f'store_id_sql: {store_id}')
 
 
     # Set gbq client for all subsequent queries
@@ -686,14 +690,11 @@ def main() -> None:  # noqa: D103
     query_sophistication = SQL_QUERIES['query_sophistication'].substitute(
             fecha_inicial_ano = fecha_inicial_ano,
             formato = formato,
-            store_id = store_id,
+            store_id = store_id_sql,
             minimo_items_categoria = minimo_items_categoria,
             proyecto =  proyecto
     )
 
-    #Parche
-    print(store_id)
-    print(query_sophistication)
 
     # Se realiza la query en caso de no existir
 
@@ -916,7 +917,7 @@ def main() -> None:  # noqa: D103
                                         'formato':'store_banner'})
 
     print('Hola mundo testing')
-    df_final['store_id'] = ','.join(store_id_list)
+    df_final['store_id'] = store_id_str
 
     df_final.columns = df_final.columns.str.lower()
 
@@ -928,9 +929,6 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     # Si ya existe entonces se borra
-    store_id_str = ','.join(store_id_list)
-
-    print('#### Llegamos a la linea +930 ####')
     deleteFromTable(
     table_ref=path_table,  # noqa: ERA001
     where_clause=f"monthid = '{monthid}' and store_banner = '{formato}' and store_id = '{store_id_str}'",  # noqa: E501
