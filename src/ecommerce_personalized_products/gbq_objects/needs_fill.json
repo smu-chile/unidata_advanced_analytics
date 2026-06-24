@@ -1,0 +1,25 @@
+{
+    "schema": "TMP",
+    "table": "TMP_PERSONALIZED_PRODUCTS_NEEDS_FILL",
+    "columns": [
+        {
+            "name": "customer_key",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "n_ean",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "prod_fill",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+
+    ]
+}
