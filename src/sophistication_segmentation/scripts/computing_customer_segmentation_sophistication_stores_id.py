@@ -930,6 +930,7 @@ def main() -> None:  # noqa: D103
     # Si ya existe entonces se borra
     store_id_str = ','.join(store_id_list)
 
+    print('#### Llegamos a la linea +930 ####')
     deleteFromTable(
     table_ref=path_table,  # noqa: ERA001
     where_clause=f"monthid = '{monthid}' and store_banner = '{formato}' and store_id = '{store_id_str}'",  # noqa: E501
