@@ -24,9 +24,10 @@ from common.databases.queries import QueryDict
 from common.gcp_extended.bigquery import (  # noqa: E402
     uploadFrame,
     readBigQuery,
-    deleteFromTable,
 )
 
+
+#deleteFromTable
 
 # -------------------------------------------------------------------------
 #  Config
