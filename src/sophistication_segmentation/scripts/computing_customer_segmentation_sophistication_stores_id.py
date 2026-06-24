@@ -614,7 +614,7 @@ def main() -> None:  # noqa: D103
     tabla = 'CUSTOMER_SEGMENTATION_SOPHISTICATION_STORES_ID' #PARCHE
 
     # Ruta completa
-    path_table = f'{proyecto}.{esquema}.{tabla}'
+    path_table = f'{proyecto}.{esquema}.{tabla}'  # noqa: F841
 
     # Nombre archivo Json
     # Parche 3: nombre del json ajustado a sector oriente
