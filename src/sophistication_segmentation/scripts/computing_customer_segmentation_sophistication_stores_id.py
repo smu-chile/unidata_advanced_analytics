@@ -928,11 +928,11 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     # Si ya existe entonces se borra
-    deleteFromTable(
-    table_ref=path_table,
-    where_clause=f"monthid = '{monthid}' and store_banner = '{formato}' and store_id = ({store_id})",  # noqa: E501
-    gbq_client=gbq_client,
-    )
+    # deleteFromTable(
+    # table_ref=path_table,
+    # where_clause=f"monthid = '{monthid}' and store_banner = '{formato}' and store_id = ({store_id})",  # noqa: E501
+    # gbq_client=gbq_client,
+    # )
 
     # Se sube por batches
 
