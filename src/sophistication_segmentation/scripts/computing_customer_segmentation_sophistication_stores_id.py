@@ -585,7 +585,7 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']  # noqa: F841
     formato:str = args['store_banner']
-    store_id = json.loads(args.store_id)
+    store_id = json.loads(args['store_id'])
 
     store_id = '(' + ','.join("'" + s + "'" for s in store_id) + ')'
 
