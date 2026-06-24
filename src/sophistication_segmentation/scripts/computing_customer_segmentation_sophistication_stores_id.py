@@ -135,7 +135,7 @@ category_counts AS (
     A.TRANSACTION_DATE >= DATE('${fecha_inicial_ano}')
     AND A.TRANSACTION_DATE < DATE_ADD(DATE('${fecha_inicial_ano}'), INTERVAL  12 MONTH)
     AND DS.STORE_BANNER = '${formato}'
-    AND DS.STORE_ID IN '${store_id}'
+    AND DS.STORE_ID IN ${store_id}
   GROUP BY A.CUSTOMER_KEY, P.CATEGORY_DESCRIPTION
   HAVING COUNT(*) >= ${minimo_items_categoria}
 
