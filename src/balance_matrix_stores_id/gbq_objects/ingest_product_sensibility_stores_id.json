@@ -1,0 +1,75 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "PRODUCT_SENSIBILITY_STORES_ID",
+
+    "columns": [
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la información"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoría a la que pertenece el producto"
+        },
+        {
+            "name": "MATERIAL",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Código del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "DESCRIPCION_MATERIAL",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre o descripción del producto"
+        },
+        {
+            "name": "MATERIAL_PADRE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Código del producto padre al que pertenece dentro de la familia"
+        },
+        {
+            "name": "GENFIX",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Indica si el producto está en la tabla genfix"
+        },
+        {
+            "name": "FAMILIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Indica si el producto es parte de una familia"
+        },
+        {
+            "name": "INDICE_SENSIBILIDAD",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Índice propio de sensibilidad del producto (media geométrica)"
+        },
+        {
+            "name": "INDICE_SENSIBILIDAD_FAMILIA",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Índice de sensibilidad contagiado desde el producto con mayores ventas de la familia"
+        },
+        {
+            "name": "KVI",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Cluster al que pertenece el producto según su índice de sensibilidad de familia"
+        },
+        {
+            "name": "STORE_ID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Información store ID"
+        }
+    ],
+
+    "clustering_fields": ["STORE_BANNER", "STORE_ID"]
+}
