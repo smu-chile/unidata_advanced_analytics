@@ -201,7 +201,7 @@ with DAG(**dag_args) as dag:
         # Dependencia por formato: primero script1, luego script2
         sophistication_task>>sensibility_task >> processed_data_task >> elasticity_task >> bm_task
 
-        sophistication_task.append(sophistication_task)
+        sophistication_tasks.append(sophistication_task)
         sensibility_tasks.append(sensibility_task)
         processed_data_tasks.append(processed_data_task)
         elasticity_tasks.append(elasticity_task)
