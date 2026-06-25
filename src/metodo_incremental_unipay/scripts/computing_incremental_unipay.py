@@ -176,7 +176,9 @@ SQL_QUERIES = QueryDict({    # Region: Explicación de query
                 LEFT JOIN
                 (SELECT *
                 FROM
-                `cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`  EQ JOIN
+                --`cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`
+                `cl-cda-unidata-dev.SET_PROYECTO.DIM_GENERAL`
+                EQ JOIN
                 `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
                 ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
                 ) EQX ON EQX.CUSTOMER_KEY=FIT.CUSTOMER_KEY
@@ -575,7 +577,8 @@ UNION ALL
                   LEFT JOIN
                   (SELECT *
                   FROM
-                  `cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`  EQ JOIN
+                  --`cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`
+                  `cl-cda-unidata-dev.SET_PROYECTO.DIM_GENERAL`  EQ JOIN
                   `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
                   ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
                   ) EQX ON EQX.CUSTOMER_KEY=FIT.CUSTOMER_KEY
@@ -962,7 +965,8 @@ UNION ALL
                   LEFT JOIN
                   (SELECT *
                   FROM
-                  `cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`  EQ JOIN
+                  --`cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`
+                  `cl-cda-unidata-dev.SET_PROYECTO.DIM_GENERAL`  EQ JOIN
                   `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
                   ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
                   ) EQX ON EQX.CUSTOMER_KEY=FIT.CUSTOMER_KEY
@@ -1356,10 +1360,11 @@ UNION ALL
 
               LEFT JOIN
               (SELECT *
-              FROM
-              `cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`  EQ JOIN
-              `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
-              ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
+                  FROM
+                  --`cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`
+                  `cl-cda-unidata-dev.SET_PROYECTO.DIM_GENERAL`  EQ JOIN
+                  `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
+                  ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
               ) EQX ON EQX.CUSTOMER_KEY=FIT.CUSTOMER_KEY
 
 
@@ -1772,10 +1777,11 @@ UNION ALL
 
                 LEFT JOIN
                 (SELECT *
-                FROM
-                `cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`  EQ JOIN
-                `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
-                ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
+                  FROM
+                  --`cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`
+                  `cl-cda-unidata-dev.SET_PROYECTO.DIM_GENERAL`  EQ JOIN
+                  `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
+                  ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
                 ) EQX ON EQX.CUSTOMER_KEY=FIT.CUSTOMER_KEY
 
 
