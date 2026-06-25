@@ -3,16 +3,18 @@
 # -------------------------------------------------------------------------
 # Imports
 # -------------------------------------------------------------------------
+import os
 import logging
 import argparse
 from logging import config
 
 import pendulum
-from google.cloud.bigquery import Client  # noqa: F401
+from google.cloud.bigquery import Client
 
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.databases.postgresql import readPostgresQuery
+from common.gcp_extended.bigquery import uploadFrame
 from common.gcp_extended.secretsmanager import getSecret
 
 
@@ -45,9 +47,13 @@ parser.add_argument(
 # SQL Queries
 # -------------------------------------------------------------------------
 SQL_QUERIES = QueryDict({
-    'count_records':
+    'extract_data':
     """
-    SELECT COUNT(*) as total_registros
+    SELECT
+        id_orden,
+        id_localidad,
+        comuna_de_la_orden,
+        localidad
     FROM ecommdata.orden_comuna_localidad
     """
 })
@@ -61,43 +67,70 @@ def main() -> None:
     # ---------------------------------------------------------------------
     # Parse arguments
     # ---------------------------------------------------------------------
-    logging.info(f'Iniciando')  # noqa: F541
-
     args = vars(parser.parse_args())
 
     execution_date: pendulum.Date = pendulum.date(
-        *list(map(int, args['execution_date'].split('-')))
-    )
+        *list(map(int, args['execution_date'].split('-'))))
 
     gcp_project_id: str = args['project_id']
 
     logging.info(f'Execution date: {execution_date}')
 
     # ---------------------------------------------------------------------
-    # Get count from PostgreSQL
+    # BigQuery client
     # ---------------------------------------------------------------------
-    logging.info('Contando registros en ecommdata.orden_comuna_localidad')
+    gbq_client = Client()
+
+    # ---------------------------------------------------------------------
+    # Get data from PostgreSQL
+    # ---------------------------------------------------------------------
+    logging.info(
+        f'Extracting from PostgreSQL: ecommdata.orden_comuna_localidad')  # noqa: F541
 
     data = readPostgresQuery(
-        query=SQL_QUERIES['count_records'].substitute(),
+        query=SQL_QUERIES['extract_data'].substitute(),
         credentials_dict=getSecret(
             secret_name='ecommerce_postgres_credentials',  # noqa: S106
             project=gcp_project_id,
         )
     )
 
-    total_records = data['total_registros'].iloc[0] if not data.empty else 0
+    logging.info(
+    f'Data collected: {data.shape} - Filas: {data.shape[0]}, Columnas: {data.shape[1]}')
 
-    # Resultado en consola
-    print('\n' + '='*50)  # noqa: T201
-    print(f'📊 CONTEO DE REGISTROS')  # noqa: F541, T201
-    print('='*50)  # noqa: T201
-    print(f'📁 Tabla: ecommdata.orden_comuna_localidad')  # noqa: F541, T201
-    print(f'📈 Total: {total_records:,} registros')  # noqa: T201
-    print('='*50 + '\n')  # noqa: T201
+    # Verificar que hay datos
+    if data.empty:
+        logging.warning('⚠️ No se encontraron datos en la tabla origen')
+    else:
+        logging.info(f'Primeras 5 filas:\n{data.head()}')
 
-    logging.info(f'Proceso completado. Total: {total_records} registros')
+    # ---------------------------------------------------------------------
+    # Upload to BigQuery
+    # ---------------------------------------------------------------------
+    logging.info('Uploading data to BigQuery with REPLACE strategy')
 
+    # Verificar que el archivo JSON existe
+    json_path = os.path.join('gbq_objects', 'orden_comuna_localidad.json')
+
+    uploadFrame(
+        data,
+        table_ddl_json_path=json_path,
+        project=gcp_project_id,
+        gbq_client=gbq_client,
+        if_exists='replace',
+    )
+
+    logging.info('✅ Process completed successfully')
+
+    # Mostrar resumen final
+    print('\n' + '='*60)  # noqa: T201
+    print('📊 CARGA COMPLETADA EXITOSAMENTE')  # noqa: T201
+    print('='*60)  # noqa: T201
+    print(f'📁 Tabla origen (PostgresSQL): ecommdata.orden_comuna_localidad')  # noqa: F541, T201
+    print(f'📁 Tabla destino (BQ): ECOMMERCE.ORDEN_COMUNA_LOCALIDAD')  # noqa: F541, T201
+    print(f'📈 Registros cargados: {data.shape[0]:,}')  # noqa: T201
+    print(f'📊 Columnas: {data.shape[1]}')  # noqa: T201
+    print('='*60 + '\n')  # noqa: T201
 
 # -------------------------------------------------------------------------
 # Entrypoint

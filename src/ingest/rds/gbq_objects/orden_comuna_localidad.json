@@ -1,0 +1,10 @@
+{
+  "schema": "ECOMMERCE",
+  "table": "ORDEN_COMUNA_LOCALIDAD",
+  "columns": [
+      {"name": "id_orden", "field_type": "INTEGER", "mode": "REQUIRED"},
+      {"name": "id_localidad", "field_type": "INTEGER", "mode": "REQUIRED"},
+      {"name": "comuna_de_la_orden", "field_type": "STRING", "mode": "NULLABLE"},
+      {"name": "localidad", "field_type": "STRING", "mode": "NULLABLE"}
+  ]
+}
