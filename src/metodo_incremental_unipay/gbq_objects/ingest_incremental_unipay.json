@@ -1,0 +1,54 @@
+{
+    "schema": "UNIPAY",
+    "table": "UNIPAY_INCREMENTAL",
+
+    "columns": [
+        {
+            "name": "PERIODO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Periodo de cálculo del indicador en formato YYYYMM."
+        },
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato comercial al que corresponde el cálculo del indicador."
+        },
+        {
+            "name": "TIPO_CLIENTE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Tipo de cliente utilizado para el cálculo del factor incremental."
+        },
+        {
+            "name": "FACTOR_INCREMENTAL_PCT",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Factor incremental expresado como porcentaje."
+        },
+        {
+            "name": "VENTA_NETA",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Venta neta del periodo calculada como venta bruta dividida por 1,19."
+        },
+        {
+            "name": "VENTA_INCREMENTAL_NETA",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Venta neta incremental obtenida al aplicar el factor incremental sobre la venta neta."
+        },
+        {
+            "name": "COSTO_PROMOCIONAL_NETO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Costo promocional neto del periodo calculado como costo promocional bruto dividido por 1,19."
+        }
+    ],
+
+    "clustering_fields": [
+        "PERIODO",
+        "STORE_BANNER"
+    ]
+}
