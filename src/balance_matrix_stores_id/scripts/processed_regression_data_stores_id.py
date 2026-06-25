@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import json
 import logging
 import argparse
 from logging import config
@@ -49,6 +50,11 @@ parser.add_argument(
 parser.add_argument(
     '--use', type=str,
     help='Forecast or elasticity'
+)
+parser.add_argument(
+    '--store_id',
+    type=str,
+    help='Store id en formato JSON'
 )
 
 # -------------------------------------------------------------------------
@@ -117,8 +123,7 @@ WHERE
     WHERE CANAL_VENTA IN ('PEDIDOS YA','UBER EATS','RAPPI','RAPPI TURBO')
   )
   AND D.STORE_BANNER = '${store_banner}'
-  AND D.STORE_ID IN ('355','352','469','335','326','224','333','340',
-    '671','926','476','325','917','327','357','41','362')
+  AND D.STORE_ID IN (${store_id})
 
 
 
@@ -398,6 +403,13 @@ def main() -> None:  # noqa: D103
     proyecto: str = args['project_id']  # noqa: F841
     store_banner:str = args['store_banner']
     use:str = args['use']
+
+    store_id_list = sorted(json.loads(args['store_id']), key=int)
+
+    store_id_sql = ','.join(f"'{s}'" for s in store_id_list)
+    store_id_str = ','.join(store_id_list)
+
+
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'proyecto: {proyecto}')
 
@@ -420,20 +432,20 @@ def main() -> None:  # noqa: D103
 
     #Parche 1: ajuste nombre tabla auxiliar.
     esquema = 'TMP'
-    tabla = f'TMP_REGRESSION_DATA_{use}_aux_{store_banner_tabla}_SECTOR_ORIENTE'
+    tabla = f'TMP_REGRESSION_DATA_{use}_aux_{store_banner_tabla}_STORES_ID'
     tmp_path_table_aux = f'{proyecto}.{esquema}.{tabla}'
 
     # Tabla temporal final
     # Parche 2: ajuste nombre tabla final.
     esquema = 'TMP'
-    tabla = f'TMP_REGRESSION_DATA_{use}_SECTOR_ORIENTE'
+    tabla = f'TMP_REGRESSION_DATA_{use}_STORES_ID'
     tmp_path_table = f'{proyecto}.{esquema}.{tabla}'
 
 
     # Nombre archivo Json
     # Parche 3: ajuste nombre archivo Json según el uso.
     if use == 'ELASTICITY':
-        nombre_json = 'ingest_regression_processed_data_elasticity_sector_oriente.json'
+        nombre_json = 'ingest_regression_processed_data_elasticity_stores_id.json'
     else:
         msg = f"Valor inválido para 'use': {use}"
         raise ValueError(msg)
@@ -494,7 +506,8 @@ def main() -> None:  # noqa: D103
         fecha_final = fecha_final,
         cant_meses = cant_meses,
         store_banner = store_banner,
-        proyecto = proyecto
+        proyecto = proyecto,
+        store_id = store_id_sql
     )
 
     createTableAsSelect(query = query_master_table,
@@ -1042,6 +1055,8 @@ def main() -> None:  # noqa: D103
     # Paso 4: eliminar la columna auxiliar
     df_final = df_final.drop(columns=['primer_p_month'])
 
+    df_final['store_id'] = store_id_str
+
     logging.info('Se elimina inicio frio...')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -1051,8 +1066,8 @@ def main() -> None:  # noqa: D103
 
     #Parche 4: Se añade SECTOR_ORIENTE al nombre de la tabla final.
     if use == 'ELASTICITY':
-        deleteFromTable(table_ref='cl-bigdata-analytics-preprod.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_SECTOR_ORIENTE',
-                where_clause=f"store_banner = '{store_banner}'",
+        deleteFromTable(table_ref='cl-bigdata-analytics-preprod.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_STORES_ID',
+                where_clause=f"store_banner = '{store_banner}'  and store_id = '{store_id_str}'",
                 gbq_client=gbq_client)
 
         uploadFrame(
