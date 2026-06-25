@@ -149,6 +149,8 @@ def main() -> None:  # noqa: D103
     else:
         suffix = f"{len(store_id_list)}_stores"
 
+    suffix = suffix.replace(" ", "_").lower()
+
     store_id_sql = ','.join(f"'{s}'" for s in store_id_list)
     store_id_str = ','.join(store_id_list)
 

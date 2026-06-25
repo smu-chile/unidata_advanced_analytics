@@ -190,7 +190,8 @@ with DAG(**dag_args) as dag:
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
                 '--store_banner', store_banner,
-                '--store_id','{{ dag_run.conf.get("store_id", []) | tojson }}' #parche 5
+                '--store_id','{{ dag_run.conf.get("store_id", []) | tojson }}', #parche 5
+                '--suffix','{{ dag_run.conf.get("suffix", "") }}',
             ],
             include_paths=[
                 'common/',
