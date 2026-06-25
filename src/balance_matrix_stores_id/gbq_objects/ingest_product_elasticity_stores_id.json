@@ -1,6 +1,6 @@
 {
     "schema": "PRECIO_PROMOCIONES",
-    "table": "PRODUCT_ELASTICITY_SECTOR_ORIENTE",
+    "table": "PRODUCT_ELASTICITY_STORES_ID",
 
     "columns": [
         {
@@ -50,8 +50,14 @@
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Cluster al que pertenece el producto según su elasticidad"
+        },
+        {
+            "name": "STORE_ID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Información store ID"
         }
     ],
 
-    "clustering_fields": ["STORE_BANNER"]
+    "clustering_fields": ["STORE_BANNER", "STORE_ID"]
 }

@@ -164,6 +164,12 @@
             "field_type": "FLOAT64",
             "mode": "NULLABLE",
             "description": "Variacion porcentual respecto a los 3 principales sustitutos"
+        },
+        {
+            "name": "STORE_ID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Información store ID"
         }
     ],
 
@@ -172,5 +178,5 @@
         "type_": "DAY"
     },
 
-    "clustering_fields": ["STORE_BANNER", "CATEGORY_DESCRIPTION"]
+    "clustering_fields": ["STORE_BANNER", "CATEGORY_DESCRIPTION", "STORE_ID"]
 }
