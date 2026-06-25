@@ -371,6 +371,7 @@ SQL_QUERIES = QueryDict({
     'allocation_personalized_products':
     """
     SELECT
+        date,
         customer_key,
         hash_string,
         CAST(sku_product AS INT64) AS sku_product,
@@ -875,6 +876,18 @@ def main() -> None:
         table_ref = f'{gcp_project}.TMP.BASE_PERSONALIZED_PRODUCTS',
         expiration = expiration,
         gbq_client= gbq_client
+    )
+
+    createTableAsSelect(
+        query=SQL_QUERIES['allocation_personalized_products'].substitute(
+            gcp_project = gcp_project,
+            gcp_project_cda = gcp_project_cda
+        ),
+        table_ref=f'{gcp_project}.ECOMMERCE.PERSONALIZED_PRODUCTS',
+        create_disposition='CREATE_IF_NEEDED',
+        write_disposition='WRITE_APPEND',
+        use_legacy_sql=False,
+        gbq_client=gbq_client,
     )
 
 if __name__ == '__main__':
