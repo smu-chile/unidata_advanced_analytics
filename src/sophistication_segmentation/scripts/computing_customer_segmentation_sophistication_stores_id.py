@@ -916,7 +916,6 @@ def main() -> None:  # noqa: D103
     df_final = df_final.rename(columns={'category_description':'categoria',
                                         'formato':'store_banner'})
 
-    print('Hola mundo testing')
     df_final['store_id'] = store_id_str
 
     df_final.columns = df_final.columns.str.lower()
