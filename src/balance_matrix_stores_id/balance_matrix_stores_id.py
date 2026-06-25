@@ -36,6 +36,7 @@ with open(
 ##########---------- TASK (i) ----------##########
 # Parche 1: nombre de script igual al nombre del archivo .py
 
+script0 = 'computing_customer_segmentation_sophistication_stores_id'
 script1 = 'product_sensibility_stores_id'
 script2 = 'processed_regression_data_stores_id'
 script3 = 'product_elasticity_stores_id'
@@ -81,14 +82,35 @@ dag_args = {
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
-    sensibility_tasks = []
+    sophistication_tasks = []
+    sensibility_tasks    = []
     processed_data_tasks = []
-    elasticity_tasks = []
-    bm_tasks = []
+    elasticity_tasks     = []
+    bm_tasks             = []
 
     for store_banner in store_banner_list:
         banner_suffix = store_banner.replace(' ', '_').lower()
 
+        sophistication_task = ExtendedDataprocCreateBatchOperator(
+            task_id = f'{script0}_{banner_suffix}',
+            python_script_path=(
+                f'{PROJECT_NAME}/'
+                'scripts/'
+                f'{script0}.py'
+            ),
+            dag_env_config=dag_env_config,
+            docker_image_name=f'{PROJECT_NAME}',
+            pyspark_batch_args=[
+                '--project_id', dag_env_config['project_id'],
+                '--execution_date', EXECUTION_DATE,
+                '--store_banner', store_banner,
+                '--store_id','{{ dag_run.conf.get("store_id", []) | tojson }}' #parche 5
+            ],
+            include_paths=[
+                'common/',
+                f'{PROJECT_NAME}/gbq_objects/'
+            ],
+        )
 
         sensibility_task = ExtendedDataprocCreateBatchOperator(
             task_id = f'{script1}_{banner_suffix}',
@@ -177,8 +199,9 @@ with DAG(**dag_args) as dag:
         )
 
         # Dependencia por formato: primero script1, luego script2
-        sensibility_task >> processed_data_task >> elasticity_task >> bm_task
+        sophistication_task>>sensibility_task >> processed_data_task >> elasticity_task >> bm_task
 
+        sophistication_task.append(sophistication_task)
         sensibility_tasks.append(sensibility_task)
         processed_data_tasks.append(processed_data_task)
         elasticity_tasks.append(elasticity_task)
