@@ -1062,7 +1062,7 @@ def main() -> None:  # noqa: D103
 
     df_gcp['store_id'] = store_id_str
     # Definir el WHERE
-    where_clause = f"store_banner = '{store_banner}' abd store_id = '{store_id_str}'"
+    where_clause = f"store_banner = '{store_banner}' and store_id = '{store_id_str}'"
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
