@@ -952,7 +952,8 @@ UNION ALL
               SHA ON SHA.CUSTOMER_ID = FIT.CUSTOMER_KEY
 
                   LEFT JOIN
-                  (SELECT * FROM `cl-bigdata-analytics-preprod.UNIPAY.TEMP_DIM`
+                  (
+                  SELECT * FROM `cl-bigdata-analytics-preprod.UNIPAY.TEMP_DIM`
                   ) EQX ON EQX.CUSTOMER_KEY=FIT.CUSTOMER_KEY
 
 
