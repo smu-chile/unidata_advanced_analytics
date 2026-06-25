@@ -2777,7 +2777,7 @@ def main() -> None:  # noqa: D103
     deleteFromTable(
         table_ref=path_table,
         where_clause=(
-            f'PERIODO = {anomes_cerrado}'
+            f"PERIODO = '{anomes_cerrado}'"
         ),
         gbq_client=gbq_client
     )
