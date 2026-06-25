@@ -51,6 +51,13 @@ parser.add_argument(
     type=str,
     help='Store id en formato JSON'
 )
+
+parser.add_argument(
+    '--suffix',
+    type=str,
+    help='Sufijo opcional para nombre de archivo'
+)
+
 # -------------------------------------------------------------------------
 #  SQL Queries
 # -------------------------------------------------------------------------
@@ -130,6 +137,17 @@ def main() -> None:  # noqa: D103
     proyecto: str = args['project_id']  # noqa: F841
     store_banner:str = args['store_banner']
     store_id_list = sorted(json.loads(args['store_id']), key=int)
+    suffix_input = args['suffix']
+
+    #### Gestión de sufijo ####
+    if len(store_id_list) == 1:
+        suffix = store_id_list[0]
+
+    elif suffix_input:
+        suffix = suffix_input
+
+    else:
+        suffix = f"{len(store_id_list)}_stores"
 
     store_id_sql = ','.join(f"'{s}'" for s in store_id_list)
     store_id_str = ','.join(store_id_list)
@@ -348,7 +366,7 @@ def main() -> None:  # noqa: D103
             'Documentos%20compartidos/'
             'Pricing/'
             'Balance Matrix AA Stores ID/'
-            f'Balance_Matrix_AA_{store_banner}.xlsx'
+            f'Balance_Matrix_AA_{store_banner}_{suffix}.xlsx'
         )
     ).upload(buffer)
     logging.info('Tabla subida en Sharepoint')
