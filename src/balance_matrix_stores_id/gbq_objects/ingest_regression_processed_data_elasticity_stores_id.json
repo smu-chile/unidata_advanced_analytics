@@ -1,6 +1,6 @@
 {
     "schema": "TMP",
-    "table": "TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_SECTOR_ORIENTE",
+    "table": "TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_STORES_ID",
 
     "columns": [
         {
