@@ -1,4 +1,4 @@
-"""Contar registros de tabla orden_comuna_localidad."""
+"""Load orden_comuna_localidad from PostgreSQL to BigQuery."""
 
 # -------------------------------------------------------------------------
 # Imports
