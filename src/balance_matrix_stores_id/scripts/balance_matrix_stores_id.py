@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import os
+import json
 import logging
 import argparse
 from logging import config
@@ -44,23 +45,35 @@ parser.add_argument(
     help='Store banner'
 )
 
+#PARCHE 1
+parser.add_argument(
+    '--store_id',
+    type=str,
+    help='Store id en formato JSON'
+)
 # -------------------------------------------------------------------------
 #  SQL Queries
 # -------------------------------------------------------------------------
-## Parche 1: Nombre de las tablas ajustado a Sector Oriente.
+## Parche 1: Nombre de las tablas ajustado a STORES_ID.
+## SOBRE TABLAS:
+# SENSIBILITY               -> TABLA MAESTRA
+# ELASTICITY                -> TABLA MAESTRA
+# PROCESSED DATA ELASTICITY -> TABLA MAESTRA
 
 SQL_QUERIES = QueryDict({    # Region: Explicación de query
 
  'query_sensibilidad':
 """
-SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY_SECTOR_ORIENTE`
+SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY_STORES_ID`
 where STORE_BANNER = '${store_banner}'
+AND STORE_ID IN (${store_id})
 """,
 
 'query_elasticidad':
 """
-SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY_SECTOR_ORIENTE`
+SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY_STORES_ID`
 where STORE_BANNER = '${store_banner}'
+AND STORE_ID IN (${store_id})
 """,
 
 'query_ventas':
@@ -68,7 +81,7 @@ where STORE_BANNER = '${store_banner}'
 WITH tabla_fecha_max AS (
   SELECT
     MAX(P_DATE) AS fecha_max
-  FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_SECTOR_ORIENTE`
+  FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_STORES_ID`
   WHERE STORE_BANNER = '${store_banner}'
 )
 
@@ -76,9 +89,10 @@ SELECT
   MATERIAL,
   EAN,
   SUM(VENTAS_TOTALES_PRODUCTO) AS ventas_totales
-FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_SECTOR_ORIENTE`
+FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_STORES_ID`
 CROSS JOIN tabla_fecha_max
 WHERE STORE_BANNER = '${store_banner}'
+  AND STORE_ID IN (${store_id})
   AND P_DATE BETWEEN DATE_SUB(
   tabla_fecha_max.fecha_max, INTERVAL 12 MONTH) AND tabla_fecha_max.fecha_max
 GROUP BY MATERIAL, EAN;
@@ -115,6 +129,11 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']  # noqa: F841
     store_banner:str = args['store_banner']
+    store_id_list = sorted(json.loads(args['store_id']), key=int)
+
+    store_id_sql = ','.join(f"'{s}'" for s in store_id_list)
+    store_id_str = ','.join(store_id_list)
+
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'proyecto: {proyecto}')
 
@@ -135,44 +154,50 @@ def main() -> None:  # noqa: D103
     # REGION: Querys de GCP
     #----------------------------------------------------------------------
 
-    # SENSIBILIDAD
+
+    ### SENSIBILIDAD
 
     query_sensibilidad = SQL_QUERIES['query_sensibilidad'].substitute(
-        proyecto = proyecto,
-        store_banner = store_banner)
+            proyecto     = proyecto,
+            store_banner = store_banner,
+            store_id     = store_id_sql)
 
     df_sensibilidad = readBigQuery(
-            query=query_sensibilidad,
-            user=usuario,
-            gbq_client=gbq_client)
+            query      = query_sensibilidad,
+            user       = usuario,
+            gbq_client = gbq_client)
 
     df_sensibilidad.columns = df_sensibilidad.columns.str.lower()
     logging.info('Consulta de sensibilidad lista')
 
-    # ELASTICIDAD
+
+    ### ELASTICIDAD
 
     query_elasticidad = SQL_QUERIES['query_elasticidad'].substitute(
-        proyecto = proyecto,
-        store_banner = store_banner)
+            proyecto      = proyecto,
+            store_banner  = store_banner,
+            store_id      = store_id_sql)
 
     df_elasticidad = readBigQuery(
-            query=query_elasticidad,
-            user=usuario,
-            gbq_client=gbq_client)
+            query      = query_elasticidad,
+            user       = usuario,
+            gbq_client = gbq_client)
 
     df_elasticidad.columns = df_elasticidad.columns.str.lower()
     logging.info('Consulta de elasticidad lista')
 
-    # VENTAS
+
+    ### VENTAS
 
     query_ventas = SQL_QUERIES['query_ventas'].substitute(
-        proyecto = proyecto,
-        store_banner = store_banner)
+            proyecto     = proyecto,
+            store_banner = store_banner,
+            store_id     = store_id_sql)
 
     df_ventas = readBigQuery(
-            query=query_ventas,
-            user=usuario,
-            gbq_client=gbq_client)
+            query       = query_ventas,
+            user        = usuario,
+            gbq_client  = gbq_client)
 
     df_ventas.columns = df_ventas.columns.str.lower()
     logging.info('Consulta de ventas lista')
@@ -265,6 +290,7 @@ def main() -> None:  # noqa: D103
 
     # ordenar antes por Categoria
     df_balance_matrix_sp = df_balance_matrix_sp.sort_values(by='Categoria')
+    df_balance_matrix_sp['store_id'] = store_id_str
 
     buffer = io.BytesIO()
 
@@ -321,8 +347,8 @@ def main() -> None:  # noqa: D103
             'BigDatayAdvancedAnalytics/'
             'Documentos%20compartidos/'
             'Pricing/'
-            'Balance Matrix AA Sector Oriente/'
-            f'Balance_Matrix_AA_{store_banner}_sector_oriente.xlsx'
+            'Balance Matrix AA Stores ID/'
+            f'Balance_Matrix_AA_{store_banner}.xlsx'
         )
     ).upload(buffer)
     logging.info('Tabla subida en Sharepoint')
@@ -334,12 +360,12 @@ def main() -> None:  # noqa: D103
     # REGION: Se sube a GCP
     #----------------------------------------------------------------------
     # Definir el WHERE
-    where_clause = f"store_banner = '{store_banner}'"
+    where_clause = f"store_banner = '{store_banner}' and store_id = '{store_id_str}'"
 
     # Parametros
     # Parche 3: Tabla ajustada a sector oriente
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'BALANCE_MATRIX_SECTOR_ORIENTE'
+    tabla = 'BALANCE_MATRIX_STORES_ID'
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
@@ -354,7 +380,7 @@ def main() -> None:  # noqa: D103
     uploadFrame(
         df_balance_matrix_sp,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'ingest_product_balance_matrix_sector_oriente.json'),
+                                         'ingest_product_balance_matrix_stores_id.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='replace'

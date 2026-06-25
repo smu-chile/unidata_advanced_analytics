@@ -32,37 +32,37 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'balance_matrix_sector_oriente'
 
-# Task 1
+##########---------- TASK (i) ----------##########
 # Parche 1: nombre de script igual al nombre del archivo .py
-script1 = 'product_sensibility_sector_oriente'
-# Task 2
-script2 = 'processed_regression_data_sector_oriente'
-# Task 3
-script3 = 'product_elasticity_sector_oriente'
-# Task 4
-script4 = 'balance_matrix_sector_oriente'
 
-dag_id = 'balance_matrix_sector_oriente'
-schedule_interval = None
-catchup = False
-start_date = [2025, 6, 20]
+script1 = 'product_sensibility_stores_id'
+script2 = 'processed_regression_data_stores_id'
+script3 = 'product_elasticity_stores_id'
+script4 = 'balance_matrix_stores_id'
+
+########## --------------------------##############
+
+PROJECT_NAME      = 'balance_matrix_stores_id' #PARCHE
+dag_id            = 'balance_matrix_stores_id' #PARCHE
+schedule_interval =  None
+catchup           =  False
+start_date        = [2025, 6, 20]
 store_banner_list = ['Unimarc']
 
 dag_args = {
-    'dag_id': 'balance_matrix_sector_oriente', #parche 1
+    'dag_id': 'balance_matrix_stores_id', #PARCHE
     'schedule_interval': schedule_interval,
     'dagrun_timeout': None,
     'catchup': catchup,
     'max_active_runs': 1,
     'concurrency': 1,
-    'tags': [PROJECT_NAME,'rlagosg'],#parche 2
+    'tags': [PROJECT_NAME,'rlagosg'], #PARCHE
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
-        'email': ['rlagosg@unidata.cl'], #parche 3
+        'email': ['rlagosg@unidata.cl'], #PARCHE
         'start_date': pendulum.datetime(
             start_date[0],
             start_date[1],
@@ -103,6 +103,7 @@ with DAG(**dag_args) as dag:
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
                 '--store_banner', store_banner,
+                '--store_id','{{ dag_run.conf.get("store_id", []) | tojson }}' #parche 5
             ],
             include_paths=[
                 'common/',
@@ -124,6 +125,7 @@ with DAG(**dag_args) as dag:
                 '--execution_date', EXECUTION_DATE,
                 '--store_banner', store_banner,
                 '--use','ELASTICITY',
+                '--store_id','{{ dag_run.conf.get("store_id", []) | tojson }}' #parche 5
             ],
             include_paths=[
                 'common/',
@@ -144,6 +146,7 @@ with DAG(**dag_args) as dag:
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
                 '--store_banner', store_banner,
+                '--store_id','{{ dag_run.conf.get("store_id", []) | tojson }}' #parche 5
             ],
             include_paths=[
                 'common/',
@@ -165,6 +168,7 @@ with DAG(**dag_args) as dag:
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
                 '--store_banner', store_banner,
+                '--store_id','{{ dag_run.conf.get("store_id", []) | tojson }}' #parche 5
             ],
             include_paths=[
                 'common/',

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import json
 import logging
 import argparse
 from logging import config
@@ -44,6 +45,12 @@ parser.add_argument(
     help='Store banner'
 )
 
+parser.add_argument(
+    '--store_id',
+    type=str,
+    help='Store id en formato JSON'
+)
+
 # -------------------------------------------------------------------------
 #  SQL Queries
 # -------------------------------------------------------------------------
@@ -53,6 +60,7 @@ SQL_QUERIES = QueryDict({    # Region: Explicación de query
     """
     SELECT * FROM `${table_processed_data}`
     where store_banner = '${store_banner}'
+    and store_id IN (${store_id})
     """,
 
     'query_sustitutos':
@@ -409,6 +417,12 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']  # noqa: F841
     store_banner:str = args['store_banner']
+
+    store_id_list = sorted(json.loads(args['store_id']), key=int)
+
+    store_id_sql = ','.join(f"'{s}'" for s in store_id_list)
+    store_id_str = ','.join(store_id_list)
+
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'proyecto: {proyecto}')
 
@@ -425,12 +439,12 @@ def main() -> None:  # noqa: D103
 
 
     esquema = 'PRECIO_PROMOCIONES'
-    # Parche 2: Nombre tabla ajustada para sector oriente
-    tabla = 'PRODUCT_ELASTICITY_SECTOR_ORIENTE'
+    # Parche 2: Nombre tabla ajustada para stores id
+    tabla = 'PRODUCT_ELASTICITY_STORES_ID'
 
     # Tabla con data procesada
-    # Parche 3: tabla con data procesada ajustada para sector oriente
-    table_processed_data=f'{proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_SECTOR_ORIENTE'
+    # Parche 3: tabla con data procesada ajustada para stores id
+    table_processed_data=f'{proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_STORES_ID'
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -444,7 +458,8 @@ def main() -> None:  # noqa: D103
     # Se genera query definitiva
     query_principal = SQL_QUERIES['query_principal'].substitute(
         table_processed_data = table_processed_data,
-        store_banner = store_banner)
+        store_banner = store_banner,
+        store_id = store_id_sql)
 
 
     logging.info('Inicia la consulta de principal ...')
@@ -1045,9 +1060,9 @@ def main() -> None:  # noqa: D103
                             'segmento_elasticidad']]
 
 
-
+    df_gcp['store_id'] = store_id_str
     # Definir el WHERE
-    where_clause = f"store_banner = '{store_banner}'"
+    where_clause = f"store_banner = '{store_banner}' abd store_id = '{store_id_str}'"
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
@@ -1061,7 +1076,7 @@ def main() -> None:  # noqa: D103
     uploadFrame(
         df_gcp,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'ingest_product_elasticity_sector_oriente.json'),
+                                         'ingest_product_elasticity_stores_id.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='append'
