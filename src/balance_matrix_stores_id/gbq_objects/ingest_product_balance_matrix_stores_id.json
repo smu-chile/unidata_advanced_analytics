@@ -1,6 +1,6 @@
 {
     "schema": "PRECIO_PROMOCIONES",
-    "table": "BALANCE_MATRIX_SECTOR_ORIENTE",
+    "table": "BALANCE_MATRIX_STORES_ID",
 
     "columns": [
         {
@@ -79,8 +79,14 @@
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Cluster al que pertenece el producto según cruce de elasticidad y sensibilidad"
+        },
+        {
+            "name": "STORE_ID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Información store ID"
         }
     ],
 
-    "clustering_fields": ["STORE_BANNER"]
+    "clustering_fields": ["STORE_BANNER", "STORE_ID"]
 }
