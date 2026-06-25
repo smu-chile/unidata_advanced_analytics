@@ -139,7 +139,7 @@ def main() -> None:  # noqa: D103
     store_id_list = sorted(json.loads(args['store_id']), key=int)
     suffix_input = args['suffix']
 
-    #### Gestión de sufijo ####
+    ####--- Gestión de sufijo ---####
     if len(store_id_list) == 1:
         suffix = store_id_list[0]
 
@@ -147,7 +147,7 @@ def main() -> None:  # noqa: D103
         suffix = suffix_input
 
     else:
-        suffix = f"{len(store_id_list)}_stores"
+        suffix = f'{len(store_id_list)}_stores'
 
     suffix = suffix.replace(' ', '_').lower()
 
