@@ -2593,6 +2593,11 @@ def construir_resultado(
         how='left'
     )
 
+    df_resultado['COSTO_PROMOCIONAL_NETO'] = (
+        df_resultado['COSTO_PROMOCIONAL_NETO']
+        .fillna(0)
+    )
+
     return df_resultado[
         [
             'PERIODO',
