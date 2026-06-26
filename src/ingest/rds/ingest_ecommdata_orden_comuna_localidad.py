@@ -108,12 +108,5 @@ with DAG(**dag_args) as dag:
         include_paths=[
             'common/',
             f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'
-        ],
-        labels={
-            'team': 'bigdata_analytics',
-            'data_source': 'postgresql',
-            'data_target': 'bigquery',
-            'load_type': 'incremental',
-            'table': 'orden_comuna_localidad'
-        },
+        ]
     )
