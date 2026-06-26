@@ -2252,7 +2252,7 @@ REGLAS_BALANCEO = {
 
     ('Ecommerce', 'PERSONA'): (
         'CLASIFICACION_CLIENTE',
-        'RANGO_EDAD'
+        'ZONA'
     ),
 
     ('Super 10', 'PERSONA'): (
@@ -2261,8 +2261,8 @@ REGLAS_BALANCEO = {
     ),
 
     ('Alvi', 'PERSONA'): (
-        'ZONA',
-        'RANGO_EDAD'
+        'SHABITS',
+        'ZONA'
     ),
 
     ('Alvi', 'COMERCIANTE'): (
@@ -2596,6 +2596,23 @@ def construir_resultado(
     df_resultado['COSTO_PROMOCIONAL_NETO'] = (
         df_resultado['COSTO_PROMOCIONAL_NETO']
         .fillna(0)
+    )
+
+    df_resultado[
+        [
+            'VENTA_NETA',
+            'VENTA_INCREMENTAL_NETA',
+            'COSTO_PROMOCIONAL_NETO'
+        ]
+    ] = (
+        df_resultado[
+            [
+                'VENTA_NETA',
+                'VENTA_INCREMENTAL_NETA',
+                'COSTO_PROMOCIONAL_NETO'
+            ]
+        ]
+        .round(0)
     )
 
     return df_resultado[
