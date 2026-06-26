@@ -50,7 +50,7 @@ SCRIPT_NAME = 'ingest_ecommdata_orden_comuna_localidad.py'
 
 dag_args = {
     'dag_id': 'ingest_ecommdata_orden_comuna_localidad',
-    'schedule_interval': '0 8 * * *',
+    'schedule_interval': '45 6 * * *',
     'dagrun_timeout': timedelta(hours=2),
     'catchup': False,
     'max_active_runs': 1,
@@ -63,6 +63,7 @@ dag_args = {
         'localidad',
         'postgresql',
         'bigquery',
+        'incremental',
         'ilopeze'
     ],
     'default_args': {
@@ -90,7 +91,7 @@ with DAG(**dag_args) as dag:
     EXECUTION_DATE="{{dag_run.conf.get('execution_date'," \
         "data_interval_end.strftime('%Y-%m-%d')) }}"  # noqa: ISC002
 
-    ingest_cumplimiento_despacho = ExtendedDataprocCreateBatchOperator(
+    ingest_orden_comuna_localidad = ExtendedDataprocCreateBatchOperator(
         task_id='ingest_ecommdata_orden_comuna_localidad',
         python_script_path=(
             f'{PROJECT_NAME}/'
@@ -108,4 +109,11 @@ with DAG(**dag_args) as dag:
             'common/',
             f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'
         ],
+        labels={
+            'team': 'bigdata_analytics',
+            'data_source': 'postgresql',
+            'data_target': 'bigquery',
+            'load_type': 'incremental',
+            'table': 'orden_comuna_localidad'
+        },
     )
