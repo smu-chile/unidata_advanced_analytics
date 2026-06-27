@@ -174,13 +174,7 @@ SQL_QUERIES = QueryDict({    # Region: Explicación de query
               SHA ON SHA.CUSTOMER_KEY = FIT.CUSTOMER_KEY
 
                 LEFT JOIN
-                (SELECT *
-                FROM
-                --`cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`
-                `cl-cda-unidata-dev.SET_PROYECTO.DIM_GENERAL`
-                EQ JOIN
-                `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
-                ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
+                (SELECT * FROM `cl-bigdata-analytics-preprod.UNIPAY.TEMP_DIM`
                 ) EQX ON EQX.CUSTOMER_KEY=FIT.CUSTOMER_KEY
 
 
@@ -575,12 +569,7 @@ UNION ALL
                 AND SHA.ORG_IP_ID = DSH.ORG_IP_ID
 
                   LEFT JOIN
-                  (SELECT *
-                  FROM
-                  --`cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`
-                  `cl-cda-unidata-dev.SET_PROYECTO.DIM_GENERAL`  EQ JOIN
-                  `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
-                  ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
+                  (SELECT * FROM `cl-bigdata-analytics-preprod.UNIPAY.TEMP_DIM`
                   ) EQX ON EQX.CUSTOMER_KEY=FIT.CUSTOMER_KEY
 
 
@@ -963,12 +952,8 @@ UNION ALL
               SHA ON SHA.CUSTOMER_ID = FIT.CUSTOMER_KEY
 
                   LEFT JOIN
-                  (SELECT *
-                  FROM
-                  --`cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`
-                  `cl-cda-unidata-dev.SET_PROYECTO.DIM_GENERAL`  EQ JOIN
-                  `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
-                  ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
+                  (
+                  SELECT * FROM `cl-bigdata-analytics-preprod.UNIPAY.TEMP_DIM`
                   ) EQX ON EQX.CUSTOMER_KEY=FIT.CUSTOMER_KEY
 
 
@@ -1359,12 +1344,7 @@ UNION ALL
             SHA ON SHA.CUSTOMER_KEY = FIT.CUSTOMER_KEY
 
               LEFT JOIN
-              (SELECT *
-                  FROM
-                  --`cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`
-                  `cl-cda-unidata-dev.SET_PROYECTO.DIM_GENERAL`  EQ JOIN
-                  `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
-                  ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
+              (SELECT * FROM `cl-bigdata-analytics-preprod.UNIPAY.TEMP_DIM`
               ) EQX ON EQX.CUSTOMER_KEY=FIT.CUSTOMER_KEY
 
 
@@ -1776,12 +1756,7 @@ UNION ALL
               SHA ON SHA.CUSTOMER_KEY = FIT.CUSTOMER_KEY
 
                 LEFT JOIN
-                (SELECT *
-                  FROM
-                  --`cl-cda-unidata-prod.DS_PROD_CLIENTES_EQUIFAX.DIM_GENERAL`
-                  `cl-cda-unidata-dev.SET_PROYECTO.DIM_GENERAL`  EQ JOIN
-                  `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CDA_CST_DEID` D
-                  ON  UPPER(LTRIM(EQ.RUTID,'0'))=UPPER(LTRIM(D.ID_CARD_NO,'0'))
+                (SELECT * FROM `cl-bigdata-analytics-preprod.UNIPAY.TEMP_DIM`
                 ) EQX ON EQX.CUSTOMER_KEY=FIT.CUSTOMER_KEY
 
 
@@ -2277,7 +2252,7 @@ REGLAS_BALANCEO = {
 
     ('Ecommerce', 'PERSONA'): (
         'CLASIFICACION_CLIENTE',
-        'RANGO_EDAD'
+        'ZONA'
     ),
 
     ('Super 10', 'PERSONA'): (
@@ -2286,8 +2261,8 @@ REGLAS_BALANCEO = {
     ),
 
     ('Alvi', 'PERSONA'): (
-        'ZONA',
-        'RANGO_EDAD'
+        'SHABITS',
+        'ZONA'
     ),
 
     ('Alvi', 'COMERCIANTE'): (
@@ -2618,6 +2593,28 @@ def construir_resultado(
         how='left'
     )
 
+    df_resultado['COSTO_PROMOCIONAL_NETO'] = (
+        df_resultado['COSTO_PROMOCIONAL_NETO']
+        .fillna(0)
+    )
+
+    df_resultado[
+        [
+            'VENTA_NETA',
+            'VENTA_INCREMENTAL_NETA',
+            'COSTO_PROMOCIONAL_NETO'
+        ]
+    ] = (
+        df_resultado[
+            [
+                'VENTA_NETA',
+                'VENTA_INCREMENTAL_NETA',
+                'COSTO_PROMOCIONAL_NETO'
+            ]
+        ]
+        .round(0)
+    )
+
     return df_resultado[
         [
             'PERIODO',
@@ -2802,7 +2799,7 @@ def main() -> None:  # noqa: D103
     deleteFromTable(
         table_ref=path_table,
         where_clause=(
-            f'PERIODO = {anomes_cerrado}'
+            f"PERIODO = '{anomes_cerrado}'"
         ),
         gbq_client=gbq_client
     )

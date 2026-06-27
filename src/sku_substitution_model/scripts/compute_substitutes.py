@@ -749,11 +749,11 @@ def main() -> None:
             sku_sophistication_scores=sophistication_score,
             score_ponderations={
                 'w2v_distance_filter': 8e-1,
-                'tfidf_distance_filter': 0e-1,
+                'tfidf_distance_filter': 5e-3,
                 'ots_distance_filter': 4e-2,
                 'other_units_filter': 1e-3,
                 'hm_pu_ppum_filter': 4e-2,
-                'container_filter': 0e-1,
+                'container_filter': 5e-3,
             },
             output='rank',
             top_k=n_substitutes
