@@ -729,6 +729,13 @@ def main() -> None:  # noqa: D103
     #--------------------------------------------------------------------------
 
     # Datos entrenamiento
+
+    ###PARCHE ERROR .min() arroja nantye y .strftime se cae:
+    print(df_final['p_date'].min())
+    print(df_final['p_date'].isna().sum())
+    print(df_final['p_date'].notna().sum())
+    print(len(df_final))
+
     fecha_inicial_entrenamiento = df_final['p_date'].min().strftime('%Y-%m-%d')
     fecha_limite = df_final['p_date'].max().strftime('%Y-%m-%d')
     considerar_feriados = True
