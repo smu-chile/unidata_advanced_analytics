@@ -474,7 +474,7 @@ def main() -> None:  # noqa: D103
         gbq_client=gbq_client
     )
 
-    #PARCHE nattypegit 
+    #PARCHE nattypegit
     print('¿Está leyendo algo?: ', df_datos.shape)
 
     #--------------------------------------------------------------------------
