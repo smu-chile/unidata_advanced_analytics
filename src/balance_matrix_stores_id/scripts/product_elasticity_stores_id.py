@@ -423,6 +423,11 @@ def main() -> None:  # noqa: D103
     store_id_sql = ','.join(f"'{s}'" for s in store_id_list)
     store_id_str = ','.join(store_id_list)
 
+    #parche nattype
+    print('store_id_list: ', store_id_list)
+    print('store_id_sql: ', store_id_sql)
+    print('store_id_str: ', store_id_str)
+
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'proyecto: {proyecto}')
 
@@ -469,7 +474,7 @@ def main() -> None:  # noqa: D103
         gbq_client=gbq_client
     )
 
-    #PARCHE nattype
+    #PARCHE nattypegit 
     print('¿Está leyendo algo?: ', df_datos.shape)
 
     #--------------------------------------------------------------------------
