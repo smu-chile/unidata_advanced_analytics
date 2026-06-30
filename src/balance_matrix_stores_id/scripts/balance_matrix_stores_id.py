@@ -290,6 +290,7 @@ def main() -> None:  # noqa: D103
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
         'store_banner':'Formato',
         'categoria':'Categoria',
+        'sub_category_description':'Grupo artículo',
         'descripcion_material': 'Descripción material',
         'material':'Material',
         'umv':'UMV',
