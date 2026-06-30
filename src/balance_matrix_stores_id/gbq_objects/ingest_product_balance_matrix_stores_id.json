@@ -16,6 +16,12 @@
             "description": "Categoría a la que pertenece el producto"
         },
         {
+            "name": "SUB_CATEGORY_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Descripión de la subcategoría del producto"
+        },
+        {
             "name": "DESCRIPCION_MATERIAL",
             "field_type": "STRING",
             "mode": "REQUIRED",
