@@ -180,7 +180,7 @@ def main() -> None:  # noqa: D103
     query_sensibilidad = SQL_QUERIES['query_sensibilidad'].substitute(
             proyecto     = proyecto,
             store_banner = store_banner,
-            store_id     = store_id_sql)
+            store_id     = store_id_str)
 
     df_sensibilidad = readBigQuery(
             query      = query_sensibilidad,
@@ -196,7 +196,7 @@ def main() -> None:  # noqa: D103
     query_elasticidad = SQL_QUERIES['query_elasticidad'].substitute(
             proyecto      = proyecto,
             store_banner  = store_banner,
-            store_id      = store_id_sql)
+            store_id      = store_id_str)
 
     df_elasticidad = readBigQuery(
             query      = query_elasticidad,
@@ -212,7 +212,7 @@ def main() -> None:  # noqa: D103
     query_ventas = SQL_QUERIES['query_ventas'].substitute(
             proyecto     = proyecto,
             store_banner = store_banner,
-            store_id     = store_id_sql)
+            store_id     = store_id_str)
 
     df_ventas = readBigQuery(
             query       = query_ventas,
