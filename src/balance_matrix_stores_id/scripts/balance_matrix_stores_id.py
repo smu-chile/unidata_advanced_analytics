@@ -73,14 +73,14 @@ SQL_QUERIES = QueryDict({    # Region: Explicación de query
 """
 SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY_STORES_ID`
 where STORE_BANNER = '${store_banner}'
-AND STORE_ID IN (${store_id})
+AND STORE_ID IN '${store_id}'
 """,
 
 'query_elasticidad':
 """
 SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY_STORES_ID`
 where STORE_BANNER = '${store_banner}'
-AND STORE_ID IN (${store_id})
+AND STORE_ID IN '${store_id}'
 """,
 
 'query_ventas':
@@ -99,7 +99,7 @@ SELECT
 FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_STORES_ID`
 CROSS JOIN tabla_fecha_max
 WHERE STORE_BANNER = '${store_banner}'
-  AND STORE_ID IN (${store_id})
+  AND STORE_ID IN '${store_id}'
   AND P_DATE BETWEEN DATE_SUB(
   tabla_fecha_max.fecha_max, INTERVAL 12 MONTH) AND tabla_fecha_max.fecha_max
 GROUP BY MATERIAL, EAN;
