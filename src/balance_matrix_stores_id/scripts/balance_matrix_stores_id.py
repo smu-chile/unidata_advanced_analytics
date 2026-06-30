@@ -153,6 +153,10 @@ def main() -> None:  # noqa: D103
 
     store_id_str = ','.join(store_id_list)
 
+    #parche query error
+    print('store_id list: ', store_id_list)
+    print('store_id_str: ', store_id_str)
+
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'proyecto: {proyecto}')
 
