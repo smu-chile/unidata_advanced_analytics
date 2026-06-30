@@ -1789,9 +1789,9 @@ def aplicar_precios_promocionales(
 
     df_out = df_pre.merge(df_prices, on='p_date', how='left')
 
-    df_out['precio_promedio'] = (
-        df_out['precio_promocional_minimo']
-        .fillna(df_out['precio_promedio'])
+    df_out['precio_promedio'] = df_out['precio_promocional_minimo'].where(
+        df_out['precio_promocional_minimo'] > 0,
+        df_out['precio_promedio']
     )
 
     return df_out
@@ -1988,6 +1988,8 @@ def adicion_registro_proyeccion(
 
     return logs_iteracion
 
+
+
 # Main Parte 4
 def loop_promociones(
     promos_existentes,
@@ -2089,6 +2091,7 @@ def loop_promociones(
                 logs_iteracion['Comentario'] = 'Modelo no entrenable'
                 filas_resumen.append(logs_iteracion)
                 continue
+
             logs_iteracion['Estado_Modelo'] = 'Válido'
 
             # -----------------------------
