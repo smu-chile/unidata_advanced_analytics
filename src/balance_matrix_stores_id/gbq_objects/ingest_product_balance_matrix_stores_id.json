@@ -85,6 +85,12 @@
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Cluster al que pertenece el producto según cruce de elasticidad y sensibilidad"
+        },
+        {
+            "name": "STORE_ID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Información store ID"
         }
     ],
 
