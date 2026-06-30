@@ -238,8 +238,9 @@ def main() -> None:  # noqa: D103
     df_balance_matrix['indice_sensibilidad'] = df_balance_matrix['indice_sensibilidad'].fillna(0)
     df_balance_matrix['kvi'] = df_balance_matrix['kvi'].fillna('BKG')
 
-    df_balance_matrix = df_balance_matrix.merge(df_ventas[['ean','ventas_totales']],
-                                                on = 'ean', how='left')
+    #Parche: agregamos columna subcat description
+    df_balance_matrix = df_balance_matrix.merge(
+          df_ventas[['ean','ventas_totales', 'sub_category_description']], on = 'ean', how='left')
 
     logging.info('Merge de tablas listo')
 
@@ -268,8 +269,10 @@ def main() -> None:  # noqa: D103
     # REGION: Se ordenan las columnas
     #----------------------------------------------------------------------
 
+    #Parche: se agregó sub_category_description
     df_balance_matrix_sp = df_balance_matrix[['store_banner',
                                             'categoria',
+                                            'sub_category_description',
                                             'descripcion_material',
                                             'material',
                                             'umv',
