@@ -60,7 +60,7 @@ SQL_QUERIES = QueryDict({    # Region: Explicación de query
     """
     SELECT * FROM `${table_processed_data}`
     where store_banner = '${store_banner}'
-    and store_id IN (${store_id})
+    and store_id  = '${store_id}'
     """,
 
     'query_sustitutos':
@@ -464,7 +464,7 @@ def main() -> None:  # noqa: D103
     query_principal = SQL_QUERIES['query_principal'].substitute(
         table_processed_data = table_processed_data,
         store_banner = store_banner,
-        store_id = store_id_sql)
+        store_id = store_id_str)
 
 
     logging.info('Inicia la consulta de principal ...')
