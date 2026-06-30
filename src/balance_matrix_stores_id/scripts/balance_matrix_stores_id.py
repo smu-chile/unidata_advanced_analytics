@@ -315,7 +315,7 @@ def main() -> None:  # noqa: D103
 
     # ordenar antes por Categoria
     df_balance_matrix_sp = df_balance_matrix_sp.sort_values(by='Categoria')
-    #df_balance_matrix_sp['store_id'] = store_id_str  # noqa: ERA001
+    df_balance_matrix_sp['store_id'] = store_id_str  # noqa: ERA001
 
     buffer = io.BytesIO()
 
