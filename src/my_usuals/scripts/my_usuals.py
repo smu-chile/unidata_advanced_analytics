@@ -825,14 +825,27 @@ SQL_QUERIES = QueryDict({
         ) <= 5
     )
 
+    SELECT *
+    FROM USUALS_ADJ
+    """,# noqa: E501
+
+    'base_my_usuals_adj_final':
+    """
     SELECT
         date,
         customer_key,
         ean_aux as ean,
         DENSE_RANK() OVER (PARTITION BY date,customer_key ORDER BY relevance ASC) AS relevance,
         store_banner
-    FROM USUALS_ADJ
-    """,# noqa: E501
+    FROM `${gcp_project}.TMP.TMP_BASE_MY_USUALS_FINAL`
+    """,
+
+    'prod_mp_final':
+    """
+    SELECT date,customer_key,ean_aux,relevance,store_banner
+    FROM `${gcp_project}.TMP.TMP_BASE_MY_USUALS_FINAL`
+    WHERE MOD(CAST(relevance AS NUMERIC), 1) = 0.5
+    """,
 
     'usuals_partition':
     """
@@ -1126,6 +1139,8 @@ def main():  # noqa: ANN201, D103
     table_base_adj_ref = f'{gcp_project}.TMP.TMP_BASE_MY_USUALS_ADJ'
     table_mp_ref = f'{gcp_project}.TMP.TMP_MARCAS_PROPIAS_{upper_store_banner}'
     table_prod_mp= f'{gcp_project}.TMP.TMP_USUALS_5_PROD_MP'
+    table_base_final = f'{gcp_project}.TMP.TMP_BASE_MY_USUALS_FINAL'
+
 
     logging.info(f'gcp_project = {gcp_project}')
     logging.info(f'gcp_project_cda = {gcp_project_cda}')
@@ -1219,32 +1234,6 @@ def main():  # noqa: ANN201, D103
             gbq_client= gbq_client
         )
 
-        logging.info('usuals 5 prod mp')
-        createTableAsSelect(
-            query=SQL_QUERIES['usuals_5_prod_mp'].substitute(
-                gcp_project=gcp_project,
-                inicio_mes = inicio_mes,
-                inicio_mes_n1 = inicio_mes_n1,
-                execution_date = execution_date,
-                store_banner = store_banner,
-                upper_store_banner = upper_store_banner
-            ),
-            table_ref=table_prod_mp,
-            create_disposition='CREATE_IF_NEEDED',
-            write_disposition='WRITE_TRUNCATE',
-            use_legacy_sql=False,
-            gbq_client=gbq_client,
-        )
-
-        now = pendulum.now()
-        expiration = now.add(minutes=1440)
-
-        setTableExpiration(
-            table_ref = table_prod_mp,
-            expiration = expiration,
-            gbq_client= gbq_client
-        )
-
         logging.info('Base my usuals adj')
         createTableAsSelect(
             query=SQL_QUERIES['base_my_usuals_adj'].substitute(
@@ -1254,6 +1243,27 @@ def main():  # noqa: ANN201, D103
                 execution_date = execution_date,
                 store_banner = store_banner,
                 upper_store_banner = upper_store_banner
+            ),
+            table_ref=table_base_final,
+            create_disposition='CREATE_IF_NEEDED',
+            write_disposition='WRITE_TRUNCATE',
+            use_legacy_sql=False,
+            gbq_client=gbq_client
+        )
+
+        now = pendulum.now()
+        expiration = now.add(minutes=1440)
+
+        setTableExpiration(
+            table_ref = table_base_final,
+            expiration = expiration,
+            gbq_client= gbq_client
+        )
+
+        logging.info('base my usuals adj')
+        createTableAsSelect(
+            query=SQL_QUERIES['base_my_usuals_adj_final'].substitute(
+                gcp_project=gcp_project
             ),
             table_ref=table_base_adj_ref,
             create_disposition='CREATE_IF_NEEDED',
@@ -1267,6 +1277,27 @@ def main():  # noqa: ANN201, D103
 
         setTableExpiration(
             table_ref = table_base_adj_ref,
+            expiration = expiration,
+            gbq_client= gbq_client
+        )
+
+        logging.info('5_prod_mp')
+        createTableAsSelect(
+            query=SQL_QUERIES['prod_mp_final'].substitute(
+                gcp_project=gcp_project
+            ),
+            table_ref=table_prod_mp,
+            create_disposition='CREATE_IF_NEEDED',
+            write_disposition='WRITE_TRUNCATE',
+            use_legacy_sql=False,
+            gbq_client=gbq_client
+        )
+
+        now = pendulum.now()
+        expiration = now.add(minutes=1440)
+
+        setTableExpiration(
+            table_ref = table_prod_mp,
             expiration = expiration,
             gbq_client= gbq_client
         )
