@@ -59,7 +59,7 @@ dag_args = {
         PROJECT_NAME,
         SUBPROJECT_NAME,
         'unimarc',
-        'cenco_chile',
+        'censo_chile',
         'bigquery',
         'ilopeze'
     ],
@@ -89,7 +89,7 @@ with DAG(**dag_args) as dag:
         "data_interval_end.strftime('%Y-%m-%d')) }}"  # noqa: ISC002
 
     ingest_maestra_chile_censo = ExtendedDataprocCreateBatchOperator(
-        task_id='ingest_ecommdata_maestra_chile_censo',
+        task_id='ingest_maestra_chile_censo',
         python_script_path=(
             f'{PROJECT_NAME}/'
             f'{SUBPROJECT_NAME}/'
