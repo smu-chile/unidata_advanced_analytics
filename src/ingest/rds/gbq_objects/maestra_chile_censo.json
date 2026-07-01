@@ -1,0 +1,17 @@
+{
+  "schema": "ECOMMERCE",
+  "table": "MAESTRA_CHILE_CENSO",
+  "columns": [
+      {"name": "cut", "field_type": "INT64", "mode": "REQUIRED"},
+      {"name": "cod_region", "field_type": "INT64", "mode": "REQUIRED"},
+      {"name": "region", "field_type": "STRING", "mode": "NULLABLE"},
+      {"name": "cod_provincia", "field_type": "INT64", "mode": "REQUIRED"},
+      {"name": "provincia", "field_type": "STRING", "mode": "NULLABLE"},
+      {"name": "comuna", "field_type": "STRING", "mode": "NULLABLE"},
+      {"name": "area_c", "field_type": "STRING", "mode": "NULLABLE"},
+      {"name": "cod_localidad", "field_type": "INT64", "mode": "REQUIRED"},
+      {"name": "localidad", "field_type": "STRING", "mode": "NULLABLE"},
+      {"name": "id_localidad", "field_type": "INT64", "mode": "REQUIRED"},
+      {"name": "nombre_localidad_interno", "field_type": "STRING", "mode": "NULLABLE"}
+  ]
+}
