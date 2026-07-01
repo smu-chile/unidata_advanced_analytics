@@ -75,7 +75,8 @@ WITH tabla_fecha_max AS (
 SELECT
   MATERIAL,
   EAN,
-  SUM(VENTAS_TOTALES_PRODUCTO) AS ventas_totales
+  SUM(VENTAS_TOTALES_PRODUCTO) AS ventas_totales,
+  MAX(SUB_CATEGORY_DESCRIPTION) AS SUB_CATEGORY_DESCRIPTION,
 FROM `${proyecto}.TMP.TMP_ECOMMERCE_REGRESSION_PROCESSED_DATA_ELASTICITY`
 CROSS JOIN tabla_fecha_max
 WHERE STORE_BANNER = '${store_banner}'
@@ -193,8 +194,9 @@ def main() -> None:  # noqa: D103
     df_balance_matrix['indice_sensibilidad'] = df_balance_matrix['indice_sensibilidad'].fillna(0)
     df_balance_matrix['kvi'] = df_balance_matrix['kvi'].fillna('BKG')
 
-    df_balance_matrix = df_balance_matrix.merge(df_ventas[['ean','ventas_totales']],
-                                                on = 'ean', how='left')
+    #Parche: agregamos columna subcat description
+    df_balance_matrix = df_balance_matrix.merge(
+          df_ventas[['ean','ventas_totales', 'sub_category_description']], on = 'ean', how='left')
 
     logging.info('Merge de tablas listo')
 
@@ -225,6 +227,7 @@ def main() -> None:  # noqa: D103
 
     df_balance_matrix_sp = df_balance_matrix[['store_banner',
                                             'categoria',
+                                            'sub_category_description',
                                             'descripcion_material',
                                             'material',
                                             'umv',
@@ -240,6 +243,7 @@ def main() -> None:  # noqa: D103
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
         'store_banner':'Formato',
         'categoria':'Categoria',
+        'sub_category_description':'Grupo artículo',
         'descripcion_material': 'Descripción material',
         'material':'Material',
         'umv':'UMV',
