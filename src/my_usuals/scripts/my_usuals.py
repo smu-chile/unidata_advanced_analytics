@@ -1219,6 +1219,32 @@ def main():  # noqa: ANN201, D103
             gbq_client= gbq_client
         )
 
+        logging.info('usuals 5 prod mp')
+        createTableAsSelect(
+            query=SQL_QUERIES['usuals_5_prod_mp'].substitute(
+                gcp_project=gcp_project,
+                inicio_mes = inicio_mes,
+                inicio_mes_n1 = inicio_mes_n1,
+                execution_date = execution_date,
+                store_banner = store_banner,
+                upper_store_banner = upper_store_banner
+            ),
+            table_ref=table_prod_mp,
+            create_disposition='CREATE_IF_NEEDED',
+            write_disposition='WRITE_TRUNCATE',
+            use_legacy_sql=False,
+            gbq_client=gbq_client,
+        )
+
+        now = pendulum.now()
+        expiration = now.add(minutes=1440)
+
+        setTableExpiration(
+            table_ref = table_prod_mp,
+            expiration = expiration,
+            gbq_client= gbq_client
+        )
+
         logging.info('Base my usuals adj')
         createTableAsSelect(
             query=SQL_QUERIES['base_my_usuals_adj'].substitute(
@@ -1258,32 +1284,6 @@ def main():  # noqa: ANN201, D103
             write_disposition='WRITE_APPEND',
             use_legacy_sql=False,
             gbq_client=gbq_client,
-        )
-
-        logging.info('usuals 5 prod mp')
-        createTableAsSelect(
-            query=SQL_QUERIES['usuals_5_prod_mp'].substitute(
-                gcp_project=gcp_project,
-                inicio_mes = inicio_mes,
-                inicio_mes_n1 = inicio_mes_n1,
-                execution_date = execution_date,
-                store_banner = store_banner,
-                upper_store_banner = upper_store_banner
-            ),
-            table_ref=table_prod_mp,
-            create_disposition='CREATE_IF_NEEDED',
-            write_disposition='WRITE_TRUNCATE',
-            use_legacy_sql=False,
-            gbq_client=gbq_client,
-        )
-
-        now = pendulum.now()
-        expiration = now.add(minutes=1440)
-
-        setTableExpiration(
-            table_ref = table_prod_mp,
-            expiration = expiration,
-            gbq_client= gbq_client
         )
 
         logging.info('Done!')
