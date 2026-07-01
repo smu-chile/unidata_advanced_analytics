@@ -1293,14 +1293,6 @@ def main():  # noqa: ANN201, D103
             gbq_client=gbq_client
         )
 
-        now = pendulum.now()
-        expiration = now.add(minutes=1440)
-
-        setTableExpiration(
-            table_ref = table_prod_mp,
-            expiration = expiration,
-            gbq_client= gbq_client
-        )
 
         # Create the table
         logging.info('Creating new partition')
