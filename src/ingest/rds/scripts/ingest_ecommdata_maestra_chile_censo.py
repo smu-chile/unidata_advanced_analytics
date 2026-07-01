@@ -92,14 +92,14 @@ def main() -> None:  # noqa: D103
 
     logging.info('Leyendo datos desde PostgreSQL...')
 
-    df = readPostgresQuery(
+    df_a = readPostgresQuery(
         query=SQL_QUERIES['extract'].substitute(),
         credentials_dict=getSecret(
             secret_name='ecommerce_postgres_credentials',  # noqa: S106
             project=project_id,
         ),
     )
-    logging.info(f'Registros obtenidos: {len(df)}')
+    logging.info(f'Registros obtenidos: {len(df_a)}')
 
     # ---------------------------------------------------------------------
     # Upload to BigQuery
@@ -107,7 +107,7 @@ def main() -> None:  # noqa: D103
     logging.info('Uploading data to BigQuery')
 
     uploadFrame(
-        df,
+        df_a,
         table_ddl_json_path=os.path.join(
             'gbq_objects',
             'maestra_chile_censo.json'
