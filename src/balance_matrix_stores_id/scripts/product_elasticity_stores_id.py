@@ -766,6 +766,7 @@ def main() -> None:  # noqa: D103
             elasticidad_valor = 'Sin datos'
             r2_valor = None
             n_obs_valor = None
+            coeficientes = {}
 
             if verificacionFactibilidadModelo(df_ean):
                 modelo = obtenerModeloOLS(
@@ -780,10 +781,14 @@ def main() -> None:  # noqa: D103
 
                 if var_precio > 90:
                     elasticidad_valor = 'Poca variabilidad'
+                    coeficientes = modelo.params.to_dict()
                 elif beta_precio >= 0:
                     elasticidad_valor = 'Elasticidad positiva'
+                    coeficientes = modelo.params.to_dict()
                 else:
                     elasticidad_valor = round(beta_precio, 2)
+                    coeficientes = modelo.params.to_dict()
+                    coef_names   = list(coeficientes.keys())
             else:
                 elasticidad_valor = 'Modelo no factible'
 
@@ -798,7 +803,7 @@ def main() -> None:  # noqa: D103
                 'r2': r2_valor,
                 'nun_observaciones': n_obs_valor,
                 'elasticidad_original': elasticidad_valor,
-                **modelo.params.to_dict()
+                **coeficientes
             })
 
             procesados += 1
@@ -1065,7 +1070,6 @@ def main() -> None:  # noqa: D103
                                                 'sales_uom':'umv',
                                                 'elasticidad_contagiada':'elasticidad'})
 
-    columnas_modelo = modelo.model.exog_names
 
     df_gcp = df_resultados[['store_banner',  # noqa: RUF005
                             'categoria',
@@ -1074,7 +1078,7 @@ def main() -> None:  # noqa: D103
                             'ean',
                             'umv',
                             'elasticidad',
-                            'segmento_elasticidad'] + columnas_modelo]
+                            'segmento_elasticidad'] + coef_names]
 
     print(df_gcp.info())
 
