@@ -797,7 +797,8 @@ def main() -> None:  # noqa: D103
                 'ventas_ean': ventas_ean,
                 'r2': r2_valor,
                 'nun_observaciones': n_obs_valor,
-                'elasticidad_original': elasticidad_valor
+                'elasticidad_original': elasticidad_valor,
+                **modelo.params.to_dict()
             })
 
             procesados += 1
@@ -1064,16 +1065,18 @@ def main() -> None:  # noqa: D103
                                                 'sales_uom':'umv',
                                                 'elasticidad_contagiada':'elasticidad'})
 
+    columnas_modelo = modelo.model.exog_names
 
-    df_gcp = df_resultados[['store_banner',
+    df_gcp = df_resultados[['store_banner',  # noqa: RUF005
                             'categoria',
                             'material',
                             'descripcion_material',
                             'ean',
                             'umv',
                             'elasticidad',
-                            'segmento_elasticidad']]
+                            'segmento_elasticidad'] + columnas_modelo]
 
+    print(df_gcp.info())
 
     df_gcp['store_id'] = store_id_str
     # Definir el WHERE
