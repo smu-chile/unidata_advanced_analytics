@@ -816,6 +816,7 @@ def main() -> None:  # noqa: D103
 
     df_resultados = pd.DataFrame(resultados)
 
+    logging.info(f'df resultados shape: {df_resultados.shape}')
     logging.info(f'value counts elasticidades: {df_resultados["elasticidad_original"].value_counts()}')  # noqa: E501
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
