@@ -56,6 +56,228 @@
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Información store ID"
+        },
+        {
+            "name": "CONST",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al valor constante del modelo"
+        },
+        {
+            "name": "LOG_PRECIO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente del logaritmo del precio"
+        },
+        {
+            "name": "MARTES",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al día de la semana (Martes)"
+        },
+        {
+            "name": "MIERCOLES",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al día de la semana (Miércoles)"
+        },
+        {
+            "name": "JUEVES",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al día de la semana (Jueves)"
+        },
+        {
+            "name": "VIERNES",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al día de la semana (Viernes)"
+        },
+        {
+            "name": "SABADO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al día de la semana (SABADO)"
+        },
+        {
+            "name": "DOMINGO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al día de la semana (DOMINGO)"
+        },
+        {
+            "name": "2024",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al año 2024"
+        },
+        {
+            "name": "2025",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al año 2025"
+        },
+        {
+            "name": "JUEVES_SANTO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al jueves santo"
+        },
+        {
+            "name": "30_ABRIL",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al 30 de abril"
+        },
+        {
+            "name": "19_JUNIO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al 19 de junio"
+        },
+        {
+            "name": "20_JUNIO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al 20 de junio"
+        },
+        {
+            "name": "15_JULIO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al 15 de julio"
+        },
+        {
+            "name": "16_JULIO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al 16 de julio"
+        },
+        {
+            "name": "14_AGOSTO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al 14 de agosto"
+        },
+        {
+            "name": "15_AGOSTO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al 15 de agosto"
+        },
+        {
+            "name": "14_SEPTIEMBRE",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al 14 de septiembre"
+        },
+        {
+            "name": "15_SEPTIEMBRE",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al 15 de septiembre"
+        },
+        {
+            "name": "16_SEPTIEMBRE",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al 16 de septiembre"
+        },
+        {
+            "name": "17_SEPTIEMBRE",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al 17 de septiembre"
+        },
+        {
+            "name": "PRE_NAVIDAD",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al periodo previo a la navidad"
+        },
+        {
+            "name": "NAVIDAD",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al periodo de navidad"
+        },
+        {
+            "name": "ANO_NUEVO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al año nuevo"
+        },
+        {
+            "name": "VARIACION_PORCENTUAL_SUBCATEGORIA",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado a la variación porcentual de la subcategoría"
+        },
+        {
+            "name": "FEBRERO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al febrero"
+        },
+        {
+            "name": "MARZO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al marzo"
+        },
+        {
+            "name": "ABRIL",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al abril"
+        },
+        {
+            "name": "MAYO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al mayo"
+        },
+        {
+            "name": "JUNIO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al junio"
+        },
+        {
+            "name": "JULIO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al julio"
+        },
+        {
+            "name": "AGOSTO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al agosto"
+        },
+        {
+            "name": "SEPTIEMBRE",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al septiembre"
+        },
+        {
+            "name": "OCTUBRE",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al octubre"
+        },
+        {
+            "name": "NOVIEMBRE",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al noviembre"
+        },
+        {
+            "name": "DICIEMBRE",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente asociado al diciembre"
         }
     ],
 
