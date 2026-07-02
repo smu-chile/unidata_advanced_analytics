@@ -816,6 +816,8 @@ def main() -> None:  # noqa: D103
 
     df_resultados = pd.DataFrame(resultados)
 
+    logging.info(f'value counts elasticidades: {df_resultados["elasticidad_original"].value_counts()}')  # noqa: E501
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
@@ -881,6 +883,8 @@ def main() -> None:  # noqa: D103
     logging.info('TANDA 0 - VENTAS SIN ELASTICIDAD ORIGINAL:')
     logging.info(f'Ventas sin elasticidad: ${ventas_sin_elasticidad:,.0f}')
     logging.info(f'Porcentaje del total: {porcentaje_sin_elasticidad:.2f}%\n')
+
+    logging.info(f'n EAN sin elasticidad: {df_resultados["elasticidad_original"].isna().sum()}')
 
     # ---------------------------------------------------------------------
     # TANDA 1: CONTAGIO MEJOR SUSTITUTO (usando similitud peso_total_ean)
