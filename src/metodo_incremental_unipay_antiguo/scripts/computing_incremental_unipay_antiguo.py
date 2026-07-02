@@ -1455,7 +1455,7 @@ CONFIG_INCREMENTAL = {
 
     'Alvi': {
         'target': 'CLIENTE TH USA',
-        'control': 'CLIENTE TH NO USA'
+        'control': 'CLIENTE FORMATO'
     }
 
 }
@@ -1657,15 +1657,21 @@ def calcular_factor_incremental(
         .copy()
     )
 
-    tabla[control] = (
-        tabla[control]
-        .fillna(0)
-    )
+    tabla[target] = tabla[target].fillna(0)
+    tabla[control] = tabla[control].fillna(0)
 
     tabla['DIFF'] = (
         tabla[target]
         -
         tabla[control]
+    )
+
+    tabla['DIFF'] = np.where(
+        (tabla['MEDIO_DE_PAGO'] != 'Unipay')
+        &
+        (tabla['DIFF'] > 0),
+        0,
+        tabla['DIFF']
     )
 
     a = tabla['DIFF'].sum()
