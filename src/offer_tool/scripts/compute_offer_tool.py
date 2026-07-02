@@ -22,6 +22,7 @@ from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
     deleteFromTable,
+    setTableExpiration,
     createTableAsSelect,
 )
 
@@ -1239,6 +1240,15 @@ def main() -> None:
         write_disposition = 'WRITE_TRUNCATE'
     )
 
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'cl-bigdata-analytics-preprod.TMP.TMP_OFFER_TOOL_SOURCE_{upper_store_banner}',
+        expiration = expiration,
+        gbq_client= gbq_client
+    )
+
     logging.info('Table rebuild completed')
 
     # Create Offer Tool Ranking Table
@@ -1255,6 +1265,15 @@ def main() -> None:
         use_legacy_sql = False,
         create_disposition='CREATE_IF_NEEDED',
         write_disposition = 'WRITE_TRUNCATE'
+    )
+
+    now = pendulum.now()
+    expiration = now.add(minutes=1440)
+
+    setTableExpiration(
+        table_ref = f'cl-bigdata-analytics-preprod.TMP.TMP_OFFER_TOOL_RANKING_{upper_store_banner}',  # noqa: E501
+        expiration = expiration,
+        gbq_client= gbq_client
     )
 
     logging.info('Table rebuild completed')
