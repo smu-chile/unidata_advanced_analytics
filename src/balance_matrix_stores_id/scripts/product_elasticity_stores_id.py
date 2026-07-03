@@ -962,8 +962,10 @@ def main() -> None:  # noqa: D103
     df_resultados.loc[~mascarasin, 'material_contagiante'] = (
         df_resultados.loc[~mascarasin, 'material'])
 
+    print('df resultados columnas: ', df_resultados.columns)
     print('df_resultados shape: ', df_resultados.shape)
-    print('df_resultados \n', df_resultados.head(10))
+    print('df_resultados \n',
+          df_resultados[['material','elasticidad_contagiada', 'material_contagiante']].head(10))
 
     logging.info(
         f'MATERIAL_CONTAGIANTE: {df_resultados["material_contagiante"].notna().sum()} con valor, '
@@ -988,14 +990,50 @@ def main() -> None:  # noqa: D103
         subcat = row['subcategoria']
         candidatos = df_validas[df_validas['subcategoria'] == subcat]
         if candidatos.empty:
-            return np.nan
-        fila_mejor = candidatos.sort_values('ventas_ean', ascending=False).iloc[0]
-        return fila_mejor['elasticidad_contagiada']
+            return pd.Series({
+                'elasticidad_contagiada': np.nan,
+                'material_contagiante': np.nan,
+            })
 
-    df_resultados.loc[faltantes_subcat,
-                    'elasticidad_contagiada'] = df_resultados.loc[
-                        faltantes_subcat].apply(contagiar_por_subcategoria,
-                                                axis=1)
+        fila_mejor = candidatos.sort_values('ventas_ean', ascending=False).iloc[0]
+
+        return pd.Series({
+            'elasticidad_contagiada': fila_mejor['elasticidad_contagiada'],
+            'material_contagiante': fila_mejor['material'],
+        })
+
+
+
+    resultado_subcat = (
+        df_resultados.loc[faltantes_subcat]
+        .apply(contagiar_por_subcategoria, axis=1)
+    )
+
+    df_resultados.loc[
+        faltantes_subcat,
+        ['elasticidad_contagiada', 'material_contagiante']
+    ] = resultado_subcat
+
+    ###### Tipo de contagio #######################################
+    df_resultados['tipo_contagio'] = np.na
+
+    df_resultados.loc[
+        mascarasin & df_resultados['material_contagiante'].notna(),
+        'tipo_contagio'] = 'sustituto'
+
+    df_resultados.loc[
+        faltantes_subcat &
+        resultado_subcat['material_contagiante'].notna().values,
+        'tipo_contagio'
+    ] = 'subcategoria'
+
+    df_resultados['tipo_contagio'].value_counts(dropna=False)
+
+    ##############################################################
+    logging.info(
+    f'MATERIAL_CONTAGIANTE: '
+    f'{df_resultados["material_contagiante"].notna().sum()} con valor, '
+    f'{df_resultados["material_contagiante"].isna().sum()} nulos')
 
     despues_tanda2 = int(df_resultados['elasticidad_contagiada'].notna().sum())
     contagiados_tanda2 = despues_tanda2 - despues_tanda1
