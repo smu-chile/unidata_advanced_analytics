@@ -1204,9 +1204,11 @@ def main() -> None:  # noqa: D103
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     logging.info('INICIO DE COPIADO DE COEFICIENTES')
 
-    # COPIADO DE COEFICIENTES: 
+    # COPIADO DE COEFICIENTES:
     df_coeficientes = df_resultados[
         ['material', 'material_contagiante']
     ].copy()
@@ -1230,6 +1232,7 @@ def main() -> None:  # noqa: D103
     print('df_coeficientes shape: ', df_coeficientes.shape)
 
     logging.info('FIN DE COPIADO DE COEFICIENTES')
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     # REGION: Limpiar y subir a GCP
     #----------------------------------------------------------------------
