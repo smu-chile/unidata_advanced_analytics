@@ -921,22 +921,54 @@ def main() -> None:  # noqa: D103
                 filas_sustituto['diferencia_peso'] = (
                     filas_sustituto['peso_total_ean'] - peso_origen).abs()
                 mejor_fila = filas_sustituto.sort_values('diferencia_peso').iloc[0]
-                return mejor_fila['elasticidad_num']
-        return np.nan
+
+                return pd.Series({
+                    'elasticidad_contagiada': mejor_fila['elasticidad_num'],
+                    'material_contagiante': sustituto,
+                })
+        return pd.Series({
+            'elasticidad_contagiada': np.nan,
+            'material_contagiante': np.nan,
+        })
+
+
 
     # Paso 6: Aplicar función sustituto a filas con elasticidad no numérica
     mascarasin = df_resultados['elasticidad_num'].isna()
     antes_tanda1 = int(mascarasin.sum())
 
-    df_resultados.loc[mascarasin, 'elasticidad_contagiada'] = df_resultados.loc[mascarasin].apply(
-        lambda row: obtener_elasticidad_por_similitud(row['material'], row['peso_total_ean']),
-        axis=1
+    resultado_contagio = (
+        df_resultados.loc[mascarasin]
+        .apply(
+            lambda row: obtener_elasticidad_por_similitud(
+                row['material'],
+                row['peso_total_ean']
+            ),
+            axis=1,
+        )
     )
 
+    df_resultados.loc[
+        mascarasin,
+        ['elasticidad_contagiada', 'material_contagiante']
+    ] = resultado_contagio
+
     # Paso 7: Las que ya tenían elasticidad original válida se copian
-    df_resultados.loc[~mascarasin,
-                    'elasticidad_contagiada'] = df_resultados.loc[
-                        ~mascarasin, 'elasticidad_num']
+
+    df_resultados.loc[~mascarasin, 'elasticidad_contagiada'] = (
+        df_resultados.loc[~mascarasin, 'elasticidad_num']
+    )
+
+    df_resultados.loc[~mascarasin, 'material_contagiante'] = (
+        df_resultados.loc[~mascarasin, 'material'])
+
+    print('df_resultados shape: ', df_resultados.shape)
+    print('df_resultados \n', df_resultados.head(10))
+
+    logging.info(
+        f'MATERIAL_CONTAGIANTE: {df_resultados["material_contagiante"].notna().sum()} con valor, '
+        f'{df_resultados["material_contagiante"].isna().sum()} nulos'
+    )
 
     despues_tanda1 = int(df_resultados['elasticidad_contagiada'].notna().sum())
     contagiados_tanda1 = despues_tanda1 - (len(df_resultados) - antes_tanda1)
