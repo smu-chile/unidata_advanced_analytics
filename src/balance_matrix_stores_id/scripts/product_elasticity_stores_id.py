@@ -1023,7 +1023,7 @@ def main() -> None:  # noqa: D103
 
     df_resultados.loc[
         faltantes_subcat &
-        resultado_subcat['material_contagiante'].notna().values,
+        resultado_subcat['material_contagiante'].notna().values,  # noqa: PD011
         'tipo_contagio'
     ] = 'subcategoria'
 
