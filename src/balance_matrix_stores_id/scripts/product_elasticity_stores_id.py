@@ -1018,17 +1018,25 @@ def main() -> None:  # noqa: D103
     df_resultados['tipo_contagio'] = None
 
     print('HOLA MUNDO')
+
     df_resultados.loc[
         mascarasin & df_resultados['material_contagiante'].notna(),
         'tipo_contagio'] = 'sustituto'
 
+    print('HOLA UNIVERSO')
+
+    indices_subcategoria = resultado_subcat.index[
+        resultado_subcat['material_contagiante'].notna()
+    ]
+
     df_resultados.loc[
-        faltantes_subcat &
-        resultado_subcat['material_contagiante'].notna().values,  # noqa: PD011
+        indices_subcategoria,
         'tipo_contagio'
     ] = 'subcategoria'
 
-    df_resultados['tipo_contagio'].value_counts(dropna=False)
+    logging.info(
+        df_resultados['tipo_contagio'].value_counts(dropna=False)
+    )
 
     ##############################################################
     logging.info(
