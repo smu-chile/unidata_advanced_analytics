@@ -1017,6 +1017,7 @@ def main() -> None:  # noqa: D103
     ###### Tipo de contagio #######################################
     df_resultados['tipo_contagio'] = None
 
+    print('HOLA MUNDO')
     df_resultados.loc[
         mascarasin & df_resultados['material_contagiante'].notna(),
         'tipo_contagio'] = 'sustituto'
