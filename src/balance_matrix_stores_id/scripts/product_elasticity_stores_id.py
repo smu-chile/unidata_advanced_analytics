@@ -751,6 +751,7 @@ def main() -> None:  # noqa: D103
     resultados = []
     procesados = 0
     total_eanes = df_final['ean'].nunique()
+    dict_material_coef = {}
 
     # siguiente porcentaje meta (10, 20, 30, ..., 100)
     meta_avance = 10
@@ -787,7 +788,10 @@ def main() -> None:  # noqa: D103
                     coeficientes = modelo.params.to_dict()
                 else:
                     elasticidad_valor = round(beta_precio, 2)
+
+                    #Guardado coeficientes de materiales con modelo.
                     coeficientes = modelo.params.to_dict()
+                    dict_material_coef.update({material: coeficientes})
                     coef_names   = list(coeficientes.keys())
             else:
                 elasticidad_valor = 'Modelo no factible'
@@ -1199,6 +1203,33 @@ def main() -> None:  # noqa: D103
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
+
+    logging.info('INICIO DE COPIADO DE COEFICIENTES')
+
+    # COPIADO DE COEFICIENTES: 
+    df_coeficientes = df_resultados[
+        ['material', 'material_contagiante']
+    ].copy()
+
+    df_coeficientes['material_coeficientes'] = np.where(
+        df_coeficientes['material_contagiante'] == '-',
+        df_coeficientes['material'],
+        df_coeficientes['material_contagiante'],
+    )
+
+    coeficientes_expandido = pd.json_normalize(
+        df_coeficientes['material_coeficientes'].map(dict_material_coef)
+    )
+
+    df_coeficientes = pd.concat(
+        [df_coeficientes, coeficientes_expandido],
+        axis=1,
+    )
+
+    print('df_coeficientes info: ', df_coeficientes.info())
+    print('df_coeficientes shape: ', df_coeficientes.shape)
+
+    logging.info('FIN DE COPIADO DE COEFICIENTES')
 
     # REGION: Limpiar y subir a GCP
     #----------------------------------------------------------------------
