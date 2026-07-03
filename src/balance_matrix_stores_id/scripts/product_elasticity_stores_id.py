@@ -1055,27 +1055,73 @@ def main() -> None:  # noqa: D103
     # ---------------------------------------------------------------------
 
     faltantes_cat = df_resultados['elasticidad_contagiada'].isna()
-    df_validas = df_resultados[~df_resultados['elasticidad_contagiada'].isna()].copy()
+
+    df_validas = df_resultados[
+        ~df_resultados['elasticidad_contagiada'].isna()
+    ].copy()
+
 
     def contagiar_por_categoria(row):
         cat = row['categoria']
         candidatos = df_validas[df_validas['categoria'] == cat]
-        if candidatos.empty:
-            return np.nan
-        fila_mejor = candidatos.sort_values('ventas_ean', ascending=False).iloc[0]
-        return fila_mejor['elasticidad_contagiada']
 
-    df_resultados.loc[faltantes_cat,
-                    'elasticidad_contagiada'] = df_resultados.loc[faltantes_cat].apply(
-        contagiar_por_categoria,
-        axis=1
+        if candidatos.empty:
+            return pd.Series({
+                'elasticidad_contagiada': np.nan,
+                'material_contagiante': np.nan,
+            })
+
+        fila_mejor = candidatos.sort_values(
+            'ventas_ean',
+            ascending=False,
+        ).iloc[0]
+
+        return pd.Series({
+            'elasticidad_contagiada': fila_mejor['elasticidad_contagiada'],
+            'material_contagiante': fila_mejor['material'],
+        })
+
+
+    resultado_categoria = (
+        df_resultados.loc[faltantes_cat]
+        .apply(contagiar_por_categoria, axis=1)
     )
 
-    despues_tanda3 = df_resultados['elasticidad_contagiada'].notna().sum()
+    df_resultados.loc[
+        faltantes_cat,
+        ['elasticidad_contagiada', 'material_contagiante']
+    ] = resultado_categoria
+
+    indices_categoria = resultado_categoria.index[
+        resultado_categoria['material_contagiante'].notna()
+    ]
+
+    df_resultados.loc[
+        indices_categoria,
+        'tipo_contagio'
+    ] = 'categoria'
+
+    despues_tanda3 = int(
+        df_resultados['elasticidad_contagiada'].notna().sum()
+    )
+
     contagiados_tanda3 = despues_tanda3 - despues_tanda2
     faltantes_tanda3 = len(df_resultados) - despues_tanda3
-    logging.info(f'TANDA 3 - CATEGORÍA: {contagiados_tanda3} contagiados,'
-        f' {faltantes_tanda3} aún sin elasticidad')
+
+    logging.info(
+        f'TANDA 3 - CATEGORÍA: {contagiados_tanda3} contagiados, '
+        f'{faltantes_tanda3} aún sin elasticidad'
+    )
+
+    logging.info(
+        f'MATERIAL_CONTAGIANTE: '
+        f'{df_resultados["material_contagiante"].notna().sum()} con valor, '
+        f'{df_resultados["material_contagiante"].isna().sum()} nulos'
+    )
+
+    logging.info(
+        df_resultados['tipo_contagio'].value_counts(dropna=False)
+    )
 
     # ---------------------------------------------------------------------
     # TANDA 4: ASIGNAR -1 A LOS QUE NO PUDIERON SER CONTAGIADOS
