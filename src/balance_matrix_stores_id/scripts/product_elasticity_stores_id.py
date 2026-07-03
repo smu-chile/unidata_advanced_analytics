@@ -1214,9 +1214,9 @@ def main() -> None:  # noqa: D103
     ].copy()
 
     df_coeficientes['material_coeficientes'] = np.where(
-        df_coeficientes['material_contagiante'] == '-',
-        df_coeficientes['material'],
-        df_coeficientes['material_contagiante'],
+        df_resultados['tipo_contagio'] == '-',
+        df_resultados['material'],
+        df_resultados['material_contagiante'],
     )
 
     coeficientes_expandido = pd.json_normalize(
