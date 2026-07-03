@@ -1015,7 +1015,7 @@ def main() -> None:  # noqa: D103
     ] = resultado_subcat
 
     ###### Tipo de contagio #######################################
-    df_resultados['tipo_contagio'] = np.nan
+    df_resultados['tipo_contagio'] = None
 
     df_resultados.loc[
         mascarasin & df_resultados['material_contagiante'].notna(),
