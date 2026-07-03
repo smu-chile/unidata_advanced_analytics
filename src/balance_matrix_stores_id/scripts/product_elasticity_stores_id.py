@@ -1130,8 +1130,16 @@ def main() -> None:  # noqa: D103
     df_resultados['elasticidad_contagiada'] = df_resultados[
         'elasticidad_contagiada'].fillna(-1)
 
-    logging.info(f'TANDA 4 - DEFAULT: {faltantes_tanda3} filas rellenadas con -1')
 
+    df_resultados['tipo_contagio'] = (
+        df_resultados['tipo_contagio']
+        .fillna('-')
+    )
+
+    logging.info(f'TANDA 4 - DEFAULT: {faltantes_tanda3} filas rellenadas con -1')
+    logging.info(
+        df_resultados['tipo_contagio'].value_counts(dropna=False)
+    )
 
     # ---------------------------------------------------------------------
     # AJUSTE FINAL: LIMITAR A UN MÍNIMO DE -8
