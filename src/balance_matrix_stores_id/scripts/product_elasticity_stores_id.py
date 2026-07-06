@@ -819,9 +819,7 @@ def main() -> None:  # noqa: D103
                 meta_avance += 10
 
     df_resultados = pd.DataFrame(resultados)
-
     logging.info(f'[PATCH] df resultados shape: {df_resultados.shape}')
-    logging.info(f'[PATCH] value counts elasticidades: {df_resultados["elasticidad_original"].value_counts()}')  # noqa: E501
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -901,13 +899,13 @@ def main() -> None:  # noqa: D103
     ]
 
     cantidad_strings = (
-        df_resultados['elasticidad_num']
+        df_resultados['elasticidad_original']
         .isin(motivos_no_elasticidad)
         .sum()
     )
 
     cantidad_elasticidades = (
-        ~df_resultados['elasticidad_num']
+        ~df_resultados['elasticidad_original']
         .isin(motivos_no_elasticidad)
     ).sum()
 
@@ -943,6 +941,8 @@ def main() -> None:  # noqa: D103
 
     # Paso 5: Función para obtener elasticidad del mejor sustituto
     # más parecido en peso
+
+    # Nota: se agrega material contagiante al retorno de la función
     def obtener_elasticidad_por_similitud(material_origen, peso_origen):
         candidatos = df_sust_sumado[  # noqa: PD011
             df_sust_sumado['material'] == material_origen]['substitute'].values
@@ -962,7 +962,6 @@ def main() -> None:  # noqa: D103
             'elasticidad_contagiada': np.nan,
             'material_contagiante': np.nan,
         })
-
 
 
     # Paso 6: Aplicar función sustituto a filas con elasticidad no numérica
