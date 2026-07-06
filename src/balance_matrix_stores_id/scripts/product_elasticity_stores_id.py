@@ -1300,9 +1300,13 @@ def main() -> None:  # noqa: D103
                             'elasticidad',
                             'segmento_elasticidad'] + coef_names]
 
-    print(df_gcp.info())
+
 
     df_gcp['store_id'] = store_id_str
+
+    print('[PATCH] Dimensiones tabla que se está subiendo a GCP: ', df_gcp.shape)
+    print(df_gcp.info())
+
     # Definir el WHERE
     where_clause = f"store_banner = '{store_banner}' and store_id = '{store_id_str}'"
 
