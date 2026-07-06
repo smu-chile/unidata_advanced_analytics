@@ -738,12 +738,6 @@ def main() -> None:  # noqa: D103
 
     # Datos entrenamiento
 
-    ###PARCHE ERROR .min() arroja nantye y .strftime se cae:
-    print(df_final['p_date'].min())
-    print(df_final['p_date'].isna().sum())
-    print(df_final['p_date'].notna().sum())
-    print(len(df_final))
-
     fecha_inicial_entrenamiento = df_final['p_date'].min().strftime('%Y-%m-%d')
     fecha_limite = df_final['p_date'].max().strftime('%Y-%m-%d')
     considerar_feriados = True
@@ -752,6 +746,9 @@ def main() -> None:  # noqa: D103
     procesados = 0
     total_eanes = df_final['ean'].nunique()
     dict_material_coef = {}
+
+    #revision:
+    materiales_elasticidad = []
 
     # siguiente porcentaje meta (10, 20, 30, ..., 100)
     meta_avance = 10
@@ -768,6 +765,7 @@ def main() -> None:  # noqa: D103
             r2_valor = None
             n_obs_valor = None
             coeficientes = {}
+
 
             if verificacionFactibilidadModelo(df_ean):
                 modelo = obtenerModeloOLS(
@@ -793,6 +791,8 @@ def main() -> None:  # noqa: D103
                     coeficientes = modelo.params.to_dict()
                     dict_material_coef.update({material: coeficientes})
                     coef_names   = list(coeficientes.keys())
+
+                    materiales_elasticidad.append(material)
             else:
                 elasticidad_valor = 'Modelo no factible'
 
@@ -821,6 +821,8 @@ def main() -> None:  # noqa: D103
     df_resultados = pd.DataFrame(resultados)
     logging.info(f'[PATCH] df resultados shape: {df_resultados.shape}')
 
+    logging.info(f'[PATCH] Modelos válidos: {len(materiales_elasticidad)}')
+    logging.info(f'[PATCH] Materiales únicos: {len(set(materiales_elasticidad))}')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
