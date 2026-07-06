@@ -1064,10 +1064,25 @@ def main() -> None:  # noqa: D103
 
     print('------------------- Conteo Tanda 1 --------------------------------------')
 
-
     # Nuevos materiales contagiantes obtenidos en la tanda 1
+
+    #Se construye una máscara booleana para identificar los registros que
+    #fueron contagiados en la tanda 1:
+
+    # mascarasin = df_resultados['elasticidad_num'].isna()  # noqa: ERA001
+    # True -> no tiene elasticidad original
+    # False -> sí tiene elasticidad original
+
+    # df_resultados['Material_Contagiante'].notna()  # noqa: ERA001
+    # True -> se encontró un material contagiante
+    # False -> No se encontró material contagiante
+
+    # unidos por & significa: "No tenía elasticidad og Y Sí encontró
+    # material contagiante"
+
     mascara_sustituto = (
         mascarasin &
+        (df_resultados['Material_Contagiante'] != 'No aplica') &
         df_resultados['Material_Contagiante'].notna()
     )
 
