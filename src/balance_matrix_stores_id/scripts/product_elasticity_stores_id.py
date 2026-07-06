@@ -1237,7 +1237,17 @@ def main() -> None:  # noqa: D103
 
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # PARCHE: COPIADO DE COEFICIENTES #
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     logging.info('INICIO DE COPIADO DE COEFICIENTES')
+
+    # Copia coeficientes desde el material original ('No aplica') o desde
+    # el material contagiante ('sustituto', 'subcategoria', 'categoria').
+    # Los casos '-' corresponden a elasticidades artificiales y
+    # no reciben coeficientes.
+
+    print('[PATCH] cantidad de modelos válidos: ', len(dict_material_coef))
 
     df_coeficientes = df_resultados[
         ['material', 'material_contagiante', 'tipo_contagio']
