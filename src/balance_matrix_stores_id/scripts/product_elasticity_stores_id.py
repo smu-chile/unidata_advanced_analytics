@@ -1330,6 +1330,13 @@ def main() -> None:  # noqa: D103
         f'Cantidad de modelos con coeficiente log_precio: '
         f'{cantidad_log_precio}'
     )
+
+    logging.info(
+        df_coeficientes.loc[
+            df_coeficientes['Tiene_modelo'] == 'No',
+            'tipo_contagio'
+        ].value_counts(dropna=False)
+    )
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     # REGION: Limpiar y subir a GCP
