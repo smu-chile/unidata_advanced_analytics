@@ -821,7 +821,7 @@ def main() -> None:  # noqa: D103
     df_resultados = pd.DataFrame(resultados)
     logging.info(f'[PATCH] df resultados shape: {df_resultados.shape}')
 
-    logging.info(f'[PATCH] Modelos válidos: {len(materiales_elasticidad)}')
+    logging.info(f'[PATCH] Materiales válidos: {len(materiales_elasticidad)}')
     logging.info(f'[PATCH] Materiales únicos: {len(set(materiales_elasticidad))}')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -901,23 +901,32 @@ def main() -> None:  # noqa: D103
         'Poca variabilidad',
     ]
 
-    cantidad_strings = (
+    mascara_strings = (
         df_resultados['elasticidad_original']
         .isin(motivos_no_elasticidad)
-        .sum()
     )
 
-    cantidad_elasticidades = (
-        ~df_resultados['elasticidad_original']
-        .isin(motivos_no_elasticidad)
-    ).sum()
+    cantidad_strings = mascara_strings.sum()
+    cantidad_elasticidades = (~mascara_strings).sum()
+
+    materiales_unicos_strings = df_resultados.loc[
+        mascara_strings,
+        'material'
+    ].nunique()
+
+    materiales_unicos_elasticidades = df_resultados.loc[
+        ~mascara_strings,
+        'material'
+    ].nunique()
 
     logging.info(
-        f'[PATCH] Registros con motivo (string): {cantidad_strings}'
+        f'[PATCH] Registros sin elasticidades: {cantidad_strings} | '
+        f'Materiales únicos sin elasticidades: {materiales_unicos_strings}'
     )
 
     logging.info(
-        f'[PATCH] Registros con elasticidad numérica: {cantidad_elasticidades}'
+        f'[PATCH] Registros con elasticidad numérica: {cantidad_elasticidades} | '
+        f'Materiales únicos con elasticidades: {materiales_unicos_elasticidades}'
     )
 
     # ---------------------------------------------------------------------
