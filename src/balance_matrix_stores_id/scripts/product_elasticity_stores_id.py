@@ -931,6 +931,7 @@ def main() -> None:  # noqa: D103
 
     #PARCHE: Conteo de materiales con modelo en cada tanda.
 
+    print('------------------- Conteo Tanda 0 --------------------------------------')
     mascara_con_elasticidad = df_resultados['elasticidad_num'].notna()
 
     df_resultados['Tipo_Contagio'] = None
@@ -953,7 +954,6 @@ def main() -> None:  # noqa: D103
     )
 
 
-
     cantidad_elasticidades = mascara_con_elasticidad.sum()
     cantidad_con_modelo = df_resultados.loc[
         mascara_con_elasticidad,
@@ -967,6 +967,7 @@ def main() -> None:  # noqa: D103
         f'TANDA 0 - Materiales con elasticidad numérica '
         f'y modelo en diccionario: {cantidad_con_modelo}'
     )
+    print('------------------- ######## --------------------------------------')
 
 
     # ---------------------------------------------------------------------
@@ -1057,6 +1058,72 @@ def main() -> None:  # noqa: D103
     faltantes_tanda1 = len(df_resultados) - despues_tanda1
     logging.info(f'TANDA 1 - SUSTITUTO: {contagiados_tanda1} contagiados,'
         f' {faltantes_tanda1} aún sin elasticidad')
+
+
+    print('------------------- Conteo Tanda 1 --------------------------------------')
+
+    df_resultados.loc[
+        mascarasin,
+        ['elasticidad_contagiada', 'Material_Contagiante']
+    ] = resultado_contagio
+
+    # Nuevos materiales contagiantes obtenidos en la tanda 1
+    mascara_sustituto = (
+        mascarasin &
+        df_resultados['Material_Contagiante'].notna()
+    )
+
+    # Registrar tipo de contagio
+    df_resultados.loc[
+        mascara_sustituto,
+        'Tipo_Contagio'
+    ] = 'SUSTITUTO'
+
+    cantidad_contagiados_t1 = int(mascara_sustituto.sum())
+
+    cantidad_contagiados_con_modelo_t1 = int(
+        df_resultados.loc[
+            mascara_sustituto,
+            'Material_Contagiante'
+        ].isin(dict_material_coef).sum()
+    )
+
+    logging.info(
+        f'TANDA 1 - Nuevos materiales contagiados por sustituto: '
+        f'{cantidad_contagiados_t1}'
+    )
+
+    logging.info(
+        f'TANDA 1 - Materiales contagiantes con modelo en diccionario: '
+        f'{cantidad_contagiados_con_modelo_t1}'
+    )
+    logging.info(
+        df_resultados['Tipo_Contagio'].value_counts(dropna=False)
+    )
+
+    logging.info(
+        f'Materiales contagiantes distintos en TANDA 1: '
+        f'{df_resultados.loc[mascara_sustituto, "Material_Contagiante"].nunique()}'
+    )
+    materiales_sustituto_sin_modelo = (
+        df_resultados.loc[
+            mascara_sustituto,
+            'Material_Contagiante'
+        ]
+        .drop_duplicates()
+    )
+
+    cantidad_sin_modelo = (
+        ~materiales_sustituto_sin_modelo.isin(dict_material_coef)
+    ).sum()
+
+    logging.info(
+        f'TANDA 1 - Materiales contagiantes sin modelo: '
+        f'{cantidad_sin_modelo}'
+    )
+
+    print('------------------- ####--------------------------------------')
+
 
     # ---------------------------------------------------------------------
     # TANDA 2: CONTAGIO X SUBCATEGORÍA (ventas_ean más alta en subcat)
