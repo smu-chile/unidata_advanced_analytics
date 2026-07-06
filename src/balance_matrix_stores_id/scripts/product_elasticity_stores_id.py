@@ -1052,7 +1052,7 @@ def main() -> None:  # noqa: D103
 
     logging.info(
         f'MATERIAL_CONTAGIANTE: {df_resultados["Material_Contagiante"].notna().sum()} con valor, '
-        f'{df_resultados["material_Contagiante"].isna().sum()} nulos'
+        f'{df_resultados["Material_Contagiante"].isna().sum()} nulos'
     )
 
     despues_tanda1 = int(df_resultados['elasticidad_contagiada'].notna().sum())
