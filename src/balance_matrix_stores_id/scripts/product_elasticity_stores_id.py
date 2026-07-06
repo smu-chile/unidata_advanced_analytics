@@ -934,6 +934,8 @@ def main() -> None:  # noqa: D103
     print('------------------- Conteo Tanda 0 --------------------------------------')
     mascara_con_elasticidad = df_resultados['elasticidad_num'].notna()
 
+
+    #Creación variables Tipo_Contagio y Material Contagiante
     df_resultados['Tipo_Contagio'] = None
     df_resultados['Material_Contagiante'] = None
 
@@ -1018,6 +1020,7 @@ def main() -> None:  # noqa: D103
 
 
     # Paso 6: Aplicar función sustituto a filas con elasticidad no numérica
+    #ACÁ SE CREA MASCARASIN
     mascarasin = df_resultados['elasticidad_num'].isna()
     antes_tanda1 = int(mascarasin.sum())
 
@@ -1034,7 +1037,7 @@ def main() -> None:  # noqa: D103
 
     df_resultados.loc[
         mascarasin,
-        ['elasticidad_contagiada', 'material_contagiante']
+        ['elasticidad_contagiada', 'Material_Contagiante']
     ] = resultado_contagio
 
     # Paso 7: Las que ya tenían elasticidad original válida se copian
@@ -1043,13 +1046,13 @@ def main() -> None:  # noqa: D103
         df_resultados.loc[~mascarasin, 'elasticidad_num']
     )
 
-    df_resultados.loc[~mascarasin, 'material_contagiante'] = (
+    df_resultados.loc[~mascarasin, 'Material_Contagiante'] = (
         df_resultados.loc[~mascarasin, 'material'])
 
     print('[PATCH] df resultados columnas: ', df_resultados.columns)
     print('[PATCH] df_resultados shape: ', df_resultados.shape)
     logging.info(
-        f'MATERIAL_CONTAGIANTE: {df_resultados["material_contagiante"].notna().sum()} con valor, '
+        f'MATERIAL_CONTAGIANTE: {df_resultados["Material_Contagiante"].notna().sum()} con valor, '
         f'{df_resultados["material_contagiante"].isna().sum()} nulos'
     )
 
@@ -1062,10 +1065,6 @@ def main() -> None:  # noqa: D103
 
     print('------------------- Conteo Tanda 1 --------------------------------------')
 
-    df_resultados.loc[
-        mascarasin,
-        ['elasticidad_contagiada', 'Material_Contagiante']
-    ] = resultado_contagio
 
     # Nuevos materiales contagiantes obtenidos en la tanda 1
     mascara_sustituto = (
