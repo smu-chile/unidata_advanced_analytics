@@ -1294,8 +1294,8 @@ def main() -> None:  # noqa: D103
     print('[PATCH] 4. Materiales contagiantes únicos: ', len(contagiantes_unicos))  # noqa: E501
 
     materiales_faltantes = list(
-        set(contagiantes_unicos) - set(len(set(materiales_elasticidad)))
-    )
+        set(contagiantes_unicos) - set(materiales_elasticidad))
+
     logging.info(f'[PATCH] Materiales contagiantes faltantes: {len(materiales_faltantes)}')
     conteo_materiales = (
         df_resultados[
