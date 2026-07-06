@@ -1239,15 +1239,22 @@ def main() -> None:  # noqa: D103
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     logging.info('INICIO DE COPIADO DE COEFICIENTES')
 
-    # COPIADO DE COEFICIENTES:
     df_coeficientes = df_resultados[
-        ['material', 'material_contagiante']
+        ['material', 'material_contagiante', 'tipo_contagio']
     ].copy()
 
-    df_coeficientes['material_coeficientes'] = np.where(
-        df_resultados['tipo_contagio'] == '-',
-        df_resultados['material'],
-        df_resultados['material_contagiante'],
+    df_coeficientes['material_coeficientes'] = np.select(
+        [
+            df_coeficientes['tipo_contagio'] == 'No aplica',
+            df_coeficientes['tipo_contagio'].isin(
+                ['sustituto', 'subcategoria', 'categoria']
+            ),
+        ],
+        [
+            df_coeficientes['material'],
+            df_coeficientes['material_contagiante'],
+        ],
+        default=np.nan,
     )
 
     coeficientes_expandido = pd.json_normalize(
