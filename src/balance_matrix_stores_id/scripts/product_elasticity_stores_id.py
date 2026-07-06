@@ -1157,7 +1157,7 @@ def main() -> None:  # noqa: D103
         if candidatos.empty:
             return pd.Series({
                 'elasticidad_contagiada': np.nan,
-                'material_contagiante': np.nan,
+                'Material_Contagiante': np.nan,
             })
 
         #Se escoge el candidato más vendedor.
@@ -1166,9 +1166,8 @@ def main() -> None:  # noqa: D103
         #Se produce el contagio.
         return pd.Series({
             'elasticidad_contagiada': fila_mejor['elasticidad_contagiada'],
-            'material_contagiante': fila_mejor['material'],
+            'Material_Contagiante': fila_mejor['material'],
         })
-
 
 
     resultado_subcat = (
@@ -1178,39 +1177,74 @@ def main() -> None:  # noqa: D103
 
     df_resultados.loc[
         faltantes_subcat,
-        ['elasticidad_contagiada', 'material_contagiante']
+        ['elasticidad_contagiada', 'Material_Contagiante']
     ] = resultado_subcat
 
-    print(df_resultados.loc[
-        df_resultados['tipo_contagio'] == 'subcategoria',
-        'material_contagiante'
-    ].isin(dict_material_coef.keys()).value_counts())
+    print('------------------- Conteo Tanda -----------------------------')
+    # Registros efectivamente contagiados en la tanda 2
+    mascara_subcategoria = (
+        faltantes_subcat &
+        df_resultados['Material_Contagiante'].notna()
+    )
 
-    ###### Tipo de contagio #######################################
-    df_resultados['tipo_contagio'] = None
-
+    # Registrar tipo de contagio
     df_resultados.loc[
-        df_resultados['elasticidad_num'].notna(),
-        'tipo_contagio'
-    ] = 'No aplica'
+        mascara_subcategoria,
+        'Tipo_Contagio'
+    ] = 'SUBCATEGORIA'
 
-    df_resultados.loc[
-        mascarasin & df_resultados['material_contagiante'].notna(),
-        'tipo_contagio'] = 'sustituto'
+    cantidad_contagiados_t2 = int(
+        mascara_subcategoria.sum()
+    )
 
+    materiales_contagiantes_t2 = (
+        df_resultados.loc[
+            mascara_subcategoria,
+            'Material_Contagiante'
+        ]
+        .drop_duplicates()
+    )
 
-    indices_subcategoria = resultado_subcat.index[
-        resultado_subcat['material_contagiante'].notna()
-    ]
+    cantidad_materiales_contagiantes_t2 = len(
+        materiales_contagiantes_t2
+    )
 
-    df_resultados.loc[
-        indices_subcategoria,
-        'tipo_contagio'
-    ] = 'subcategoria'
+    cantidad_materiales_con_modelo_t2 = int(
+        materiales_contagiantes_t2.isin(
+            dict_material_coef
+        ).sum()
+    )
 
     logging.info(
-        df_resultados['tipo_contagio'].value_counts(dropna=False)
+        f'TANDA 2 - Registros contagiados: '
+        f'{cantidad_contagiados_t2}'
     )
+
+    logging.info(
+        f'TANDA 2 - Materiales contagiantes únicos: '
+        f'{cantidad_materiales_contagiantes_t2}'
+    )
+
+    logging.info(
+        f'TANDA 2 - Materiales contagiantes con modelo: '
+        f'{cantidad_materiales_con_modelo_t2}'
+    )
+
+    logging.info(
+        f'TANDA 2 - Materiales contagiantes sin modelo: '
+        f'{cantidad_materiales_contagiantes_t2 - cantidad_materiales_con_modelo_t2}'
+    )
+
+    materiales_sin_modelo_t2 = materiales_contagiantes_t2[
+        ~materiales_contagiantes_t2.isin(dict_material_coef)
+    ]
+
+    logging.info(
+        f'TANDA 2 - Lista materiales contagiantes sin modelo: '
+        f'{list(materiales_sin_modelo_t2)}'
+    )
+
+    print('------------------- ####--------------------------------------')
 
     ##############################################################
     logging.info(
