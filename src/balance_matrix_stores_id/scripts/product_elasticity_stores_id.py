@@ -933,7 +933,7 @@ def main() -> None:  # noqa: D103
 
     print('------------------- Conteo Tanda 0 --------------------------------------')
     mascara_con_elasticidad = df_resultados['elasticidad_num'].notna()
-
+    cantidad_elasticidades  = mascara_con_elasticidad.sum()
 
     #Creación variables Tipo_Contagio y Material Contagiante
     df_resultados['Tipo_Contagio'] = None
@@ -941,13 +941,15 @@ def main() -> None:  # noqa: D103
 
     df_resultados.loc[
         mascara_con_elasticidad,
-        'Tipo_Contagio',
-    ] = 'No aplica'
+                                'Tipo_Contagio'] = 'No aplica'
 
-    df_resultados.loc[
-        mascara_con_elasticidad,
-        'Material_Contagiante',
-    ] = 'No aplica'
+    df_resultados.loc[mascara_con_elasticidad,
+                      'Material_Contagiante',
+                                                ] = 'No aplica'
+
+    df_resultados.loc[mascara_con_elasticidad, 'elasticidad_contagiada'] = (
+        df_resultados.loc[mascara_con_elasticidad, 'elasticidad_num']
+    )
 
     logging.info(
         f'TANDA 0 - Material_Contagiante: '
@@ -955,12 +957,11 @@ def main() -> None:  # noqa: D103
         f'{df_resultados["Material_Contagiante"].isna().sum()} nulos'
     )
 
-
-    cantidad_elasticidades = mascara_con_elasticidad.sum()
     cantidad_con_modelo = df_resultados.loc[
         mascara_con_elasticidad,
         'material',
     ].isin(dict_material_coef).sum()
+
     logging.info(
         f'TANDA 0 - Materiales con elasticidad numérica: '
         f'{cantidad_elasticidades}'
@@ -1011,11 +1012,11 @@ def main() -> None:  # noqa: D103
 
                 return pd.Series({
                     'elasticidad_contagiada': mejor_fila['elasticidad_num'],
-                    'material_contagiante': sustituto,
+                    'Material_Contagiante': sustituto,
                 })
         return pd.Series({
             'elasticidad_contagiada': np.nan,
-            'material_contagiante': np.nan,
+            'Material_Contagiante': np.nan,
         })
 
 
@@ -1042,18 +1043,16 @@ def main() -> None:  # noqa: D103
 
     # Paso 7: Las que ya tenían elasticidad original válida se copian
 
-    df_resultados.loc[~mascarasin, 'elasticidad_contagiada'] = (
-        df_resultados.loc[~mascarasin, 'elasticidad_num']
-    )
 
     df_resultados.loc[~mascarasin, 'Material_Contagiante'] = (
         df_resultados.loc[~mascarasin, 'material'])
 
     print('[PATCH] df resultados columnas: ', df_resultados.columns)
     print('[PATCH] df_resultados shape: ', df_resultados.shape)
+
     logging.info(
         f'MATERIAL_CONTAGIANTE: {df_resultados["Material_Contagiante"].notna().sum()} con valor, '
-        f'{df_resultados["material_contagiante"].isna().sum()} nulos'
+        f'{df_resultados["material_Contagiante"].isna().sum()} nulos'
     )
 
     despues_tanda1 = int(df_resultados['elasticidad_contagiada'].notna().sum())
