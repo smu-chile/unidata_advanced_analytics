@@ -889,6 +889,36 @@ def main() -> None:  # noqa: D103
     logging.info(f'Ventas sin elasticidad: ${ventas_sin_elasticidad:,.0f}')
     logging.info(f'Porcentaje del total: {porcentaje_sin_elasticidad:.2f}%\n')
 
+
+    # ---------------------------------------------------------------------
+    # PARCHE: Visualización cantidad de materiales sin elasticidad original
+    # ---------------------------------------------------------------------
+
+    motivos_no_elasticidad = [
+        'Modelo no factible',
+        'Elasticidad positiva',
+        'Poca variabilidad',
+    ]
+
+    cantidad_strings = (
+        df_resultados['elasticidad_num']
+        .isin(motivos_no_elasticidad)
+        .sum()
+    )
+
+    cantidad_elasticidades = (
+        ~df_resultados['elasticidad_num']
+        .isin(motivos_no_elasticidad)
+    ).sum()
+
+    logging.info(
+        f'[PATCH] Registros con motivo (string): {cantidad_strings}'
+    )
+
+    logging.info(
+        f'[PATCH] Registros con elasticidad numérica: {cantidad_elasticidades}'
+    )
+
     # ---------------------------------------------------------------------
     # TANDA 1: CONTAGIO MEJOR SUSTITUTO (usando similitud peso_total_ean)
     # ---------------------------------------------------------------------
