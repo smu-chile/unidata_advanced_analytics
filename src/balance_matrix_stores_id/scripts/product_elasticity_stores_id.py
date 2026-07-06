@@ -1249,7 +1249,7 @@ def main() -> None:  # noqa: D103
     # Los casos '-' corresponden a elasticidades artificiales y
     # no reciben coeficientes.
 
-    print('[PATCH] cantidad de modelos válidos: ', len(dict_material_coef))
+    print('[PATCH] 1. cantidad de modelos válidos: ', len(dict_material_coef))
 
     df_coeficientes = df_resultados[
         ['material', 'material_contagiante', 'tipo_contagio']
@@ -1278,8 +1278,10 @@ def main() -> None:  # noqa: D103
         axis=1,
     )
 
-    print('df_coeficientes info: ', df_coeficientes.info())
-    print('df_coeficientes shape: ', df_coeficientes.shape)
+    print('[PATCH] 2. df_coeficientes info: ', df_coeficientes.info())
+    print('[PATCH] 3. df_coeficientes shape: ', df_coeficientes.shape)
+    print('[PATCH] 4. Materiales contagiantes únicos: ', len(set(df_coeficientes['material_contagiante'].dropna().tolist())))  # noqa: E501
+    print('[PATCH] 4. Materiales contagiantes únicos: ', df_coeficientes['material_contagiante'].dropna().nunique())  # noqa: E501
 
     logging.info('FIN DE COPIADO DE COEFICIENTES')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
