@@ -886,6 +886,7 @@ def main() -> None:  # noqa: D103
     logging.info('TANDA 0 - VENTAS SIN ELASTICIDAD ORIGINAL:')
     logging.info(f'Ventas sin elasticidad: ${ventas_sin_elasticidad:,.0f}')
     logging.info(f'Porcentaje del total: {porcentaje_sin_elasticidad:.2f}%\n')
+    logging.info(f'Sin elasticidad: {len(sin_elasticidad)} registros')
 
 
     # ---------------------------------------------------------------------
@@ -966,6 +967,7 @@ def main() -> None:  # noqa: D103
 
     # Paso 6: Aplicar función sustituto a filas con elasticidad no numérica
     mascarasin = df_resultados['elasticidad_num'].isna()
+    print('[PATCH] mascarasin shape: ', mascarasin.shape)
     antes_tanda1 = int(mascarasin.sum())
 
     resultado_contagio = (
@@ -1048,13 +1050,10 @@ def main() -> None:  # noqa: D103
     ###### Tipo de contagio #######################################
     df_resultados['tipo_contagio'] = None
 
-    print('HOLA MUNDO')
-
     df_resultados.loc[
         mascarasin & df_resultados['material_contagiante'].notna(),
         'tipo_contagio'] = 'sustituto'
 
-    print('HOLA UNIVERSO')
 
     indices_subcategoria = resultado_subcat.index[
         resultado_subcat['material_contagiante'].notna()
