@@ -1287,11 +1287,23 @@ def main() -> None:  # noqa: D103
         axis=1,
     )
 
+    contagiantes_unicos =  list(set(df_coeficientes['material_contagiante'].dropna().tolist()))
     print('[PATCH] 2. df_coeficientes info: ', df_coeficientes.info())
     print('[PATCH] 3. df_coeficientes shape: ', df_coeficientes.shape)
     print('[PATCH] 4. Materiales contagiantes únicos: ', len(set(df_coeficientes['material_contagiante'].dropna().tolist())))  # noqa: E501
-    print('[PATCH] 4. Materiales contagiantes únicos: ', df_coeficientes['material_contagiante'].dropna().nunique())  # noqa: E501
+    print('[PATCH] 4. Materiales contagiantes únicos: ', len(contagiantes_unicos))  # noqa: E501
 
+    materiales_faltantes = list(
+        set(contagiantes_unicos) - set(len(set(materiales_elasticidad)))
+    )
+    logging.info(f'[PATCH] Materiales contagiantes faltantes: {len(materiales_faltantes)}')
+    conteo_materiales = (
+        df_resultados[
+            df_resultados['material_contagiante'].isin(materiales_faltantes)
+        ]['material_contagiante']
+        .value_counts()
+    )
+    logging.info(f'[PATCH] Conteo de materiales faltantes: {conteo_materiales.to_dict()}')
     logging.info('FIN DE COPIADO DE COEFICIENTES')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1299,12 +1311,14 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     df_resultados['store_banner'] = store_banner
+    df_resultados['store_id'] = store_id_str
     df_resultados = df_resultados.rename(columns={'product_description':'descripcion_material',
                                                 'sales_uom':'umv',
                                                 'elasticidad_contagiada':'elasticidad'})
 
 
     df_gcp = df_resultados[['store_banner',  # noqa: RUF005
+                            'store_id',
                             'categoria',
                             'material',
                             'descripcion_material',
@@ -1314,8 +1328,6 @@ def main() -> None:  # noqa: D103
                             'segmento_elasticidad'] + coef_names]
 
 
-
-    df_gcp['store_id'] = store_id_str
 
     print('[PATCH] Dimensiones tabla que se está subiendo a GCP: ', df_gcp.shape)
     print(df_gcp.info())
