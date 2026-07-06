@@ -1148,6 +1148,9 @@ def main() -> None:  # noqa: D103
     df_validas = df_resultados[
         ~df_resultados['elasticidad_contagiada'].isna()].copy()
 
+    print('[PATCH] faltantes subcat: ', faltantes_subcat.sum())
+    print('[PATCH] df_validas.shape ', df_validas.shape)
+
     def contagiar_por_subcategoria(row):
         #recibe una fila de los materiales que aún no tienen elasticidad.
         subcat = row['subcategoria']
@@ -1166,7 +1169,7 @@ def main() -> None:  # noqa: D103
         #Se produce el contagio.
         return pd.Series({
             'elasticidad_contagiada': fila_mejor['elasticidad_contagiada'],
-            'Material_Contagiante': fila_mejor['material'],
+            'Material_Contagiante': fila_mejor['Material_Contagiante'],
         })
 
 
