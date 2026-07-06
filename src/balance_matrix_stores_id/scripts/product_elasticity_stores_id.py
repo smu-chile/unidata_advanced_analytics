@@ -1305,6 +1305,31 @@ def main() -> None:  # noqa: D103
     )
     logging.info(f'[PATCH] Conteo de materiales faltantes: {conteo_materiales.to_dict()}')
     logging.info('FIN DE COPIADO DE COEFICIENTES')
+
+    materiales_con_modelo = set(dict_material_coef.keys())
+
+    df_coeficientes['Tiene_modelo'] = np.select(
+        [
+            df_coeficientes['tipo_contagio'] == '-',
+            df_coeficientes['material_coeficientes'].isin(materiales_con_modelo),
+        ],
+        [
+            'Sin Elasticidad',
+            'Si',
+        ],
+        default='No',
+    )
+
+    print('[PATCH] df_coeficientes value counts: ', df_coeficientes['Tiene_modelo'].value_counts())  # noqa: E501
+    cantidad_log_precio = sum(
+        'log_precio' in coeficientes
+        for coeficientes in dict_material_coef.values()
+    )
+
+    logging.info(
+        f'Cantidad de modelos con coeficiente log_precio: '
+        f'{cantidad_log_precio}'
+    )
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     # REGION: Limpiar y subir a GCP
