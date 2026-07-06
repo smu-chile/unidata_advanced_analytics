@@ -10,6 +10,12 @@
             "description": "Formato al que pertenece la información"
         },
         {
+            "name": "STORE_ID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Información store ID"
+        },
+        {
             "name": "CATEGORIA",
             "field_type": "STRING",
             "mode": "REQUIRED",
@@ -50,12 +56,6 @@
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Cluster al que pertenece el producto según su elasticidad"
-        },
-        {
-            "name": "STORE_ID",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "Información store ID"
         },
         {
             "name": "CONST",
