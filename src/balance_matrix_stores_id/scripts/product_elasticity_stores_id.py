@@ -1252,8 +1252,8 @@ def main() -> None:  # noqa: D103
     ##############################################################
     logging.info(
     f'MATERIAL_CONTAGIANTE: '
-    f'{df_resultados["material_contagiante"].notna().sum()} con valor, '
-    f'{df_resultados["material_contagiante"].isna().sum()} nulos')
+    f'{df_resultados["Material_Contagiante"].notna().sum()} con valor, '
+    f'{df_resultados["Material_Contagiante"].isna().sum()} nulos')
 
     despues_tanda2 = int(df_resultados['elasticidad_contagiada'].notna().sum())
     contagiados_tanda2 = despues_tanda2 - despues_tanda1
@@ -1279,7 +1279,7 @@ def main() -> None:  # noqa: D103
         if candidatos.empty:
             return pd.Series({
                 'elasticidad_contagiada': np.nan,
-                'material_contagiante': np.nan,
+                'Naterial_Contagiante': np.nan,
             })
 
         fila_mejor = candidatos.sort_values(
@@ -1289,7 +1289,7 @@ def main() -> None:  # noqa: D103
 
         return pd.Series({
             'elasticidad_contagiada': fila_mejor['elasticidad_contagiada'],
-            'material_contagiante': fila_mejor['material'],
+            'Material_Contagiante': fila_mejor['Material_Contagiante'],
         })
 
 
@@ -1300,17 +1300,17 @@ def main() -> None:  # noqa: D103
 
     df_resultados.loc[
         faltantes_cat,
-        ['elasticidad_contagiada', 'material_contagiante']
+        ['elasticidad_contagiada', 'Material_Contagiante']
     ] = resultado_categoria
 
     indices_categoria = resultado_categoria.index[
-        resultado_categoria['material_contagiante'].notna()
+        resultado_categoria['Material_Contagiante'].notna()
     ]
 
     df_resultados.loc[
         indices_categoria,
-        'tipo_contagio'
-    ] = 'categoria'
+        'Tipo_Contagio'
+    ] = 'CATEGORIA'
 
     despues_tanda3 = int(
         df_resultados['elasticidad_contagiada'].notna().sum()
@@ -1331,7 +1331,7 @@ def main() -> None:  # noqa: D103
     )
 
     logging.info(
-        df_resultados['tipo_contagio'].value_counts(dropna=False)
+        df_resultados['Tipo_Contagio'].value_counts(dropna=False)
     )
 
     # ---------------------------------------------------------------------
@@ -1342,14 +1342,14 @@ def main() -> None:  # noqa: D103
         'elasticidad_contagiada'].fillna(-1)
 
 
-    df_resultados['tipo_contagio'] = (
-        df_resultados['tipo_contagio']
+    df_resultados['Tipo_Contagio'] = (
+        df_resultados['Tipo_Contagio']
         .fillna('-')
     )
 
     logging.info(f'TANDA 4 - DEFAULT: {faltantes_tanda3} filas rellenadas con -1')
     logging.info(
-        df_resultados['tipo_contagio'].value_counts(dropna=False)
+        df_resultados['Tipo_Contagio'].value_counts(dropna=False)
     )
 
     # ---------------------------------------------------------------------
@@ -1426,19 +1426,19 @@ def main() -> None:  # noqa: D103
     print('[PATCH] 1. cantidad de modelos válidos: ', len(dict_material_coef))
 
     df_coeficientes = df_resultados[
-        ['material', 'material_contagiante', 'tipo_contagio']
+        ['material', 'Material_Contagiante', 'Tipo_Contagio']
     ].copy()
 
     df_coeficientes['material_coeficientes'] = np.select(
         [
-            df_coeficientes['tipo_contagio'] == 'No aplica',
-            df_coeficientes['tipo_contagio'].isin(
-                ['sustituto', 'subcategoria', 'categoria']
+            df_coeficientes['Tipo_Contagio'] == 'No aplica',
+            df_coeficientes['Tipo_Contagio'].isin(
+                ['SUSTITUTO', 'SUBCATEGORIA', 'CATEGORIA']
             ),
         ],
         [
             df_coeficientes['material'],
-            df_coeficientes['material_contagiante'],
+            df_coeficientes['Material_Contagiante'],
         ],
         default=np.nan,
     )
@@ -1452,10 +1452,10 @@ def main() -> None:  # noqa: D103
         axis=1,
     )
 
-    contagiantes_unicos =  list(set(df_coeficientes['material_contagiante'].dropna().tolist()))
+    contagiantes_unicos =  list(set(df_coeficientes['Material_Contagiante'].dropna().tolist()))
     print('[PATCH] 2. df_coeficientes info: ', df_coeficientes.info())
     print('[PATCH] 3. df_coeficientes shape: ', df_coeficientes.shape)
-    print('[PATCH] 4. Materiales contagiantes únicos: ', len(set(df_coeficientes['material_contagiante'].dropna().tolist())))  # noqa: E501
+    print('[PATCH] 4. Materiales contagiantes únicos: ', len(set(df_coeficientes['Material_contagiante'].dropna().tolist())))  # noqa: E501
     print('[PATCH] 4. Materiales contagiantes únicos: ', len(contagiantes_unicos))  # noqa: E501
 
     materiales_faltantes = list(
@@ -1464,8 +1464,8 @@ def main() -> None:  # noqa: D103
     logging.info(f'[PATCH] Materiales contagiantes faltantes: {len(materiales_faltantes)}')
     conteo_materiales = (
         df_resultados[
-            df_resultados['material_contagiante'].isin(materiales_faltantes)
-        ]['material_contagiante']
+            df_resultados['Material_Contagiante'].isin(materiales_faltantes)
+        ]['Material_Contagiante']
         .value_counts()
     )
     logging.info(f'[PATCH] Conteo de materiales faltantes: {conteo_materiales.to_dict()}')
@@ -1475,8 +1475,8 @@ def main() -> None:  # noqa: D103
 
     df_coeficientes['Tiene_modelo'] = np.select(
         [
-            df_coeficientes['tipo_contagio'] == '-',
-            df_coeficientes['material_coeficientes'].isin(materiales_con_modelo),
+            df_coeficientes['Tipo_Contagio'] == '-',
+            df_coeficientes['Material_Coeficientes'].isin(materiales_con_modelo),
         ],
         [
             'Sin Elasticidad',
@@ -1499,7 +1499,7 @@ def main() -> None:  # noqa: D103
     logging.info(
         df_coeficientes.loc[
             df_coeficientes['Tiene_modelo'] == 'No',
-            'tipo_contagio'
+            'Tipo_Contagio'
         ].value_counts(dropna=False)
     )
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
