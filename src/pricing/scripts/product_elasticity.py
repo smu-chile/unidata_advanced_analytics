@@ -737,6 +737,7 @@ def main() -> None:  # noqa: D103
             elasticidad_valor = 'Sin datos'
             r2_valor = None
             n_obs_valor = None
+            coeficientes = {}
 
             if verificacionFactibilidadModelo(df_ean):
                 modelo = obtenerModeloOLS(
