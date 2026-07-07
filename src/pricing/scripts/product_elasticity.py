@@ -1400,8 +1400,10 @@ def main() -> None:  # noqa: D103
     columnas_merge = [
     'material','Material_Contagiante','Tipo_Contagio']
 
+    cols_patch = columnas_merge + ['Tiene_modelo', 'material_coeficientes']  # noqa: RUF005
+
     columnas_a_copiar = [
-        col for col in df_coeficientes.columns if col not in columnas_merge]
+        col for col in df_coeficientes.columns if col not in cols_patch]
 
     df_resultados = df_resultados.merge(
         df_coeficientes[columnas_merge + columnas_a_copiar],
