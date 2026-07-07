@@ -777,7 +777,6 @@ def main() -> None:  # noqa: D103
                 'r2': r2_valor,
                 'nun_observaciones': n_obs_valor,
                 'elasticidad_original': elasticidad_valor,
-                **coeficientes
             })
 
             procesados += 1
@@ -1397,6 +1396,7 @@ def main() -> None:  # noqa: D103
 
     print('---- Realizando Merge df_coeficientes - df_resultados ------')
 
+    print('INFORMACIÓN DF_RESULTADOS ANTES MERGED: ', df_resultados.info())
     columnas_merge = [
     'material','Material_Contagiante','Tipo_Contagio']
 
