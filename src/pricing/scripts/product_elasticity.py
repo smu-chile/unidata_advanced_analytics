@@ -1408,6 +1408,9 @@ def main() -> None:  # noqa: D103
         on=columnas_merge,
         how='left',
     )
+
+    print('Columnas a copiar: ', len(columnas_a_copiar), '\n ejempl0: ', columnas_a_copiar)
+    print('DF RESULTADOS FINAL PRE SUBIDA: ', df_resultados.info())
     # REGION: Limpiar y subir a GCP
     #----------------------------------------------------------------------
 
