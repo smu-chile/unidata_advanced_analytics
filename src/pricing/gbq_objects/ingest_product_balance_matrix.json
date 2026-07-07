@@ -16,6 +16,12 @@
             "description": "Categoría a la que pertenece el producto"
         },
         {
+            "name": "GRUPO ARTICULO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Descripción subcategoria a la que pertenece el producto"
+        },
+        {
             "name": "DESCRIPCION_MATERIAL",
             "field_type": "STRING",
             "mode": "REQUIRED",
