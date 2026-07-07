@@ -1455,7 +1455,7 @@ def main() -> None:  # noqa: D103
     contagiantes_unicos =  list(set(df_coeficientes['Material_Contagiante'].dropna().tolist()))
     print('[PATCH] 2. df_coeficientes info: ', df_coeficientes.info())
     print('[PATCH] 3. df_coeficientes shape: ', df_coeficientes.shape)
-    print('[PATCH] 4. Materiales contagiantes únicos: ', len(set(df_coeficientes['Material_contagiante'].dropna().tolist())))  # noqa: E501
+    print('[PATCH] 4. Materiales contagiantes únicos: ', len(set(df_coeficientes['Material_Contagiante'].dropna().tolist())))  # noqa: E501
     print('[PATCH] 4. Materiales contagiantes únicos: ', len(contagiantes_unicos))  # noqa: E501
 
     materiales_faltantes = list(
@@ -1476,7 +1476,7 @@ def main() -> None:  # noqa: D103
     df_coeficientes['Tiene_modelo'] = np.select(
         [
             df_coeficientes['Tipo_Contagio'] == '-',
-            df_coeficientes['Material_Coeficientes'].isin(materiales_con_modelo),
+            df_coeficientes['material_coeficientes'].isin(materiales_con_modelo),
         ],
         [
             'Sin Elasticidad',
