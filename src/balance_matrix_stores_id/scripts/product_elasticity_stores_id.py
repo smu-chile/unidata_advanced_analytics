@@ -1326,8 +1326,8 @@ def main() -> None:  # noqa: D103
 
     logging.info(
         f'MATERIAL_CONTAGIANTE: '
-        f'{df_resultados["material_contagiante"].notna().sum()} con valor, '
-        f'{df_resultados["material_contagiante"].isna().sum()} nulos'
+        f'{df_resultados["Material_Contagiante"].notna().sum()} con valor, '
+        f'{df_resultados["Material_Contagiante"].isna().sum()} nulos'
     )
 
     logging.info(
