@@ -1434,6 +1434,10 @@ def main() -> None:  # noqa: D103
     if 'apo' not in df_gcp.columns:
         df_gcp['apo'] = 0
 
+    df_gcp['Material_Contagiante'] = (
+        df_gcp['Material_Contagiante']
+        .replace('No aplica', -1))
+
 
     print('Justo antes de subir a GCP: ', df_gcp.info())
 
