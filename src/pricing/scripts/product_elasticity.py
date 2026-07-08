@@ -1431,6 +1431,10 @@ def main() -> None:  # noqa: D103
                             'elasticidad',
                             'segmento_elasticidad'] + columnas_a_copiar]
 
+    if 'apo' not in df_resultados.columns:
+        df_resultados['apo'] = 0
+
+
     print('Justo antes de subir a GCP: ', df_gcp.info())
 
     # Definir el WHERE
