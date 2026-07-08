@@ -53,7 +53,7 @@ SQL_QUERIES = QueryDict({
     """
     with categorias as (
         select distinct desc_categoria
-        from `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WORKFLOW`
+        from `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WORK FLOW`
         where registro_valido = 'X'
         and n_promocion in (${categorias})
         )
