@@ -1431,8 +1431,14 @@ def main() -> None:  # noqa: D103
                             'elasticidad',
                             'segmento_elasticidad']  + columnas_a_copiar + ['Tipo_Contagio', 'Material_Contagiante']]  # noqa: E501
 
+
     if 'apo' not in df_gcp.columns:
-        df_gcp['apo'] = 0
+        posicion_variante = df_gcp.columns.get_loc('variacion_top1_sustituto')
+
+        df_gcp.insert(
+            loc=posicion_variante,
+            column='apo',
+            value=0)
 
     df_gcp['Material_Contagiante'] = (
         df_gcp['Material_Contagiante']
