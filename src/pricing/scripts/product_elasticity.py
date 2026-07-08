@@ -1429,7 +1429,7 @@ def main() -> None:  # noqa: D103
                             'ean',
                             'umv',
                             'elasticidad',
-                            'segmento_elasticidad'] + ['Material_Contagiante','Tipo_Contagio'] + columnas_a_copiar]  # noqa: E501
+                            'segmento_elasticidad']  + columnas_a_copiar + ['Tipo_Contagio', 'Material_Contagiante']]  # noqa: E501
 
     if 'apo' not in df_gcp.columns:
         df_gcp['apo'] = 0
