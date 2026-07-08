@@ -338,6 +338,18 @@
             "field_type": "FLOAT",
             "mode": "NULLABLE",
             "description": "Coeficiente variacion top3 sustitutos"
+        },
+        {
+            "name": "TIPO_CONTAGIO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Tipo de contagio utilizado"
+        },
+        {
+            "name": "MATERIAL_CONTAGIANTE",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Material del cual se obtiene la elasticidad"
         }
     ],
 
