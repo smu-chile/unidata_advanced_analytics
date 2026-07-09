@@ -1440,6 +1440,14 @@ def main() -> None:  # noqa: D103
             column='apo',
             value=0)
 
+    #MAYORISTA NO REGISTRA COLUMNA 2026
+    if '2026' not in df_gcp.columns:
+        posicion_variante = df_gcp.columns.get_loc('multiplicador_x05')
+        df_gcp.insert(
+            loc=posicion_variante,
+            column='2026',
+            value=0)
+
     df_gcp['Material_Contagiante'] = (
         df_gcp['Material_Contagiante']
         .replace('No aplica', -1))
