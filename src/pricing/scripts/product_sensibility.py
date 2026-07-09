@@ -959,7 +959,7 @@ def main() -> None:  # noqa: D103
         'KVI',
         'porcentaje',
         'porcentaje_categoria',
-        'indice_sensibilidad_original',
+        'media_geometrica_original',
     ]]
 
     print('Se crea dataframe final')
