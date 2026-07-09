@@ -62,6 +62,18 @@
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Cluster al que pertenece el producto según su índice de sensibilidad de familia"
+        },
+        {
+            "name": "PESO_PRODUCTO_EN_CATEGORIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Porcentaje asociado al peso del producto en categoría"
+        },
+        {
+            "name": "PESO_CATEGORIA_EN_FORMATO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Porcentaje asociado al peso de la categoría en el formato"
         }
     ],
 
