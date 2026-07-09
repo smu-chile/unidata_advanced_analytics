@@ -952,7 +952,9 @@ def main() -> None:  # noqa: D103
         'familia',
         'indice_sensibilidad',
         'indice_sensibilidad_familia',
-        'KVI'
+        'KVI',
+        'porcentaje',
+        'porcentaje_categoria'
     ]]
 
     print('Se crea dataframe final')
@@ -1013,6 +1015,8 @@ def main() -> None:  # noqa: D103
     df_final = df_final.drop(columns=['KVI_forzado'])
 
     print('Se fuerzan los productos señalados por equipo de Pricing')
+    print('Columnas justo antes de subirse  GCP: ', df_final.columns)
+    print('INFO df_final antes de GCP: ', df_final.info())
 
     #----------------------------------------------------------------------
     # ENDREGION
