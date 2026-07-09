@@ -74,6 +74,12 @@
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Porcentaje asociado al peso de la categoría en el formato"
+        },
+        {
+            "name": "INDICE_SENSIBILIDAD_DESNORMALIZADA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Indice de sensibilidad desnormalizada"
         }
     ],
 
