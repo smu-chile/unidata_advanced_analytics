@@ -765,8 +765,7 @@ def main() -> None:  # noqa: D103
 
     logging.info('##### Visualización Factores Escalamiento #####')
     logging.info(f'[MIN]: {scaler.data_min_}')
-    logging.info(f'[MAX]: {scaler. data_max}')
-    logging.info(f'[Feature range]: {scaler.feature_range}')
+    logging.info(f'[MAX]: {scaler. data_max_}')
 
     # Como considerar el porcentaje de las familias:
     # Puede ser como la suma de todos los miembros: "Son el mismo producto"
