@@ -931,6 +931,8 @@ def main() -> None:  # noqa: D103
 
     df_final = df_detalle4.copy()
 
+    print('[PATCH] Columnas de df_detalle4 antes de asignación final: ', df_final.columns)
+
 
     df_final = df_final.assign(
         store_banner = store_banner,
