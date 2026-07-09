@@ -504,6 +504,15 @@ def getClusters(df_info:pd.DataFrame,
     df_clusters = pd.concat([filtered_df, outliers_low, outliers_high])
     df_clusters.sort_values(by=[variable])
 
+
+    # Centros ordenados de menor a mayor
+    centros = np.sort(kmeans.cluster_centers_.flatten())
+    print('Centros:', centros)
+
+    # Fronteras (punto medio entre centros consecutivos)
+    fronteras = [(centros[i] + centros[i+1]) / 2 for i in range(len(centros)-1)]
+    print('Fronteras (donde se intercala):', fronteras)
+
     return df_clusters
 
 # -------------------------------------------------------------------------

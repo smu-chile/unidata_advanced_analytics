@@ -65,19 +65,19 @@
         },
         {
             "name": "PESO_PRODUCTO_EN_CATEGORIA",
-            "field_type": "STRING",
+            "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": "Porcentaje asociado al peso del producto en categoría"
         },
         {
             "name": "PESO_CATEGORIA_EN_FORMATO",
-            "field_type": "STRING",
+            "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": "Porcentaje asociado al peso de la categoría en el formato"
         },
         {
             "name": "INDICE_SENSIBILIDAD_DESNORMALIZADA",
-            "field_type": "STRING",
+            "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": "Indice de sensibilidad desnormalizada"
         }
