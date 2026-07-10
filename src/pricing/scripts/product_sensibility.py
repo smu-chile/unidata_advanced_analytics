@@ -926,6 +926,10 @@ def main() -> None:  # noqa: D103
     # Paso 6: Filtrar df_detalle3 para los materiales en df_impuestos
     filtro = df_detalle4['sku_padre'].isin(materiales_impuestos)
 
+    #[PATCH] revisión actualización paso 7
+    df_detalle4['Forzado_RankingCat'] = 0
+    df_detalle4.loc[filtro, 'Forzado_Ranking_cat'] = 1
+
 
     # Paso 7: Actualizar los valores a 'high'
     df_detalle4.loc[filtro, 'cluster'] = 'high'
@@ -969,6 +973,7 @@ def main() -> None:  # noqa: D103
         'porcentaje',
         'porcentaje_categoria',
         'media_geometrica_original',
+        'Forzado_RankingCat'
     ]]
 
     print('Se crea dataframe final')
