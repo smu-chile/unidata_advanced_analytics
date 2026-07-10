@@ -928,7 +928,7 @@ def main() -> None:  # noqa: D103
 
     #[PATCH] revisión actualización paso 7
     df_detalle4['Forzado_RankingCat'] = 0
-    df_detalle4.loc[filtro, 'Forzado_Rankingcat'] = 1
+    df_detalle4.loc[filtro, 'Forzado_RankingCat'] = 1
 
 
     # Paso 7: Actualizar los valores a 'high'
