@@ -184,7 +184,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     df_balance_matrix = df_elasticidad.merge(
-        df_sensibilidad[['material', 'indice_sensibilidad', 'kvi']],
+        df_sensibilidad[['material', 'indice_sensibilidad', 'indice_sensibilidad_familia','kvi']],
         on='material',
         how='left'
     )
@@ -232,6 +232,7 @@ def main() -> None:  # noqa: D103
                                             'ean',
                                             'ventas_totales',
                                             'indice_sensibilidad',
+                                            'indice_sensibilidad_familia',
                                             'elasticidad',
                                             'kvi',
                                             'codigo_sensibilidad',
@@ -248,6 +249,7 @@ def main() -> None:  # noqa: D103
         'ean':'EAN',
         'ventas_totales': 'Ventas EAN (12 meses)',
         'indice_sensibilidad': 'Índice sensibilidad',
+        'indice_sensibilidad_familia': 'Índice sensibilidad familia',
         'elasticidad': 'Elasticidad',
         'kvi':'KVI',
         'codigo_sensibilidad': 'Código sensibilidad',
