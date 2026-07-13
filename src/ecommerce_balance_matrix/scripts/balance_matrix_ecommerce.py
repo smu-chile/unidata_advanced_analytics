@@ -192,6 +192,7 @@ def main() -> None:  # noqa: D103
     )
 
     df_balance_matrix['indice_sensibilidad'] = df_balance_matrix['indice_sensibilidad'].fillna(0)
+    df_balance_matrix['indice_sensibilidad_familia'] = df_balance_matrix['indice_sensibilidad_familia'].fillna(0)  # noqa: E501
     df_balance_matrix['kvi'] = df_balance_matrix['kvi'].fillna('BKG')
 
     #Parche: agregamos columna subcat description
