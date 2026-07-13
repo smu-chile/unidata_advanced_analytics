@@ -148,7 +148,7 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client)
 
     df_sensibilidad.columns = df_sensibilidad.columns.str.lower()
-    logging.info('Consulta de sensibilidad lista')
+    logging.info('(1) Consulta de sensibilidad lista')
 
     # ELASTICIDAD
 
@@ -162,7 +162,7 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client)
 
     df_elasticidad.columns = df_elasticidad.columns.str.lower()
-    logging.info('Consulta de elasticidad lista')
+    logging.info('(2) Consulta de elasticidad lista')
 
     # VENTAS
 
@@ -176,7 +176,7 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client)
 
     df_ventas.columns = df_ventas.columns.str.lower()
-    logging.info('Consulta de ventas lista')
+    logging.info('(3) Consulta de ventas lista')
 
     #----------------------------------------------------------------------
     # ENDREGION
@@ -186,7 +186,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     df_balance_matrix = df_elasticidad.merge(
-        df_sensibilidad[['material', 'indice_sensibilidad', 'kvi']],
+        df_sensibilidad[['material', 'indice_sensibilidad', 'indice_sensibilidad_familia', 'kvi']],
         on='material',
         how='left'
     )
@@ -234,6 +234,7 @@ def main() -> None:  # noqa: D103
                                             'ean',
                                             'ventas_totales',
                                             'indice_sensibilidad',
+                                            'indice_sensibilidad_familia',
                                             'elasticidad',
                                             'kvi',
                                             'codigo_sensibilidad',
@@ -250,6 +251,7 @@ def main() -> None:  # noqa: D103
         'ean':'EAN',
         'ventas_totales': 'Ventas EAN (12 meses)',
         'indice_sensibilidad': 'Índice sensibilidad',
+        'indice_sensibilidad_familia': 'Índice sensibilidad familia',
         'elasticidad': 'Elasticidad',
         'kvi':'KVI',
         'codigo_sensibilidad': 'Código sensibilidad',

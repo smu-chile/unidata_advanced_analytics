@@ -16,6 +16,12 @@
             "description": "Categoría a la que pertenece el producto"
         },
         {
+            "name": "SUB_CATEGORY_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Descripión de la subcategoría del producto"
+        },
+        {
             "name": "DESCRIPCION_MATERIAL",
             "field_type": "STRING",
             "mode": "REQUIRED",
@@ -50,6 +56,12 @@
             "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": "Índice propio de sensibilidad del producto (media geométrica)"
+        },
+        {
+            "name": "INDICE_SENSIBILIDAD_FAMILIA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Índice de sensibilidad sku padre (media geométrica)"
         },
         {
             "name": "ELASTICIDAD",
