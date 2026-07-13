@@ -274,6 +274,7 @@ def main() -> None:  # noqa: D103
 
     buffer = io.BytesIO()
 
+    print('BALANCE_MATRIX PRE EXCEL: ', df_balance_matrix_sp.info())
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
         nombre_hoja = f'BM {store_banner}'
         df_balance_matrix_sp.to_excel(writer, index=False, sheet_name=nombre_hoja)
@@ -296,6 +297,7 @@ def main() -> None:  # noqa: D103
         })
 
         columnas = list(df_balance_matrix_sp.columns)
+
 
         for i, col in enumerate(columnas):
             serie = df_balance_matrix_sp[col].astype(str)
