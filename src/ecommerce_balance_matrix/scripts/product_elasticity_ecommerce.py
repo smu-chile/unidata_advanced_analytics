@@ -1463,7 +1463,7 @@ def main() -> None:  # noqa: D103
     uploadFrame(
         df_gcp,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'ingest_product_elasticity.json'),
+                                         'ingest_ecommerce_product_elasticity.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='append'
