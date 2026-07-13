@@ -790,7 +790,7 @@ def main() -> None:  # noqa: D103
                             ]]
 
     # Media armonica de porcentaje producto y categoria
-    df_detalle2['media_geometrica'] = np.sqrt(
+    df_detalle2['media_geometrica_original'] = np.sqrt(
         df_detalle2['porcentaje'] * df_detalle2['porcentaje_categoria'])
 
     # Crear el objeto MinMaxScaler
@@ -798,7 +798,7 @@ def main() -> None:  # noqa: D103
 
     # Aplicar el scaler a la columna 'media_geometrica'
     df_detalle2['media_geometrica'] = scaler.fit_transform(
-                                            df_detalle2[['media_geometrica']])
+                                            df_detalle2[['media_geometrica_original']])
 
     logging.info('##### Visualización Factores Escalamiento #####')
     logging.info(f'[MIN]: {scaler.data_min_}')
@@ -998,7 +998,7 @@ def main() -> None:  # noqa: D103
         'porcentaje',
         'porcentaje_categoria',
         'media_geometrica_original',
-        'Forzado_RankinCat'
+        'Forzado_RankingCat'
     ]]
 
     print('Se crea dataframe final')
