@@ -434,8 +434,6 @@ def main() -> None:  # noqa: D103
     # ENDREGION
 
 
-
-
     # REGION: Query de tabla con el detalle de productos
     #----------------------------------------------------------------------
 
