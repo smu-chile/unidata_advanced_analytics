@@ -1442,6 +1442,20 @@ def main() -> None:  # noqa: D103
             column='2026',
             value=0)
 
+    if 'variacion_top1_sustituto' not in df_gcp.columns:
+        posicion_variante = df_gcp.columns.get_loc('tipo_contagio')
+        df_gcp.insert(
+            loc=posicion_variante,
+            column='variacion_top1_sustituto',
+            value=0)
+
+    if 'variacion_top3_sustitutos' not in df_gcp.columns:
+        posicion_variante = df_gcp.columns.get_loc('tipo_contagio')
+        df_gcp.insert(
+            loc=posicion_variante,
+            column='variacion_top3_sustitutos',
+            value=0)
+
     df_gcp['Material_Contagiante'] = (
         df_gcp['Material_Contagiante']
         .replace('No aplica', -1))
