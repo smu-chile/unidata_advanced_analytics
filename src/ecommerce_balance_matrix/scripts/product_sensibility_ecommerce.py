@@ -800,6 +800,10 @@ def main() -> None:  # noqa: D103
     df_detalle2['media_geometrica'] = scaler.fit_transform(
                                             df_detalle2[['media_geometrica']])
 
+    logging.info('##### Visualización Factores Escalamiento #####')
+    logging.info(f'[MIN]: {scaler.data_min_}')
+    logging.info(f'[MAX]: {scaler. data_max_}')
+
     # Como considerar el porcentaje de las familias:
     # Puede ser como la suma de todos los miembros: "Son el mismo producto"
     # Puede ser el maximo: "El miembro de mayor venta es el que representa"
@@ -950,6 +954,9 @@ def main() -> None:  # noqa: D103
     # Paso 6: Filtrar df_detalle3 para los materiales en df_impuestos
     filtro = df_detalle4['sku_padre'].isin(materiales_impuestos)
 
+    #[PATCH] revisión actualización paso 7
+    df_detalle4['Forzado_RankingCat'] = 0
+    df_detalle4.loc[filtro, 'Forzado_RankingCat'] = 1
 
     # Paso 7: Actualizar los valores a 'high'
     df_detalle4.loc[filtro, 'cluster'] = 'high'
@@ -987,7 +994,11 @@ def main() -> None:  # noqa: D103
         'familia',
         'indice_sensibilidad',
         'indice_sensibilidad_familia',
-        'KVI'
+        'KVI',
+        'porcentaje',
+        'porcentaje_categoria',
+        'media_geometrica_original',
+        'Forzado_RankinCat'
     ]]
 
     print('Se crea dataframe final')
