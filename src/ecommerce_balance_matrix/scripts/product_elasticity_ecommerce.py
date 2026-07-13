@@ -720,6 +720,9 @@ def main() -> None:  # noqa: D103
     procesados = 0
     total_eanes = df_final['ean'].nunique()
 
+    #[PATCH] Almacenamiento de coeficientes para modelos válidos
+    dict_material_coeficientes = {}
+
     # siguiente porcentaje meta (10, 20, 30, ..., 100)
     meta_avance = 10
 
@@ -734,6 +737,7 @@ def main() -> None:  # noqa: D103
             elasticidad_valor = 'Sin datos'
             r2_valor = None
             n_obs_valor = None
+            coeficientes = {}
 
             if verificacionFactibilidadModelo(df_ean):
                 modelo = obtenerModeloOLS(
@@ -752,6 +756,10 @@ def main() -> None:  # noqa: D103
                     elasticidad_valor = 'Elasticidad positiva'
                 else:
                     elasticidad_valor = round(beta_precio, 2)
+
+                # [PATCH] Guardado de coeficientes para materiales validos.
+                    coeficientes = modelo.params.to_dict()
+                    dict_material_coeficientes.update({material: coeficientes})
             else:
                 elasticidad_valor = 'Modelo no factible'
 
@@ -844,6 +852,50 @@ def main() -> None:  # noqa: D103
     logging.info(f'Ventas sin elasticidad: ${ventas_sin_elasticidad:,.0f}')
     logging.info(f'Porcentaje del total: {porcentaje_sin_elasticidad:.2f}%\n')
 
+    # _____________________________________________________________________
+    #
+    # TANDA 0 - PATCH: Se añade Material Contagiante y Tipo de Contagio
+    # _____________________________________________________________________
+
+    # [Col] Tipo de Contagio: Información del método por el cual el
+    # material recibió elasticidad. En caso de que el material tenga
+    # elasticidad en la tanda 0, su valor será 'No aplica'.
+    # [Col] Material Contagiante: Material del cual obtiene la elasticidad
+    # un material que originalmente no presenta.
+
+    print('------------------ Tanda 0 - Patch---------------------------')
+    mascara_con_elasticidad = df_resultados['elasticidad_num'].notna()
+    cantidad_elasticidades  = mascara_con_elasticidad.sum()
+
+    df_resultados['Tipo_Contagio']        = None
+    df_resultados['Material_Contagiante'] = None
+
+    df_resultados.loc[
+        mascara_con_elasticidad,
+                             'Tipo_Contagio'] = 'No aplica'
+
+    df_resultados.loc[mascara_con_elasticidad,
+                      'Material_Contagiante'] = 'No aplica'
+
+    df_resultados.loc[mascara_con_elasticidad, 'elasticidad_contagiada'] = (
+        df_resultados.loc[mascara_con_elasticidad, 'elasticidad_num'])
+
+    logging.info(
+        f'TANDA 0 - Material_Contagiante: '
+        f'{df_resultados["Material_Contagiante"].notna().sum()} con valor, '
+        f'{df_resultados["Material_Contagiante"].isna().sum()} nulos')
+
+    cantidad_con_modelo = df_resultados.loc[mascara_con_elasticidad,
+        'material'].isin(dict_material_coeficientes).sum()
+
+    logging.info(
+        f'TANDA 0 - Materiales con elasticidad numérica: '
+        f'{cantidad_elasticidades}')
+    logging.info(
+        f'TANDA 0 - Materiales con elasticidad numérica '
+        f'y modelo en diccionario: {cantidad_con_modelo}')
+    print('------------------- ######## ---------------------------------')
+
     # ---------------------------------------------------------------------
     # TANDA 1: CONTAGIO MEJOR SUSTITUTO (usando similitud peso_total_ean)
     # ---------------------------------------------------------------------
@@ -868,6 +920,7 @@ def main() -> None:  # noqa: D103
 
     # Paso 5: Función para obtener elasticidad del mejor sustituto
     # más parecido en peso
+    # NOTA [PATCH]: Se agregó Material_Contagiante al retorno.
     def obtener_elasticidad_por_similitud(material_origen, peso_origen):
         candidatos = df_sust_sumado[  # noqa: PD011
             df_sust_sumado['material'] == material_origen]['substitute'].values
@@ -878,28 +931,111 @@ def main() -> None:  # noqa: D103
                 filas_sustituto['diferencia_peso'] = (
                     filas_sustituto['peso_total_ean'] - peso_origen).abs()
                 mejor_fila = filas_sustituto.sort_values('diferencia_peso').iloc[0]
-                return mejor_fila['elasticidad_num']
-        return np.nan
 
-    # Paso 6: Aplicar función sustituto a filas con elasticidad no numérica
+                return pd.Series({
+                    'elasticidad_contagiada': mejor_fila['elasticidad_num'],
+                    'Material_Contagiante': sustituto,
+                })
+        return pd.Series({
+            'elasticidad_contagiada': np.nan,
+            'Material_Contagiante': np.nan,
+        })
+
+   # Paso 6: Aplicar función sustituto a filas con elasticidad no numérica
     mascarasin = df_resultados['elasticidad_num'].isna()
     antes_tanda1 = int(mascarasin.sum())
 
-    df_resultados.loc[mascarasin, 'elasticidad_contagiada'] = df_resultados.loc[mascarasin].apply(
-        lambda row: obtener_elasticidad_por_similitud(row['material'], row['peso_total_ean']),
-        axis=1
-    )
+    # [PATCH] Se añade Material Contagiante Tanda 1 más loggin
+    resultado_contagio = (
+        df_resultados.loc[mascarasin]
+        .apply(
+            lambda row: obtener_elasticidad_por_similitud(
+                row['material'], row['peso_total_ean']),axis=1))
 
-    # Paso 7: Las que ya tenían elasticidad original válida se copian
-    df_resultados.loc[~mascarasin,
-                    'elasticidad_contagiada'] = df_resultados.loc[
-                        ~mascarasin, 'elasticidad_num']
+    df_resultados.loc[
+        mascarasin,
+        ['elasticidad_contagiada', 'Material_Contagiante']
+    ] = resultado_contagio
+
+    df_resultados.loc[~mascarasin, 'Material_Contagiante'] = (
+        df_resultados.loc[~mascarasin, 'material'])
+
+    logging.info(
+        f'MATERIAL_CONTAGIANTE: {df_resultados["Material_Contagiante"].notna().sum()} con valor, '
+        f'{df_resultados["Material_Contagiante"].isna().sum()} nulos'
+    )
 
     despues_tanda1 = int(df_resultados['elasticidad_contagiada'].notna().sum())
     contagiados_tanda1 = despues_tanda1 - (len(df_resultados) - antes_tanda1)
     faltantes_tanda1 = len(df_resultados) - despues_tanda1
     logging.info(f'TANDA 1 - SUSTITUTO: {contagiados_tanda1} contagiados,'
         f' {faltantes_tanda1} aún sin elasticidad')
+
+
+    print('------------------- Tanda 1 - Patch --------------------------')
+
+    # Nuevos materiales contagiantes obtenidos en la tanda 1
+
+    #Se construye una máscara booleana para identificar los registros que
+    #fueron contagiados en la tanda 1:
+
+    # mascarasin = df_resultados['elasticidad_num'].isna()  # noqa: ERA001
+    # True -> no tiene elasticidad original
+    # False -> sí tiene elasticidad original
+
+    # df_resultados['Material_Contagiante'].notna()  # noqa: ERA001
+    # True -> se encontró un material contagiante
+    # False -> No se encontró material contagiante
+
+    # unidos por & significa: "No tenía elasticidad og Y Sí encontró
+    # material contagiante"
+
+    mascara_sustituto = (
+        mascarasin &
+        (df_resultados['Material_Contagiante'] != 'No aplica') &
+        df_resultados['Material_Contagiante'].notna()
+    )
+
+    # Registrar tipo de contagio
+    df_resultados.loc[
+        mascara_sustituto,
+        'Tipo_Contagio'
+    ] = 'SUSTITUTO'
+
+    cantidad_contagiados_t1 = int(mascara_sustituto.sum())
+
+    cantidad_contagiados_con_modelo_t1 = int(
+        df_resultados.loc[
+            mascara_sustituto,
+            'Material_Contagiante'
+        ].isin(dict_material_coeficientes).sum()
+    )
+
+    logging.info(
+        f'TANDA 1 - Nuevos materiales contagiados por sustituto: '
+        f'{cantidad_contagiados_t1}')
+    logging.info(
+        f'TANDA 1 - Materiales contagiantes con modelo en diccionario: '
+        f'{cantidad_contagiados_con_modelo_t1}')
+    logging.info(
+        df_resultados['Tipo_Contagio'].value_counts(dropna=False))
+
+    logging.info(
+        f'Materiales contagiantes distintos en TANDA 1: '
+        f'{df_resultados.loc[mascara_sustituto, "Material_Contagiante"].nunique()}')
+    materiales_sustituto_sin_modelo = (
+        df_resultados.loc[mascara_sustituto,'Material_Contagiante']
+        .drop_duplicates())
+
+    cantidad_sin_modelo = (
+        ~materiales_sustituto_sin_modelo.isin(dict_material_coeficientes)).sum()
+
+    logging.info(
+        f'TANDA 1 - Materiales contagiantes sin modelo: '
+        f'{cantidad_sin_modelo}')
+
+    print('--------------------- ####---------------------------------')
+
 
     # ---------------------------------------------------------------------
     # TANDA 2: CONTAGIO X SUBCATEGORÍA (ventas_ean más alta en subcat)
@@ -910,17 +1046,105 @@ def main() -> None:  # noqa: D103
         ~df_resultados['elasticidad_contagiada'].isna()].copy()
 
     def contagiar_por_subcategoria(row):
+        #recibe una fila de los materiales que aún no tienen elasticidad.
         subcat = row['subcategoria']
+
+        #Busca mmateriales validos de la misma subcat.
         candidatos = df_validas[df_validas['subcategoria'] == subcat]
         if candidatos.empty:
-            return np.nan
-        fila_mejor = candidatos.sort_values('ventas_ean', ascending=False).iloc[0]
-        return fila_mejor['elasticidad_contagiada']
+            return pd.Series({
+                'elasticidad_contagiada': np.nan,
+                'Material_Contagiante': np.nan,
+            })
 
-    df_resultados.loc[faltantes_subcat,
-                    'elasticidad_contagiada'] = df_resultados.loc[
-                        faltantes_subcat].apply(contagiar_por_subcategoria,
-                                                axis=1)
+        #Se escoge el candidato más vendedor.
+        fila_mejor = candidatos.sort_values('ventas_ean', ascending=False).iloc[0]
+
+        #Se produce el contagio.
+        return pd.Series({
+            'elasticidad_contagiada': fila_mejor['elasticidad_contagiada'],
+            'Material_Contagiante': fila_mejor['Material_Contagiante']})
+
+    resultado_subcat = (
+        df_resultados.loc[faltantes_subcat]
+        .apply(contagiar_por_subcategoria, axis=1)
+    )
+
+    df_resultados.loc[
+        faltantes_subcat,
+        ['elasticidad_contagiada', 'Material_Contagiante']
+    ] = resultado_subcat
+
+    print('------------------- Tanda 2 - Patch -----------------------------')
+    # Registros efectivamente contagiados en la tanda 2
+    mascara_subcategoria = (
+        faltantes_subcat &
+        df_resultados['Material_Contagiante'].notna()
+    )
+
+    # Registrar tipo de contagio
+    df_resultados.loc[
+        mascara_subcategoria,
+        'Tipo_Contagio'
+    ] = 'SUBCATEGORIA'
+
+    cantidad_contagiados_t2 = int(
+        mascara_subcategoria.sum()
+    )
+
+    materiales_contagiantes_t2 = (
+        df_resultados.loc[
+            mascara_subcategoria,
+            'Material_Contagiante'
+        ]
+        .drop_duplicates()
+    )
+
+    cantidad_materiales_contagiantes_t2 = len(
+        materiales_contagiantes_t2
+    )
+
+    cantidad_materiales_con_modelo_t2 = int(
+        materiales_contagiantes_t2.isin(
+            dict_material_coeficientes
+        ).sum()
+    )
+
+    logging.info(
+        f'TANDA 2 - Registros contagiados: '
+        f'{cantidad_contagiados_t2}'
+    )
+
+    logging.info(
+        f'TANDA 2 - Materiales contagiantes únicos: '
+        f'{cantidad_materiales_contagiantes_t2}'
+    )
+
+    logging.info(
+        f'TANDA 2 - Materiales contagiantes con modelo: '
+        f'{cantidad_materiales_con_modelo_t2}'
+    )
+
+    logging.info(
+        f'TANDA 2 - Materiales contagiantes sin modelo: '
+        f'{cantidad_materiales_contagiantes_t2 - cantidad_materiales_con_modelo_t2}'
+    )
+
+    materiales_sin_modelo_t2 = materiales_contagiantes_t2[
+        ~materiales_contagiantes_t2.isin(dict_material_coeficientes)
+    ]
+
+    logging.info(
+        f'TANDA 2 - Lista materiales contagiantes sin modelo: '
+        f'{list(materiales_sin_modelo_t2)}'
+    )
+
+    logging.info(
+    f'MATERIAL_CONTAGIANTE: '
+    f'{df_resultados["Material_Contagiante"].notna().sum()} con valor, '
+    f'{df_resultados["Material_Contagiante"].isna().sum()} nulos')
+
+    print('------------------------ ####--------------------------------')
 
     despues_tanda2 = int(df_resultados['elasticidad_contagiada'].notna().sum())
     contagiados_tanda2 = despues_tanda2 - despues_tanda1
@@ -938,16 +1162,63 @@ def main() -> None:  # noqa: D103
     def contagiar_por_categoria(row):
         cat = row['categoria']
         candidatos = df_validas[df_validas['categoria'] == cat]
-        if candidatos.empty:
-            return np.nan
-        fila_mejor = candidatos.sort_values('ventas_ean', ascending=False).iloc[0]
-        return fila_mejor['elasticidad_contagiada']
 
-    df_resultados.loc[faltantes_cat,
-                    'elasticidad_contagiada'] = df_resultados.loc[faltantes_cat].apply(
-        contagiar_por_categoria,
-        axis=1
+        if candidatos.empty:
+            return pd.Series({
+                'elasticidad_contagiada': np.nan,
+                'Naterial_Contagiante': np.nan,
+            })
+
+        fila_mejor = candidatos.sort_values(
+            'ventas_ean',
+            ascending=False,
+        ).iloc[0]
+
+        return pd.Series({
+            'elasticidad_contagiada': fila_mejor['elasticidad_contagiada'],
+            'Material_Contagiante': fila_mejor['Material_Contagiante']})
+
+    print('------------------- Tanda 3 - Patch -----------------------------')
+    resultado_categoria = (
+        df_resultados.loc[faltantes_cat]
+        .apply(contagiar_por_categoria, axis=1)
     )
+
+    df_resultados.loc[
+        faltantes_cat,
+        ['elasticidad_contagiada', 'Material_Contagiante']
+    ] = resultado_categoria
+
+    indices_categoria = resultado_categoria.index[
+        resultado_categoria['Material_Contagiante'].notna()
+    ]
+
+    df_resultados.loc[indices_categoria,'Tipo_Contagio'] = 'CATEGORIA'
+
+    despues_tanda3 = int(
+        df_resultados['elasticidad_contagiada'].notna().sum()
+    )
+
+    contagiados_tanda3 = despues_tanda3 - despues_tanda2
+    faltantes_tanda3 = len(df_resultados) - despues_tanda3
+
+    logging.info(
+        f'TANDA 3 - CATEGORÍA: {contagiados_tanda3} contagiados, '
+        f'{faltantes_tanda3} aún sin elasticidad'
+    )
+
+    logging.info(
+        f'MATERIAL_CONTAGIANTE: '
+        f'{df_resultados["Material_Contagiante"].notna().sum()} con valor, '
+        f'{df_resultados["Material_Contagiante"].isna().sum()} nulos'
+    )
+
+    logging.info(
+        df_resultados['Tipo_Contagio'].value_counts(dropna=False)
+    )
+
+    print('------------------------ ####--------------------------------')
+
 
     despues_tanda3 = df_resultados['elasticidad_contagiada'].notna().sum()
     contagiados_tanda3 = despues_tanda3 - despues_tanda2
@@ -955,15 +1226,27 @@ def main() -> None:  # noqa: D103
     logging.info(f'TANDA 3 - CATEGORÍA: {contagiados_tanda3} contagiados,'
         f' {faltantes_tanda3} aún sin elasticidad')
 
-    # ---------------------------------------------------------------------
+   # ---------------------------------------------------------------------
     # TANDA 4: ASIGNAR -1 A LOS QUE NO PUDIERON SER CONTAGIADOS
     # ---------------------------------------------------------------------
+
+    print('------------------- Tanda 4 - Patch -----------------------------')
 
     df_resultados['elasticidad_contagiada'] = df_resultados[
         'elasticidad_contagiada'].fillna(-1)
 
-    logging.info(f'TANDA 4 - DEFAULT: {faltantes_tanda3} filas rellenadas con -1')
 
+    df_resultados['Tipo_Contagio'] = (
+        df_resultados['Tipo_Contagio']
+        .fillna('-')
+    )
+
+    logging.info(f'TANDA 4 - DEFAULT: {faltantes_tanda3} filas rellenadas con -1')
+    logging.info(
+        df_resultados['Tipo_Contagio'].value_counts(dropna=False)
+    )
+
+    print('------------------------ ####--------------------------------')
 
     # ---------------------------------------------------------------------
     # AJUSTE FINAL: LIMITAR A UN MÍNIMO DE -8
@@ -1024,6 +1307,108 @@ def main() -> None:  # noqa: D103
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # PARCHE: COPIADO DE COEFICIENTES #
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    logging.info('INICIO DE COPIADO DE COEFICIENTES')
+
+    # Copia coeficientes desde el material original ('No aplica') o desde
+    # el material contagiante ('sustituto', 'subcategoria', 'categoria').
+    # Los casos '-' corresponden a elasticidades artificiales y
+    # no reciben coeficientes.
+
+    print('[PATCH] 1. cantidad de modelos válidos: ', len(dict_material_coeficientes))
+
+    df_coeficientes = df_resultados[
+        ['material', 'Material_Contagiante', 'Tipo_Contagio']
+    ].copy()
+
+    df_coeficientes['material_coeficientes'] = np.select(
+        [
+            df_coeficientes['Tipo_Contagio'] == 'No aplica',
+            df_coeficientes['Tipo_Contagio'].isin(
+                ['SUSTITUTO', 'SUBCATEGORIA', 'CATEGORIA']
+            ),
+        ],
+        [
+            df_coeficientes['material'],
+            df_coeficientes['Material_Contagiante'],
+        ],
+        default=np.nan,
+    )
+
+    coeficientes_expandido = pd.json_normalize(
+        df_coeficientes['material_coeficientes'].map(dict_material_coeficientes)
+    )
+
+    df_coeficientes = pd.concat(
+        [df_coeficientes, coeficientes_expandido],
+        axis=1,
+    )
+
+    contagiantes_unicos =  list(set(df_coeficientes['Material_Contagiante'].dropna().tolist()))
+    print('[PATCH] 2. df_coeficientes info: ', df_coeficientes.info())
+    print('[PATCH] 3. df_coeficientes shape: ', df_coeficientes.shape)
+    print('[PATCH] 4. Materiales contagiantes únicos: ', len(set(df_coeficientes['Material_Contagiante'].dropna().tolist())))  # noqa: E501
+    print('[PATCH] 4. Materiales contagiantes únicos: ', len(contagiantes_unicos))  # noqa: E501
+
+
+    logging.info('FIN DE COPIADO DE COEFICIENTES')
+
+    materiales_con_modelo = set(dict_material_coeficientes.keys())
+
+    df_coeficientes['Tiene_modelo'] = np.select(
+        [
+            df_coeficientes['Tipo_Contagio'] == '-',
+            df_coeficientes['material_coeficientes'].isin(materiales_con_modelo),
+        ],
+        [
+            'Sin Elasticidad',
+            'Si',
+        ],
+        default='No',
+    )
+
+    print('[PATCH] df_coeficientes value counts: ', df_coeficientes['Tiene_modelo'].value_counts())  # noqa: E501
+    cantidad_log_precio = sum(
+        'log_precio' in coeficientes
+        for coeficientes in dict_material_coeficientes.values()
+    )
+
+    logging.info(
+        f'Cantidad de modelos con coeficiente log_precio: '
+        f'{cantidad_log_precio}'
+    )
+
+    logging.info(
+        df_coeficientes.loc[
+            df_coeficientes['Tiene_modelo'] == 'No',
+            'Tipo_Contagio'
+        ].value_counts(dropna=False)
+    )
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    print('---- Realizando Merge df_coeficientes - df_resultados ------')
+
+    print('INFORMACIÓN DF_RESULTADOS ANTES MERGED: ', df_resultados.info())
+    columnas_merge = [
+    'material','Material_Contagiante','Tipo_Contagio']
+
+    cols_patch = columnas_merge + ['Tiene_modelo', 'material_coeficientes']  # noqa: RUF005
+
+    columnas_a_copiar = [
+        col for col in df_coeficientes.columns if col not in cols_patch]
+
+    df_resultados = df_resultados.merge(
+        df_coeficientes[columnas_merge + columnas_a_copiar],
+        on=columnas_merge,
+        how='left',
+    )
+
+    print('Columnas a copiar: ', len(columnas_a_copiar), '\n ejempl0: ', columnas_a_copiar)
+    print('DF RESULTADOS FINAL PRE SUBIDA: ', df_resultados.info())
     # REGION: Limpiar y subir a GCP
     #----------------------------------------------------------------------
 
@@ -1033,16 +1418,38 @@ def main() -> None:  # noqa: D103
                                                 'elasticidad_contagiada':'elasticidad'})
 
 
-    df_gcp = df_resultados[['store_banner',
+    df_gcp = df_resultados[['store_banner',  # noqa: RUF005
                             'categoria',
                             'material',
                             'descripcion_material',
                             'ean',
                             'umv',
                             'elasticidad',
-                            'segmento_elasticidad']]
+                            'segmento_elasticidad']  + columnas_a_copiar + ['Tipo_Contagio', 'Material_Contagiante']]  # noqa: E501
 
 
+    if 'apo' not in df_gcp.columns:
+        posicion_variante = df_gcp.columns.get_loc('variacion_top1_sustituto')
+
+        df_gcp.insert(
+            loc=posicion_variante,
+            column='apo',
+            value=0)
+
+    #MAYORISTA NO REGISTRA COLUMNA 2026
+    if '2026' not in df_gcp.columns:
+        posicion_variante = df_gcp.columns.get_loc('multiplicador_x05')
+        df_gcp.insert(
+            loc=posicion_variante,
+            column='2026',
+            value=0)
+
+    df_gcp['Material_Contagiante'] = (
+        df_gcp['Material_Contagiante']
+        .replace('No aplica', -1))
+
+
+    print('Justo antes de subir a GCP: ', df_gcp.info())
 
     # Definir el WHERE
     where_clause = f"store_banner = '{store_banner}'"
@@ -1058,7 +1465,7 @@ def main() -> None:  # noqa: D103
     uploadFrame(
         df_gcp,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'ingest_ecommerce_product_elasticity.json'),
+                                         'ingest_product_elasticity.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='append'
@@ -1073,3 +1480,4 @@ def main() -> None:  # noqa: D103
 
 if __name__ == '__main__':
     main()
+
