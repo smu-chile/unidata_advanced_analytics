@@ -60,7 +60,7 @@
         {
             "name": "INDICE_SENSIBILIDAD_FAMILIA",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Índice de sensibilidad sku padre (media geométrica)"
         },
         {
