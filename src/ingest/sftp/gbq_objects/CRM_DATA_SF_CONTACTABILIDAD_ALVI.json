@@ -70,7 +70,10 @@
         {
             "name": "DIRECCION",
             "field_type": "STRING",
-            "mode": "NULLABLE"
+            "mode": "NULLABLE",
+            "policy_tags": {
+                "names": ["projects/cl-cda-qa/locations/us/taxonomies/3933141009802020086/policyTags/4759802851378849030"]
+            }
         },
         {
             "name": "ACEPTA_BASES_CONCURSOS",
