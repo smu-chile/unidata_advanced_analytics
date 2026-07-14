@@ -96,7 +96,11 @@
         {
             "name": "RUT_PROVEEDOR",
             "field_type": "STRING",
-            "mode": "NULLABLE"
+            "mode": "NULLABLE",
+            "policy_tags": {
+                "names": ["projects/cl-cda-qa/locations/us/taxonomies/3933141009802020086/policyTags/6088334250513318514"]
+            }
+            
         },
         {
             "name": "IMPORTE_SELL_OUT",
