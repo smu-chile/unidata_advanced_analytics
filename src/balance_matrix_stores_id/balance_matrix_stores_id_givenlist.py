@@ -8,7 +8,7 @@ from datetime import timedelta
 # pip
 import pendulum
 from airflow.models import DAG
-from airflow.decorators import task, task_group
+from airflow.decorators import task, task_group  # type: ignore  # noqa: PGH003
 from airflow.configuration import conf
 
 
@@ -119,21 +119,21 @@ with DAG(**dag_args) as dag:
             sophistication_task = ExtendedDataprocCreateBatchOperator(
                 task_id=f'{script0}_{banner_suffix}',
                 python_script_path=f'{PROJECT_NAME}/scripts/{script0}.py',
-                pyspark_batch_args=[*base_args, '--store_id', store_id],
+                pyspark_batch_args=[*base_args, '--store_id', json.dumps([store_id])],
                 **common,
             )
 
             sensibility_task = ExtendedDataprocCreateBatchOperator(
                 task_id=f'{script1}_{banner_suffix}',
                 python_script_path=f'{PROJECT_NAME}/scripts/{script1}.py',
-                pyspark_batch_args=[*base_args, '--store_id', store_id],
+                pyspark_batch_args=[*base_args, '--store_id', json.dumps([store_id])],
                 **common,
             )
 
             processed_data_task = ExtendedDataprocCreateBatchOperator(
                 task_id=f'{script2}_{banner_suffix}',
                 python_script_path=f'{PROJECT_NAME}/scripts/{script2}.py',
-                pyspark_batch_args=[*base_args, '--use', 'ELASTICITY', '--store_id', store_id],
+                pyspark_batch_args=[*base_args, '--use', 'ELASTICITY', '--store_id', json.dumps([store_id])],  # noqa: E501
                 spark_driver_cores=8,
                 spark_driver_memory=40,
                 **common,
@@ -142,7 +142,7 @@ with DAG(**dag_args) as dag:
             elasticity_task = ExtendedDataprocCreateBatchOperator(
                 task_id=f'{script3}_{banner_suffix}',
                 python_script_path=f'{PROJECT_NAME}/scripts/{script3}.py',
-                pyspark_batch_args=[*base_args, '--store_id', store_id],
+                pyspark_batch_args=[*base_args, '--store_id', json.dumps([store_id])],
                 spark_driver_cores=8,
                 spark_driver_memory=40,
                 **common,
@@ -151,7 +151,7 @@ with DAG(**dag_args) as dag:
             bm_task = ExtendedDataprocCreateBatchOperator(
                 task_id=f'{script4}_{banner_suffix}',
                 python_script_path=f'{PROJECT_NAME}/scripts/{script4}.py',
-                pyspark_batch_args=[*base_args, '--store_id', store_id, '--suffix', '{{ dag_run.conf.get("suffix", "") }}'],  # noqa: E501
+                pyspark_batch_args=[*base_args, '--store_id', json.dumps([store_id]), '--suffix', '{{ dag_run.conf.get("suffix", "") }}'],  # noqa: E501
                 **common,
             )
 
