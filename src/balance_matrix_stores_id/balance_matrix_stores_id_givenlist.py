@@ -8,6 +8,7 @@ from datetime import timedelta
 # pip
 import pendulum
 from airflow.models import DAG
+from airflow.decorators import task, task_group
 from airflow.configuration import conf
 
 
@@ -46,12 +47,12 @@ script4 = 'balance_matrix_stores_id_givenlist'
 ########## --------------------------##############
 
 PROJECT_NAME      = 'balance_matrix_stores_id' #PARCHE
-dag_id            = 'balance_matrix_stores_id' #PARCHE
+dag_id            = 'balance_matrix_stores_id_givenlist' #PARCHE
 schedule_interval =  None
 catchup           =  False
 start_date        = [2025, 6, 20]
 store_banner_list = ['Unimarc']
-store_id_list     = ['35','40']
+
 
 dag_args = {
     'dag_id': 'balance_matrix_stores_id', #PARCHE
@@ -80,8 +81,6 @@ dag_args = {
         'retry_delay': timedelta(minutes=5)
     }
 }
-
-from airflow.sdk import task, task_group  # noqa: E402
 
 
 with DAG(**dag_args) as dag:
