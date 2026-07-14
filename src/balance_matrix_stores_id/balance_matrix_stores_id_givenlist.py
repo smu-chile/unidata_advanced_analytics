@@ -55,7 +55,7 @@ store_banner_list = ['Unimarc']
 
 
 dag_args = {
-    'dag_id': 'balance_matrix_stores_id', #PARCHE
+    'dag_id': dag_id, #PARCHE
     'schedule_interval': schedule_interval,
     'dagrun_timeout': None,
     'catchup': catchup,
