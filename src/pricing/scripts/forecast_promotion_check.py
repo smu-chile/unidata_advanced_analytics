@@ -2020,7 +2020,7 @@ def comparacion_ventas_historial(
         x_train['p_date'].isin(dias_last_year)
     ]
 
-    #Cantidad de días post extracción 
+    #Cantidad de días post extracción
     dias_encontrados = x_last_year['p_date'].nunique()
 
     #Obtención las ventas durante predicción.
