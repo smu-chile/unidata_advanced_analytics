@@ -1391,7 +1391,7 @@ def entrenar_modelo_material(df_prod: pd.DataFrame,
         (None, None, None) si no lo es.
     """
 
-    modelo = obtenerModeloOLS(
+    modelo, datos_train = obtenerModeloOLS(
         df_prod,
         ean,
         fecha_limite,
@@ -1400,7 +1400,7 @@ def entrenar_modelo_material(df_prod: pd.DataFrame,
     )
 
     if modelo is None:
-        return None, None, None
+        return None, None, None, None
 
     r2 = round(float(modelo.rsquared_adj), 2) if modelo is not None else None
 
@@ -1409,7 +1409,7 @@ def entrenar_modelo_material(df_prod: pd.DataFrame,
         if hasattr(modelo, 'params') and 'log_precio' in modelo.params.index
         else None
     )
-    return modelo, r2, elasticidad
+    return modelo, r2, elasticidad, datos_train
 
 #4.6.1
 def obtenerModeloOLS(
@@ -1482,14 +1482,14 @@ def obtenerModeloOLS(
         ]
 
     if df_ean.empty:
-        return None
+        return None, None
 
     # -------------------------------------------------------------
     # 2) Transformaciones básicas
     # -------------------------------------------------------------
     columnas_requeridas = {'cantidad_total', 'precio_promedio', 'p_date'}
     if not columnas_requeridas.issubset(df_ean.columns):
-        return None
+        return None, None
 
     df_ean['log_cantidad'] = np.log(df_ean['cantidad_total'])
     df_ean['log_precio'] = np.log(df_ean['precio_promedio'])
@@ -1497,16 +1497,17 @@ def obtenerModeloOLS(
     # Filtro de ventas extremadamente bajas (regla 10% del promedio)
     cantidad_media = df_ean['cantidad_total'].mean()
     if not np.isfinite(cantidad_media) or cantidad_media <= 0:
-        return None
+        return None, None
 
     df_ean = df_ean[df_ean['cantidad_total'] >= cantidad_media / 10]
     if df_ean.empty:
-        return None
+        return None, None
 
     # -------------------------------------------------------------
     # 3) Definición de variables explicativas
     # -------------------------------------------------------------
     fixed_vars = [
+        'p_date',
         'log_precio', #antes log_precio
         'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
         '2024', '2025', '2026',
@@ -1532,7 +1533,7 @@ def obtenerModeloOLS(
     ]
 
     if 'log_precio' not in fixed_vars:
-        return None
+        return None, None
 
     # Meses (sin enero para evitar trampa de dummies)
     meses_vars = [
@@ -1578,7 +1579,8 @@ def obtenerModeloOLS(
         pesos_percent=pesos_percent
     )
 
-    return sm.WLS(y, X, weights=pesos).fit()
+    x_sin_pdate = X.drop(columns=['p_date'])
+    return sm.WLS(y, x_sin_pdate, weights=pesos).fit(), (X,y,pesos)
 
 
 #4.7
@@ -1988,7 +1990,99 @@ def adicion_registro_proyeccion(
 
     return logs_iteracion
 
+def comparacion_ventas_historial(
+    df_train: pd.DataFrame,
+    df_pred: pd.DataFrame,
+    porc_diff_up: float = 1.5,
+    porc_diff_down: float = 0.6,
+    porc_dias_comparacion: float = 0.75,
+) -> str | None:
+    """Compara ventas predichas contra historial reciente o anual."""
 
+
+    #Información de entrenamiento
+    x_train = df_train[0]
+
+    #Ventas durante entrenamiento: precio * unidades_vendidas
+    y_train = np.exp(df_train[0]['log_precio']) * np.exp(df_train[1])
+
+    #Se ordenan las fechas de predicción
+    dias_pred = sorted(df_pred['p_date'].unique())
+
+    #Se crea una nueva lista con las fechas de pred pero un año antes
+    dias_last_year = [
+        fecha - pd.DateOffset(years=1)
+        for fecha in dias_pred
+    ]
+
+    #Se extrae el periodo de predicción equivalente del año pasado
+    x_last_year = x_train[
+        x_train['p_date'].isin(dias_last_year)
+    ]
+
+    #Cantidad de días post extracción 
+    dias_encontrados = x_last_year['p_date'].nunique()
+
+    #Obtención las ventas durante predicción.
+    ventas_pred = df_pred[
+        'ventas_totales_producto_predicha'
+    ].sum()
+
+    # Si los días encontrados superan una cantidad equivalente a:
+    # <porc_dias_comparacion> * días de promo
+    # Entonces se compara con el periodo anual anterior. Caso contrario,
+    # se mira los últimos días equivalente al periodo evaluado.
+
+    if dias_encontrados >= (
+        porc_dias_comparacion * len(dias_pred)
+    ):
+        print('Entramos a comparar periodo anual pasado')
+
+        #Se extraen los índices de los días correspondientes al periodo
+        #anual equivalente anterior y se indexa con las ventas observadas
+        y_train_equivalente = y_train[
+            y_train.index.isin(x_last_year.index)
+        ]
+
+        #la suma de la venta diaria corresponde a unas ventas pasadas
+        ventas_past = y_train_equivalente.sum()
+
+    #Caso contrario, sumamos las ventas de los últimos días equivalentes
+    #a la duración de la promo
+    else:
+        print('Entramos a comparar con últimos días')
+        fechas_recientes = (
+            pd.Series(
+                x_train['p_date'].unique()
+            )
+            .sort_values()
+            .tail(len(dias_pred))
+        )
+
+        #extracción de fechas.
+        x_last_past = x_train[
+            x_train['p_date'].isin(fechas_recientes)
+        ]
+
+        #Mismo proceso de extracción de índices
+        y_train_equivalente = y_train[
+            y_train.index.isin(x_last_past.index)
+        ]
+
+        #la suma de la venta diaria corresponde a unas ventas pasadas
+        ventas_past = y_train_equivalente.sum()
+
+    print('Ventas predichas: ',ventas_pred)
+    print('Ventas observadas: ', ventas_past)
+    if ventas_pred >= porc_diff_up * ventas_past:
+        comentario = 'Proyección sobrestimada'
+    elif ventas_pred <= porc_diff_down * ventas_past:
+        comentario = 'Proyección subestimada'
+
+    else:
+        comentario = '-'
+
+    return comentario, round(ventas_past), round(ventas_pred)
 
 # Main Parte 4
 def loop_promociones(
@@ -2073,7 +2167,7 @@ def loop_promociones(
             # -----------------------------
             # 2) Entrenamiento del modelo
             # -----------------------------
-            modelo, r2, elasticidad = entrenar_modelo_material(
+            modelo, r2, elasticidad, data_train = entrenar_modelo_material(
                 df_hist_prod,
                 contexto['ean_promocion'],
                 contexto['fecha_limite'],
@@ -2137,6 +2231,15 @@ def loop_promociones(
                 considerar_venta_incremental
             )
 
+            # Implementación Trigger Venta Sobre/subestimada vs historial
+            comentario, ventas_past, ventas_obs = comparacion_ventas_historial(data_train, res_promo['df_pred'])  # noqa: E501
+
+            if comentario != '-':
+                logs_iteracion['Estado_proyección'] = 'No se pudo proyectar'
+                logs_iteracion['Comentario'] = comentario
+                filas_resumen.append(logs_iteracion)
+                continue
+
             # -----------------------------
             # 5) Registro iteración válida
             # -----------------------------
@@ -2146,6 +2249,7 @@ def loop_promociones(
                 res_base=res_base)
 
             logs_iteracion['Estado_proyección'] = 'Viable'
+            logs_iteracion['Valores Comparativa'] = [ventas_past, ventas_obs]
 
             filas_resumen.append(logs_iteracion)
 
