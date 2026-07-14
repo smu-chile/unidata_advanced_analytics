@@ -111,7 +111,6 @@ with DAG(**dag_args) as dag:
                 include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
                 pool=STORE_POOL,
                 map_index_template='{{ store_id }}',   # UI legible: muestra el store_id,
-                deferrable=False
             )
             base_args = [
                 '--project_id', dag_env_config['project_id'],
