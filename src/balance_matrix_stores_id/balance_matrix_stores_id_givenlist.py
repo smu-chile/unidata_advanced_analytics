@@ -55,7 +55,7 @@ store_banner_list = ['Unimarc']
 
 
 dag_args = {
-    'dag_id': dag_id, #PARCHE
+    'dag_id': 'balance_matrix_stores_id_givenlist', #PARCHE
     'schedule_interval': schedule_interval,
     'dagrun_timeout': None,
     'catchup': catchup,
@@ -87,7 +87,7 @@ with DAG(**dag_args) as dag:
 
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
-    STORE_POOL = 'dataproc_stores'   # crea este pool en Admin -> Pools (ej: 2 slots)
+    STORE_POOL = 'default_pool'   # crea este pool en Admin -> Pools (ej: 2 slots)
 
     # 1) Resolver la lista de store_id en RUNTIME (no en parse time)
     @task
