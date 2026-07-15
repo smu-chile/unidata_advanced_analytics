@@ -10,12 +10,6 @@
             "description": "Formato al que pertenece la información"
         },
         {
-            "name": "STORE_ID",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "Información store ID"
-        },
-        {
             "name": "CATEGORIA",
             "field_type": "STRING",
             "mode": "REQUIRED",
@@ -118,16 +112,46 @@
             "description": "Coeficiente asociado al año 2025"
         },
         {
+            "name": "2026",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente asociado al año 2025"
+        },
+        {
+            "name": "multiplicador_x05",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Dummy para producto con venta menos que el promedio diario"
+        },
+        {
             "name": "JUEVES_SANTO",
             "field_type": "FLOAT",
             "mode": "NULLABLE",
             "description": "Coeficiente asociado al jueves santo"
         },
         {
+            "name": "VIERNES_SANTO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente asociado al viernes santo"
+        },
+        {
             "name": "30_ABRIL",
             "field_type": "FLOAT",
             "mode": "NULLABLE",
             "description": "Coeficiente asociado al 30 de abril"
+        },
+        {
+            "name": "20_MAYO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente asociado al 20 de mayo"
+        },
+        {
+            "name": "21_MAYO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente asociado al 21 de mayo"
         },
         {
             "name": "19_JUNIO",
@@ -190,6 +214,18 @@
             "description": "Coeficiente asociado al 17 de septiembre"
         },
         {
+            "name": "PRE_HALLOWEEN",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente asociado al periodo previo a halloween"
+        },
+        {
+            "name": "HALLLOWEEN",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente asociado al periodo de halloween"
+        },
+        {
             "name": "PRE_NAVIDAD",
             "field_type": "FLOAT",
             "mode": "NULLABLE",
@@ -202,10 +238,22 @@
             "description": "Coeficiente asociado al periodo de navidad"
         },
         {
+            "name": "PRE_ANO_NUEVO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente asociado al periodo previo al año nuevo"
+        },
+        {
             "name": "ANO_NUEVO",
             "field_type": "FLOAT",
             "mode": "NULLABLE",
             "description": "Coeficiente asociado al año nuevo"
+        },
+        {
+            "name": "APO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente asociado a la flag apo"
         },
         {
             "name": "VARIACION_PORCENTUAL_SUBCATEGORIA",
@@ -278,8 +326,33 @@
             "field_type": "FLOAT",
             "mode": "NULLABLE",
             "description": "Coeficiente asociado al diciembre"
+        },
+        {
+            "name": "VARIACION_TOP1_SUSTITUTO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente variacion top1 sustituto"
+        },
+        {
+            "name": "VARIACION_TOP3_SUSTITUTOS",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente variacion top3 sustitutos"
+        },
+        {
+            "name": "TIPO_CONTAGIO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Tipo de contagio utilizado"
+        },
+        {
+            "name": "MATERIAL_CONTAGIANTE",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Material del cual se obtiene la elasticidad"
         }
     ],
 
-    "clustering_fields": ["STORE_BANNER", "STORE_ID"]
+    "clustering_fields": ["STORE_BANNER"]
 }
+
