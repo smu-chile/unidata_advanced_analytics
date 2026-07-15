@@ -1446,12 +1446,14 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     df_resultados['store_banner'] = store_banner
+    df_resultados['store_id'] = store_id_str
     df_resultados = df_resultados.rename(columns={'product_description':'descripcion_material',
                                                 'sales_uom':'umv',
                                                 'elasticidad_contagiada':'elasticidad'})
 
 
     df_gcp = df_resultados[['store_banner',  # noqa: RUF005
+                            'store_id',
                             'categoria',
                             'material',
                             'descripcion_material',
