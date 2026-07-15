@@ -508,6 +508,8 @@ def ejecutar_query(
         categorias=categorias
     )
 
+    print('QUERY: ', query)
+
     logging.info('Ejecutando query en BigQuery...')
     ejecutando = True
 
