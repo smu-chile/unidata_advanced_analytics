@@ -2036,7 +2036,7 @@ def comparacion_ventas_historial(
     if dias_encontrados >= (
         porc_dias_comparacion * len(dias_pred)
     ):
-        print('Entramos a comparar periodo anual pasado')
+        # print('Entramos a comparar periodo anual pasado')  # noqa: ERA001
 
         #Se extraen los índices de los días correspondientes al periodo
         #anual equivalente anterior y se indexa con las ventas observadas
@@ -2050,7 +2050,7 @@ def comparacion_ventas_historial(
     #Caso contrario, sumamos las ventas de los últimos días equivalentes
     #a la duración de la promo
     else:
-        print('Entramos a comparar con últimos días')
+        # print('Entramos a comparar con últimos días')  # noqa: ERA001
         fechas_recientes = (
             pd.Series(
                 x_train['p_date'].unique()
@@ -2072,8 +2072,8 @@ def comparacion_ventas_historial(
         #la suma de la venta diaria corresponde a unas ventas pasadas
         ventas_past = y_train_equivalente.sum()
 
-    print('Ventas predichas: ',ventas_pred)
-    print('Ventas observadas: ', ventas_past)
+    # print('Ventas predichas: ',ventas_pred)  # noqa: ERA001
+    # print('Ventas observadas: ', ventas_past)  # noqa: ERA001
     if ventas_pred >= porc_diff_up * ventas_past:
         comentario = 'Proyección sobrestimada'
     elif ventas_pred <= porc_diff_down * ventas_past:
@@ -2232,7 +2232,7 @@ def loop_promociones(
             )
 
             # Implementación Trigger Venta Sobre/subestimada vs historial
-            comentario, ventas_past, ventas_obs = comparacion_ventas_historial(data_train, res_promo['df_pred'])  # noqa: E501
+            comentario, _, _ = comparacion_ventas_historial(data_train, res_promo['df_pred'])  # noqa: E501
 
             if comentario != '-':
                 logs_iteracion['Estado_proyección'] = 'No se pudo proyectar'
@@ -2249,7 +2249,7 @@ def loop_promociones(
                 res_base=res_base)
 
             logs_iteracion['Estado_proyección'] = 'Viable'
-            logs_iteracion['Valores Comparativa'] = [ventas_past, ventas_obs]
+            #logs_iteracion['Valores Comparativa'] = [ventas_past, ventas_obs]  # noqa: ERA001, W505
 
             filas_resumen.append(logs_iteracion)
 
@@ -2368,6 +2368,10 @@ def main():
                                             'Estado_Elasticidad',
                                             'Estado_fecha_proy',
                                             'Estado_proyección'])
+
+    logging.info('[Anexo]: Estado de las proyecciones: \n', df_proyecciones['Comentario'].value_counts())  # noqa: E501
+
+
 
     # ---- Parte 5: Subida resultados a Sharepoint ---- #
     logging.info('[5/5]: Guardado de resultados...')
