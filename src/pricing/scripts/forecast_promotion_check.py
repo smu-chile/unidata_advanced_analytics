@@ -2249,7 +2249,7 @@ def loop_promociones(
                 res_base=res_base)
 
             logs_iteracion['Estado_proyección'] = 'Viable'
-            #logs_iteracion['Valores Comparativa'] = [ventas_past, ventas_obs]  # noqa: ERA001, W505
+            #logs_iteracion['Valores Comparativa']=[ventas_past, ventas_obs]  # noqa: ERA001, W505
 
             filas_resumen.append(logs_iteracion)
 
