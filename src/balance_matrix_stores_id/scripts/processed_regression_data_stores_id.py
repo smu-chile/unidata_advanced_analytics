@@ -519,13 +519,15 @@ def main() -> None:  # noqa: D103
 
 
     ahora = pendulum.now()
-    expiration = ahora.add(minutes=200)
 
-    setTableExpiration(
-        table_ref = tmp_path_table_aux,
-        expiration = expiration,
-        gbq_client= gbq_client
-    )
+    #Se deja tabla AUX
+    # expiration = ahora.add(minutes=200)
+
+    # setTableExpiration(
+    #     table_ref = tmp_path_table_aux,
+    #     expiration = expiration,
+    #     gbq_client= gbq_client
+    # )
 
     logging.info('Se setea la expiracion de la tabla maestra...')
 
