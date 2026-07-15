@@ -348,7 +348,7 @@ def main() -> None:  # noqa: D103
         for i, col in enumerate(columnas):
             print('[COL] ', col)
             serie = df_balance_matrix_sp[col].astype(str)
-            max_len = max(serie.map(len).max(), len(col))
+            max_len = max(serie.astype(str).map(len).max(), len(col))
             width = max_len + 2
 
             # aplicar formato según columna
