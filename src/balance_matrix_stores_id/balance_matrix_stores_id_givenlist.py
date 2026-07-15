@@ -7,8 +7,7 @@ from datetime import timedelta
 
 # pip
 import pendulum
-from airflow.models import DAG
-from airflow.decorators import task, task_group  # type: ignore  # noqa: PGH003
+from airflow.models import DAG, Variable
 from airflow.configuration import conf
 
 
@@ -52,7 +51,7 @@ schedule_interval =  None
 catchup           =  False
 start_date        = [2025, 6, 20]
 store_banner_list = ['Unimarc']
-
+store_id_list = json.loads(Variable.get('balance_matrix_store_ids', default_var='[]'))  # noqa: AIR311
 
 dag_args = {
     'dag_id': 'balance_matrix_stores_id_givenlist', #PARCHE
@@ -87,78 +86,75 @@ with DAG(**dag_args) as dag:
 
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
-    STORE_POOL = 'default_pool'   # crea este pool en Admin -> Pools (ej: 2 slots)
 
-    # 1) Resolver la lista de store_id en RUNTIME (no en parse time)
-    @task
-    def get_store_ids(**context):
-        raw = context['dag_run'].conf.get('store_id', [])
-        # devuelve cada store ya como cadena JSON: '["35"]', '["40"]'
-        return [json.dumps([str(s)]) for s in raw]
+    store_id_list = json.loads(
+            Variable.get('balance_matrix_store_ids', default_var='[]')  # noqa: AIR311
+        )
 
-    store_ids = get_store_ids()
+    previous_group = None
 
     for store_banner in store_banner_list:
         banner_suffix = store_banner.replace(' ', '_').lower()
 
-        # 2) Un TaskGroup = pipeline completa (5 pasos) por cada store_id
-        @task_group(group_id=f'pipeline_{banner_suffix}')
-        def store_pipeline(store_id, store_banner=store_banner, banner_suffix=banner_suffix):
+        for store_id in store_id_list:
+            sid = str(store_id)
 
             common: dict[str, Any] = dict(  # noqa: C408
                 dag_env_config=dag_env_config,
                 docker_image_name=f'{PROJECT_NAME}',
                 include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
-                pool=STORE_POOL,
-                map_index_template='{{ store_id }}',   # UI legible: muestra el store_id,
             )
+
             base_args = [
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
                 '--store_banner', store_banner,
+                '--store_id', json.dumps([sid])
             ]
 
             sophistication_task = ExtendedDataprocCreateBatchOperator(
-                task_id=f'{script0}_{banner_suffix}',
+                task_id=f'{script0}_{banner_suffix}_{sid}',
                 python_script_path=f'{PROJECT_NAME}/scripts/{script0}.py',
-                pyspark_batch_args=[*base_args, '--store_id', store_id],
+                pyspark_batch_args=[*base_args],
                 **common,
             )
 
             sensibility_task = ExtendedDataprocCreateBatchOperator(
-                task_id=f'{script1}_{banner_suffix}',
+                task_id=f'{script1}_{banner_suffix}_{sid}',
                 python_script_path=f'{PROJECT_NAME}/scripts/{script1}.py',
-                pyspark_batch_args=[*base_args, '--store_id', store_id],
+                pyspark_batch_args=[*base_args],
                 **common,
             )
 
             processed_data_task = ExtendedDataprocCreateBatchOperator(
-                task_id=f'{script2}_{banner_suffix}',
+                task_id=f'{script2}_{banner_suffix}_{sid}',
                 python_script_path=f'{PROJECT_NAME}/scripts/{script2}.py',
-                pyspark_batch_args=[*base_args, '--use', 'ELASTICITY', '--store_id', store_id],  # noqa: E501
+                pyspark_batch_args=[*base_args, '--use', 'ELASTICITY'],  # noqa: E501
                 spark_driver_cores=8,
                 spark_driver_memory=40,
                 **common,
             )
 
             elasticity_task = ExtendedDataprocCreateBatchOperator(
-                task_id=f'{script3}_{banner_suffix}',
+                task_id=f'{script3}_{banner_suffix}_{sid}',
                 python_script_path=f'{PROJECT_NAME}/scripts/{script3}.py',
-                pyspark_batch_args=[*base_args, '--store_id', store_id],
+                pyspark_batch_args=[*base_args],
                 spark_driver_cores=8,
                 spark_driver_memory=40,
                 **common,
             )
 
             bm_task = ExtendedDataprocCreateBatchOperator(
-                task_id=f'{script4}_{banner_suffix}',
+                task_id=f'{script4}_{banner_suffix}_{sid}',
                 python_script_path=f'{PROJECT_NAME}/scripts/{script4}.py',
-                pyspark_batch_args=[*base_args, '--store_id', store_id, '--suffix', '{{ dag_run.conf.get("suffix", "") }}'],  # noqa: E501
+                pyspark_batch_args=[*base_args, '--suffix', '{{ dag_run.conf.get("suffix", "") }}'],  # noqa: E501
                 **common,
             )
 
             # Encadenamiento dentro del grupo: secuencial por store
             sophistication_task >> sensibility_task >> processed_data_task >> elasticity_task >> bm_task  # noqa: E501
 
-        # 3) Expandir: una pipeline independiente por cada store_id
-        store_pipeline.expand(store_id=store_ids)
+            if previous_group is not None:
+                previous_group >> sophistication_task
+            previous_group = bm_task
+
