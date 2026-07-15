@@ -2387,7 +2387,7 @@ def main():
                                             'Estado_fecha_proy',
                                             'Estado_proyección'])
 
-    logging.info('[Anexo]: Estado de las proyecciones: \n', df_proyecciones['Comentario'].value_counts())  # noqa: E501
+    logging.info('[Anexo]: Estado de las proyecciones:\n%s', df_proyecciones['Comentario'].value_counts())  # noqa: E501
 
 
 
