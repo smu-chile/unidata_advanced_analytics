@@ -10,6 +10,12 @@
             "description": "Formato al que pertenece la información"
         },
         {
+            "name": "STORE_ID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "ID de las stores a ejecutarse"
+        },
+        {
             "name": "CATEGORIA",
             "field_type": "STRING",
             "mode": "REQUIRED",
@@ -353,6 +359,6 @@
         }
     ],
 
-    "clustering_fields": ["STORE_BANNER"]
+    "clustering_fields": ["STORE_BANNER", "STORE_ID"]
 }
 
