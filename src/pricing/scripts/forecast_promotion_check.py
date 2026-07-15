@@ -329,25 +329,40 @@ def cargar_input_sharepoint(
 def validar_input_promociones(
     df_inp: pd.DataFrame
 ) -> list[str]:
-    """P1.F6 Valida columnas obligatorias y cantidad de promos > 0
+    """P1.F6 Valida columnas s y cantidad de promos > 0.
 
     Inputs:
     df_inp [pd.DataFrame] Dataframe con la data del .xlsx importado
 
     Outputs:
-    [list] Lista de promociones contenidas en df_inp
+    [list] Lista de promociones marcadas para generar proyección.
     """
 
     cols_requeridas = {'n_promocion', 'generar_proyeccion'}
     faltantes = cols_requeridas - set(df_inp.columns)
 
     text_val_1 = f'Faltan columnas en el Excel: {sorted(faltantes)}'
-    text_val_2 = 'No se encontraron promociones en el archivo.'
+    text_val_2 = (
+        'No se encontraron promociones con generar_proyeccion = Si.'
+    )
 
     if faltantes:
         raise ValueError(text_val_1)
 
-    promociones = (df_inp['n_promocion'].dropna().astype(str).unique().tolist())
+    promociones = (
+        df_inp.loc[
+            df_inp['generar_proyeccion']
+            .astype(str)
+            .str.strip()
+            .str.lower()
+            .eq('si'),
+            'n_promocion',
+        ]
+        .dropna()
+        .astype(str)
+        .unique()
+        .tolist()
+    )
 
     if not promociones:
         raise ValueError(text_val_2)
@@ -2336,6 +2351,8 @@ def main():
     )
     string_promos =  ','.join(lista_promos)
 
+    logging.info(f'[patch] Visualización STRING PROMOS [n {len(lista_promos)}] \n', string_promos)
+
     # ---- Parte 2: Procesamiento y construcción de DataFrames ---- #
     logging.info('[2/5]: Construcción de DataFrame Historial venta...')
     df_final = generarDataFrame(query='query_data_procesada',
@@ -2344,7 +2361,6 @@ def main():
                                 path_table= path_table,
                                 usuario='pricing',
                                 store_banner = store_banner)
-    print('df_final: ', df_final.shape)
 
     # ---- Parte 3: Construcción de df_resultado y df_universo ---- #
     logging.info('[3/5]: Construcción de df_resultado y df_universo...')
