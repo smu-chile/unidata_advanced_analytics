@@ -41,7 +41,7 @@ script0 = 'computing_customer_segmentation_sophistication_stores_id'
 script1 = 'product_sensibility_stores_id'
 script2 = 'processed_regression_data_stores_id'
 script3 = 'product_elasticity_stores_id'
-script4 = 'balance_matrix_stores_id'
+script4 = 'balance_matrix_stores_id_givenlist'
 
 ########## --------------------------##############
 
