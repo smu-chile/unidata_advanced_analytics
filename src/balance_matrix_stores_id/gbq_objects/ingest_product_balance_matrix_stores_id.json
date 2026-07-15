@@ -58,6 +58,12 @@
             "description": "Índice propio de sensibilidad del producto (media geométrica)"
         },
         {
+            "name": "INDICE_SENSIBILIDAD_FAMILIA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Índice de sensibilidad sku padre (media geométrica)"
+        },
+        {
             "name": "ELASTICIDAD",
             "field_type": "FLOAT",
             "mode": "REQUIRED",
