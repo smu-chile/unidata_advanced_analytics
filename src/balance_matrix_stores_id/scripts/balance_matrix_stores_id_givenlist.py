@@ -232,7 +232,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     df_balance_matrix = df_elasticidad.merge(
-        df_sensibilidad[['material', 'indice_sensibilidad', 'kvi']],
+        df_sensibilidad[['material', 'indice_sensibilidad','indice_sensibilidad_familia','kvi']],
         on='material',
         how='left'
     )
@@ -281,6 +281,7 @@ def main() -> None:  # noqa: D103
                                             'ean',
                                             'ventas_totales',
                                             'indice_sensibilidad',
+                                            'indice_sensibilidad_familia',
                                             'elasticidad',
                                             'kvi',
                                             'codigo_sensibilidad',
@@ -297,6 +298,7 @@ def main() -> None:  # noqa: D103
         'ean':'EAN',
         'ventas_totales': 'Ventas EAN (12 meses)',
         'indice_sensibilidad': 'Índice sensibilidad',
+        'indice_sensibilidad_familia': 'Índice sensibilidad familia',
         'elasticidad': 'Elasticidad',
         'kvi':'KVI',
         'codigo_sensibilidad': 'Código sensibilidad',
@@ -386,6 +388,7 @@ def main() -> None:  # noqa: D103
     # REGION: Se sube a GCP
     #----------------------------------------------------------------------
     # Definir el WHERE
+    print('Justo antes de subir a GCP: ', df_balance_matrix_sp.info())
     where_clause = f"store_banner = '{store_banner}' and store_id = '{store_id_str}'"
 
     # Parametros
@@ -403,6 +406,7 @@ def main() -> None:  # noqa: D103
     # Se carga en BQ con los datos recalculados
     # Parche 4: json ajustado a sector oriente
     # Parche 5: append -> replace.
+
     uploadFrame(
         df_balance_matrix_sp,
         table_ddl_json_path=os.path.join('gbq_objects',
