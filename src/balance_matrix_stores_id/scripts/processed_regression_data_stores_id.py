@@ -22,7 +22,6 @@ from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
     deleteFromTable,
-    setTableExpiration,
     createTableAsSelect,
 )
 from common.gcp_extended.secretsmanager import getSecret  # noqa: F401
@@ -521,13 +520,11 @@ def main() -> None:  # noqa: D103
     ahora = pendulum.now()
 
     #Se deja tabla AUX
-    # expiration = ahora.add(minutes=200)
-
+    # expiration = ahora.add(minutes=200)  # noqa: ERA001
     # setTableExpiration(
-    #     table_ref = tmp_path_table_aux,
-    #     expiration = expiration,
-    #     gbq_client= gbq_client
-    # )
+    #     table_ref = tmp_path_table_aux,  # noqa: ERA001
+    #     expiration = expiration,  # noqa: ERA001
+    #     gbq_client= gbq_client)
 
     logging.info('Se setea la expiracion de la tabla maestra...')
 
