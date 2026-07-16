@@ -256,18 +256,6 @@
             "description": "Coeficiente asociado al año nuevo"
         },
         {
-            "name": "APO",
-            "field_type": "FLOAT",
-            "mode": "NULLABLE",
-            "description": "Coeficiente asociado a la flag apo"
-        },
-        {
-            "name": "VARIACION_PORCENTUAL_SUBCATEGORIA",
-            "field_type": "FLOAT",
-            "mode": "NULLABLE",
-            "description": "Coeficiente asociado a la variación porcentual de la subcategoría"
-        },
-        {
             "name": "FEBRERO",
             "field_type": "FLOAT",
             "mode": "NULLABLE",
@@ -332,6 +320,18 @@
             "field_type": "FLOAT",
             "mode": "NULLABLE",
             "description": "Coeficiente asociado al diciembre"
+        },
+        {
+            "name": "APO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente asociado a la flag apo"
+        },
+        {
+            "name": "VARIACION_PORCENTUAL_SUBCATEGORIA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente asociado a la variación porcentual de la subcategoría"
         },
         {
             "name": "VARIACION_TOP1_SUSTITUTO",
