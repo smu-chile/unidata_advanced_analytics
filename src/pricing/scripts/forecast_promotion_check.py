@@ -2010,8 +2010,8 @@ def adicion_registro_proyeccion(
 def comparacion_ventas_historial(
     df_train: pd.DataFrame,
     df_pred: pd.DataFrame,
-    porc_diff_up: float = 1.5,
-    porc_diff_down: float = 0.6,
+    porc_diff_up: float = 1.75,
+    porc_diff_down: float = 0.5,
     porc_dias_comparacion: float = 0.75,
 ) -> str | None:
     """Compara ventas predichas contra historial reciente o anual."""
