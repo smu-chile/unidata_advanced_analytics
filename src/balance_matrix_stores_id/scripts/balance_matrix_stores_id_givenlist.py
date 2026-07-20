@@ -415,7 +415,7 @@ def main() -> None:  # noqa: D103
                                          'ingest_product_balance_matrix_stores_id.json'),
         project=proyecto,
         gbq_client=gbq_client,
-        if_exists='replace'
+        if_exists='append'
     )
 
     logging.info('Se sube la tabla a GCP')
