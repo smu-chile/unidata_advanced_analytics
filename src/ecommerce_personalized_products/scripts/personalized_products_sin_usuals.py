@@ -126,7 +126,7 @@ SQL_QUERIES = QueryDict({
             FECHA_INICIO_DE_PROMOCION,
             FECHA_FIN_DE_PROMOCION,
             ROW_NUMBER() OVER (PARTITION BY EAN ORDER BY FECHA_INICIO_DE_PROMOCION ASC) AS RW
-    FROM `${gcp_project}.CDA_VISTAS.VW_FACT_WORKFLOW`
+    FROM `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_FACT_WORKFLOW`
     WHERE
         organizacion_ventas = '1000'
         AND canal_distribucion IN ('10','70')
