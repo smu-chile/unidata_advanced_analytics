@@ -123,6 +123,7 @@ def main() -> None:  # noqa: D103
             input_file_ytd = input_files[file].substitute(site_root=site_root,
                                                           year=year)
             logging.info(f'Starting extraction of {input_file_ytd} from Sharepoint')
+        try:
             sharepoint = sp.SharePointFile(
             **sp_cred,
             server_relative_path=input_file_ytd
@@ -130,8 +131,8 @@ def main() -> None:  # noqa: D103
             df_file = sharepoint.toFrame()
             df_file =cleaning_func(df_file,year, file)
 
-            # Upload data
             logging.info('Uploading data')
+
             gbq_extended.createTableFromJSON(
                     table_ddl_json_path=os.path.join('gbq_objects', jsons[file]),
                     project=gcp_project_id,
@@ -153,6 +154,14 @@ def main() -> None:  # noqa: D103
                 if_exists='append',
             )
             logging.info(f'File {input_file_ytd} uploaded')
+
+        except Exception as e:
+            if '404' in str(e) or 'Not Found' in str(e):
+                logging.warning(f'Archivo no encontrado: {input_file_ytd}')
+                continue
+            raise
+
+
     logging.info('Process ended!')
 
 
