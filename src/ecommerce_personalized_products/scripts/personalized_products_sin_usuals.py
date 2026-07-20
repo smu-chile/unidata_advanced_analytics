@@ -490,7 +490,7 @@ def main() -> None:
 
     if execution_date.day_of_week == pendulum.THURSDAY:
         fecha_my_usuals = execution_date
-    elif execution_date.day_of_week == pendulum.SUNDAY:
+    elif execution_date.day_of_week == pendulum.MONDAY:
         fecha_my_usuals = execution_date.previous(pendulum.THURSDAY).to_date_string()
 
     upper_store_banner = store_banner.upper()
