@@ -52,7 +52,7 @@ start_date        = [2025, 6, 20]
 store_banner_list = ['Unimarc']
 
 dag_args = {
-    'dag_id': 'balance_matrix_group_stores_id', #PARCHE
+    'dag_id': 'balance_matrix_stores_id', #PARCHE
     'schedule_interval': schedule_interval,
     'dagrun_timeout': None,
     'catchup': catchup,
