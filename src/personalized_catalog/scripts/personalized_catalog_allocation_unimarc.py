@@ -171,12 +171,6 @@ SQL_QUERIES = QueryDict({
         customer_pool.CUSTOMER_KEY = TYC.CUSTOMER_KEY
         and TYC.TYC = 1
 
-    INNER JOIN `cl-cda-unidata-prod.DS_UNIDATA_CRM.CONTACTABILITY_USR` USR
-    ON
-        customer_pool.CUSTOMER_KEY = USR.CUSTOMER_ID
-        AND USR.ORGANIZATION_ID = upper('${store_banner}')
-        AND USR.EMAIL IS NOT NULL
-
     INNER JOIN `cl-cda-unidata-prod.DS_PROD_CLIENTES_IC.VW_CUSTOMER_BASE_WCA_FINAL` UNS
     ON
         customer_pool.CUSTOMER_KEY = UNS.CUSTOMER_ID
