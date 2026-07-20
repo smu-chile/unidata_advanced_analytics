@@ -46,7 +46,7 @@ script4 = 'balance_matrix_stores_id_givenlist'
 ########## --------------------------##############
 
 PROJECT_NAME      = 'balance_matrix_stores_id' #PARCHE
-dag_id            = 'balance_matrix_stores_id_givenlist' #PARCHE
+dag_id            = 'balance_matrix_each_stores_id' #PARCHE
 schedule_interval =  None
 catchup           =  False
 start_date        = [2025, 6, 20]
