@@ -40,19 +40,19 @@ script0 = 'computing_customer_segmentation_sophistication_stores_id'
 script1 = 'product_sensibility_stores_id'
 script2 = 'processed_regression_data_stores_id'
 script3 = 'product_elasticity_stores_id'
-script4 = 'balance_matrix_stores_id'
+script4 = 'balance_matrix_stores_id_givenlist'
 
 ########## --------------------------##############
 
 PROJECT_NAME      = 'balance_matrix_stores_id' #PARCHE
-dag_id            = 'balance_matrix_stores_id' #PARCHE
+dag_id            = 'balance_matrix_group_stores_id' #PARCHE
 schedule_interval =  None
 catchup           =  False
 start_date        = [2025, 6, 20]
 store_banner_list = ['Unimarc']
 
 dag_args = {
-    'dag_id': 'balance_matrix_stores_id', #PARCHE
+    'dag_id': 'balance_matrix_group_stores_id', #PARCHE
     'schedule_interval': schedule_interval,
     'dagrun_timeout': None,
     'catchup': catchup,
