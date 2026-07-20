@@ -1,0 +1,49 @@
+{
+    "schema": "TMP",
+    "table": "TMP_PERSONALIZED_PRODUCTS_CUSTOMER_FILL",
+    "columns": [
+        {
+            "name": "customer_key",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "material",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "cosine_distance",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "ean",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "grupo_dsc",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "cat_dsc",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "origen",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        }
+
+    ]
+}
