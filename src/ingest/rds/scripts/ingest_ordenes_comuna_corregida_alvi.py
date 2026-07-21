@@ -271,8 +271,8 @@ def main() -> None:
     logging.info('✅ Proceso completado exitosamente')
 
     # Variables auxiliares
-    fecha_max_bq = max_date if max_date else 'N/A'  # noqa: FURB110
-    umbral_fecha = max_date if max_date else 'TODOS'  # noqa: FURB110
+    fecha_max_bq = max_date if max_date else 'N/A'
+    umbral_fecha = max_date if max_date else 'TODOS'
 
     # Construcción del resumen
     summary_lines = [
