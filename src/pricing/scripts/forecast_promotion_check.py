@@ -2254,8 +2254,8 @@ def loop_promociones(
             if comentario != '-':
                 logs_iteracion['Estado_proyección'] = 'No se pudo proyectar'
                 logs_iteracion['Comentario'] = comentario
-                filas_resumen.append(logs_iteracion)
-                continue
+                # filas_resumen.append(logs_iteracion)  # noqa: ERA001
+                # continue  # noqa: ERA001
 
             # -----------------------------
             # 5) Registro iteración válida
