@@ -519,7 +519,7 @@ def main() -> None:  # noqa: D103
     # Create table using DDL JSON
     logging.info('Creating table schema if needed')
     createTableFromJSON(
-        table_ddl_json_path=os.path.join('gbq_objects', 'personalized_products.json'),
+        table_ddl_json_path=os.path.join('gbq_objects', 'personalized_products2.json'),
         project=gcp_project,
         gbq_client=gbq_client,
         if_exists='ignore',
@@ -957,7 +957,7 @@ def main() -> None:  # noqa: D103
             gcp_project = gcp_project,
             gcp_project_cda = gcp_project_cda
         ),
-        table_ref=f'{gcp_project}.ECOMMERCE.PERSONALIZED_PRODUCTS',
+        table_ref=f'{gcp_project}.ECOMMERCE.PERSONALIZED_PRODUCTS2',
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_APPEND',
         use_legacy_sql=False,
