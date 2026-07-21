@@ -10,5 +10,5 @@
     "type_": "DAY",
     "field": "fecha_creacion"
   },
-  "clustering_fields": ["comuna"]
+  "clustering_fields": ["comuna_de_la_orden"]
 }
