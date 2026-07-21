@@ -80,7 +80,7 @@ with DAG(**dag_args) as dag:
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 'scripts/'
-                'personalized_products.py'
+                'personalized_products_sin_usuals.py'
             ),
             dag_env_config=dag_env_config,
             docker_image_name=f'{PROJECT_NAME}',
