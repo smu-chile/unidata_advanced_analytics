@@ -210,7 +210,7 @@ def main() -> None:
         logging.info('=' * 60)
         logging.info('No hay registros nuevos para procesar')
         logging.info(f'Total en PostgreSQL: {total_pg:,}')
-        logging.info(f'Fec.Max en BQ: {max_date if max_date else "N/A"}')
+        logging.info(f"Fec.Max en BQ: {max_date if max_date else 'N/A'}")
         logging.info('=' * 60)
         return
 
@@ -270,21 +270,30 @@ def main() -> None:
     # ---------------------------------------------------------------------
     logging.info('✅ Proceso completado exitosamente')
 
+    # Variables auxiliares
+    fecha_max_bq = max_date if max_date else 'N/A'  # noqa: FURB110
+    umbral_fecha = max_date if max_date else 'TODOS'  # noqa: FURB110
+
+    # Construcción del resumen
     summary_lines = [
         '=' * 70,
         'CARGA INCREMENTAL COMPLETADA (por fecha_creacion)',
         '=' * 70,
-        f'Tbl ori: power_bi.ordenes_comuna_corregida_alvi',
-        f'Tbl des: ECOMMERCE.ORDENES_COMUNA_CORREGIDA_ALVI',
+        'Tbl ori: power_bi.'
+        'ordenes_comuna_corregida_alvi',
+        'Tbl des: ECOMMERCE.'
+        'ORDENES_COMUNA_CORREGIDA_ALVI',
         f'Total en PostgreSQL: {total_pg:,}',
-        f'Fec.Max previa en BQ: {max_date if max_date else 'N/A'}',
-        f'Reg.Cargados (fecha>={max_date if max_date else 'TODOS'}): {len(new_data):,}',
+        f'Fec.Max previa en BQ: {fecha_max_bq}',
+        f'Reg.Cargados (fecha>={umbral_fecha}): {len(new_data):,}',
     ]
 
     if not new_data.empty:
         min_date = new_data['fecha_creacion'].min()
         max_date_new = new_data['fecha_creacion'].max()
-        summary_lines.append(f'Rango de fechas cargadas: {min_date} - {max_date_new}')
+        summary_lines.append(
+            f'Rango de fechas cargadas: {min_date} - {max_date_new}'
+        )
 
     summary_lines.append('=' * 70)
 
