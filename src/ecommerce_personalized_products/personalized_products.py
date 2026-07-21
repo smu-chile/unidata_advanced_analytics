@@ -64,7 +64,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).next(3).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    ean_per_subcategory = "{{ dag_run.conf.get('ean_per_subcategory', 2) }}"
+    ean_per_subcategory = "{{ dag_run.conf.get('ean_per_subcategory', 1) }}"
     top_n = "{{ dag_run.conf.get('top_n', 35) }}"
     month_interval = "{{ dag_run.conf.get('month_interval', 6) }}"
     batch_size = "{{ dag_run.conf.get('batch_size', 50000) }}"
