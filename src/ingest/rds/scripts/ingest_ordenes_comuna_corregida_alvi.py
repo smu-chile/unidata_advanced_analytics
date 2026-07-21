@@ -126,8 +126,11 @@ def filter_new_records_by_date(data: pd.DataFrame, max_date) -> pd.DataFrame:  #
     if not pd.api.types.is_datetime64_any_dtype(data['fecha_creacion']):
         data['fecha_creacion'] = pd.to_datetime(data['fecha_creacion']).dt.date
 
+     # Convertir max_date a pandas Timestamp para comparación uniforme
+    max_date_ts = pd.Timestamp(max_date)
+
     # Filtrar
-    filtered = data[data['fecha_creacion'] >= max_date]
+    filtered = data[data['fecha_creacion'] >= max_date_ts]
     logging.info(f'Registros totales en PostgreSQL: {len(data):,}')
     logging.info(f'Registros con fecha >= {max_date}: {len(filtered):,}')
     return filtered
