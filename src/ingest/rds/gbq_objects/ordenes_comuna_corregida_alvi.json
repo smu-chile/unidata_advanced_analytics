@@ -1,0 +1,14 @@
+{
+  "schema": "ECOMMERCE",
+  "table": "ORDENES_COMUNA_CORREGIDA_ALVI",
+  "columns": [
+      {"name": "id", "field_type": "INTEGER", "mode": "REQUIRED"},
+      {"name": "fecha_creacion", "field_type": "DATE", "mode": "REQUIRED"},
+      {"name": "comuna_de_la_orden", "field_type": "STRING", "mode": "NULLABLE"}
+  ],
+  "time_partitioning": {
+    "type_": "DAY",
+    "field": "fecha_creacion"
+  },
+  "clustering_fields": ["comuna"]
+}
