@@ -210,7 +210,7 @@ def main() -> None:
         logging.info('=' * 60)
         logging.info('No hay registros nuevos para procesar')
         logging.info(f'Total en PostgreSQL: {total_pg:,}')
-        logging.info(f'Fec.Max en BQ: {max_date if max_date else "N/A"}')  # noqa: FURB110
+        logging.info(f'Fec.Max en BQ: {max_date if max_date else "N/A"}')
         logging.info('=' * 60)
         return
 
@@ -274,11 +274,11 @@ def main() -> None:
         '=' * 70,
         'CARGA INCREMENTAL COMPLETADA (por fecha_creacion)',
         '=' * 70,
-        f'Tbl ori: power_bi.ordenes_comuna_corregida_alvi',  # noqa: F541
-        f'Tbl des: ECOMMERCE.ORDENES_COMUNA_CORREGIDA_ALVI',  # noqa: F541
+        f'Tbl ori: power_bi.ordenes_comuna_corregida_alvi',
+        f'Tbl des: ECOMMERCE.ORDENES_COMUNA_CORREGIDA_ALVI',
         f'Total en PostgreSQL: {total_pg:,}',
-        f'Fec.Max previa en BQ: {max_date if max_date else 'N/A'}',  # noqa: FURB110
-        f'Reg.Cargados (fecha>={max_date if max_date else 'TODOS'}): {len(new_data):,}',  # noqa: FURB110
+        f'Fec.Max previa en BQ: {max_date if max_date else 'N/A'}',
+        f'Reg.Cargados (fecha>={max_date if max_date else 'TODOS'}): {len(new_data):,}',
     ]
 
     if not new_data.empty:
