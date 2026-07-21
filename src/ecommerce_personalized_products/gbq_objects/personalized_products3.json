@@ -1,0 +1,63 @@
+{
+    "schema": "ECOMMERCE",
+    "table": "PERSONALIZED_PRODUCTS3",
+    "columns": [
+        {
+            "name": "date",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "[PARTITIONED] Date in which the usuals go live"
+        },
+        {
+            "name": "customer_key",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": "ID of the client in GCP"
+        },
+        {
+            "name": "hash_string",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "ID of the client in ecommerce tables"
+        },
+        {
+            "name": "sku_product",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "SKU of the product"
+        },
+        {
+            "name": "ean",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "EAN of the product"
+        },
+        {
+            "name": "relevance",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Rank of the relevance for the product (lower is better)"
+        },
+        {
+            "name": "store_banner",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "[CLUSTERED] SMU subsidiary in BDF format"
+        },
+        {
+            "name": "vtexrefid",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "ID of the product in VTEX"
+        }
+    ],
+
+    "time_partitioning": {
+        "field": "date",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": [
+        "store_banner"
+    ]
+}

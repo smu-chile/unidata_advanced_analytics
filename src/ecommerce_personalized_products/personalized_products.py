@@ -81,7 +81,7 @@ with DAG(**dag_args) as dag:
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 'scripts/'
-                'personalized_products_sin_usuals_max_ean_1.py'
+                'personalized_products_sin_usuals_max_ean_sub_cat_1_3.py'
             ),
             dag_env_config=dag_env_config,
             docker_image_name=f'{PROJECT_NAME}',
