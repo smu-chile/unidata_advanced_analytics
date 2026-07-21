@@ -205,13 +205,13 @@ def main() -> None:
     # ---------------------------------------------------------------------
     if new_data.empty:
         logging.info('✅ No hay registros nuevos para cargar (fecha >= max_date)')
-        print('\n' + '='*60)  # noqa: T201
-        print('📊 CARGA INCREMENTAL COMPLETADA')  # noqa: T201
-        print('='*60)  # noqa: T201
-        print('✅ No hay registros nuevos para procesar')  # noqa: T201
-        print(f'📊 Total en PostgreSQL: {total_pg:,}')  # noqa: T201
-        print(f'📊 Fecha máxima en BigQuery: {max_date if max_date else "N/A"}')  # noqa: FURB110, T201
-        print('='*60 + '\n')  # noqa: T201
+        print('\n' + '='*60)
+        print('📊 CARGA INCREMENTAL COMPLETADA')
+        print('='*60)
+        print('✅ No hay registros nuevos para procesar')
+        print(f'📊 Total en PostgreSQL: {total_pg:,}')
+        print(f'📊 Fec.Max en BQ: {max_date if max_date else "N/A"}')
+        print('='*60 + '\n')
         return
 
     # ---------------------------------------------------------------------
@@ -271,14 +271,14 @@ def main() -> None:
     # ---------------------------------------------------------------------
     logging.info('✅ Proceso completado exitosamente')
 
-    print('\n' + '='*70)  # noqa: T201
-    print('📊 CARGA INCREMENTAL COMPLETADA (por fecha_creacion)')  # noqa: T201
-    print('='*70)  # noqa: T201
-    print(f'📁 Tabla origen: power_bi.ordenes_comuna_corregida_alvi')  # noqa: F541, T201
-    print(f'📁 Tabla destino: ECOMMERCE.ORDENES_COMUNA_CORREGIDA_ALVI')  # noqa: F541, T201
-    print(f'📊 Total en PostgreSQL: {total_pg:,}')  # noqa: T201
-    print(f'📊 Fecha máxima previa en BQ: {max_date if max_date else "N/A"}')  # noqa: FURB110, T201
-    print(f'📈 Reg.Cargados (fecha>={max_date if max_date else "TODOS"}): {len(new_data):,}')  # noqa: FURB110, T201
+    print('\n' + '='*70)
+    print('📊 CARGA INCREMENTAL COMPLETADA (por fecha_creacion)')
+    print('='*70)
+    print(f'📁 Tbl ori: power_bi.ordenes_comuna_corregida_alvi')
+    print(f'📁 Tbl des: ECOMMERCE.ORDENES_COMUNA_CORREGIDA_ALVI')
+    print(f'📊 Total en PostgreSQL: {total_pg:,}')
+    print(f'📊 Fec.Max previa en BQ: {max_date if max_date else "N/A"}')
+    print(f'📈 Reg.Cargados (fecha>={max_date if max_date else "TODOS"}): {len(new_data):,}')
     if not new_data.empty:
         print(f'📅 Rango de fechas cargadas: {new_data["fecha_creacion"].min()} - {new_data["fecha_creacion"].max()}')  # noqa: E501, T201
     print('='*70 + '\n')  # noqa: T201
