@@ -204,14 +204,14 @@ def main() -> None:
     # Verificar si hay datos nuevos
     # ---------------------------------------------------------------------
     if new_data.empty:
-        logging.info('✅ No hay registros nuevos para cargar (fecha >= max_date)')
-        print('\n' + '='*60)
-        print('📊 CARGA INCREMENTAL COMPLETADA')
-        print('='*60)
-        print('✅ No hay registros nuevos para procesar')
-        print(f'📊 Total en PostgreSQL: {total_pg:,}')
-        print(f'📊 Fec.Max en BQ: {max_date if max_date else "N/A"}')
-        print('='*60 + '\n')
+        logging.info('No hay registros nuevos para cargar (fecha >= max_date)')
+        logging.info('=' * 60)
+        logging.info('CARGA INCREMENTAL COMPLETADA')
+        logging.info('=' * 60)
+        logging.info('No hay registros nuevos para procesar')
+        logging.info(f'Total en PostgreSQL: {total_pg:,}')
+        logging.info(f'Fec.Max en BQ: {max_date if max_date else "N/A"}')  # noqa: FURB110
+        logging.info('=' * 60)
         return
 
     # ---------------------------------------------------------------------
@@ -265,24 +265,30 @@ def main() -> None:
         gbq_client=gbq_client,
         if_exists='append',
     )
-
     # ---------------------------------------------------------------------
-    # Resumen final
+    # Resumen final (usando solo logging)
     # ---------------------------------------------------------------------
     logging.info('✅ Proceso completado exitosamente')
 
-    print('\n' + '='*70)
-    print('📊 CARGA INCREMENTAL COMPLETADA (por fecha_creacion)')
-    print('='*70)
-    print(f'📁 Tbl ori: power_bi.ordenes_comuna_corregida_alvi')
-    print(f'📁 Tbl des: ECOMMERCE.ORDENES_COMUNA_CORREGIDA_ALVI')
-    print(f'📊 Total en PostgreSQL: {total_pg:,}')
-    print(f'📊 Fec.Max previa en BQ: {max_date if max_date else "N/A"}')
-    print(f'📈 Reg.Cargados (fecha>={max_date if max_date else "TODOS"}): {len(new_data):,}')
-    if not new_data.empty:
-        print(f'📅 Rango de fechas cargadas: {new_data["fecha_creacion"].min()} - {new_data["fecha_creacion"].max()}')  # noqa: E501, T201
-    print('='*70 + '\n')  # noqa: T201
+    summary_lines = [
+        '=' * 70,
+        'CARGA INCREMENTAL COMPLETADA (por fecha_creacion)',
+        '=' * 70,
+        f'Tbl ori: power_bi.ordenes_comuna_corregida_alvi',  # noqa: F541
+        f'Tbl des: ECOMMERCE.ORDENES_COMUNA_CORREGIDA_ALVI',  # noqa: F541
+        f'Total en PostgreSQL: {total_pg:,}',
+        f'Fec.Max previa en BQ: {max_date if max_date else 'N/A'}',  # noqa: FURB110
+        f'Reg.Cargados (fecha>={max_date if max_date else 'TODOS'}): {len(new_data):,}',  # noqa: FURB110
+    ]
 
+    if not new_data.empty:
+        min_date = new_data['fecha_creacion'].min()
+        max_date_new = new_data['fecha_creacion'].max()
+        summary_lines.append(f'Rango de fechas cargadas: {min_date} - {max_date_new}')
+
+    summary_lines.append('=' * 70)
+
+    logging.info('\n'.join(summary_lines))
 
 # -------------------------------------------------------------------------
 # Entrypoint
