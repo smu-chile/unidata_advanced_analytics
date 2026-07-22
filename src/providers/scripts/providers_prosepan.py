@@ -43,7 +43,9 @@ parser.add_argument(
 SQL_QUERIES = QueryDict({
     'TRANSACCIONES_PA' :
     """
-    SELECT STORE_ID AS `Store Code`,
+    SELECT
+        SEMANA_ACTUAL_2 AS SEMANA_ANALISIS,
+        STORE_ID AS `Store Code`,
         Modelo,
         MARCA,
         Zone as Zona,
@@ -71,12 +73,15 @@ SQL_QUERIES = QueryDict({
         frecuencia_PA as `Frecuencia PA`,
         Var_frecuencia_PA as `Var % Frecuencia`
     FROM
-    `cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION_MARCA`
+    `cl-cda-unidata-dev.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION_MARCA`
+    ORDER BY SEMANA_ACTUAL_2 ASC
 
-    WHERE SEMANA_ACTUAL_2 = '${execution_date}'
+    #WHERE SEMANA_ACTUAL_2 = '${execution_date}'
     """,
     'TRANSACCIONES_AA' : """
-    SELECT STORE_ID AS `Store Code`,
+    SELECT
+        SEMANA_ACTUAL_2 AS SEMANA_ANALISIS,
+        STORE_ID AS `Store Code`,
         Modelo,
         MARCA,
         Zone as Zona,
@@ -104,9 +109,9 @@ SQL_QUERIES = QueryDict({
         frecuencia_AA as `Frecuencia AA`,
         Var_frecuencia_AA as `Var % Frecuencia`
     FROM
-    `cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION_MARCA`
-
-    WHERE SEMANA_ACTUAL_2 = '${execution_date}'
+    `cl-cda-unidata-dev.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION_MARCA`
+    ORDER BY SEMANA_ACTUAL_2 ASC
+    #WHERE SEMANA_ACTUAL_2 = '${execution_date}'
     """,
 })
 
