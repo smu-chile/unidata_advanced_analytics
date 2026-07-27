@@ -44,7 +44,6 @@ SQL_QUERIES = QueryDict({
     'TRANSACCIONES_PA' :
     """
     SELECT
-        SEMANA_ACTUAL_2 AS SEMANA_ANALISIS,
         STORE_ID AS `Store Code`,
         Modelo,
         MARCA,
@@ -74,13 +73,10 @@ SQL_QUERIES = QueryDict({
         Var_frecuencia_PA as `Var % Frecuencia`
     FROM
     `cl-cda-unidata-dev.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION_MARCA`
-    ORDER BY SEMANA_ACTUAL_2 ASC
-
-    #WHERE SEMANA_ACTUAL_2 = '${execution_date}'
+    WHERE SEMANA_ACTUAL_2 = '${execution_date}'
     """,
     'TRANSACCIONES_AA' : """
     SELECT
-        SEMANA_ACTUAL_2 AS SEMANA_ANALISIS,
         STORE_ID AS `Store Code`,
         Modelo,
         MARCA,
@@ -110,8 +106,7 @@ SQL_QUERIES = QueryDict({
         Var_frecuencia_AA as `Var % Frecuencia`
     FROM
     `cl-cda-unidata-dev.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION_MARCA`
-    ORDER BY SEMANA_ACTUAL_2 ASC
-    #WHERE SEMANA_ACTUAL_2 = '${execution_date}'
+    WHERE SEMANA_ACTUAL_2 = '${execution_date}'
     """,
 })
 
