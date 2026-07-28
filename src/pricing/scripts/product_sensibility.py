@@ -16,8 +16,7 @@ from google.cloud.bigquery import Client
 from sklearn.preprocessing import MinMaxScaler
 from dateutil.relativedelta import relativedelta
 
-import common.office365_extended.sharepoint as sp
-
+# import common.office365_extended.sharepoint as sp  # noqa: ERA001
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
@@ -26,7 +25,7 @@ from common.gcp_extended.bigquery import (
     readBigQuery,
     deleteFromTable,
 )
-from common.gcp_extended.secretsmanager import getSecret
+from common.gcp_extended.secretsmanager import getSecret  # noqa: F401
 
 
 # -------------------------------------------------------------------------
