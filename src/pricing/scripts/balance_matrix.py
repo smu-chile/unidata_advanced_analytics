@@ -57,7 +57,7 @@ where STORE_BANNER = '${store_banner}'
 
 'query_elasticidad':
 """
-SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY`
+SELECT * FROM `${proyecto}.SET_ELASTICIDAD_PROMOTION.ELASTICIDAD_GENERAL_FINAL`
 where STORE_BANNER = '${store_banner}'
 """,
 
