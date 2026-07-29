@@ -57,11 +57,31 @@ where STORE_BANNER = '${store_banner}'
 
 'query_elasticidad':
 """
-SELECT t1.*, t2.umv
-FROM `${proyecto}.TMP.ELASTICIDAD_GENERAL_FINAL` t1
-    LEFT JOIN `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY` t2
-    on t1.material = t2.material
-where t1.STORE_BANNER = '${store_banner}'
+WITH productos AS (
+  SELECT DISTINCT
+      EAN,
+      CAT_DSC AS CATEGORY_DESCRIPTION,
+      GRUPO_DSC AS SUB_CATEGORY_DESCRIPTION,
+      NM AS PRODUCT_DESCRIPTION,
+      SKU_PRODUCT AS PRODUCT_ID,
+      NEG_DSC,
+      CONTENIDO_BRUTO,
+      CONT_CONV_UMB AS sales_unit,
+      UNIDAD_DE_MEDIDA AS sales_uom,
+      FIRST_VALUE(EAN) OVER (
+        PARTITION BY SKU_PRODUCT, UNIDAD_DE_MEDIDA
+        ORDER BY CASE WHEN INDIC_EAN_PPAL = 'X' THEN 0 ELSE 1 END, EAN
+      ) AS ean_default
+  FROM `${proyecto}.CDA_VISTAS.VW_DIM_PRODUCT`
+)
+
+SELECT
+    t1.*,
+    p.sales_uom
+FROM `${proyeco}.TMP.ELASTICIDAD_GENERAL_FINAL` t1
+INNER JOIN productos p
+    ON t1.ean = p.EAN
+WHERE t1.STORE_BANNER = 'Unimarc';
 """,
 
 'query_ventas':
