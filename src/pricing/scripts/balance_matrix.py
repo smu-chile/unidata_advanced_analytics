@@ -154,6 +154,8 @@ def main() -> None:  # noqa: D103
         proyecto = 'cl-cda-unidata-dev',
         store_banner = store_banner)
 
+    print('[PARCHE] Query Elasticidad Review: {query_elasticidad}')
+
     df_elasticidad = readBigQuery(
             query=query_elasticidad,
             user=usuario,
