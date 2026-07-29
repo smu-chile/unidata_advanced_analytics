@@ -59,7 +59,7 @@ where STORE_BANNER = '${store_banner}'
 """
 SELECT t1.*, t2.umv
 FROM `${proyecto}.TMP.ELASTICIDAD_GENERAL_FINAL` t1
-    LEFT JOIN '${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY` t2
+    LEFT JOIN `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY` t2
     on t1.material = t2.material
 where t1.STORE_BANNER = '${store_banner}'
 """,
