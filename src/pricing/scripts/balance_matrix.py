@@ -151,7 +151,7 @@ def main() -> None:  # noqa: D103
     # ELASTICIDAD
 
     query_elasticidad = SQL_QUERIES['query_elasticidad'].substitute(
-        proyecto = proyecto,
+        proyecto = 'cl-cda-unidata-dev',
         store_banner = store_banner)
 
     df_elasticidad = readBigQuery(
