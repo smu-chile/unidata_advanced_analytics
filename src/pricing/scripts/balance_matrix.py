@@ -77,7 +77,9 @@ WITH productos AS (
 
 SELECT
     t1.*,
-    p.umv
+    p.SUB_CATEGORY_DESCRIPTION,
+    p.umv,
+    p.SUB_CATEGORY_DESCRIPTION,
 FROM `${proyecto}.TMP.ELASTICIDAD_GENERAL_FINAL` t1
 INNER JOIN productos p
     ON t1.ean = p.EAN
@@ -226,7 +228,7 @@ def main() -> None:  # noqa: D103
 
     #Parche: agregamos columna subcat description
     df_balance_matrix = df_balance_matrix.merge(
-          df_ventas[['ean','ventas_totales', 'sub_category_description']], on = 'ean', how='left')
+          df_ventas[['ean','ventas_totales']], on = 'ean', how='left')
 
     logging.info('Merge de tablas listo')
 
