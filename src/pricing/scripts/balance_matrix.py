@@ -57,8 +57,11 @@ where STORE_BANNER = '${store_banner}'
 
 'query_elasticidad':
 """
-SELECT * FROM `${proyecto}.TMP.ELASTICIDAD_GENERAL_FINAL`
-where STORE_BANNER = '${store_banner}'
+SELECT t1.*, t2.umv
+FROM `${proyecto}.TMP.ELASTICIDAD_GENERAL_FINAL` t1
+    LEFT JOIN '${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY` t2
+    on t1.material = t2.material
+where t1.STORE_BANNER = '${store_banner}'
 """,
 
 'query_ventas':
@@ -145,6 +148,9 @@ def main() -> None:  # noqa: D103
             user=usuario,
             gbq_client=gbq_client)
 
+    print('[PARCHE] Query Sensibilidad Info: ')
+    print(df_sensibilidad.info())
+
     df_sensibilidad.columns = df_sensibilidad.columns.str.lower()
     logging.info('Consulta de sensibilidad lista')
 
@@ -154,12 +160,13 @@ def main() -> None:  # noqa: D103
         proyecto = proyecto,
         store_banner = store_banner)
 
-    print('[PARCHE] Query Elasticidad Review: {query_elasticidad}')
-
     df_elasticidad = readBigQuery(
             query=query_elasticidad,
             user=usuario,
             gbq_client=gbq_client)
+
+    print('[PARCHE] Query Elasticidad Info: ')
+    print(df_elasticidad.info())
 
     df_elasticidad.columns = df_elasticidad.columns.str.lower()
     logging.info('Consulta de elasticidad lista')
@@ -174,6 +181,9 @@ def main() -> None:  # noqa: D103
             query=query_ventas,
             user=usuario,
             gbq_client=gbq_client)
+
+    print('[PARCHE] Query Ventas Info: ')
+    print(df_ventas.info())
 
     df_ventas.columns = df_ventas.columns.str.lower()
     logging.info('Consulta de ventas lista')
