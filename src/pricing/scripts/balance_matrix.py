@@ -223,7 +223,18 @@ def main() -> None:  # noqa: D103
         how='left'
     )
 
+    mask_fillna_is  = df_balance_matrix['indice_sensibilidad'].isna()
+    mask_fillna_isf = df_balance_matrix['indice_sensibilidad_familia'].isna()
+
     df_balance_matrix['indice_sensibilidad'] = df_balance_matrix['indice_sensibilidad'].fillna(0)
+
+    #[PARCHE] En estrico rigor se debería rellenar ISF yendo a buscar los padres ¿?  # noqa: W505
+
+    df_balance_matrix['indice_sensibilidad_familia'] = df_balance_matrix['indice_sensibilidad_familia'].fillna(0)  # noqa: E501
+
+    print('#(IS nans) agregados: ', mask_fillna_is.sum())
+    print('#(ISF nans) agregados: ', mask_fillna_isf.sum())
+
     df_balance_matrix['kvi'] = df_balance_matrix['kvi'].fillna('BKG')
 
     #Parche: agregamos columna subcat description
