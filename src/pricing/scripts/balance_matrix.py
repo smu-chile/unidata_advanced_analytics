@@ -78,7 +78,7 @@ WITH productos AS (
 SELECT
     t1.*,
     p.sales_uom
-FROM `${proyeco}.TMP.ELASTICIDAD_GENERAL_FINAL` t1
+FROM `${proyecto}.TMP.ELASTICIDAD_GENERAL_FINAL` t1
 INNER JOIN productos p
     ON t1.ean = p.EAN
 WHERE t1.STORE_BANNER = 'Unimarc';
