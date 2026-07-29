@@ -79,11 +79,11 @@ SELECT
     t1.*,
     p.SUB_CATEGORY_DESCRIPTION,
     p.umv,
-    p.SUB_CATEGORY_DESCRIPTION,
 FROM `${proyecto}.TMP.ELASTICIDAD_GENERAL_FINAL` t1
 INNER JOIN productos p
     ON t1.ean = p.EAN
-WHERE t1.STORE_BANNER = 'Unimarc';
+WHERE t1.STORE_BANNER = 'Unimarc'
+    and t1.ELASTICIDAD IS NOT NULL
 """,
 
 'query_ventas':
