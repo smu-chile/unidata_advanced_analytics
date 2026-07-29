@@ -808,6 +808,8 @@ def main() -> None:  # noqa: D103
 
     print('Se agrega media armonica')
 
+    print('Post media armómina: ', df_detalle2.info())
+
     #----------------------------------------------------------------------
     # ENDREGION
 
