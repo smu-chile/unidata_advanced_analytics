@@ -36,7 +36,7 @@ script4 = 'balance_matrix'
 
 
 
-store_banner_list = ['Unimarc', 'Alvi', 'Mayorista', 'Super 10']
+store_banner_list = ['Unimarc'] #, 'Alvi', 'Mayorista', 'Super 10']
 
 dag_args = {
     'dag_id': 'balance_matrix',
