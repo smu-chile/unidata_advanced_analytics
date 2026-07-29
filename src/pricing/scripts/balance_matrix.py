@@ -57,7 +57,7 @@ where STORE_BANNER = '${store_banner}'
 
 'query_elasticidad':
 """
-SELECT * FROM `${proyecto}.SET_ELASTICIDAD_PROMOTION.ELASTICIDAD_GENERAL_FINAL`
+SELECT * FROM `${proyecto}.TMP.ELASTICIDAD_GENERAL_FINAL`
 where STORE_BANNER = '${store_banner}'
 """,
 
@@ -151,7 +151,7 @@ def main() -> None:  # noqa: D103
     # ELASTICIDAD
 
     query_elasticidad = SQL_QUERIES['query_elasticidad'].substitute(
-        proyecto = 'cl-cda-unidata-dev',
+        proyecto = proyecto,
         store_banner = store_banner)
 
     print('[PARCHE] Query Elasticidad Review: {query_elasticidad}')
