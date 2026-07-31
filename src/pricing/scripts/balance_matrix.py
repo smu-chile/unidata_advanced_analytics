@@ -57,8 +57,33 @@ where STORE_BANNER = '${store_banner}'
 
 'query_elasticidad':
 """
-SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY`
-where STORE_BANNER = '${store_banner}'
+WITH productos AS (
+  SELECT DISTINCT
+      EAN,
+      CAT_DSC AS CATEGORY_DESCRIPTION,
+      GRUPO_DSC AS SUB_CATEGORY_DESCRIPTION,
+      NM AS PRODUCT_DESCRIPTION,
+      SKU_PRODUCT AS PRODUCT_ID,
+      NEG_DSC,
+      CONTENIDO_BRUTO,
+      CONT_CONV_UMB AS sales_unit,
+      UNIDAD_DE_MEDIDA AS umv,
+      FIRST_VALUE(EAN) OVER (
+        PARTITION BY SKU_PRODUCT, UNIDAD_DE_MEDIDA
+        ORDER BY CASE WHEN INDIC_EAN_PPAL = 'X' THEN 0 ELSE 1 END, EAN
+      ) AS ean_default
+  FROM `${proyecto}.CDA_VISTAS.VW_DIM_PRODUCT`
+)
+
+SELECT
+    t1.*,
+    p.SUB_CATEGORY_DESCRIPTION,
+    p.umv,
+FROM `${proyecto}.TMP.ELASTICIDAD_GENERAL_FINAL` t1
+INNER JOIN productos p
+    ON t1.ean = p.EAN
+WHERE t1.STORE_BANNER = 'Unimarc'
+    and t1.ELASTICIDAD IS NOT NULL
 """,
 
 'query_ventas':
@@ -66,7 +91,7 @@ where STORE_BANNER = '${store_banner}'
 WITH tabla_fecha_max AS (
   SELECT
     MAX(P_DATE) AS fecha_max
-  FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY`
+  FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_FINAL`
   WHERE STORE_BANNER = '${store_banner}'
 )
 
@@ -75,7 +100,7 @@ SELECT
   EAN,
   SUM(VENTAS_TOTALES_PRODUCTO) AS ventas_totales,
   MAX(SUB_CATEGORY_DESCRIPTION) AS SUB_CATEGORY_DESCRIPTION,
-FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY`
+FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_FINAL`
 CROSS JOIN tabla_fecha_max
 WHERE STORE_BANNER = '${store_banner}'
   AND P_DATE BETWEEN DATE_SUB(
@@ -145,6 +170,9 @@ def main() -> None:  # noqa: D103
             user=usuario,
             gbq_client=gbq_client)
 
+    print('[PARCHE] Query Sensibilidad Info: ')
+    print(df_sensibilidad.info())
+
     df_sensibilidad.columns = df_sensibilidad.columns.str.lower()
     logging.info('Consulta de sensibilidad lista')
 
@@ -159,6 +187,9 @@ def main() -> None:  # noqa: D103
             user=usuario,
             gbq_client=gbq_client)
 
+    print('[PARCHE] Query Elasticidad Info: ')
+    print(df_elasticidad.info())
+
     df_elasticidad.columns = df_elasticidad.columns.str.lower()
     logging.info('Consulta de elasticidad lista')
 
@@ -172,6 +203,9 @@ def main() -> None:  # noqa: D103
             query=query_ventas,
             user=usuario,
             gbq_client=gbq_client)
+
+    print('[PARCHE] Query Ventas Info: ')
+    print(df_ventas.info())
 
     df_ventas.columns = df_ventas.columns.str.lower()
     logging.info('Consulta de ventas lista')
@@ -189,12 +223,23 @@ def main() -> None:  # noqa: D103
         how='left'
     )
 
+    mask_fillna_is  = df_balance_matrix['indice_sensibilidad'].isna()
+    mask_fillna_isf = df_balance_matrix['indice_sensibilidad_familia'].isna()
+
     df_balance_matrix['indice_sensibilidad'] = df_balance_matrix['indice_sensibilidad'].fillna(0)
+
+    #[PARCHE] En estrico rigor se debería rellenar ISF yendo a buscar los padres ¿?  # noqa: W505
+
+    df_balance_matrix['indice_sensibilidad_familia'] = df_balance_matrix['indice_sensibilidad_familia'].fillna(0)  # noqa: E501
+
+    print('#(IS nans) agregados: ', mask_fillna_is.sum())
+    print('#(ISF nans) agregados: ', mask_fillna_isf.sum())
+
     df_balance_matrix['kvi'] = df_balance_matrix['kvi'].fillna('BKG')
 
     #Parche: agregamos columna subcat description
     df_balance_matrix = df_balance_matrix.merge(
-          df_ventas[['ean','ventas_totales', 'sub_category_description']], on = 'ean', how='left')
+          df_ventas[['ean','ventas_totales']], on = 'ean', how='left')
 
     logging.info('Merge de tablas listo')
 

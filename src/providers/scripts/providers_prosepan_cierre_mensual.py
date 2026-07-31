@@ -46,6 +46,7 @@ SQL_QUERIES = QueryDict({
     SELECT * FROM cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_WEIGHTS_MARCA
     WHERE YEAR = ${year}
     AND MONTH = ${month}
+
     """,
     'Prosepan Visits' : """
     SELECT * FROM cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VISITS_MARCA

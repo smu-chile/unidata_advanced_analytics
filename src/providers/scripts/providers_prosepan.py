@@ -107,6 +107,7 @@ SQL_QUERIES = QueryDict({
     FROM
     `cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VENTAS_TRANSACCIONES_PENETRACION_MARCA`
     WHERE SEMANA_ACTUAL_2 = '${execution_date}'
+
     """,
 })
 

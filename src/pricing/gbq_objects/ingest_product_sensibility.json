@@ -80,12 +80,6 @@
             "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": "Indice de sensibilidad desnormalizada"
-        },
-        {
-            "name": "Forzado_RankingCat",
-            "field_type": "FLOAT",
-            "mode": "REQUIRED",
-            "description": "FLAG registro actualizado mediante regla de Pricing"
         }
     ],
 
