@@ -82,6 +82,22 @@ SQL_QUERIES = QueryDict({
         FROM`${gcp_project}.ML_LAB.W2V_CUSTOMER_EMBEDDINGS`
         WHERE date = '${fecha_emb}'
         AND store_banner = '${store_banner}'
+        AND customer_key IN (
+            FROM_BASE64('aSg9tFRjxdgT12sSbnG7LA=='),
+            FROM_BASE64('eYPo7nMndFtbrPoMzXExdA=='),
+            FROM_BASE64('DQaqL1qALLNUlXl0HICjDQ'),
+            FROM_BASE64('emQwxVeJ34weHj3P+omSFg=='),
+            FROM_BASE64('eRzgTneP0tGKsnMZ9U2xQQ=='),
+            FROM_BASE64('iSFrmN+kHVbHRQqBaaRdQQ=='),
+            FROM_BASE64('P5uD9Q6vg6/Z9pAuRas65g=='),
+            FROM_BASE64('eomAD4slCiWWkUDz/zwwLQ=='),
+            FROM_BASE64('5lvjTzd2D7/4Hzx9OOb3fg=='),
+            FROM_BASE64('QA+qP4odVW3QOOCyXfArgQ=='),
+            FROM_BASE64('G3eG4XSovD/2EsL5eAP2wQ=='),
+            FROM_BASE64('zSQdiN4QvKm39gwe5zqxUA=='),
+            FROM_BASE64('UA+lolcjjhcXXdbjN9aB8w=='),
+            FROM_BASE64('Srko2maBU6R9BrmQ8jHw5A==')
+        )
     ) customer_emb
 
     INNER JOIN (
@@ -194,6 +210,22 @@ SQL_QUERIES = QueryDict({
                 SELECT MARKET_BASKET_KEY
                 FROM `${gcp_project}.CDA_VISTAS.VW_FACT_MARKET_BASKET_E_COMMERCE`
                 WHERE CANAL_VENTA IN ('PEDIDOS YA','UBER EATS','RAPPI','RAPPI TURBO')
+            )
+            AND A.customer_key IN (
+                FROM_BASE64('aSg9tFRjxdgT12sSbnG7LA=='),
+                FROM_BASE64('eYPo7nMndFtbrPoMzXExdA=='),
+                FROM_BASE64('DQaqL1qALLNUlXl0HICjDQ'),
+                FROM_BASE64('emQwxVeJ34weHj3P+omSFg=='),
+                FROM_BASE64('eRzgTneP0tGKsnMZ9U2xQQ=='),
+                FROM_BASE64('iSFrmN+kHVbHRQqBaaRdQQ=='),
+                FROM_BASE64('P5uD9Q6vg6/Z9pAuRas65g=='),
+                FROM_BASE64('eomAD4slCiWWkUDz/zwwLQ=='),
+                FROM_BASE64('5lvjTzd2D7/4Hzx9OOb3fg=='),
+                FROM_BASE64('QA+qP4odVW3QOOCyXfArgQ=='),
+                FROM_BASE64('G3eG4XSovD/2EsL5eAP2wQ=='),
+                FROM_BASE64('zSQdiN4QvKm39gwe5zqxUA=='),
+                FROM_BASE64('UA+lolcjjhcXXdbjN9aB8w=='),
+                FROM_BASE64('Srko2maBU6R9BrmQ8jHw5A==')
             )
     )
 
@@ -535,7 +567,7 @@ def main() -> None:  # noqa: D103
     # Create table using DDL JSON
     logging.info('Creating table schema if needed')
     createTableFromJSON(
-        table_ddl_json_path=os.path.join('gbq_objects', 'personalized_products3.json'),
+        table_ddl_json_path=os.path.join('gbq_objects', 'personalized_products.json'),
         project=gcp_project,
         gbq_client=gbq_client,
         if_exists='ignore',
@@ -1024,7 +1056,7 @@ def main() -> None:  # noqa: D103
             gcp_project = gcp_project,
             gcp_project_cda = gcp_project_cda
         ),
-        table_ref=f'{gcp_project}.ECOMMERCE.PERSONALIZED_PRODUCTS3',
+        table_ref=f'{gcp_project}.ECOMMERCE.PERSONALIZED_PRODUCTS',
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_APPEND',
         use_legacy_sql=False,
