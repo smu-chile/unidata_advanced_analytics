@@ -106,7 +106,7 @@ with DAG(**dag_args) as dag:
             ],
             ttl=43200,
             spark_driver_cores=8,
-            spark_driver_memory=35,
+            spark_driver_memory=40,
         )
 
         for store_banner in STORE_BANNERS

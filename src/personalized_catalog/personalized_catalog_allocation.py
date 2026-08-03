@@ -119,6 +119,9 @@ with DAG(**dag_args) as dag:
                 'common/',
                 f'{PROJECT_NAME}/gbq_objects/'
             ],
+
+            spark_driver_cores = 8,
+            spark_driver_memory = 40
         )
 
         default_catalog_task >> personalized_catalog_task
