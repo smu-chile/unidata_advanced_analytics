@@ -38,7 +38,7 @@ PROJECT_NAME = 'ecommerce_personalized_products'
 
 dag_args = {
     'dag_id': 'ecommerce_personalized_products',
-    'schedule_interval': '0 12 * * 0',
+    'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
@@ -63,7 +63,7 @@ dag_args = {
 }
 
 with DAG(**dag_args) as dag:
-    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).next(3).strftime('%Y-%m-%d')) }}"  # noqa: E501
+    EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).add(days=1).strftime('%Y-%m-%d')) }}"  # noqa: E501
     ean_per_subcategory = "{{ dag_run.conf.get('ean_per_subcategory', 1) }}"
     top_n = "{{ dag_run.conf.get('top_n', 35) }}"
     month_interval = "{{ dag_run.conf.get('month_interval', 6) }}"
