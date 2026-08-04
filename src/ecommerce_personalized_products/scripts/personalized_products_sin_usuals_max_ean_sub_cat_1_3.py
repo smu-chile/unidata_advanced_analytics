@@ -125,6 +125,8 @@ SQL_QUERIES = QueryDict({
     'productos_promocion':
     """
     SELECT
+        t.NOMBRE_PROMOCION,
+        t.DESCRIPCION_EVENTO_PROMOCIONAL,
         t.FECHA_INICIO_DE_PROMOCION,
         t.FECHA_FIN_DE_PROMOCION,
         t.MATERIAL,
@@ -136,6 +138,7 @@ SQL_QUERIES = QueryDict({
     FROM (
         SELECT
             NOMBRE_PROMOCION,
+            DESCRIPCION_EVENTO_PROMOCIONAL,
             MATERIAL,
             EAN,
             DESC_MATERIAL,
@@ -147,10 +150,8 @@ SQL_QUERIES = QueryDict({
         organizacion_ventas = '1000'
         AND canal_distribucion IN ('10','70')
         AND registro_valido = 'X'
-        AND FECHA_INICIO_DE_PROMOCION >= '${fecha_ini_prom1}'
         AND FECHA_INICIO_DE_PROMOCION <= '${fecha_ini_prom2}'
         AND FECHA_FIN_DE_PROMOCION >= '${fecha_ini_prom3}'
-        AND FECHA_FIN_DE_PROMOCION <= '${fin_mes_n1}'
     ) t
 
     INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT` AS dim_prod
@@ -638,10 +639,8 @@ def main() -> None:  # noqa: D103
     createTableAsSelect(
     query=SQL_QUERIES['productos_promocion'].substitute(
         gcp_project = gcp_project,
-        fecha_ini_prom1 = fecha_emb,
         fecha_ini_prom2 = date_table,
         fecha_ini_prom3 = fecha_prom,
-        fin_mes_n1 = fin_mes_n1
         ),
         table_ref=f'{gcp_project}.TMP.TMP_PERSONALIZED_PRODUCTS_PROD_PROMOCION',
         create_disposition='CREATE_IF_NEEDED',
