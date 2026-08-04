@@ -35,13 +35,21 @@ with open(
 
 PROJECT_NAME = 'pricing_effects'
 
-# Banners a procesar -- fisicos + las 2 variantes de e-commerce.
-# 'Ecommerce Unimarc' y 'Ecommerce Alvi' usan su PROPIA tabla productiva
-# de regresion (ver baseline.py), pero corren el mismo pipeline.
 STORE_BANNER_LIST = [
-    'Unimarc', 'Super 10', 'Alvi',
-    'Ecommerce Unimarc', 'Ecommerce Alvi',
+    'Unimarc'
+    #, 'Super 10', 'Alvi','Ecommerce Unimarc', 'Ecommerce Alvi',
 ]
+
+# Unimarc es, por lejos, el banner con mas materiales -- el driver
+# fallaba con SIGKILL (exit 137, presion de memoria) usando los
+# recursos por defecto. Se le da mas poder solo a este banner; el
+# resto sigue con la configuracion default del operador.
+RECURSOS_EXTRA_POR_BANNER = {
+    'Unimarc': {
+        'spark_driver_cores': 8,
+        'spark_driver_memory': 40,
+    },
+}
 
 dag_args = {
     'dag_id': 'pricing_effects',
@@ -95,6 +103,7 @@ with DAG(**dag_args) as dag:
 
     for store_banner in STORE_BANNER_LIST:
         banner_suffix = store_banner.replace(' ', '_').lower()
+        kwargs_recursos = RECURSOS_EXTRA_POR_BANNER.get(store_banner, {})
 
         # ---------- Task baseline ----------
         baseline_task = (
@@ -119,6 +128,7 @@ with DAG(**dag_args) as dag:
                     'common/',
                     f'{PROJECT_NAME}/gbq_objects/'
                 ],
+                **kwargs_recursos,
             )
         )
 
@@ -145,6 +155,7 @@ with DAG(**dag_args) as dag:
                     'common/',
                     f'{PROJECT_NAME}/gbq_objects/'
                 ],
+                **kwargs_recursos,
             )
         )
 
@@ -171,13 +182,15 @@ with DAG(**dag_args) as dag:
                     'common/',
                     f'{PROJECT_NAME}/gbq_objects/'
                 ],
+                **kwargs_recursos,
             )
         )
 
-        # Dependencia por banner: promotion_daily (comun) -> baseline ->
-        # transiciones -> elasticidad_general. Elasticidad general
-        # necesita la tabla de transiciones YA subida para ese mismo
-        # banner (regla de parche por mediana de transiciones).
+        # Dependencia por banner: baseline -> transiciones ->
+        # elasticidad_general. Elasticidad general necesita la tabla de
+        # transiciones YA subida para ese mismo banner (regla de parche
+        # por mediana de transiciones). TMP_PROMOTION_DAILY ya no se
+        # construye en este DAG -- se mantiene manualmente en GCP.
         baseline_task >> transiciones_task >> elasticidad_general_task
 
         baseline_tasks.append(baseline_task)
