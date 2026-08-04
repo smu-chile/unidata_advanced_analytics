@@ -24,7 +24,7 @@ from common.databases.queries import QueryDict
 from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
-    deleteFromTable,  # noqa: F401
+    deleteFromTable,
     setTableExpiration,
     createTableAsSelect,
     createTableFromJSON,
@@ -1055,6 +1055,12 @@ def main() -> None:  # noqa: D103
             expiration = expiration,
             gbq_client= gbq_client
         )
+
+    deleteFromTable(
+        table_ref=f'{gcp_project}.ECOMMERCE.PERSONALIZED_PRODUCTS',
+        where_clause=f"date = '{date_table}'",
+        gbq_client=gbq_client,
+    )
 
     createTableAsSelect(
         query=SQL_QUERIES['allocation_personalized_products'].substitute(
