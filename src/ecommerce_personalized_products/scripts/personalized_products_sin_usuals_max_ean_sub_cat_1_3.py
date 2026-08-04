@@ -534,12 +534,13 @@ def main() -> None:  # noqa: D103
 
     gcp_project_cda = 'cl-cda-unidata-prod'
 
+    date_table = execution_date.add(days=1)
     fecha_emb = execution_date.replace(day=1)
     fin_mes_n1 = execution_date.add(months=1).end_of('month')
 
-    if execution_date.day_of_week == pendulum.THURSDAY:
+    if execution_date.day_of_week == pendulum.WEDNESDAY:
         fecha_my_usuals = execution_date
-    elif execution_date.day_of_week == pendulum.MONDAY:
+    elif execution_date.day_of_week == pendulum.SUNDAY:
         fecha_my_usuals = execution_date.previous(pendulum.THURSDAY).to_date_string()
 
     upper_store_banner = store_banner.upper()
@@ -993,7 +994,7 @@ def main() -> None:  # noqa: D103
         )
 
         distances_all_final['store_banner'] = store_banner
-        distances_all_final['date'] = execution_date
+        distances_all_final['date'] = date_table
 
         distances_all_final['ean'] = distances_all_final['ean'].astype('int64')
         distances_all_final['relevance'] = distances_all_final['relevance'].astype('int64')
