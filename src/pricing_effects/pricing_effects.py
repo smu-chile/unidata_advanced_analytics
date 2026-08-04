@@ -39,7 +39,7 @@ PROJECT_NAME = 'pricing_effects'
 # 'Ecommerce Unimarc' y 'Ecommerce Alvi' usan su PROPIA tabla productiva
 # de regresion (ver baseline.py), pero corren el mismo pipeline.
 STORE_BANNER_LIST = [
-    'Unimarc', 'Super 10', 'Mayorista 10', 'Alvi',
+    'Unimarc', 'Super 10', 'Alvi',
     'Ecommerce Unimarc', 'Ecommerce Alvi',
 ]
 
