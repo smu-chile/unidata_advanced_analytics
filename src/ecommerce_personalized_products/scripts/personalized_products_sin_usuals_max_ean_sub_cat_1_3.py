@@ -96,7 +96,8 @@ SQL_QUERIES = QueryDict({
             FROM_BASE64('G3eG4XSovD/2EsL5eAP2wQ=='),
             FROM_BASE64('zSQdiN4QvKm39gwe5zqxUA=='),
             FROM_BASE64('UA+lolcjjhcXXdbjN9aB8w=='),
-            FROM_BASE64('Srko2maBU6R9BrmQ8jHw5A==')
+            FROM_BASE64('Srko2maBU6R9BrmQ8jHw5A=='),
+            FROM_BASE64('7K3bbBkZLsufdmbDUngOSQ==')
         )
     ) customer_emb
 
@@ -226,7 +227,8 @@ SQL_QUERIES = QueryDict({
                 FROM_BASE64('G3eG4XSovD/2EsL5eAP2wQ=='),
                 FROM_BASE64('zSQdiN4QvKm39gwe5zqxUA=='),
                 FROM_BASE64('UA+lolcjjhcXXdbjN9aB8w=='),
-                FROM_BASE64('Srko2maBU6R9BrmQ8jHw5A==')
+                FROM_BASE64('Srko2maBU6R9BrmQ8jHw5A=='),
+                FROM_BASE64('7K3bbBkZLsufdmbDUngOSQ==')
             )
     )
 
