@@ -580,7 +580,7 @@ def main() -> None:  # noqa: D103
             gcp_project = gcp_project,
             fecha_emb = fecha_emb,
             fecha_my_usuals = fecha_my_usuals,
-            execution_date = execution_date,
+            execution_date = date_table,
             month_interval = month_interval,
             store_banner = store_banner
         ),
@@ -637,7 +637,7 @@ def main() -> None:  # noqa: D103
     query=SQL_QUERIES['productos_promocion'].substitute(
         gcp_project = gcp_project,
         fecha_ini_prom1 = fecha_emb,
-        fecha_ini_prom2 = execution_date,
+        fecha_ini_prom2 = date_table,
         fin_mes_n1 = fin_mes_n1
         ),
         table_ref=f'{gcp_project}.TMP.TMP_PERSONALIZED_PRODUCTS_PROD_PROMOCION',
