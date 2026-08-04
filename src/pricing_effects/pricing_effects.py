@@ -89,32 +89,6 @@ with DAG(**dag_args) as dag:
         ").strftime('%Y-%m-%d')) }}"
     )
 
-    # ---------- Task promotion_daily: corre 1 sola vez, todos los banners
-    # Crea/reemplaza TMP_PROMOTION_DAILY para los 6 banners juntos -- por
-    # eso no lleva --store_banner ni va dentro del loop de abajo.
-    promotion_daily_task = (
-        ExtendedDataprocCreateBatchOperator(
-            task_id='promotion_daily',
-            python_script_path=(
-                f'{PROJECT_NAME}/'
-                'scripts/'
-                'promotion_daily.py'
-            ),
-            dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
-            pyspark_batch_args=[
-                '--project_id',
-                dag_env_config['project_id'],
-                '--execution_date',
-                EXECUTION_DATE,
-            ],
-            include_paths=[
-                'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
-            ],
-        )
-    )
-
     baseline_tasks = []
     transiciones_tasks = []
     elasticidad_general_tasks = []
@@ -204,7 +178,7 @@ with DAG(**dag_args) as dag:
         # transiciones -> elasticidad_general. Elasticidad general
         # necesita la tabla de transiciones YA subida para ese mismo
         # banner (regla de parche por mediana de transiciones).
-        promotion_daily_task >> baseline_task >> transiciones_task >> elasticidad_general_task
+        baseline_task >> transiciones_task >> elasticidad_general_task
 
         baseline_tasks.append(baseline_task)
         transiciones_tasks.append(transiciones_task)
