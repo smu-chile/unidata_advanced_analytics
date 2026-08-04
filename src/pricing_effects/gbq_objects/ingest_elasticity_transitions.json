@@ -1,0 +1,75 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "ELASTICITY_TRANSITIONS",
+
+    "columns": [
+        {
+            "name": "material",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Codigo del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "ean",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del producto"
+        },
+        {
+            "name": "product_description",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre o descripcion del producto"
+        },
+        {
+            "name": "category_description",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria a la que pertenece el producto"
+        },
+        {
+            "name": "sub_category_description",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Subcategoria a la que pertenece el producto"
+        },
+        {
+            "name": "sales_uom",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Unidad de medida de venta (UMV)"
+        },
+        {
+            "name": "tipo_transicion",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Regular_a_Regular, Regular_a_Promocional, Promocional_a_Regular o Promocional_a_Promocional"
+        },
+        {
+            "name": "store_banner",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la informacion"
+        },
+        {
+            "name": "origen_elasticidad",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Origen del valor: propia, heredada_sustituto, heredada_subcategoria, heredada_categoria o sin_evidencia"
+        },
+        {
+            "name": "elasticidad_arco_final",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Elasticidad de arco final, ya acotada al rango [-5, 0]"
+        },
+        {
+            "name": "n_eventos",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Cantidad de eventos de transicion propios detectados para ese SKU y tipo de transicion"
+        }
+    ],
+
+    "clustering_fields": ["store_banner"]
+}

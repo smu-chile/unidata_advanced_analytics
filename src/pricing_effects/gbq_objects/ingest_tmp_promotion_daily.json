@@ -1,0 +1,69 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "TMP_PROMOTION_DAILY",
+
+    "columns": [
+        {
+            "name": "material",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Codigo del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "desc_material",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre o descripcion del producto"
+        },
+        {
+            "name": "store_banner",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la informacion"
+        },
+        {
+            "name": "desc_promocion",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Mecanica de la promocion (Precio Fijo, % de Descuento, Combinacion NX$, Escalas)"
+        },
+        {
+            "name": "p_date",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha del dia"
+        },
+        {
+            "name": "atributo_promocion",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Bucket de intensidad promocional (0_10, 10_15, ... 40_mas)"
+        },
+        {
+            "name": "duracion",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Duracion total de la promocion, en dias"
+        },
+        {
+            "name": "dia_promocion",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Numero de dia dentro de la promocion (1, 2, 3...)"
+        },
+        {
+            "name": "progreso_promocion",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "dia_promocion / duracion -- que tan avanzada esta la promocion"
+        },
+        {
+            "name": "frecuencia_promocional_90d",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Cantidad de dias promocionales en los 90 dias previos (inclusive)"
+        }
+    ],
+
+    "clustering_fields": ["store_banner"]
+}

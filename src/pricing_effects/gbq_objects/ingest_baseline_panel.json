@@ -1,0 +1,99 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "BASELINE_PANEL",
+
+    "columns": [
+        {
+            "name": "material",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Codigo del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "ean",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del producto"
+        },
+        {
+            "name": "product_description",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre o descripcion del producto"
+        },
+        {
+            "name": "category_description",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria a la que pertenece el producto"
+        },
+        {
+            "name": "sub_category_description",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Subcategoria a la que pertenece el producto"
+        },
+        {
+            "name": "sales_uom",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Unidad de medida de venta (UMV)"
+        },
+        {
+            "name": "p_date",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha del dia"
+        },
+        {
+            "name": "estado",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Estado del dia: Regular o el bucket de intensidad promocional"
+        },
+        {
+            "name": "precio_promedio",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Precio promedio del dia"
+        },
+        {
+            "name": "cantidad_total",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Cantidad total vendida ese dia"
+        },
+        {
+            "name": "cantidad_esperada_baseline",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Cantidad esperada segun el modelo de calendario (Baseline)"
+        },
+        {
+            "name": "indice_venta",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "cantidad_total / cantidad_esperada_baseline -- ya limpio de calendario"
+        },
+        {
+            "name": "nivel_baseline",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nivel de confiabilidad del baseline: blend o sin_baseline"
+        },
+        {
+            "name": "peso_propio_baseline",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Peso del modelo propio vs. el prior de grupo (shrinkage continuo)"
+        },
+        {
+            "name": "store_banner",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la informacion"
+        }
+    ],
+
+    "clustering_fields": ["store_banner"]
+}
