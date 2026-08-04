@@ -149,7 +149,7 @@ SQL_QUERIES = QueryDict({
         AND registro_valido = 'X'
         AND FECHA_INICIO_DE_PROMOCION >= '${fecha_ini_prom1}'
         AND FECHA_INICIO_DE_PROMOCION <= '${fecha_ini_prom2}'
-        AND FECHA_FIN_DE_PROMOCION >= '${fecha_ini_prom2}'
+        AND FECHA_FIN_DE_PROMOCION >= '${fecha_ini_prom3}'
         AND FECHA_FIN_DE_PROMOCION <= '${fin_mes_n1}'
     ) t
 
@@ -535,6 +535,7 @@ def main() -> None:  # noqa: D103
     gcp_project_cda = 'cl-cda-unidata-prod'
 
     date_table = execution_date.add(days=1)
+    fecha_prom = execution_date.add(days=4)
     fecha_emb = execution_date.replace(day=1)
     fin_mes_n1 = execution_date.add(months=1).end_of('month')
 
@@ -553,6 +554,7 @@ def main() -> None:  # noqa: D103
     logging.info(f'fecha_emb: {fecha_emb}')
     logging.info(f'fin_mes_n1: {fin_mes_n1}')
     logging.info(f'fecha_my_usuals: {fecha_my_usuals}')
+    logging.info(f'fecha_prom: {fecha_prom}')
     logging.info(f'store_banner: {store_banner}')
     logging.info(f'top_n: {top_n}')
     logging.info(f'month_interval: {month_interval}')
@@ -638,6 +640,7 @@ def main() -> None:  # noqa: D103
         gcp_project = gcp_project,
         fecha_ini_prom1 = fecha_emb,
         fecha_ini_prom2 = date_table,
+        fecha_ini_prom3 = fecha_prom,
         fin_mes_n1 = fin_mes_n1
         ),
         table_ref=f'{gcp_project}.TMP.TMP_PERSONALIZED_PRODUCTS_PROD_PROMOCION',
