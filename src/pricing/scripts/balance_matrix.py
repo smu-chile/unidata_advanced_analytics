@@ -214,7 +214,7 @@ def main() -> None:  # noqa: D103
 
     #Parche: agregamos columna subcat description
     df_balance_matrix = df_balance_matrix.merge(
-          df_ventas[['ean','ventas_totales']], on = 'ean', how='left')
+          df_ventas[['ean','ventas_totales','sub_category_description']], on = 'ean', how='left')
 
     logging.info('Merge de tablas listo')
 
