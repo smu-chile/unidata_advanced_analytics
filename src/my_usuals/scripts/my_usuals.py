@@ -478,7 +478,7 @@ SQL_QUERIES = QueryDict({
                 WHEN sales_item.customer_key IS NOT NULL THEN 1
                 ELSE 0
             END AS compra
-        FROM `${gcp_project}.TMP.TMP_USUALS_5_PROD_MP` prod_mp
+        FROM `${gcp_project}.ECOMMERCE.USUALS_5_PROD_MP` prod_mp
 
         LEFT JOIN `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
             ON prod_mp.customer_key = sales_item.CUSTOMER_KEY
@@ -620,7 +620,7 @@ SQL_QUERIES = QueryDict({
 
         WHERE
             date = '${inicio_mes}'
-            AND store_banner = 'Unimarc'
+            AND store_banner = '${store_banner}'
     ),
 
     SUSTITUTOS_ADJ AS (
@@ -766,7 +766,7 @@ SQL_QUERIES = QueryDict({
                 WHEN sales_item.customer_key IS NOT NULL THEN 1
                 ELSE 0
             END AS compra
-        FROM `${gcp_project}.TMP.TMP_USUALS_5_PROD_MP` prod_mp
+        FROM `${gcp_project}.ECOMMERCE.USUALS_5_PROD_MP` prod_mp
 
         LEFT JOIN `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
             ON prod_mp.customer_key = sales_item.CUSTOMER_KEY
@@ -1138,7 +1138,7 @@ def main():  # noqa: ANN201, D103
     table_base_ref = f'{gcp_project}.TMP.TMP_BASE_MY_USUALS'
     table_base_adj_ref = f'{gcp_project}.TMP.TMP_BASE_MY_USUALS_ADJ'
     table_mp_ref = f'{gcp_project}.TMP.TMP_MARCAS_PROPIAS_{upper_store_banner}'
-    table_prod_mp= f'{gcp_project}.TMP.TMP_USUALS_5_PROD_MP'
+    table_prod_mp= f'{gcp_project}.ECOMMERCE.USUALS_5_PROD_MP'
     table_base_final = f'{gcp_project}.TMP.TMP_BASE_MY_USUALS_FINAL'
 
 
