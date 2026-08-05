@@ -259,6 +259,7 @@ DECLARE ANOMES_CERRADO INT64 DEFAULT ${anomes_cerrado};
 
 
 
+
 # -------------------------------------------------------------------------
 # Reglas de balanceo
 # -------------------------------------------------------------------------
@@ -735,8 +736,61 @@ def guardar_auditoria_json(
     return path_salida
 
 
-def balancear_clientes(df_principal):
-    """Balancea los clientes según las reglas definidas.
+def balancear_clientes_legacy(df_principal):
+    """Balanceo ORIGINAL (histórico), sin cambios.
+
+    Esta es exactamente la lógica que tenía el script antes de
+    incorporar el balanceo corregido: cada target (CLIENTE FORMATO,
+    CLIENTE TH NO USA, CLIENTE TH USA) se balancea por proporción
+    contra la distribución de CLIENTE TH USA usando
+    `balancear_targets_full`, sin ninguna restricción de "targets".
+
+    Se usa para calcular el resultado incremental que se sube a
+    UNIPAY_INCREMENTAL, para que los valores históricos del
+    indicador no cambien mientras se evalúa el nuevo método.
+
+    Las tablas de auditoría (univariante/bivariante) NO salen de
+    aquí — para eso ver `balancear_clientes_auditoria`, que usa el
+    método corregido (FORMATO se ajusta a TH USA sin reducirlo).
+    """
+
+    dfs_balanceados = []
+
+    for (banner, tipo), (var1, var2) in REGLAS_BALANCEO.items():
+
+        df_tmp = df_principal[
+            (df_principal['STORE_BANNER'] == banner)
+            &
+            (df_principal['TIPO_CLIENTE'] == tipo)
+        ].copy()
+
+        if df_tmp.empty:
+            continue
+
+        df_bal = balancear_targets_full(
+            df=df_tmp,
+            var1=var1,
+            var2=var2
+        )
+
+        dfs_balanceados.append(
+            df_bal
+        )
+
+    if not dfs_balanceados:
+        msg = 'No fue posible balancear ningún segmento.'
+        raise ValueError(
+            msg
+        )
+
+    return pd.concat(
+        dfs_balanceados,
+        ignore_index=True
+    )
+
+
+def balancear_clientes_auditoria(df_principal):
+    """Balanceo CORREGIDO, usado SOLO para las tablas de auditoría.
 
     - CLIENTE FORMATO se ajusta para igualar la distribución de
       CLIENTE TH USA (TH USA queda intacto, sin reducir su N).
@@ -744,9 +798,17 @@ def balancear_clientes(df_principal):
       proporción respecto a CLIENTE TH USA (no participa del
       cálculo del factor incremental, solo se reporta).
 
-    Retorna una tupla (df_balanceado, tabla_univariante, tabla_bivariante)
-    con el dataframe balanceado y las tablas de auditoría consolidadas
-    para todos los (STORE_BANNER, TIPO_CLIENTE).
+    IMPORTANTE: el dataframe balanceado que retorna esta función NO
+    se usa para calcular el resultado incremental (eso lo hace
+    `balancear_clientes_legacy`). Esta función corre en paralelo,
+    exclusivamente para producir las tablas de auditoría
+    (univariante/bivariante) que se suben a BigQuery. Por lo tanto,
+    un `IGUALADO = True` en la auditoría describe cómo QUEDARÍA la
+    distribución con el método corregido, no necesariamente el
+    balanceo que efectivamente se usó para el FACTOR_INCREMENTAL_PCT
+    de ese periodo.
+
+    Retorna una tupla (df_balanceado, tabla_univariante, tabla_bivariante).
     """
 
     dfs_balanceados = []
@@ -1168,12 +1230,32 @@ def main() -> None:  # noqa: D103
     # ---------------------------------------------------------------------
     # Balanceo de clientes
     # ---------------------------------------------------------------------
+    # Se corren DOS balanceos en paralelo sobre el mismo df_principal:
+    #
+    #   1) balancear_clientes_legacy: método ORIGINAL (histórico), sin
+    #      cambios. Su resultado (df_balanceado) es el que alimenta el
+    #      cálculo del FACTOR_INCREMENTAL_PCT, para no alterar los
+    #      valores históricos del indicador.
+    #
+    #   2) balancear_clientes_auditoria: método CORREGIDO (FORMATO se
+    #      ajusta a TH USA, TH USA queda intacto). Su resultado se usa
+    #      ÚNICAMENTE para las tablas de auditoría/reporte — no
+    #      alimenta el cálculo del incremental.
+    #
+    # Esto es intencional mientras se evalúa el cambio metodológico:
+    # el indicador de negocio sigue calculándose igual que siempre,
+    # y la auditoría muestra en paralelo cómo se vería con el método
+    # corregido, sin generar ruido en el histórico.
+
+    df_balanceado = balancear_clientes_legacy(
+        df_principal
+    )
 
     (
-        df_balanceado,
+        _,
         tabla_univariante,
         tabla_bivariante
-    ) = balancear_clientes(
+    ) = balancear_clientes_auditoria(
         df_principal
     )
 
@@ -1382,6 +1464,6 @@ def main() -> None:  # noqa: D103
         'Proceso finalizado correctamente.'
     )
 
-#comentario
+
 if __name__ == '__main__':
     main()
