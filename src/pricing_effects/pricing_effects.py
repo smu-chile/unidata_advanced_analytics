@@ -36,8 +36,8 @@ with open(
 PROJECT_NAME = 'pricing_effects'
 
 STORE_BANNER_LIST = [
-    'Unimarc'
-    #, 'Super 10', 'Alvi','Ecommerce Unimarc', 'Ecommerce Alvi',
+    #'Unimarc',
+    'Super 10', 'Alvi','Ecommerce Unimarc', 'Ecommerce Alvi',
 ]
 
 # Unimarc es, por lejos, el banner con mas materiales -- el driver
