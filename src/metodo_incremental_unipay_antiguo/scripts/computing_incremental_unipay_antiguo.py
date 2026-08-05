@@ -279,7 +279,7 @@ CONFIG_INCREMENTAL = {
 
     'Unimarc': {
         'target': 'CLIENTE TH USA',
-        'control': 'CLIENTE TH NO USA'
+        'control': 'CLIENTE FORMATO'
     },
 
     'Super 10': {
