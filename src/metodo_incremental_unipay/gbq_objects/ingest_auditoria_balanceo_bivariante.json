@@ -1,0 +1,90 @@
+{
+    "schema": "UNIPAY",
+    "table": "UNIPAY_AUDITORIA_BALANCEO_BIVARIANTE",
+
+    "columns": [
+        {
+            "name": "PERIODO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Periodo (anomes_cerrado) al que corresponde la auditoría de balanceo, formato YYYYMM."
+        },
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato comercial al que corresponde el segmento auditado."
+        },
+        {
+            "name": "TIPO_CLIENTE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Tipo de cliente (PERSONA/COMERCIANTE) del segmento auditado."
+        },
+        {
+            "name": "VAR1_NOMBRE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre de la primera variable de balanceo usada en el cruce."
+        },
+        {
+            "name": "VAR2_NOMBRE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre de la segunda variable de balanceo usada en el cruce."
+        },
+        {
+            "name": "VAR1_VALOR",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoría de la primera variable en este estrato."
+        },
+        {
+            "name": "VAR2_VALOR",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoría de la segunda variable en este estrato."
+        },
+        {
+            "name": "Q_CONTROL",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Cantidad de clientes únicos del grupo control (CLIENTE FORMATO) en ese estrato, tras el balanceo."
+        },
+        {
+            "name": "PCT_CONTROL",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Porcentaje que representa ese estrato dentro del grupo control (CLIENTE FORMATO), tras el balanceo."
+        },
+        {
+            "name": "Q_COMPARATIVO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Cantidad de clientes únicos del grupo comparativo (CLIENTE TH USA) en ese estrato."
+        },
+        {
+            "name": "PCT_COMPARATIVO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Porcentaje que representa ese estrato dentro del grupo comparativo (CLIENTE TH USA)."
+        },
+        {
+            "name": "DIFF_PCT",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Diferencia en puntos porcentuales entre PCT_CONTROL y PCT_COMPARATIVO."
+        },
+        {
+            "name": "IGUALADO",
+            "field_type": "BOOLEAN",
+            "mode": "NULLABLE",
+            "description": "Indica si la diferencia entre control y comparativo está dentro de la tolerancia definida (±1 punto porcentual)."
+        }
+    ],
+
+    "clustering_fields": [
+        "PERIODO",
+        "STORE_BANNER"
+    ]
+}
