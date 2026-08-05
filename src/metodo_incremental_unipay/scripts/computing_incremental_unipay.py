@@ -1382,6 +1382,6 @@ def main() -> None:  # noqa: D103
         'Proceso finalizado correctamente.'
     )
 
-
+#comentario
 if __name__ == '__main__':
     main()
