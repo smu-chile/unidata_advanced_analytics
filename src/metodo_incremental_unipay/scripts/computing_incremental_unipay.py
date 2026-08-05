@@ -258,6 +258,7 @@ DECLARE ANOMES_CERRADO INT64 DEFAULT ${anomes_cerrado};
 })
 
 
+
 # -------------------------------------------------------------------------
 # Reglas de balanceo
 # -------------------------------------------------------------------------
@@ -1181,6 +1182,48 @@ def main() -> None:  # noqa: D103
     # tabla principal (delete + append por PERIODO).
     tabla_univariante['PERIODO'] = anomes_cerrado
     tabla_bivariante['PERIODO'] = anomes_cerrado
+
+    # uploadFrame castea por POSICIÓN según el orden del JSON de
+    # esquema (mismo comportamiento que ya usa construir_resultado()
+    # para la tabla principal), así que hay que reordenar las
+    # columnas del DataFrame para que calcen exacto con el orden
+    # declarado en los ingest_*.json. Si no se hace esto, un valor de
+    # una columna puede terminar casteado con el tipo de OTRA columna
+    # (ej. PERIODO cayendo en la posición de IGUALADO) y pyarrow
+    # tira ArrowInvalid al no poder parsear el valor.
+    tabla_univariante = tabla_univariante[
+        [
+            'PERIODO',
+            'STORE_BANNER',
+            'TIPO_CLIENTE',
+            'VARIABLE',
+            'CATEGORIA',
+            'Q_CONTROL',
+            'PCT_CONTROL',
+            'Q_COMPARATIVO',
+            'PCT_COMPARATIVO',
+            'DIFF_PCT',
+            'IGUALADO'
+        ]
+    ]
+
+    tabla_bivariante = tabla_bivariante[
+        [
+            'PERIODO',
+            'STORE_BANNER',
+            'TIPO_CLIENTE',
+            'VAR1_NOMBRE',
+            'VAR2_NOMBRE',
+            'VAR1_VALOR',
+            'VAR2_VALOR',
+            'Q_CONTROL',
+            'PCT_CONTROL',
+            'Q_COMPARATIVO',
+            'PCT_COMPARATIVO',
+            'DIFF_PCT',
+            'IGUALADO'
+        ]
+    ]
 
     path_auditoria = guardar_auditoria_json(
         tabla_univariante=tabla_univariante,
