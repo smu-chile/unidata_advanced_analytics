@@ -38,7 +38,7 @@ PROJECT_NAME = 'ecommerce_personalized_products'
 
 dag_args = {
     'dag_id': 'ecommerce_personalized_products',
-    'schedule_interval': None,
+    'schedule_interval': '0 11 * * 0,3',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,

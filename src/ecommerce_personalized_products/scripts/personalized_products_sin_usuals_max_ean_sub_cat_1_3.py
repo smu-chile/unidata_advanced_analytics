@@ -560,7 +560,7 @@ def main() -> None:  # noqa: D103
     fin_mes_n1 = execution_date.add(months=1).end_of('month')
 
     if execution_date.day_of_week == pendulum.WEDNESDAY:
-        fecha_my_usuals = execution_date
+        fecha_my_usuals = date_table
     elif execution_date.day_of_week == pendulum.SUNDAY:
         fecha_my_usuals = execution_date.previous(pendulum.THURSDAY).to_date_string()
 
