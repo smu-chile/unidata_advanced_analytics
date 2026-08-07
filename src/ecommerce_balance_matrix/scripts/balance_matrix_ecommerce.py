@@ -351,9 +351,9 @@ def main() -> None:  # noqa: D103
             '/sites/'
             'BigDatayAdvancedAnalytics/'
             'Documentos%20compartidos/'
-            'Pricing/'
-            'Balance Matrix AA - GCP/'
-            f'Balance_Matrix_AA_{store_banner}.xlsx'
+            'Ecommerce/'
+            'Balance Matrix AA Ecommerce/'
+            f'Balance_Matrix_AA_Ecommerce_{store_banner}.xlsx'
         )
     ).upload(buffer)
     logging.info('Tabla subida en Sharepoint')
@@ -368,8 +368,8 @@ def main() -> None:  # noqa: D103
     where_clause = f"store_banner = '{store_banner}'"
 
     # Parametros
-    esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'BALANCE_MATRIX'
+    esquema = 'ECOMMERCE'
+    tabla = 'ECOMMERCE_BALANCE_MATRIX'
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
