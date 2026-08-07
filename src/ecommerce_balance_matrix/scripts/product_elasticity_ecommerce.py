@@ -1425,35 +1425,40 @@ def main() -> None:  # noqa: D103
                             'elasticidad',
                             'segmento_elasticidad']  + columnas_a_copiar + ['Tipo_Contagio', 'Material_Contagiante']]  # noqa: E501
 
-    if 'variacion_top1_sustituto' not in df_gcp.columns:
-        posicion_variante = df_gcp.columns.get_loc('Tipo_Contagio')
-        df_gcp.insert(
-            loc=posicion_variante,
-            column='variacion_top1_sustituto',
-            value=0)
+    columnas_coeficientes =  ['const', 'log_precio',
+         'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
+         '2024', '2025', '2026',
+         'multiplicador_x05',
+         'jueves_santo', 'viernes_santo',
+         '30_abril',
+         '20_mayo', '21_mayo',
+         '19_junio','20_junio',
+         '15_julio', '16_julio',
+         '14_agosto', '15_agosto',
+         '14_septiembre','15_septiembre', '16_septiembre', '17_septiembre',
+         'pre_halloween', 'halloween',
+         'pre_navidad', 'navidad',
+         'pre_ano_nuevo', 'ano_nuevo',
+         'febrero','marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',  # noqa: E501
+         'apo',
+         'variacion_porcentual_subcategoria',  'variacion_top1_sustituto', 'variacion_top3_sustitutos']  # noqa: E501
 
-    if 'variacion_top3_sustitutos' not in df_gcp.columns:
-        posicion_variante = df_gcp.columns.get_loc('Tipo_Contagio')
-        df_gcp.insert(
-            loc=posicion_variante,
-            column='variacion_top3_sustitutos',
-            value=0)
+    # Si falta alguna columna de los coeficientes:
+    for col in columnas_coeficientes:
+        if col not in df_gcp.columns:
+            print('Se ha creado la columna: ',col)
+            df_gcp[col] = 0
 
-    if 'apo' not in df_gcp.columns:
-        posicion_variante = df_gcp.columns.get_loc('variacion_top1_sustituto')
-
-        df_gcp.insert(
-            loc=posicion_variante,
-            column='apo',
-            value=0)
-
-    #MAYORISTA NO REGISTRA COLUMNA 2026
-    if '2026' not in df_gcp.columns:
-        posicion_variante = df_gcp.columns.get_loc('multiplicador_x05')
-        df_gcp.insert(
-            loc=posicion_variante,
-            column='2026',
-            value=0)
+    # Aseguramos orden en las columnas
+    df_gcp = df_gcp[['store_banner',  # noqa: RUF005
+                            'store_id',
+                            'categoria',
+                            'material',
+                            'descripcion_material',
+                            'ean',
+                            'umv',
+                            'elasticidad',
+                            'segmento_elasticidad']  + columnas_coeficientes + ['Tipo_Contagio', 'Material_Contagiante']]  # noqa: E501
 
 
     df_gcp['Material_Contagiante'] = (
@@ -1464,7 +1469,7 @@ def main() -> None:  # noqa: D103
     print('Justo antes de subir a GCP: ', df_gcp.info())
 
     # Definir el WHERE
-    where_clause = f"store_banner = '{store_banner}'"
+    where_clause = f"store_banner = 'Ecommerce {store_banner}'"
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
