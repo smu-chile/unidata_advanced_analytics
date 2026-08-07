@@ -810,6 +810,11 @@ def main() -> None:  # noqa: D103
 
     print('Post media armómina: ', df_detalle2.info())
 
+
+    # PATCH revisión 0 en sensibilidad
+    cantidad_ceros = (df_detalle2['media_geometrica'] == 0).sum()
+    print(f'Cantidad de ceros: {cantidad_ceros}')
+
     #----------------------------------------------------------------------
     # ENDREGION
 
