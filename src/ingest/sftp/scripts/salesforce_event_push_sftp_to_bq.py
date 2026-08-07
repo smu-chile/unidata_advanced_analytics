@@ -1,6 +1,3 @@
-# ---------------------------------------------------------------------
-# Imports
-# ---------------------------------------------------------------------
 import csv
 import logging
 import datetime
@@ -108,22 +105,22 @@ def main():
                     formato)
                 continue
 
-            df = pd.DataFrame(registros)
+            df_push = pd.DataFrame(registros)
 
-            df.columns = [
+            df_push.columns = [
                 str(col).replace('\ufeff', '').strip()
-                for col in df.columns]
+                for col in df_push.columns]
 
             # ------------------------------------------------------
             # Eliminar columna no existente en BigQuery
             # ------------------------------------------------------
-            if 'ServiceResponse' in df.columns:
-                df.drop(columns=['ServiceResponse'], inplace=True)  # noqa: PD002
+            if 'ServiceResponse' in df_push.columns:
+                df_push.drop(columns=['ServiceResponse'], inplace=True)  # noqa: PD002
 
             # ------------------------------------------------------
             # Renombrar columnas al esquema BigQuery
             # ------------------------------------------------------
-            df.rename(columns={
+            df_push.rename(columns={
                 'AppName': 'APP_NAME',
                 'MessageName': 'MESSAGE_NAME',
                 'MessageID': 'MESSAGE_ID',
@@ -154,38 +151,38 @@ def main():
             # ------------------------------------------------------
             # Agregar columnas requeridas
             # ------------------------------------------------------
-            df['BUSINESS_UNIT'] = cfg['business_unit']
-            df['EVENT_DATE'] = today
-            df['CLIENT_ID'] = cfg['client_id']
-            df['EID'] = EID
-            df['FECHA_CARGA'] = today
+            df_push['BUSINESS_UNIT'] = cfg['business_unit']
+            df_push['EVENT_DATE'] = today
+            df_push['CLIENT_ID'] = cfg['client_id']
+            df_push['EID'] = EID
+            df_push['FECHA_CARGA'] = today
 
             # ------------------------------------------------------
             # Conversión tipos de datos
             # ------------------------------------------------------
-            df['DATETIME_SEND'] = pd.to_datetime(
-                df['DATETIME_SEND'],
+            df_push['DATETIME_SEND'] = pd.to_datetime(
+                df_push['DATETIME_SEND'],
                 format='%m/%d/%Y %I:%M:%S %p', errors='coerce')
 
-            df['OPEN_DATE'] = pd.to_datetime(
-                df['OPEN_DATE'],
+            df_push['OPEN_DATE'] = pd.to_datetime(
+                df_push['OPEN_DATE'],
                 format='%m/%d/%Y %I:%M:%S %p', errors='coerce')
 
-            df['MESSAGE_ID'] = pd.to_numeric(
-                df['MESSAGE_ID'], errors='coerce').astype('Int64')
+            df_push['MESSAGE_ID'] = pd.to_numeric(
+                df_push['MESSAGE_ID'], errors='coerce').astype('Int64')
 
-            df['CLIENT_ID'] = pd.to_numeric(
-                df['CLIENT_ID'], errors='coerce').astype('Int64')
+            df_push['CLIENT_ID'] = pd.to_numeric(
+                df_push['CLIENT_ID'], errors='coerce').astype('Int64')
 
-            df['EID'] = int(EID)
+            df_push['EID'] = int(EID)
 
             # ------------------------------------------------------
             # Crear llave única
             # ------------------------------------------------------
-            df['KEY'] = (df['BUSINESS_UNIT']
-                + '|' + df['REQUEST_ID'] + '|' + df['DEVICE_ID'])
+            df_push['KEY'] = (df_push['BUSINESS_UNIT']
+                + '|' + df_push['REQUEST_ID'] + '|' + df_push['DEVICE_ID'])
 
-            logging.info('Registros leídos : %s', len(df))
+            logging.info('Registros leídos : %s', len(df_push))
             logging.info('Consultando llaves existentes en BigQuery...')
 
             sql = f"""
@@ -201,16 +198,16 @@ def main():
 
             logging.info('Llaves existentes : %s', len(existentes))
 
-            df = df[~df['KEY'].isin(existentes['KEY'])].copy()
+            df_push = df_push[~df_push['KEY'].isin(existentes['KEY'])].copy()
 
-            logging.info('Registros nuevos : %s', len(df))
+            logging.info('Registros nuevos : %s', len(df_push))
 
-            if df.empty:
+            if df_push.empty:
                 logging.info('No existen registros nuevos.')
 
                 continue
 
-            df.drop(columns=['KEY'], inplace=True)  # noqa: PD002
+            df_push.drop(columns=['KEY'], inplace=True)  # noqa: PD002
 
             # ------------------------------------------------------
             # Job Config
@@ -224,11 +221,11 @@ def main():
             logging.info('Cargando registros a BigQuery...')
 
             job = bq_client.load_table_from_dataframe(
-                df, TABLE_ID, job_config=job_config)
+                df_push, TABLE_ID, job_config=job_config)
 
             job.result()
 
-            logging.info(f'Registros cargados: {len(df):,}')
+            logging.info(f'Registros cargados: {len(df_push):,}')
 
         except FileNotFoundError:
             logging.info(f'No existe archivo para {formato}.')
