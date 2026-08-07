@@ -185,7 +185,7 @@ ORDER BY nombre_promocion, desc_categoria ,material
 def get_sharepoint_folders(
     sp_cred: dict,
     file_site: str
-) -> tuple[sp.SharePointFolder, sp.SharePointFolder]:
+) -> tuple[sp.SharePointFolder, sp.SharePointFolder, str]:
     '''P1.F1: Obtiene SharePointFolder para carpetas input y output
 
     Inputs:
@@ -376,7 +376,7 @@ def preparar_input_promociones(
     patron_input: str,
     patron_output: str,
     abortar_si_no_pendientes: bool = True
-) -> tuple[pd.DataFrame, list]:
+) -> tuple[pd.DataFrame | None, list[str], str | None, str | None]:
 
     """Orquesta el flujo completo de carga y validación de inputs de
     promocionesdesde SharePoint.
@@ -464,7 +464,7 @@ def preparar_input_promociones(
         if abortar_si_no_pendientes:
             raise ValueError(msg)
 
-        return None, []
+        return None, [], None, None
 
     # Política actual: tomar el último input válido
     nombre_input = pendientes[-1]
@@ -2316,6 +2316,7 @@ def subir_archivo_sharepoint(
 
 
 def main():
+
 
     #------- Inputs ---------#
     args = vars(parser.parse_args())
