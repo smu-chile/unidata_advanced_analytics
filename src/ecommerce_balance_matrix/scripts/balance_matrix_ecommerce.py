@@ -51,16 +51,14 @@ SQL_QUERIES = QueryDict({    # Region: Explicación de query
 
  'query_sensibilidad':
 """
-SELECT * FROM `${proyecto}.ECOMMERCE.ECOMMERCE_PRODUCT_SENSIBILITY`
-#¿CAMBIAR NOMBRES?
+SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY`
 where STORE_BANNER = '${store_banner}'
 """,
 
 'query_elasticidad':
 """
-SELECT * FROM `${proyecto}.ECOMMERCE.ECOMMERCE_PRODUCT_ELASTICITY`
-  #¿CAMBIAR NOMBRES?
-where STORE_BANNER = '${store_banner}'
+SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.ELASTICITY`
+where STORE_BANNER = 'Ecommerce ${store_banner}'
 """,
 
 'query_ventas':
@@ -128,7 +126,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     # Usuario
-    usuario = 'ecommerce_balance_matrix'
+    usuario = 'balance_matrix'
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -147,8 +145,11 @@ def main() -> None:  # noqa: D103
             user=usuario,
             gbq_client=gbq_client)
 
+    print('[PARCHE] Query Sensibilidad Info: ')
+    print(df_sensibilidad.info())
+
     df_sensibilidad.columns = df_sensibilidad.columns.str.lower()
-    logging.info('(1) Consulta de sensibilidad lista')
+    logging.info('Consulta de sensibilidad lista')
 
     # ELASTICIDAD
 
@@ -161,8 +162,11 @@ def main() -> None:  # noqa: D103
             user=usuario,
             gbq_client=gbq_client)
 
+    print('[PARCHE] Query Elasticidad Info: ')
+    print(df_elasticidad.info())
+
     df_elasticidad.columns = df_elasticidad.columns.str.lower()
-    logging.info('(2) Consulta de elasticidad lista')
+    logging.info('Consulta de elasticidad lista')
 
     # VENTAS
 
@@ -175,8 +179,11 @@ def main() -> None:  # noqa: D103
             user=usuario,
             gbq_client=gbq_client)
 
+    print('[PARCHE] Query Ventas Info: ')
+    print(df_ventas.info())
+
     df_ventas.columns = df_ventas.columns.str.lower()
-    logging.info('(3) Consulta de ventas lista')
+    logging.info('Consulta de ventas lista')
 
     #----------------------------------------------------------------------
     # ENDREGION
@@ -186,18 +193,28 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     df_balance_matrix = df_elasticidad.merge(
-        df_sensibilidad[['material', 'indice_sensibilidad', 'indice_sensibilidad_familia', 'kvi']],
+        df_sensibilidad[['material', 'indice_sensibilidad', 'indice_sensibilidad_familia','kvi']],
         on='material',
         how='left'
     )
 
+    mask_fillna_is  = df_balance_matrix['indice_sensibilidad'].isna()
+    mask_fillna_isf = df_balance_matrix['indice_sensibilidad_familia'].isna()
+
     df_balance_matrix['indice_sensibilidad'] = df_balance_matrix['indice_sensibilidad'].fillna(0)
+
+    #[PARCHE] En estrico rigor se debería rellenar ISF yendo a buscar los padres ¿?  # noqa: W505
+
     df_balance_matrix['indice_sensibilidad_familia'] = df_balance_matrix['indice_sensibilidad_familia'].fillna(0)  # noqa: E501
+
+    print('#(IS nans) agregados: ', mask_fillna_is.sum())
+    print('#(ISF nans) agregados: ', mask_fillna_isf.sum())
+
     df_balance_matrix['kvi'] = df_balance_matrix['kvi'].fillna('BKG')
 
     #Parche: agregamos columna subcat description
     df_balance_matrix = df_balance_matrix.merge(
-          df_ventas[['ean','ventas_totales', 'sub_category_description']], on = 'ean', how='left')
+          df_ventas[['ean','ventas_totales','sub_category_description']], on = 'ean', how='left')
 
     logging.info('Merge de tablas listo')
 
@@ -245,7 +262,7 @@ def main() -> None:  # noqa: D103
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
         'store_banner':'Formato',
         'categoria':'Categoria',
-        'sub_category_description':'Grupo artículo',
+        'sub_category_description': 'Grupo artículo',
         'descripcion_material': 'Descripción material',
         'material':'Material',
         'umv':'UMV',
@@ -271,11 +288,18 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     # ordenar antes por Categoria
+
     df_balance_matrix_sp = df_balance_matrix_sp.sort_values(by='Categoria')
+
+    print(f'[PARCHE] Balance Matrix Dimensiones: {df_balance_matrix_sp.shape}')
+    cantidad_eliminadas = df_balance_matrix_sp['Elasticidad'].isna().sum()
+    df_balance_matrix_sp = df_balance_matrix_sp[df_balance_matrix_sp['Elasticidad'].notna()]
+    print(f'Se eliminaron {cantidad_eliminadas} filas con Elasticidad nula')
+    print(f'[PARCHE] Balance Matrix Dimensiones: {df_balance_matrix_sp.shape}')
+
 
     buffer = io.BytesIO()
 
-    print('BALANCE_MATRIX PRE EXCEL: ', df_balance_matrix_sp.info())
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
         nombre_hoja = f'BM {store_banner}'
         df_balance_matrix_sp.to_excel(writer, index=False, sheet_name=nombre_hoja)
@@ -299,9 +323,7 @@ def main() -> None:  # noqa: D103
 
         columnas = list(df_balance_matrix_sp.columns)
 
-
         for i, col in enumerate(columnas):
-            print('col: ',col, 'type: ', type(col))
             serie = df_balance_matrix_sp[col].astype(str)
             max_len = max(serie.map(len).max(), len(col))
             width = max_len + 2
@@ -329,9 +351,9 @@ def main() -> None:  # noqa: D103
             '/sites/'
             'BigDatayAdvancedAnalytics/'
             'Documentos%20compartidos/'
-            'Ecommerce/'
-            'Balance Matrix AA Ecommerce/'
-            f'Balance_Matrix_AA_Ecommerce_{store_banner}.xlsx'
+            'Pricing/'
+            'Balance Matrix AA - GCP/'
+            f'Balance_Matrix_AA_{store_banner}.xlsx'
         )
     ).upload(buffer)
     logging.info('Tabla subida en Sharepoint')
@@ -346,8 +368,8 @@ def main() -> None:  # noqa: D103
     where_clause = f"store_banner = '{store_banner}'"
 
     # Parametros
-    esquema = 'ECOMMERCE'
-    tabla = 'ECOMMERCE_BALANCE_MATRIX'
+    esquema = 'PRECIO_PROMOCIONES'
+    tabla = 'BALANCE_MATRIX'
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
@@ -360,8 +382,8 @@ def main() -> None:  # noqa: D103
     uploadFrame(
         df_balance_matrix_sp,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'ingest_ecommerce_product_balance_matrix.json'),
-        project=proyecto,#cambio
+                                         'ingest_product_balance_matrix.json'),
+        project=proyecto,
         gbq_client=gbq_client,
         if_exists='append'
     )

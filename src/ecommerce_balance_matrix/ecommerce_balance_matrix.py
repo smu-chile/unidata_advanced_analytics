@@ -1,28 +1,15 @@
 # Default
 import json
-import platform
-import importlib
 from datetime import timedelta
 
 # pip
 import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
+from airflow.providers.google.cloud.operators.dataproc import (
+    DataprocCreateBatchOperator,
+)
 
-
-if platform.system() == 'Windows':
-    from common.operators.dataproc_create_batch import (
-        ExtendedDataprocCreateBatchOperator,
-    )
-elif platform.system() == 'Linux':
-    ExtendedDataprocCreateBatchOperator = (importlib.import_module(
-        'BRANCH_PLACEHOLDER.'
-        'smu-chile.unidata_advanced_analytics.'
-        'src.common.operators.dataproc_create_batch'
-    )).ExtendedDataprocCreateBatchOperator
-else:
-    err_msg = 'Only Linux and Windows are supported.'
-    raise NotImplementedError(err_msg)
 
 # Globals
 with open(
@@ -33,156 +20,205 @@ with open(
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
 PROJECT_NAME = 'ecommerce_balance_matrix'
+dag_id = 'balance_matrix'
+schedule_interval = None
+catchup = False
+start_date = [2025, 6, 20]
+
+# Task 1
+script1 = 'product_sensibility_ecommerce'
+script4 = 'balance_matrix_ecommerce'
+
+
+
+store_banner_list = ['Unimarc', 'Alvi'] #, 'Alvi', 'Mayorista', 'Super 10']
 
 dag_args = {
     'dag_id': 'ecommerce_balance_matrix',
-    'schedule_interval': None,
+    'schedule_interval': schedule_interval,
     'dagrun_timeout': None,
-    'catchup': False,
+    'catchup': catchup,
     'max_active_runs': 1,
-    'concurrency': 1,
+    'concurrency': 4,
     'tags': [PROJECT_NAME, 'abravom'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
         'owner': 'BIGDATA_ANALYTICS',
-        'email': ['abravom@unidata.cl'],
+        'email':  ['abravom@unidata.cl'],
         'start_date': pendulum.datetime(
-            2025, 1, 1,
-            tz=pendulum.timezone('America/Santiago')
+            start_date[0],
+            start_date[1],
+            start_date[2],
+            tz=pendulum.timezone('America/Santiago'),
         ),
         'depends_on_past': False,
-        'catchup': False,
-        'email_on_failure': False,
+        'catchup': catchup,
+        'email_on_failure': True,
         'email_on_retry': False,
         'retries': 0,
-        'retry_delay': timedelta(minutes=5)
-    }
+        'retry_delay': timedelta(minutes=5),
+    },
 }
-
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = (
         "{{ dag_run.conf.get('execution_date', "
         "dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"
-    )
-
-    store_banners = ['Unimarc', 'Alvi']
+    )  # noqa: E501
 
     sensibility_tasks = []
     processed_data_tasks = []
     elasticity_tasks = []
     bm_tasks = []
 
-    for store_banner in store_banners:
-        sensibility_task = ExtendedDataprocCreateBatchOperator(
-            task_id = 'ecommerce_sensibility_'
-            f'{store_banner.lower()}',
-            python_script_path=(
-                f'{PROJECT_NAME}/'
-                'scripts/'
-                'product_sensibility_ecommerce.py'
-            ),
-            dag_env_config=dag_env_config,
-            docker_image_name=f'{PROJECT_NAME}',
-            pyspark_batch_args=[
-                '--project_id', dag_env_config['project_id'],
-                '--execution_date', EXECUTION_DATE,
-                '--store_banner',store_banner,
-            ],
-            include_paths=[
-                'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
-            ],
+    for store_banner in store_banner_list:
+        banner_suffix = store_banner.replace(' ', '_').lower()
 
-             # Driver config (dinámico por banner)
-            spark_driver_cores = 4,
-            spark_driver_memory = 20
-
+        # ---------- Task script1: product_sensibility ----------
+        sensibility_task = DataprocCreateBatchOperator(
+            task_id=f'{script1}_{banner_suffix}',
+            batch={
+                'pyspark_batch': {
+                    # Main file to run in the dataproc pod
+                    'main_python_file_uri': (
+                        f'gs://{dag_env_config["scripts_gcs"]}/'
+                        f'{PROJECT_NAME}/'
+                        'scripts/'
+                        f'{script1}.py'
+                    ),
+                    # Common files
+                    'python_file_uris': [
+                        (
+                            f'gs://{dag_env_config["scripts_gcs"]}/'
+                            'common/'
+                        ),
+                        (
+                            f'gs://{dag_env_config["scripts_gcs"]}/'
+                            f'{PROJECT_NAME}/'
+                            'gbq_objects/'
+                        ),
+                    ],
+                    # For Google Big Query read/write
+                    'jar_file_uris': [
+                        'gs://spark-lib/bigquery/'
+                        'spark-3.5-bigquery-0.42.2.jar'
+                    ],
+                    # Main file arguments
+                    'args': [
+                        '--project_id',
+                        dag_env_config['project_id'],
+                        '--execution_date',
+                        EXECUTION_DATE,
+                        '--store_banner',
+                        store_banner,
+                    ],
+                },
+                # Docker image to be used in the dataproc pod
+                'runtime_config': {
+                    'version': '2.2',
+                    'container_image': (
+                        'us-east1-docker.pkg.dev/'
+                        f'{dag_env_config["project_id"]}/'
+                        'dataproc-worker-images/'
+                        f"{PROJECT_NAME.replace('_', '-')}:latest"
+                    ),
+                    # Executor hardware config
+                    'properties': {
+                        # Executor instances
+                        'spark.executor.instances': '2',
+                        'spark.executor.cores': '4',
+                        'spark.executor.memory': '4096m',
+                        # Driver instances
+                        'spark.driver.cores': '4',
+                        'spark.driver.memory': '20g',
+                    },
+                },
+                # Privileges config
+                'environment_config': {
+                    'execution_config': {
+                        'service_account': dag_env_config['g_service_account'],
+                        'network_uri': dag_env_config['network'],
+                        'subnetwork_uri': dag_env_config['subnetwork'],
+                        'ttl': '14400s',
+                    },
+                },
+            },
+            # Leaves Airflow Trigger to track the status of Dataproc batch
+            batch_id='batch-{{ macros.uuid.uuid4() }}',
+            project_id=dag_env_config['project_id'],
         )
 
-        processed_data_task = ExtendedDataprocCreateBatchOperator(
-            task_id = 'processed_data_tasks_'
-            f'{store_banner.lower()}',
-            python_script_path=(
-                f'{PROJECT_NAME}/'
-                'scripts/'
-                'ecommerce_processed_regression_data.py'
-            ),
-            dag_env_config=dag_env_config,
-            docker_image_name=f'{PROJECT_NAME}',
-            pyspark_batch_args=[
-                '--project_id', dag_env_config['project_id'],
-                '--execution_date', EXECUTION_DATE,
-                '--store_banner',store_banner,
-                '--use','ELASTICITY'
-            ],
-            include_paths=[
-                'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
-            ],
 
-             # Driver config (dinámico por banner)
-            spark_driver_cores = 4,
-            spark_driver_memory = 20
+        # ---------- Task script4: balance_matrix ----------
+        bm_task = DataprocCreateBatchOperator(
+            task_id=f'{script4}_{banner_suffix}',
+            batch={
+                'pyspark_batch': {
+                    'main_python_file_uri': (
+                        f'gs://{dag_env_config["scripts_gcs"]}/'
+                        f'{PROJECT_NAME}/'
+                        'scripts/'
+                        f'{script4}.py'
+                    ),
+                    'python_file_uris': [
+                        (
+                            f'gs://{dag_env_config["scripts_gcs"]}/'
+                            'common/'
+                        ),
+                        (
+                            f'gs://{dag_env_config["scripts_gcs"]}/'
+                            f'{PROJECT_NAME}/'
+                            'gbq_objects/'
+                        ),
+                    ],
+                    'jar_file_uris': [
+                        'gs://spark-lib/bigquery/'
+                        'spark-3.5-bigquery-0.42.2.jar'
+                    ],
+                    'args': [
+                        '--project_id',
+                        dag_env_config['project_id'],
+                        '--execution_date',
+                        EXECUTION_DATE,
+                        '--store_banner',
+                        store_banner,
 
+                    ],
+                },
+                'runtime_config': {
+                    'version': '2.2',
+                    'container_image': (
+                        'us-east1-docker.pkg.dev/'
+                        f'{dag_env_config["project_id"]}/'
+                        'dataproc-worker-images/'
+                        f"{PROJECT_NAME.replace('_', '-')}:latest"
+                    ),
+                    'properties': {
+                        'spark.executor.instances': '2',
+                        'spark.executor.cores': '4',
+                        'spark.executor.memory': '4096m',
+                        'spark.driver.cores': '4',
+                        'spark.driver.memory': '10g',
+                    },
+                },
+                'environment_config': {
+                    'execution_config': {
+                        'service_account': dag_env_config['g_service_account'],
+                        'network_uri': dag_env_config['network'],
+                        'subnetwork_uri': dag_env_config['subnetwork'],
+                        'ttl': '14400s',
+                    },
+                },
+            },
+            batch_id='batch-{{ macros.uuid.uuid4() }}',
+            project_id=dag_env_config['project_id'],
         )
 
-        elasticity_task = ExtendedDataprocCreateBatchOperator(
-            task_id = 'elasticity_tasks_'
-            f'{store_banner.lower()}',
-            python_script_path=(
-                f'{PROJECT_NAME}/'
-                'scripts/'
-                'product_elasticity_ecommerce.py'
-            ),
-            dag_env_config=dag_env_config,
-            docker_image_name=f'{PROJECT_NAME}',
-            pyspark_batch_args=[
-                '--project_id', dag_env_config['project_id'],
-                '--execution_date', EXECUTION_DATE,
-                '--store_banner',store_banner,
-            ],
-            include_paths=[
-                'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
-            ],
-
-             # Driver config (dinámico por banner)
-            spark_driver_cores = 8,
-            spark_driver_memory = 40
-
-        )
-
-        bm_task = ExtendedDataprocCreateBatchOperator(
-            task_id = 'bm_tasks_'
-            f'{store_banner.lower()}',
-            python_script_path=(
-                f'{PROJECT_NAME}/'
-                'scripts/'
-                'balance_matrix_ecommerce.py'
-            ),
-            dag_env_config=dag_env_config,
-            docker_image_name=f'{PROJECT_NAME}',
-            pyspark_batch_args=[
-                '--project_id', dag_env_config['project_id'],
-                '--execution_date', EXECUTION_DATE,
-                '--store_banner',store_banner,
-            ],
-            include_paths=[
-                'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
-            ],
-
-             # Driver config (dinámico por banner)
-            spark_driver_cores = 4,
-            spark_driver_memory = 10
-
-        )
-
-        sensibility_task >> processed_data_task >> elasticity_task >> bm_task
+        # Dependencia por formato: primero script1, luego script2
+        # elasticidad se extrae directamente de tabla GCP
+        sensibility_task  >> bm_task
 
         sensibility_tasks.append(sensibility_task)
-        processed_data_tasks.append(processed_data_task)
-        elasticity_tasks.append(elasticity_task)
         bm_tasks.append(bm_task)
+
