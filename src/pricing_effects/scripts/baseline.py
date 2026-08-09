@@ -296,7 +296,7 @@ def _preparar_x_y(df_regular: pd.DataFrame, variables: list[str]):
     x = x.astype(float)
 
     limite_superior = df_regular['cantidad_total'].quantile(PERCENTIL_WINSOR_TARGET)
-    cantidad_winsorizada = df_regular['cantidad_total'].clip(
+    cantidad_winsorizada = df_regular['cantidad_total'].astype(float).clip(
         lower=0.01, upper=limite_superior)
     y = np.log(cantidad_winsorizada)
 
@@ -387,7 +387,7 @@ def _entrenar_modelo(df_regular: pd.DataFrame, incluir_estacionalidad: bool) -> 
     except Exception:  # noqa: BLE001
         return vacio
 
-    factor_correccion = np.exp(modelo.resid).mean()
+    factor_correccion = np.exp(modelo.resid.astype(float)).mean()
 
     variables_continuas = [
         v for v in VARIABLES_MAHALANOBIS_CANDIDATAS if v in variables]
@@ -437,7 +437,7 @@ def _predecir_pieza(df_pred: pd.DataFrame, modelo, variables: list[str],
     x = x.reindex(columns=columnas_diseno, fill_value=0.0)
     x = x.astype(float)
 
-    log_pred = modelo.predict(x)
+    log_pred = np.asarray(modelo.predict(x), dtype=float)
     pred = np.exp(log_pred) * factor_correccion * factor_escala
 
     return pd.Series(np.asarray(pred), index=df_pred.index)
@@ -548,9 +548,9 @@ def _dias_del_regimen_dinamico(df_material: pd.DataFrame) -> pd.DataFrame:
     dispersion temporal (evita que 1-2 meses seguidos definan todo).
     Devuelve un dataframe vacio si el regimen no pasa validacion.
     """
-    precio_ref = df_material['precio_promedio'].ewm(
-        alpha=LAMBDA_REGIMEN_DINAMICO, adjust=False).mean()
-    desviacion = (df_material['precio_promedio'] - precio_ref).abs() / precio_ref
+    precio = df_material['precio_promedio'].astype(float)
+    precio_ref = precio.ewm(alpha=LAMBDA_REGIMEN_DINAMICO, adjust=False).mean()
+    desviacion = (precio - precio_ref).abs() / precio_ref
     dentro_banda = desviacion <= BANDA_REGIMEN_DINAMICO
 
     pct_dias = dentro_banda.mean()
