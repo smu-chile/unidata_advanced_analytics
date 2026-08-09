@@ -82,6 +82,19 @@ CANDIDATAS_CALENDARIO_EXTRA = ['feriado', 'pre_feriado', 'primer_dia_mes',
 CANDIDATAS_CONTEXTO = ['variacion_top1_sustituto', 'variacion_top3_sustitutos',
                         'variacion_porcentual_subcategoria']
 
+# -------------------------------------------------------------------------
+#  Regimen de precio de referencia dinamico -- para materiales sin
+#  suficiente historia Regular (o con historia escasa). Ver documento
+#  de arquitectura "Regimen de precio de referencia dinamico" para el
+#  detalle metodologico y la justificacion de cada parametro.
+# -------------------------------------------------------------------------
+LAMBDA_REGIMEN_DINAMICO = 0.12  # velocidad del EWMA (vida media ~5 dias)
+BANDA_REGIMEN_DINAMICO = 0.07   # tolerancia +-7% respecto al precio de referencia
+MIN_PCT_DIAS_REGIMEN = 0.50     # al menos 50% de los dias deben caer en la banda
+MIN_MESES_DISTINTOS_REGIMEN = 4  # dispersion temporal minima
+MIN_DIAS_PARA_COMPARAR_REGIMEN = 150  # sobre este umbral, no se compara
+MIN_R2_TODA_HISTORIA = 0.05     # umbral de calidad para el 2do intento
+
 # Ecommerce tiene su PROPIA tabla productiva de regresion -- y dentro de
 # esa tabla, el campo store_banner dice literalmente "Unimarc" o "Alvi"
 # (no "Ecommerce Unimarc"/"Ecommerce Alvi").
@@ -524,6 +537,33 @@ def _calcular_factor_escala(df_material: pd.DataFrame, info_pieza: dict) -> floa
 
 
 # -------------------------------------------------------------------------
+#  Regimen de precio de referencia dinamico (EWMA)
+# -------------------------------------------------------------------------
+def _dias_del_regimen_dinamico(df_material: pd.DataFrame) -> pd.DataFrame:
+    """Calcula un precio de referencia via EWMA (Reference Price Theory
+    / expectativas adaptativas) y devuelve los dias cuyo precio real
+    esta dentro de la banda de tolerancia -- SIN importar si WORKFLOW
+    los etiqueto como 'Regular' o promocionales. Solo se acepta el
+    regimen si junta suficiente cantidad de dias Y suficiente
+    dispersion temporal (evita que 1-2 meses seguidos definan todo).
+    Devuelve un dataframe vacio si el regimen no pasa validacion.
+    """
+    precio_ref = df_material['precio_promedio'].ewm(
+        alpha=LAMBDA_REGIMEN_DINAMICO, adjust=False).mean()
+    desviacion = (df_material['precio_promedio'] - precio_ref).abs() / precio_ref
+    dentro_banda = desviacion <= BANDA_REGIMEN_DINAMICO
+
+    pct_dias = dentro_banda.mean()
+    meses_cubiertos = (
+        df_material.loc[dentro_banda, 'p_date'].dt.to_period('M').nunique())
+
+    if (pct_dias >= MIN_PCT_DIAS_REGIMEN
+            and meses_cubiertos >= MIN_MESES_DISTINTOS_REGIMEN):
+        return df_material[dentro_banda]
+    return df_material.iloc[0:0]
+
+
+# -------------------------------------------------------------------------
 #  Construccion de baselines -- shrinkage continuo (partial pooling)
 # -------------------------------------------------------------------------
 def construir_baselines(df_panel: pd.DataFrame) -> dict:
@@ -563,20 +603,95 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
         'umbral_mahalanobis': None,
     }
 
-    for material, df_material in df_regular_todo.groupby('material'):
-        subcat = df_material['sub_category_description'].iloc[0]
-        categoria = df_material['category_description'].iloc[0]
-        n_dias_propio = len(df_material)
+    for material, df_material_completo in df_panel.groupby('material'):
+        subcat = df_material_completo['sub_category_description'].iloc[0]
+        categoria = df_material_completo['category_description'].iloc[0]
 
-        # --- Modelo propio (umbral bajo -- el shrinkage regula la
-        #  confianza) ---
+        df_material_regular = df_material_completo[
+            df_material_completo['estado'] == 'Regular']
+        n_dias_regular_real = len(df_material_regular)
+
         info_propio = None
-        if n_dias_propio >= MIN_DIAS_PARA_INTENTAR_MODELO_PROPIO:
+        n_dias_propio = 0
+        origen_propio = None
+        df_entrenamiento_propio = None
+
+        if n_dias_regular_real > MIN_DIAS_PARA_COMPARAR_REGIMEN:
+            # --- Camino de SIEMPRE, sin cambios: suficiente Regular real
             incluir_estacionalidad = (
-                n_dias_propio >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
-            candidato = _entrenar_modelo(df_material, incluir_estacionalidad)
+                n_dias_regular_real >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
+            candidato = _entrenar_modelo(df_material_regular, incluir_estacionalidad)
             if candidato['modelo'] is not None:
                 info_propio = candidato
+                n_dias_propio = n_dias_regular_real
+                origen_propio = 'regular_real'
+                df_entrenamiento_propio = df_material_regular
+
+        elif n_dias_regular_real >= MIN_DIAS_PARA_INTENTAR_MODELO_PROPIO:
+            # --- Caso limite (45-150 dias): comparar Regular real vs.
+            # regimen dinamico, se queda con el de mejor R2 ---
+            incluir_est_regular = (
+                n_dias_regular_real >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
+            candidato_regular = _entrenar_modelo(
+                df_material_regular, incluir_est_regular)
+
+            dias_regimen = _dias_del_regimen_dinamico(df_material_completo)
+            candidato_regimen = None
+            if len(dias_regimen) >= MIN_DIAS_PARA_INTENTAR_MODELO_PROPIO:
+                incluir_est_regimen = (
+                    len(dias_regimen) >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
+                candidato_regimen = _entrenar_modelo(dias_regimen, incluir_est_regimen)
+
+            r2_regular = (
+                candidato_regular['r2_ajustado']
+                if candidato_regular['modelo'] is not None else np.nan)
+            tiene_regimen = (
+                candidato_regimen is not None
+                and candidato_regimen['modelo'] is not None)
+            r2_regimen = candidato_regimen['r2_ajustado'] if tiene_regimen else np.nan
+
+            if pd.notna(r2_regimen) and (
+                    pd.isna(r2_regular) or r2_regimen > r2_regular):
+                info_propio = candidato_regimen
+                n_dias_propio = len(dias_regimen)
+                origen_propio = 'regimen_dinamico'
+                df_entrenamiento_propio = dias_regimen
+            elif pd.notna(r2_regular):
+                info_propio = candidato_regular
+                n_dias_propio = n_dias_regular_real
+                origen_propio = 'regular_real'
+                df_entrenamiento_propio = df_material_regular
+
+        else:
+            # --- Sin Regular suficiente (0-44 dias): cascada de 2
+            # intentos -- regimen dinamico primero, toda la historia
+            # como respaldo (con umbral minimo de calidad) ---
+            dias_regimen = _dias_del_regimen_dinamico(df_material_completo)
+            candidato_regimen = None
+            if len(dias_regimen) >= MIN_DIAS_PARA_INTENTAR_MODELO_PROPIO:
+                incluir_est_regimen = (
+                    len(dias_regimen) >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
+                candidato_regimen = _entrenar_modelo(dias_regimen, incluir_est_regimen)
+
+            tiene_regimen = (
+                candidato_regimen is not None
+                and candidato_regimen['modelo'] is not None)
+            if tiene_regimen:
+                info_propio = candidato_regimen
+                n_dias_propio = len(dias_regimen)
+                origen_propio = 'regimen_dinamico'
+                df_entrenamiento_propio = dias_regimen
+            else:
+                incluir_est_todo = (
+                    len(df_material_completo) >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
+                candidato_todo = _entrenar_modelo(
+                    df_material_completo, incluir_est_todo)
+                if (candidato_todo['modelo'] is not None
+                        and candidato_todo['r2_ajustado'] >= MIN_R2_TODA_HISTORIA):
+                    info_propio = candidato_todo
+                    n_dias_propio = len(df_material_completo)
+                    origen_propio = 'historia_completa'
+                    df_entrenamiento_propio = df_material_completo
 
         # --- Modelo de grupo: subcategoria primero, si no categoria ---
         info_grupo, nivel_grupo, factor_escala_grupo = None, None, np.nan
@@ -585,7 +700,7 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
             ('categoria', modelos_categoria.get(categoria)),
         ]:
             if candidato_dict is not None and candidato_dict.get('modelo') is not None:
-                fe = _calcular_factor_escala(df_material, candidato_dict)
+                fe = _calcular_factor_escala(df_material_completo, candidato_dict)
                 if np.isfinite(fe):
                     info_grupo = candidato_dict
                     nivel_grupo = candidato_nivel
@@ -605,7 +720,7 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
                 'variables_continuas_grupo': [], 'centro_grupo': None,
                 'cov_inv_grupo': None,
                 'umbral_mahalanobis_grupo': None, 'factor_escala_grupo': np.nan,
-                'r2_ajustado': np.nan, 'n_dias_entrenamiento': n_dias_propio,
+                'r2_ajustado': np.nan, 'n_dias_entrenamiento': n_dias_regular_real,
             }
             continue
 
@@ -644,8 +759,22 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
             'n_dias_entrenamiento': n_dias_propio,
         }
 
-        if _es_baseline_confiable(df_material, info_blend):
-            baselines[material] = info_blend
+        # Validar honestidad contra lo que efectivamente entreno al
+        # candidato propio ganador (Regular real, regimen dinamico, o
+        # toda la historia) -- la funcion es generica, no le importa
+        # el origen de los dias, solo chequea calibracion.
+        df_para_validar = (
+            df_entrenamiento_propio if df_entrenamiento_propio is not None
+            else df_material_completo
+        )
+
+        if _es_baseline_confiable(df_para_validar, info_blend):
+            nivel_final = 'blend'
+            if origen_propio == 'regimen_dinamico':
+                nivel_final = 'blend_regimen_dinamico'
+            elif origen_propio == 'historia_completa':
+                nivel_final = 'blend_historia_completa'
+            baselines[material] = {**info_blend, 'nivel': nivel_final}
         else:
             baselines[material] = {
                 **info_blend,

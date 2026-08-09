@@ -1,0 +1,63 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "ELASTICITY_PR",
+
+    "columns": [
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la informacion"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria a la que pertenece el producto"
+        },
+        {
+            "name": "MATERIAL",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Codigo del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "DESCRIPCION_MATERIAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre o descripcion del producto"
+        },
+        {
+            "name": "EAN",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del producto"
+        },
+        {
+            "name": "UMV",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Unidad de medida de venta"
+        },
+        {
+            "name": "ORIGEN",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Origen del valor: 'propia' (Regular real, >150 dias o ganador del caso limite), 'propia_regimen_dinamico' (via el regimen de precio de referencia dinamico -- mide sensibilidad al precio dentro del regimen habitual del SKU, NO el uplift promocional), 'propia_historia_completa' (respaldo cuando el regimen dinamico no logro anclar, usando toda la historia del SKU con un umbral minimo de R2), 'heredada_sustituto', 'heredada_subcategoria', 'heredada_categoria', 'sin_evidencia', o sus variantes con prefijo 'sin_baseline_' (para materiales que nunca calificaron ni siquiera para intentar un baseline propio)"
+        },
+        {
+            "name": "ELASTICIDAD",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Valor final de elasticidad, ya acotado al rango [-5, 0]"
+        },
+        {
+            "name": "SEGMENTO_ELASTICIDAD",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Cluster (high/low) al que pertenece el producto segun su elasticidad"
+        }
+    ],
+
+    "clustering_fields": ["STORE_BANNER"]
+}
