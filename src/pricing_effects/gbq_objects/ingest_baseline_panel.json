@@ -13,7 +13,7 @@
             "name": "ean",
             "field_type": "STRING",
             "mode": "NULLABLE",
-            "description": "Codigo EAN del producto"
+            "description": "Codigo EAN del producto -- un material puede tener varios EAN (formatos/tamanos distintos); cada combinacion material x ean se trata como su propia serie"
         },
         {
             "name": "product_description",
@@ -58,6 +58,12 @@
             "description": "Precio promedio del dia"
         },
         {
+            "name": "precio_suavizado",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Precio con mediana movil centrada de 45 dias -- calculado siempre, no decide nada en Baseline. Se usa en elasticidad_general.py como 3er intento cuando la regresion de elasticidad con precio crudo da una relacion positiva o sin ajuste (precio diario demasiado ruidoso)"
+        },
+        {
             "name": "cantidad_total",
             "field_type": "FLOAT",
             "mode": "NULLABLE",
@@ -79,7 +85,7 @@
             "name": "nivel_baseline",
             "field_type": "STRING",
             "mode": "NULLABLE",
-            "description": "Nivel de confiabilidad del baseline: blend o sin_baseline"
+            "description": "Nivel de confiabilidad del baseline: 'blend' (Regular real, camino de siempre), 'blend_regimen_dinamico' (via el regimen de precio de referencia dinamico, para materiales con poca o nula historia Regular), 'blend_historia_completa' (respaldo cuando el regimen dinamico no logro anclar, usando toda la historia con un umbral minimo de R2), o 'sin_baseline' (ningun metodo logro un baseline confiable)"
         },
         {
             "name": "peso_propio_baseline",
