@@ -1,4 +1,6 @@
-import csv  # noqa: D100
+import os  # noqa: D100
+import csv
+import time
 import logging
 import datetime
 
@@ -70,42 +72,67 @@ def main():  # noqa: ANN201, D103
 
         transport = None
         sftp = None
+        local_file = None
 
         try:
+            # 1. Conectar SFTP
             logging.info('Conectando SFTP...')
             transport = paramiko.Transport((host, port))
             transport.connect(username=user, password=password)
             sftp = paramiko.SFTPClient.from_transport(transport)
             logging.info('Conexión exitosa.')
 
-            # ------------------------------------------------------
-            # Validar existencia archivo
-            # ------------------------------------------------------
+            # 2. Validar existencia archivo
             try: sftp.stat(remote_file)
 
             except FileNotFoundError:
                 logging.warning(
                     'Archivo %s no existe para %s. Se continúa.',
-                    REMOTE_FILE, formato)
+                    remote_file, formato)
                 continue
-            logging.info('Archivo encontrado.')
 
-            logging.info('Leyendo primeras 10 filas desde SFTP...')
-            with sftp.open(remote_file, 'r') as f:
+            logging.info(f'Archivo encontrado: {remote_file}')
 
+            # 3. Descargar archivo completo
+            nombre_archivo = os.path.basename(remote_file)
+            local_file = os.path.join(
+                os.environ.get('TEMP', '.'), nombre_archivo)
+
+            logging.info(f'Descargando archivo SFTP a local: {local_file}')
+
+            inicio_descarga = time.time()
+
+            sftp.get(remote_file, local_file)
+
+            fin_descarga = time.time()
+
+            logging.info(
+                f'Descarga finalizada. '
+                f'Tiempo: {fin_descarga - inicio_descarga:.2f} segundos')
+
+            # 4. Leer CSV local
+            logging.info('Leyendo CSV completo desde archivo local...')
+            inicio_lectura = time.time()
+            with open(local_file, 'r', encoding='utf-8-sig', newline='') as f:  # noqa: UP015
                 reader = csv.DictReader(f)
-                registros = []
-                for row in reader:
-                    registros.append(row)  # noqa: PERF402
-
-            if not registros:
-                logging.info(
-                    "El archivo '%s' no contiene registros. Se omite la carga.",
-                    formato)
-                continue
+                registros = list(reader)
 
             df_push = pd.DataFrame(registros)
 
+            fin_lectura = time.time()
+            logging.info(
+                f'CSV leído completamente. '
+                f'Registros: {len(df_push)}. '
+                f'Tiempo: {fin_lectura - inicio_lectura:.2f} segundos')
+
+            # 5. Archivo vacío
+            if df_push.empty:
+                logging.info(
+                    f'El archivo {formato} no contiene ningún registro. '
+                    f'Se omite el procesamiento.')
+                continue
+
+            # 6. Normalización de columnas
             df_push.columns = [
                 str(col).replace('\ufeff', '').strip()
                 for col in df_push.columns]
@@ -239,9 +266,11 @@ def main():  # noqa: ANN201, D103
             if transport is not None:
                 transport.close()
 
-            logging.info(
-                f'Proceso finalizado para {formato}'
-            )
+            if os.path.exists(local_file):
+                os.remove(local_file)
+                logging.info(f'Archivo temporal eliminado: {local_file}')
+
+            logging.info(f'Proceso finalizado para {formato}')
 
     logging.info('=' * 70)
     logging.info('PROCESO FINALIZADO CORRECTAMENTE')
