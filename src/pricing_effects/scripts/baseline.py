@@ -95,6 +95,12 @@ MIN_MESES_DISTINTOS_REGIMEN = 4  # dispersion temporal minima
 MIN_DIAS_PARA_COMPARAR_REGIMEN = 150  # sobre este umbral, no se compara
 MIN_R2_TODA_HISTORIA = 0.05     # umbral de calidad para el 2do intento
 
+# precio_suavizado: se calcula SIEMPRE (columna adicional, no decide nada
+# aqui) -- la decision de si se usa como 3er intento vive en
+# elasticidad_general.py, ya que solo se justifica cuando la regresion de
+# elasticidad (no la de calendario) falla con el precio crudo.
+VENTANA_SUAVIZADO_DIAS = 45
+
 # Ecommerce tiene su PROPIA tabla productiva de regresion -- y dentro de
 # esa tabla, el campo store_banner dice literalmente "Unimarc" o "Alvi"
 # (no "Ecommerce Unimarc"/"Ecommerce Alvi").
@@ -137,11 +143,12 @@ SQL_QUERIES = QueryDict({  # Region: Explicacion de query
     """
     SELECT
         material,
+        ean,
         p_date,
         atributo_promocion
     FROM `${table}`
     WHERE store_banner = '${store_banner}'
-    ORDER BY material, p_date
+    ORDER BY material, ean, p_date
     """,
 })
 
@@ -575,7 +582,8 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
     baselines = {}
     df_regular_todo = df_panel[df_panel['estado'] == 'Regular'].copy()
 
-    sku_por_subcat = df_panel.groupby('sub_category_description')['material'].nunique()
+    sku_por_subcat = (
+        df_panel.groupby('sub_category_description')['material_ean'].nunique())
 
     # --- Modelos de categoria (respaldo final del grupo) ---
     modelos_categoria = {}
@@ -603,7 +611,7 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
         'umbral_mahalanobis': None,
     }
 
-    for material, df_material_completo in df_panel.groupby('material'):
+    for material_ean, df_material_completo in df_panel.groupby('material_ean'):
         subcat = df_material_completo['sub_category_description'].iloc[0]
         categoria = df_material_completo['category_description'].iloc[0]
 
@@ -708,7 +716,7 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
                     break
 
         if info_propio is None and info_grupo is None:
-            baselines[material] = {
+            baselines[material_ean] = {
                 'nivel': 'sin_baseline', 'peso_propio': np.nan, 'nivel_grupo': None,
                 'modelo_propio': None, 'variables_propio': [],
                 'factor_correccion_propio': np.nan,
@@ -774,9 +782,9 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
                 nivel_final = 'blend_regimen_dinamico'
             elif origen_propio == 'historia_completa':
                 nivel_final = 'blend_historia_completa'
-            baselines[material] = {**info_blend, 'nivel': nivel_final}
+            baselines[material_ean] = {**info_blend, 'nivel': nivel_final}
         else:
-            baselines[material] = {
+            baselines[material_ean] = {
                 **info_blend,
                 'nivel': 'sin_baseline',
             }
@@ -841,6 +849,7 @@ def main() -> None:  # noqa: D103
     # -------------------------------------------------------------------
     df_venta = df_venta.copy()
     df_venta['material'] = df_venta['material'].astype(str)
+    df_venta['ean'] = df_venta['ean'].astype(str)
     df_venta['p_date'] = pd.to_datetime(df_venta['p_date'])
     df_venta['precio_promedio'] = df_venta['precio_promedio'].astype(float)
     df_venta['cantidad_total'] = df_venta['cantidad_total'].astype(float)
@@ -852,25 +861,47 @@ def main() -> None:  # noqa: D103
     df_promo = df_promo.copy()
     if not df_promo.empty:
         df_promo['material'] = df_promo['material'].astype(str)
+        df_promo['ean'] = df_promo['ean'].astype(str)
         df_promo['p_date'] = pd.to_datetime(df_promo['p_date'])
-        df_promo = df_promo.drop_duplicates(subset=['material', 'p_date'])
+        df_promo = df_promo.drop_duplicates(subset=['material', 'ean', 'p_date'])
 
+    columnas_promo = ['material', 'ean', 'p_date', 'atributo_promocion']
     df_panel = df_venta.merge(
-        df_promo[['material', 'p_date', 'atributo_promocion']] if not df_promo.empty
-        else pd.DataFrame(columns=['material', 'p_date', 'atributo_promocion']),
-        on=['material', 'p_date'],
+        (df_promo[columnas_promo] if not df_promo.empty
+        else pd.DataFrame(columns=columnas_promo)),
+        on=['material', 'ean', 'p_date'],
         how='left',
     )
 
     df_panel['estado'] = df_panel['atributo_promocion'].fillna('Regular')
     df_panel['es_regular'] = (df_panel['estado'] == 'Regular').astype(int)
 
+    # Cada EAN es un producto real distinto (formato/tamaño propio) --
+    # de aqui en adelante, TODO se agrupa por esta clave combinada, no
+    # solo por material.
+    df_panel['material_ean'] = df_panel['material'] + '_' + df_panel['ean']
+
     feriados = agregarFeriados(df_panel[['p_date']].drop_duplicates())
     df_panel = df_panel.merge(feriados, on='p_date', how='left')
 
     df_panel = agregar_variables_calendario(df_panel)
 
-    df_panel = df_panel.sort_values(['material', 'p_date']).reset_index(drop=True)
+    df_panel = df_panel.sort_values(['material_ean', 'p_date']).reset_index(drop=True)
+
+    # precio_suavizado: mediana movil centrada, SIEMPRE calculada (no
+    # decide nada aqui -- ver nota en VENTANA_SUAVIZADO_DIAS). Sirve de
+    # candidato adicional para elasticidad_general.py cuando el precio
+    # crudo da una regresion de elasticidad poco confiable.
+    df_panel['precio_suavizado'] = (
+        df_panel.groupby('material_ean')['precio_promedio']
+        .transform(lambda s: s.rolling(
+            VENTANA_SUAVIZADO_DIAS, center=True,
+            min_periods=VENTANA_SUAVIZADO_DIAS // 2).median())
+    )
+    df_panel['precio_suavizado'] = (
+        df_panel.groupby('material_ean')['precio_suavizado']
+        .transform(lambda s: s.bfill().ffill())
+    )
 
     logging.info(f'Panel diario construido: {df_panel.shape}')
     # ENDREGION
@@ -887,21 +918,24 @@ def main() -> None:  # noqa: D103
     # REGION: Prediccion del baseline para todo el panel
     # -------------------------------------------------------------------
     piezas_prediccion = []
-    for material, df_material in df_panel.groupby('material'):
-        info_baseline = baselines.get(material, {'nivel': 'sin_baseline'})
+    for material_ean, df_material in df_panel.groupby('material_ean'):
+        info_baseline = baselines.get(material_ean, {'nivel': 'sin_baseline'})
         pred = predecir_baseline(df_material, info_baseline)
         piezas_prediccion.append(pred)
 
     df_panel['cantidad_esperada_baseline'] = pd.concat(piezas_prediccion).sort_index()
-    df_panel['nivel_baseline'] = df_panel['material'].map(
-        lambda m: baselines.get(m, {}).get('nivel', 'sin_baseline'))
-    df_panel['peso_propio_baseline'] = df_panel['material'].map(
-        lambda m: baselines.get(m, {}).get('peso_propio', np.nan))
+    df_panel['nivel_baseline'] = df_panel['material_ean'].map(
+        lambda me: baselines.get(me, {}).get('nivel', 'sin_baseline'))
+    df_panel['peso_propio_baseline'] = df_panel['material_ean'].map(
+        lambda me: baselines.get(me, {}).get('peso_propio', np.nan))
     df_panel['indice_venta'] = (
         df_panel['cantidad_total'] / df_panel['cantidad_esperada_baseline'])
 
+    n_material_ean = df_panel['material_ean'].nunique()
     n_materiales = df_panel['material'].nunique()
-    logging.info(f'Prediccion de baseline completa para {n_materiales:,} materiales')
+    logging.info(
+        f'Prediccion de baseline completa para {n_material_ean:,} combinaciones '
+        f'material x ean ({n_materiales:,} materiales distintos)')
     # ENDREGION
 
     # REGION: Carga a BigQuery
@@ -909,7 +943,8 @@ def main() -> None:  # noqa: D103
     columnas_a_subir = [
         'material', 'ean', 'product_description', 'category_description',
         'sub_category_description', 'sales_uom', 'p_date', 'estado', 'precio_promedio',
-        'cantidad_total', 'cantidad_esperada_baseline', 'indice_venta',
+        'precio_suavizado', 'cantidad_total', 'cantidad_esperada_baseline',
+        'indice_venta',
         'nivel_baseline', 'peso_propio_baseline',
     ]
     columnas_disponibles = [c for c in columnas_a_subir if c in df_panel.columns]

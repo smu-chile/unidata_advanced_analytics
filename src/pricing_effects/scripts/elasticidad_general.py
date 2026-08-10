@@ -102,13 +102,14 @@ SQL_QUERIES = QueryDict({  # Region: Explicacion de query
         p_date,
         estado,
         precio_promedio,
+        precio_suavizado,
         indice_venta,
         nivel_baseline
     FROM `${table}`
     WHERE store_banner = '${store_banner}'
         AND nivel_baseline IN (
             'blend', 'blend_regimen_dinamico', 'blend_historia_completa')
-    ORDER BY material, p_date
+    ORDER BY material, ean, p_date
     """,
 
     # Mecanica promocional (progreso, frecuencia reciente) -- el
@@ -117,13 +118,14 @@ SQL_QUERIES = QueryDict({  # Region: Explicacion de query
     """
     SELECT
         material,
+        ean,
         p_date,
         atributo_promocion,
         progreso_promocion,
         frecuencia_promocional_90d
     FROM `${table}`
     WHERE store_banner = '${store_banner}'
-    ORDER BY material, p_date
+    ORDER BY material, ean, p_date
     """,
 
     # Identidad del sustituto mas cercano (para la cascada de 3 niveles)
@@ -131,11 +133,12 @@ SQL_QUERIES = QueryDict({  # Region: Explicacion de query
     """
     SELECT
         material,
+        ean,
         p_date,
         ean_sustituto_1
     FROM `${table}`
     WHERE store_banner = '${store_banner}'
-    ORDER BY material, p_date
+    ORDER BY material, ean, p_date
     """,
 
     # Elasticidades de transicion ya calculadas (para el parche de casos
@@ -242,6 +245,41 @@ def _entrenar_elasticidad(df_material: pd.DataFrame) -> dict:
         'modelo': modelo, 'variables': variables_finales,
         'r2_ajustado': modelo.rsquared_adj,
     }
+
+
+def _entrenar_elasticidad_con_reintento(df_material: pd.DataFrame) -> dict:
+    """Entrena con precio crudo primero. Si el coeficiente de log_precio
+    sale positivo o no se pudo estimar, reintenta usando precio_suavizado
+    (mediana movil 45 dias, calculada en baseline.py) en su lugar --
+    solo se justifica cuando la relacion precio-venta con el dato diario
+    crudo no da una sensibilidad negativa medible. Devuelve el resultado
+    ganador mas 'metodo_precio' ('crudo' o 'suavizado') para trazabilidad.
+    """
+    info_crudo = _entrenar_elasticidad(df_material)
+    coef_crudo = (
+        info_crudo['modelo'].params.get('log_precio', np.nan)
+        if info_crudo['modelo'] is not None else np.nan
+    )
+    if pd.notna(coef_crudo) and coef_crudo < 0:
+        return {**info_crudo, 'metodo_precio': 'crudo'}
+
+    if 'precio_suavizado' not in df_material.columns:
+        return {**info_crudo, 'metodo_precio': 'crudo'}
+
+    df_suavizado = df_material.copy()
+    df_suavizado['log_precio'] = np.log(df_suavizado['precio_suavizado'].clip(lower=1))
+    info_suavizado = _entrenar_elasticidad(df_suavizado)
+    coef_suavizado = (
+        info_suavizado['modelo'].params.get('log_precio', np.nan)
+        if info_suavizado['modelo'] is not None else np.nan
+    )
+    if pd.notna(coef_suavizado) and coef_suavizado < 0:
+        return {**info_suavizado, 'metodo_precio': 'suavizado'}
+
+    # Ninguno de los 2 dio una sensibilidad negativa medible -- se
+    # devuelve el crudo (su comportamiento aguas abajo, incluido el
+    # parche de Regla 1/2/3, sigue siendo el mismo de siempre).
+    return {**info_crudo, 'metodo_precio': 'crudo'}
 
 
 # -------------------------------------------------------------------------
@@ -360,29 +398,36 @@ def main() -> None:  # noqa: D103
     # dummies de promo
     # -------------------------------------------------------------------
     df_panel['material'] = df_panel['material'].astype(str)
+    df_panel['ean'] = df_panel['ean'].astype(str)
     df_panel['p_date'] = pd.to_datetime(df_panel['p_date'])
     df_panel['precio_promedio'] = df_panel['precio_promedio'].astype(float)
     df_panel['indice_venta'] = df_panel['indice_venta'].astype(float)
 
-    df_panel = df_panel.drop_duplicates(subset=['material', 'p_date'], keep='last')
+    df_panel = df_panel.drop_duplicates(
+        subset=['material', 'ean', 'p_date'], keep='last')
+    df_panel['material_ean'] = df_panel['material'] + '_' + df_panel['ean']
 
     df_promo_mecanica['material'] = df_promo_mecanica['material'].astype(str)
+    df_promo_mecanica['ean'] = df_promo_mecanica['ean'].astype(str)
     df_promo_mecanica['p_date'] = pd.to_datetime(df_promo_mecanica['p_date'])
-    df_promo_mecanica = df_promo_mecanica.drop_duplicates(subset=['material', 'p_date'])
+    df_promo_mecanica = df_promo_mecanica.drop_duplicates(
+        subset=['material', 'ean', 'p_date'])
 
     df_sustituto_identidad['material'] = df_sustituto_identidad['material'].astype(str)
+    df_sustituto_identidad['ean'] = df_sustituto_identidad['ean'].astype(str)
     df_sustituto_identidad['p_date'] = pd.to_datetime(df_sustituto_identidad['p_date'])
     df_sustituto_identidad = df_sustituto_identidad.drop_duplicates(
-        subset=['material', 'p_date'])
+        subset=['material', 'ean', 'p_date'])
 
+    columnas_mecanica = [
+        'material', 'ean', 'p_date', 'progreso_promocion', 'frecuencia_promocional_90d']
     df_panel = df_panel.merge(
-        df_promo_mecanica[
-            ['material', 'p_date', 'progreso_promocion', 'frecuencia_promocional_90d']],
-        on=['material', 'p_date'], how='left',
+        df_promo_mecanica[columnas_mecanica],
+        on=['material', 'ean', 'p_date'], how='left',
     )
     df_panel = df_panel.merge(
-        df_sustituto_identidad[['material', 'p_date', 'ean_sustituto_1']],
-        on=['material', 'p_date'], how='left',
+        df_sustituto_identidad[['material', 'ean', 'p_date', 'ean_sustituto_1']],
+        on=['material', 'ean', 'p_date'], how='left',
     )
 
     df_panel['log_precio'] = np.log(df_panel['precio_promedio'].clip(lower=1))
@@ -393,41 +438,43 @@ def main() -> None:  # noqa: D103
     for intensidad in ORDEN_INTENSIDAD:
         df_panel[intensidad] = (df_panel['estado'] == intensidad).astype(int)
 
-    df_panel = df_panel.sort_values(['material', 'p_date']).reset_index(drop=True)
+    df_panel = df_panel.sort_values(['material_ean', 'p_date']).reset_index(drop=True)
 
     logging.info(f'Panel construido: {df_panel.shape}')
     # ENDREGION
 
-    # REGION: Mapeo material_sustituto_1
+    # REGION: Mapeo material_ean_sustituto_1
     # (identidad, para la cascada de 3 niveles)
     # -------------------------------------------------------------------
-    lookup_ean_material = (
-        df_panel[['ean', 'material']].dropna().drop_duplicates(subset=['ean'])
-        .set_index('ean')['material']
+    lookup_ean_material_ean = (
+        df_panel[['ean', 'material_ean']].dropna().drop_duplicates(subset=['ean'])
+        .set_index('ean')['material_ean']
     )
 
-    ean_sustituto_por_material = (
+    ean_sustituto_por_material_ean = (
         df_panel.dropna(subset=['ean_sustituto_1'])
-        .groupby('material')['ean_sustituto_1']
+        .groupby('material_ean')['ean_sustituto_1']
         .agg(lambda s: s.mode().iloc[0] if not s.mode().empty else np.nan)
     )
 
-    material_sustituto_1 = ean_sustituto_por_material.map(lookup_ean_material)
-    n_con_sustituto = material_sustituto_1.notna().sum()
-    n_material_total = len(material_sustituto_1)
-    logging.info(f'Materiales con sustituto identificado y mapeado: '
-                f'{n_con_sustituto:,} de {n_material_total:,}')
+    material_ean_sustituto_1 = (
+        ean_sustituto_por_material_ean.map(lookup_ean_material_ean))
+    n_con_sustituto = material_ean_sustituto_1.notna().sum()
+    n_material_ean_total = len(material_ean_sustituto_1)
+    logging.info(f'Combinaciones material x ean con sustituto identificado y mapeado: '
+                f'{n_con_sustituto:,} de {n_material_ean_total:,}')
     # ENDREGION
 
     # REGION: Loop principal -- elasticidad propia por material
     # -------------------------------------------------------------------
     resultados = []
 
-    for material, df_material in df_panel.groupby('material'):
+    for material_ean, df_material in df_panel.groupby('material_ean'):
         n_dias = len(df_material)
+        material = df_material['material'].iloc[0]
+        ean = df_material['ean'].iloc[0]
         subcat = df_material['sub_category_description'].iloc[0]
         categoria = df_material['category_description'].iloc[0]
-        ean = df_material['ean'].iloc[0]
         product_description = df_material['product_description'].iloc[0]
         sales_uom = df_material['sales_uom'].iloc[0]
         nivel_baseline_material = df_material['nivel_baseline'].iloc[0]
@@ -438,18 +485,20 @@ def main() -> None:  # noqa: D103
             if precio.mean() > 0 else 0
         )
 
-        info_modelo = {'modelo': None, 'variables': [], 'r2_ajustado': np.nan}
+        info_modelo = {'modelo': None, 'variables': [], 'r2_ajustado': np.nan,
+                        'metodo_precio': 'crudo'}
         if (n_dias >= MIN_DIAS_PARA_INTENTAR_ELASTICIDAD_PROPIA
                 and rango_pct >= MIN_RANGO_PRECIO_PCT_PARA_ESTIMAR):
-            info_modelo = _entrenar_elasticidad(df_material)
+            info_modelo = _entrenar_elasticidad_con_reintento(df_material)
 
         fila = {
-            'material': material, 'ean': ean,
+            'material': material, 'ean': ean, 'material_ean': material_ean,
             'product_description': product_description,
             'category_description': categoria, 'sub_category_description': subcat,
             'sales_uom': sales_uom, 'nivel_baseline': nivel_baseline_material,
             'n_dias': n_dias, 'rango_precio_pct': round(rango_pct, 2),
             'r2_ajustado': info_modelo['r2_ajustado'],
+            'metodo_precio': info_modelo['metodo_precio'],
         }
 
         if info_modelo['modelo'] is not None:
@@ -473,8 +522,11 @@ def main() -> None:  # noqa: D103
     df_coeficientes = pd.DataFrame(resultados)
 
     n_con_propia = df_coeficientes['coef_log_precio'].notna().sum()
-    logging.info(f'Materiales con elasticidad propia estimada: '
+    n_via_suavizado = (df_coeficientes['metodo_precio'] == 'suavizado').sum()
+    logging.info(f'Combinaciones material x ean con elasticidad propia estimada: '
                 f'{n_con_propia:,} de {len(df_coeficientes):,}')
+    logging.info(f'De esas, resueltas via precio suavizado (3er intento): '
+                f'{n_via_suavizado:,}')
     # ENDREGION
 
     # REGION: Materiales SIN baseline confiable -- se agregan para heredar
@@ -494,6 +546,7 @@ def main() -> None:  # noqa: D103
         )
         fila_vacia = {
             'material': fila_material['material'], 'ean': fila_material['ean'],
+            'material_ean': f"{fila_material['material']}_{fila_material['ean']}",
             'product_description': fila_material['product_description'],
             'category_description': fila_material['category_description'],
             'sub_category_description': fila_material['sub_category_description'],
@@ -528,7 +581,7 @@ def main() -> None:  # noqa: D103
     prior_subcat = (
         con_propia.groupby('sub_category_description')
         .agg(elasticidad_subcat_prior=('coef_log_precio', 'median'),
-            n_sku_subcat_prior=('material', 'nunique'))
+            n_sku_subcat_prior=('material_ean', 'nunique'))
         .reset_index()
     )
     prior_categoria = (
@@ -539,21 +592,22 @@ def main() -> None:  # noqa: D103
     df_coeficientes = df_coeficientes.merge(prior_subcat, on='sub_category_description', how='left')  # noqa: E501
     df_coeficientes = df_coeficientes.merge(prior_categoria, on='category_description', how='left')  # noqa: E501
 
-    df_coeficientes['material_sustituto_1'] = (
-        df_coeficientes['material'].map(material_sustituto_1))
+    df_coeficientes['material_ean_sustituto_1'] = (
+        df_coeficientes['material_ean'].map(material_ean_sustituto_1))
 
     lookup_propio = (
-        df_coeficientes.set_index('material')[['coef_log_precio', 'n_dias_evidencia']]
+        df_coeficientes.set_index('material_ean')
+        [['coef_log_precio', 'n_dias_evidencia']]
         .rename(columns={'coef_log_precio': 'elasticidad_sustituto_prior',
                         'n_dias_evidencia': 'n_dias_sustituto'})
     )
 
     df_coeficientes = df_coeficientes.merge(
-        lookup_propio, left_on='material_sustituto_1', right_index=True, how='left'
+        lookup_propio, left_on='material_ean_sustituto_1', right_index=True, how='left'
     )
 
     sustituto_calificado = (
-        df_coeficientes['material_sustituto_1'].notna()
+        df_coeficientes['material_ean_sustituto_1'].notna()
         & (df_coeficientes['n_dias_sustituto'] >= MIN_DIAS_SUSTITUTO_CONFIABLE)
     )
     subcat_calificada = (
@@ -588,6 +642,16 @@ def main() -> None:  # noqa: D103
         'propia_regimen_dinamico')
     df_coeficientes.loc[mascara_historia, 'origen_elasticidad'] = (
         'propia_historia_completa')
+
+    # El precio suavizado es un caso aparte -- puede pasar con
+    # CUALQUIERA de los 3 caminos de Baseline (Regular real, regimen,
+    # o historia completa), ya que resuelve un problema distinto (precio
+    # diario demasiado ruidoso para la regresion de elasticidad, no
+    # falta de dias). Se marca con prioridad porque es el caveat mas
+    # importante para interpretar el numero.
+    mascara_suavizado = es_propia & (df_coeficientes['metodo_precio'] == 'suavizado')
+    df_coeficientes.loc[mascara_suavizado, 'origen_elasticidad'] = (
+        'propia_precio_suavizado')
 
     # Los materiales que nunca tuvieron baseline confiable (motivo_sin_
     # baseline no-nulo) jamas pueden tener origen 'propia' -- pero para
