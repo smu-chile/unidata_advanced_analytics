@@ -1,5 +1,7 @@
-import os  # noqa: D100
+
+import os
 import csv
+import json
 import time
 import logging
 import datetime
@@ -15,24 +17,33 @@ from common.gcp_extended import secretsmanager
 # Logging
 # ---------------------------------------------------------------------
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s')
-
+    level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ---------------------------------------------------------------------
-# Configuración
+# Configuración PROD
 # ---------------------------------------------------------------------
 PROJECT_ID = 'cl-bigdata-analytics-prod'
 DATASET = 'CRM'
-TABLE = 'CRM_DATA_SF_PUSH_EVENT'
 
-TABLE_ID = f'{PROJECT_ID}.{DATASET}.{TABLE}'
+# Tabla STG de prueba
+STG_TABLE = 'CRM_DATA_SF_PUSH_EVENT_STG'
 
+STG_TABLE_ID = f'{PROJECT_ID}.{DATASET}.{STG_TABLE}'
+
+# ---------------------------------------------------------------------
+# SFTP
+# ---------------------------------------------------------------------
 REMOTE_PATH = '/Import'
 REMOTE_FILE = 'MobilePushDetailExtractReport.csv'
 
+# ---------------------------------------------------------------------
+# Salesforce
+# ---------------------------------------------------------------------
 EID = 546001831
 
+# ---------------------------------------------------------------------
+# Formatos
+# ---------------------------------------------------------------------
 FORMATOS = {
     'unimarc': {
         'business_unit': 'Unimarc',
@@ -48,20 +59,58 @@ FORMATOS = {
 # Main
 # ---------------------------------------------------------------------
 def main():  # noqa: ANN201, D103
-    today = datetime.date.today()  # noqa: DTZ011
-    logging.info('Obteniendo credenciales SFTP...')
-    sftp_secret = secretsmanager.getSecret(
-        'salesforce_sftp_credentials', project='cl-bigdata-analytics-prod')
 
+    schema_file = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)),
+    'gbq_objects', 'CRM_DATA_SF_PUSH_EVENT_STG.json')
+
+    with open(schema_file, 'r', encoding='utf-8') as f:  # noqa: UP015
+        schema_json = json.load(f)
+
+    schema = [
+        bigquery.SchemaField(
+            field['name'],
+            field['field_type'],
+            mode=field.get('mode', 'NULLABLE')
+        )
+        for field in schema_json['columns']
+    ]
+
+    today = datetime.date.today()  # noqa: DTZ011
+
+    logging.info('=' * 80)
+    logging.info('INICIO PROCESO SFTP -> BIGQUERY STG')
+    logging.info('=' * 80)
+
+    # ---------------------------------------------------------------
+    # Credenciales
+    # ---------------------------------------------------------------
+    logging.info('Obteniendo credenciales SFTP...')
+
+    sftp_secret = secretsmanager.getSecret(
+        'salesforce_sftp_credentials',
+        project='cl-bigdata-analytics-prod')
+
+    # ---------------------------------------------------------------
+    # BigQuery
+    # ---------------------------------------------------------------
     bq_client = bigquery.Client(project=PROJECT_ID)
 
-    # ===============================================================
-    # Procesar ambos formatos
-    # ===============================================================
+    # ---------------------------------------------------------------
+    # Limpiar tabla STG una sola vez al inicio
+    # ---------------------------------------------------------------
+    logging.info('Limpiando tabla STG antes de iniciar la carga...')
+    truncate_sql = f"""TRUNCATE TABLE `{STG_TABLE_ID}`"""
+    bq_client.query(truncate_sql).result()
+    logging.info('Tabla STG limpiada correctamente.')
+
+    # ---------------------------------------------------------------
+    # Procesar formatos
+    # ---------------------------------------------------------------
     for formato, cfg in FORMATOS.items():
 
         logging.info('=' * 80)
-        logging.info(f'Formato : {formato.upper()}')
+        logging.info('Formato : %s', formato.upper())
 
         host = sftp_secret['host']
         port = int(sftp_secret['port'])
@@ -72,209 +121,225 @@ def main():  # noqa: ANN201, D103
 
         transport = None
         sftp = None
-        local_file = None
 
         try:
-            # 1. Conectar SFTP
+
+            # -------------------------------------------------------
+            # Conectar SFTP
+            # -------------------------------------------------------
             logging.info('Conectando SFTP...')
+
             transport = paramiko.Transport((host, port))
             transport.connect(username=user, password=password)
             sftp = paramiko.SFTPClient.from_transport(transport)
             logging.info('Conexión exitosa.')
 
-            # 2. Validar existencia archivo
-            try: sftp.stat(remote_file)
+            # -------------------------------------------------------
+            # Validar existencia archivo
+            # -------------------------------------------------------
+            try:
+                sftp.stat(remote_file)
 
             except FileNotFoundError:
+
                 logging.warning(
                     'Archivo %s no existe para %s. Se continúa.',
                     remote_file, formato)
+
                 continue
 
-            logging.info(f'Archivo encontrado: {remote_file}')
+            logging.info('Archivo encontrado: %s', remote_file)
 
-            # 3. Descargar archivo completo
-            nombre_archivo = os.path.basename(remote_file)
-            local_file = os.path.join(
-                os.environ.get('TEMP', '.'), nombre_archivo)
+            # -------------------------------------------------------
+            # Leer CSV directamente desde SFTP
+            # -------------------------------------------------------
+            logging.info('Leyendo CSV completo desde SFTP...')
 
-            logging.info(f'Descargando archivo SFTP a local: {local_file}')
-
-            inicio_descarga = time.time()
-
-            sftp.get(remote_file, local_file)
-
-            fin_descarga = time.time()
-
-            logging.info(
-                f'Descarga finalizada. '
-                f'Tiempo: {fin_descarga - inicio_descarga:.2f} segundos')
-
-            # 4. Leer CSV local
-            logging.info('Leyendo CSV completo desde archivo local...')
             inicio_lectura = time.time()
-            with open(local_file, 'r', encoding='utf-8-sig', newline='') as f:  # noqa: UP015
+            registros = []
+            with sftp.open(remote_file, 'r', bufsize=1024 * 1024) as f:
                 reader = csv.DictReader(f)
-                registros = list(reader)
 
-            df_push = pd.DataFrame(registros)
+                for row in reader:
+                    registros.append(row)  # noqa: PERF402
 
             fin_lectura = time.time()
+
             logging.info(
-                f'CSV leído completamente. '
-                f'Registros: {len(df_push)}. '
-                f'Tiempo: {fin_lectura - inicio_lectura:.2f} segundos')
+                'Lectura SFTP finalizada. '
+                'Registros: %s. '
+                'Tiempo: %.2f segundos',
+                len(registros), fin_lectura - inicio_lectura)
 
-            # 5. Archivo vacío
-            if df_push.empty:
+            # -------------------------------------------------------
+            # Validar archivo vacío
+            # -------------------------------------------------------
+            if not registros:
+
                 logging.info(
-                    f'El archivo {formato} no contiene ningún registro. '
-                    f'Se omite el procesamiento.')
+                    "El archivo '%s' no contiene ningún registro. "
+                    "Se omite el formato.", formato)
                 continue
 
-            # 6. Normalización de columnas
-            df_push.columns = [
-                str(col).replace('\ufeff', '').strip()
-                for col in df_push.columns]
+            # -------------------------------------------------------
+            # Crear DataFrame
+            # -------------------------------------------------------
+            df = pd.DataFrame(registros)
+            logging.info('DataFrame creado. Registros: %s', len(df))
 
-            # ------------------------------------------------------
-            # Eliminar columna no existente en BigQuery
-            # ------------------------------------------------------
-            if 'ServiceResponse' in df_push.columns:
-                df_push.drop(columns=['ServiceResponse'], inplace=True)  # noqa: PD002
+            # -------------------------------------------------------
+            # Normalizar columnas
+            # -------------------------------------------------------
+            df.columns = [
+                str(col)
+                .replace('\ufeff', '')
+                .strip()
+                for col in df.columns]
 
-            # ------------------------------------------------------
-            # Renombrar columnas al esquema BigQuery
-            # ------------------------------------------------------
-            df_push.rename(columns={
-                'AppName': 'APP_NAME',
-                'MessageName': 'MESSAGE_NAME',
-                'MessageID': 'MESSAGE_ID',
-                'Campaigns': 'CAMPAIGNS',
-                'DeviceId': 'DEVICE_ID',
-                'DateTimeSend': 'DATETIME_SEND',
-                'MessageContent': 'MESSAGE_CONTENT',
-                'MessageOpened': 'MESSAGE_OPENED',
-                'OpenDate': 'OPEN_DATE',
-                'TimeInApp': 'TIME_IN_APP',
-                'Platform': 'PLATFORM',
-                'PlatformVersion': 'PLATFORM_VERSION',
-                'Status': 'STATUS',
-                'GeofenceName': 'GEOFENCENAME',
-                'Template': 'TEMPLATE',
-                'Format': 'FORMAT_TYPE',
-                'PageName': 'PAGE_NAME',
-                'PushJobId': 'PUSH_JOB_ID',
-                'SystemToken': 'SYSTEM_TOKEN',
-                'InboxMessageDownloaded': 'INBOX_DOWNLOAD',
-                'InboxMessageOpened': 'INBOX_OPEN',
-                'IosMediaUrl': 'IOS_MEDIA_URL',
-                'AndroidMediaUrl': 'ANDROID_MEDIA_URL',
-                'MediaAlt': 'MEDIA_ALT',
-                'ContactKey': 'SUBSCRIBERKEY',
-                'RequestId': 'REQUEST_ID'}, inplace=True)  # noqa: PD002
+            logging.info('Columnas originales: %s', list(df.columns))
 
-            # ------------------------------------------------------
-            # Agregar columnas requeridas
-            # ------------------------------------------------------
-            df_push['BUSINESS_UNIT'] = cfg['business_unit']
-            df_push['EVENT_DATE'] = today
-            df_push['CLIENT_ID'] = cfg['client_id']
-            df_push['EID'] = EID
-            df_push['FECHA_CARGA'] = today
+            # -------------------------------------------------------
+            # Eliminar columna no utilizada
+            # -------------------------------------------------------
+            if 'ServiceResponse' in df.columns:
+                df.drop(columns=['ServiceResponse'], inplace=True)  # noqa: PD002
 
-            # ------------------------------------------------------
-            # Conversión tipos de datos
-            # ------------------------------------------------------
-            df_push['DATETIME_SEND'] = pd.to_datetime(
-                df_push['DATETIME_SEND'],
+            # -------------------------------------------------------
+            # Renombrar columnas
+            # -------------------------------------------------------
+            df.rename(
+                columns={
+                    'AppName': 'APP_NAME',
+                    'MessageName': 'MESSAGE_NAME',
+                    'MessageID': 'MESSAGE_ID',
+                    'Campaigns': 'CAMPAIGNS',
+                    'DeviceId': 'DEVICE_ID',
+                    'DateTimeSend': 'DATETIME_SEND',
+                    'MessageContent': 'MESSAGE_CONTENT',
+                    'MessageOpened': 'MESSAGE_OPENED',
+                    'OpenDate': 'OPEN_DATE',
+                    'TimeInApp': 'TIME_IN_APP',
+                    'Platform': 'PLATFORM',
+                    'PlatformVersion': 'PLATFORM_VERSION',
+                    'Status': 'STATUS',
+                    'GeofenceName': 'GEOFENCENAME',
+                    'Template': 'TEMPLATE',
+                    'Format': 'FORMAT_TYPE',
+                    'PageName': 'PAGE_NAME',
+                    'PushJobId': 'PUSH_JOB_ID',
+                    'SystemToken': 'SYSTEM_TOKEN',
+                    'InboxMessageDownloaded': 'INBOX_DOWNLOAD',
+                    'InboxMessageOpened': 'INBOX_OPEN',
+                    'IosMediaUrl': 'IOS_MEDIA_URL',
+                    'AndroidMediaUrl': 'ANDROID_MEDIA_URL',
+                    'MediaAlt': 'MEDIA_ALT',
+                    'ContactKey': 'SUBSCRIBERKEY',
+                    'RequestId': 'REQUEST_ID'
+                }, inplace=True)  # noqa: PD002
+
+            # -------------------------------------------------------
+            # Agregar columnas adicionales
+            # -------------------------------------------------------
+            df['BUSINESS_UNIT'] = cfg['business_unit']
+            df['EVENT_DATE'] = today
+            df['CLIENT_ID'] = cfg['client_id']
+            df['EID'] = EID
+            df['FECHA_CARGA'] = today
+
+            # -------------------------------------------------------
+            # Conversión de fechas
+            # -------------------------------------------------------
+            df['DATETIME_SEND'] = pd.to_datetime(
+                df['DATETIME_SEND'],
                 format='%m/%d/%Y %I:%M:%S %p', errors='coerce')
 
-            df_push['OPEN_DATE'] = pd.to_datetime(
-                df_push['OPEN_DATE'],
+            df['OPEN_DATE'] = pd.to_datetime(
+                df['OPEN_DATE'],
                 format='%m/%d/%Y %I:%M:%S %p', errors='coerce')
 
-            df_push['MESSAGE_ID'] = pd.to_numeric(
-                df_push['MESSAGE_ID'], errors='coerce').astype('Int64')
+            # -------------------------------------------------------
+            # Validar columnas obligatorias
+            # -------------------------------------------------------
+            columnas_obligatorias = [
+                'APP_NAME',
+                'DEVICE_ID',
+                'DATETIME_SEND',
+                'REQUEST_ID'
+            ]
 
-            df_push['CLIENT_ID'] = pd.to_numeric(
-                df_push['CLIENT_ID'], errors='coerce').astype('Int64')
+            faltantes = [
+                columna
+                for columna in columnas_obligatorias
+                if columna not in df.columns
+            ]
 
-            df_push['EID'] = int(EID)
+            if faltantes:
+                logging.error(
+                    'Faltan columnas obligatorias en %s: %s',
+                    formato, faltantes)
 
-            # ------------------------------------------------------
-            # Crear llave única
-            # ------------------------------------------------------
-            df_push['KEY'] = (df_push['BUSINESS_UNIT']
-                + '|' + df_push['REQUEST_ID'] + '|' + df_push['DEVICE_ID'])
-
-            logging.info('Registros leídos : %s', len(df_push))
-            logging.info('Consultando llaves existentes en BigQuery...')
-
-            sql = f"""
-            SELECT CONCAT(
-                BUSINESS_UNIT, '|', REQUEST_ID, '|', DEVICE_ID) AS KEY
-            FROM `{PROJECT_ID}.{DATASET}.{TABLE}`
-            WHERE BUSINESS_UNIT = '{cfg["business_unit"]}'
-            AND DATETIME_SEND >= DATE_SUB(CURRENT_DATE(), INTERVAL 120 DAY)
-            """  # noqa: S608
-
-            existentes = bq_client.query(sql).to_dataframe(
-    create_bqstorage_client=False)
-
-            logging.info('Llaves existentes : %s', len(existentes))
-
-            df_push = df_push[~df_push['KEY'].isin(existentes['KEY'])].copy()
-
-            logging.info('Registros nuevos : %s', len(df_push))
-
-            if df_push.empty:
-                logging.info('No existen registros nuevos.')
-
+                logging.info('Columnas disponibles: %s', list(df.columns))
                 continue
 
-            df_push.drop(columns=['KEY'], inplace=True)  # noqa: PD002
+            # -------------------------------------------------------
+            # Cerrar SFTP
+            # -------------------------------------------------------
+            logging.info('Lectura finalizada. Cerrando conexión SFTP...')
 
-            # ------------------------------------------------------
-            # Job Config
-            # ------------------------------------------------------
+            sftp.close()
+            sftp = None
+
+            transport.close()
+            transport = None
+
+            logging.info('Conexión SFTP cerrada correctamente.')
+
+            # -------------------------------------------------------
+            # Cargar a STG
+            # -------------------------------------------------------
+            logging.info('Cargando %s registros a BigQuery STG...', len(df))
+            inicio_carga = time.time()
+
             job_config = bigquery.LoadJobConfig(
-                write_disposition='WRITE_APPEND')
-
-            # ------------------------------------------------------
-            # Cargar BigQuery
-            # ------------------------------------------------------
-            logging.info('Cargando registros a BigQuery...')
+                write_disposition='WRITE_APPEND', schema=schema)
 
             job = bq_client.load_table_from_dataframe(
-                df_push, TABLE_ID, job_config=job_config)
+                df, STG_TABLE_ID, job_config=job_config)
 
             job.result()
-
-            logging.info(f'Registros cargados: {len(df_push):,}')
-
-        except FileNotFoundError:
-            logging.info(f'No existe archivo para {formato}.')
+            fin_carga = time.time()
+            logging.info(
+                'Carga STG finalizada. '
+                'Registros cargados: %s. '
+                'Tiempo: %.2f segundos',
+                len(df), fin_carga - inicio_carga)
 
         except Exception:
-            logging.exception(f'Error procesando %s', formato)  # noqa: F541
+            logging.exception('Error procesando %s', formato)
 
         finally:
+            # -------------------------------------------------------
+            # Cerrar conexiones si todavía están abiertas
+            # -------------------------------------------------------
             if sftp is not None:
-                sftp.close()
+                try:
+                    sftp.close()
+                except Exception:  # noqa: BLE001
+                    logging.warning(
+                        'No fue posible cerrar SFTP correctamente.')
 
             if transport is not None:
-                transport.close()
+                try:
+                    transport.close()
+                except Exception:  # noqa: BLE001
+                    logging.warning(
+                        'No fue posible cerrar Transport correctamente.')
 
-            if os.path.exists(local_file):
-                os.remove(local_file)
-                logging.info(f'Archivo temporal eliminado: {local_file}')
+            logging.info('Proceso finalizado para %s', formato)
 
-            logging.info(f'Proceso finalizado para {formato}')
-
-    logging.info('=' * 70)
-    logging.info('PROCESO FINALIZADO CORRECTAMENTE')
-    logging.info('=' * 70)
+    logging.info('=' * 80)
+    logging.info('PROCESO SFTP -> STG FINALIZADO')
+    logging.info('=' * 80)
 
 
 # ---------------------------------------------------------------------

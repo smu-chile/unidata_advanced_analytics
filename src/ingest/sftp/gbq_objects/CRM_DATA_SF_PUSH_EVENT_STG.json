@@ -1,0 +1,162 @@
+{
+    "schema": "CRM",
+    "table": "CRM_DATA_SF_PUSH_EVENT_STG",
+
+    "columns": [
+        {
+            "name": "EVENT_DATE",
+            "field_type": "DATE",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "CLIENT_ID",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "EID",
+            "field_type": "INTEGER",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "APP_NAME",
+            "field_type": "STRING",
+            "mode": "REQUIRED"
+        },
+        {
+            "name": "MESSAGE_NAME",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+         {
+            "name": "MESSAGE_ID",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "TEMPLATE",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FORMAT_TYPE",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "GEOFENCENAME",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "PAGE_NAME",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "CAMPAIGNS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DEVICE_ID",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SUBSCRIBERKEY",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "DATETIME_SEND",
+            "field_type": "DATETIME",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MESSAGE_CONTENT",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MESSAGE_OPENED",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "OPEN_DATE",
+            "field_type": "DATETIME",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "TIME_IN_APP",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "PLATFORM",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "PLATFORM_VERSION",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "STATUS",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "PUSH_JOB_ID",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "SYSTEM_TOKEN",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "INBOX_DOWNLOAD",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "INBOX_OPEN",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "IOS_MEDIA_URL",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "ANDROID_MEDIA_URL",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "MEDIA_ALT",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "REQUEST_ID",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "BUSINESS_UNIT",
+            "field_type": "STRING",
+            "mode": "NULLABLE"
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "NULLABLE"
+        }  
+    ]
+}
