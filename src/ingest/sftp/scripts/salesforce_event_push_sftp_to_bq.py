@@ -1,5 +1,4 @@
-
-import os
+import os  # noqa: D100
 import csv
 import json
 import time
@@ -184,30 +183,30 @@ def main():  # noqa: ANN201, D103
             # -------------------------------------------------------
             # Crear DataFrame
             # -------------------------------------------------------
-            df = pd.DataFrame(registros)
-            logging.info('DataFrame creado. Registros: %s', len(df))
+            df_push = pd.DataFrame(registros)
+            logging.info('DataFrame creado. Registros: %s', len(df_push))
 
             # -------------------------------------------------------
             # Normalizar columnas
             # -------------------------------------------------------
-            df.columns = [
+            df_push.columns = [
                 str(col)
                 .replace('\ufeff', '')
                 .strip()
-                for col in df.columns]
+                for col in df_push.columns]
 
-            logging.info('Columnas originales: %s', list(df.columns))
+            logging.info('Columnas originales: %s', list(df_push.columns))
 
             # -------------------------------------------------------
             # Eliminar columna no utilizada
             # -------------------------------------------------------
-            if 'ServiceResponse' in df.columns:
-                df.drop(columns=['ServiceResponse'], inplace=True)  # noqa: PD002
+            if 'ServiceResponse' in df_push.columns:
+                df_push.drop(columns=['ServiceResponse'], inplace=True)  # noqa: PD002
 
             # -------------------------------------------------------
             # Renombrar columnas
             # -------------------------------------------------------
-            df.rename(
+            df_push.rename(
                 columns={
                     'AppName': 'APP_NAME',
                     'MessageName': 'MESSAGE_NAME',
@@ -240,21 +239,21 @@ def main():  # noqa: ANN201, D103
             # -------------------------------------------------------
             # Agregar columnas adicionales
             # -------------------------------------------------------
-            df['BUSINESS_UNIT'] = cfg['business_unit']
-            df['EVENT_DATE'] = today
-            df['CLIENT_ID'] = cfg['client_id']
-            df['EID'] = EID
-            df['FECHA_CARGA'] = today
+            df_push['BUSINESS_UNIT'] = cfg['business_unit']
+            df_push['EVENT_DATE'] = today
+            df_push['CLIENT_ID'] = cfg['client_id']
+            df_push['EID'] = EID
+            df_push['FECHA_CARGA'] = today
 
             # -------------------------------------------------------
             # Conversión de fechas
             # -------------------------------------------------------
-            df['DATETIME_SEND'] = pd.to_datetime(
-                df['DATETIME_SEND'],
+            df_push['DATETIME_SEND'] = pd.to_datetime(
+                df_push['DATETIME_SEND'],
                 format='%m/%d/%Y %I:%M:%S %p', errors='coerce')
 
-            df['OPEN_DATE'] = pd.to_datetime(
-                df['OPEN_DATE'],
+            df_push['OPEN_DATE'] = pd.to_datetime(
+                df_push['OPEN_DATE'],
                 format='%m/%d/%Y %I:%M:%S %p', errors='coerce')
 
             # -------------------------------------------------------
@@ -270,7 +269,7 @@ def main():  # noqa: ANN201, D103
             faltantes = [
                 columna
                 for columna in columnas_obligatorias
-                if columna not in df.columns
+                if columna not in df_push.columns
             ]
 
             if faltantes:
@@ -278,7 +277,7 @@ def main():  # noqa: ANN201, D103
                     'Faltan columnas obligatorias en %s: %s',
                     formato, faltantes)
 
-                logging.info('Columnas disponibles: %s', list(df.columns))
+                logging.info('Columnas disponibles: %s', list(df_push.columns))
                 continue
 
             # -------------------------------------------------------
@@ -297,14 +296,14 @@ def main():  # noqa: ANN201, D103
             # -------------------------------------------------------
             # Cargar a STG
             # -------------------------------------------------------
-            logging.info('Cargando %s registros a BigQuery STG...', len(df))
+            logging.info('Cargando %s registros a BigQuery STG...', len(df_push))
             inicio_carga = time.time()
 
             job_config = bigquery.LoadJobConfig(
                 write_disposition='WRITE_APPEND', schema=schema)
 
             job = bq_client.load_table_from_dataframe(
-                df, STG_TABLE_ID, job_config=job_config)
+                df_push, STG_TABLE_ID, job_config=job_config)
 
             job.result()
             fin_carga = time.time()
@@ -312,7 +311,7 @@ def main():  # noqa: ANN201, D103
                 'Carga STG finalizada. '
                 'Registros cargados: %s. '
                 'Tiempo: %.2f segundos',
-                len(df), fin_carga - inicio_carga)
+                len(df_push), fin_carga - inicio_carga)
 
         except Exception:
             logging.exception('Error procesando %s', formato)
