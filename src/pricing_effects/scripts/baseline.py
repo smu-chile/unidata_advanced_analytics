@@ -82,6 +82,25 @@ CANDIDATAS_CALENDARIO_EXTRA = ['feriado', 'pre_feriado', 'primer_dia_mes',
 CANDIDATAS_CONTEXTO = ['variacion_top1_sustituto', 'variacion_top3_sustitutos',
                         'variacion_porcentual_subcategoria']
 
+# -------------------------------------------------------------------------
+#  Regimen de precio de referencia dinamico -- para materiales sin
+#  suficiente historia Regular (o con historia escasa). Ver documento
+#  de arquitectura "Regimen de precio de referencia dinamico" para el
+#  detalle metodologico y la justificacion de cada parametro.
+# -------------------------------------------------------------------------
+LAMBDA_REGIMEN_DINAMICO = 0.12  # velocidad del EWMA (vida media ~5 dias)
+BANDA_REGIMEN_DINAMICO = 0.07   # tolerancia +-7% respecto al precio de referencia
+MIN_PCT_DIAS_REGIMEN = 0.50     # al menos 50% de los dias deben caer en la banda
+MIN_MESES_DISTINTOS_REGIMEN = 4  # dispersion temporal minima
+MIN_DIAS_PARA_COMPARAR_REGIMEN = 150  # sobre este umbral, no se compara
+MIN_R2_TODA_HISTORIA = 0.05     # umbral de calidad para el 2do intento
+
+# precio_suavizado: se calcula SIEMPRE (columna adicional, no decide nada
+# aqui) -- la decision de si se usa como 3er intento vive en
+# elasticidad_general.py, ya que solo se justifica cuando la regresion de
+# elasticidad (no la de calendario) falla con el precio crudo.
+VENTANA_SUAVIZADO_DIAS = 45
+
 # Ecommerce tiene su PROPIA tabla productiva de regresion -- y dentro de
 # esa tabla, el campo store_banner dice literalmente "Unimarc" o "Alvi"
 # (no "Ecommerce Unimarc"/"Ecommerce Alvi").
@@ -124,11 +143,12 @@ SQL_QUERIES = QueryDict({  # Region: Explicacion de query
     """
     SELECT
         material,
+        ean,
         p_date,
         atributo_promocion
     FROM `${table}`
     WHERE store_banner = '${store_banner}'
-    ORDER BY material, p_date
+    ORDER BY material, ean, p_date
     """,
 })
 
@@ -283,7 +303,7 @@ def _preparar_x_y(df_regular: pd.DataFrame, variables: list[str]):
     x = x.astype(float)
 
     limite_superior = df_regular['cantidad_total'].quantile(PERCENTIL_WINSOR_TARGET)
-    cantidad_winsorizada = df_regular['cantidad_total'].clip(
+    cantidad_winsorizada = df_regular['cantidad_total'].astype(float).clip(
         lower=0.01, upper=limite_superior)
     y = np.log(cantidad_winsorizada)
 
@@ -374,7 +394,7 @@ def _entrenar_modelo(df_regular: pd.DataFrame, incluir_estacionalidad: bool) -> 
     except Exception:  # noqa: BLE001
         return vacio
 
-    factor_correccion = np.exp(modelo.resid).mean()
+    factor_correccion = np.exp(modelo.resid.astype(float)).mean()
 
     variables_continuas = [
         v for v in VARIABLES_MAHALANOBIS_CANDIDATAS if v in variables]
@@ -424,7 +444,7 @@ def _predecir_pieza(df_pred: pd.DataFrame, modelo, variables: list[str],
     x = x.reindex(columns=columnas_diseno, fill_value=0.0)
     x = x.astype(float)
 
-    log_pred = modelo.predict(x)
+    log_pred = np.asarray(modelo.predict(x), dtype=float)
     pred = np.exp(log_pred) * factor_correccion * factor_escala
 
     return pd.Series(np.asarray(pred), index=df_pred.index)
@@ -524,6 +544,33 @@ def _calcular_factor_escala(df_material: pd.DataFrame, info_pieza: dict) -> floa
 
 
 # -------------------------------------------------------------------------
+#  Regimen de precio de referencia dinamico (EWMA)
+# -------------------------------------------------------------------------
+def _dias_del_regimen_dinamico(df_material: pd.DataFrame) -> pd.DataFrame:
+    """Calcula un precio de referencia via EWMA (Reference Price Theory
+    / expectativas adaptativas) y devuelve los dias cuyo precio real
+    esta dentro de la banda de tolerancia -- SIN importar si WORKFLOW
+    los etiqueto como 'Regular' o promocionales. Solo se acepta el
+    regimen si junta suficiente cantidad de dias Y suficiente
+    dispersion temporal (evita que 1-2 meses seguidos definan todo).
+    Devuelve un dataframe vacio si el regimen no pasa validacion.
+    """
+    precio = df_material['precio_promedio'].astype(float)
+    precio_ref = precio.ewm(alpha=LAMBDA_REGIMEN_DINAMICO, adjust=False).mean()
+    desviacion = (precio - precio_ref).abs() / precio_ref
+    dentro_banda = desviacion <= BANDA_REGIMEN_DINAMICO
+
+    pct_dias = dentro_banda.mean()
+    meses_cubiertos = (
+        df_material.loc[dentro_banda, 'p_date'].dt.to_period('M').nunique())
+
+    if (pct_dias >= MIN_PCT_DIAS_REGIMEN
+            and meses_cubiertos >= MIN_MESES_DISTINTOS_REGIMEN):
+        return df_material[dentro_banda]
+    return df_material.iloc[0:0]
+
+
+# -------------------------------------------------------------------------
 #  Construccion de baselines -- shrinkage continuo (partial pooling)
 # -------------------------------------------------------------------------
 def construir_baselines(df_panel: pd.DataFrame) -> dict:
@@ -535,7 +582,8 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
     baselines = {}
     df_regular_todo = df_panel[df_panel['estado'] == 'Regular'].copy()
 
-    sku_por_subcat = df_panel.groupby('sub_category_description')['material'].nunique()
+    sku_por_subcat = (
+        df_panel.groupby('sub_category_description')['material_ean'].nunique())
 
     # --- Modelos de categoria (respaldo final del grupo) ---
     modelos_categoria = {}
@@ -563,20 +611,95 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
         'umbral_mahalanobis': None,
     }
 
-    for material, df_material in df_regular_todo.groupby('material'):
-        subcat = df_material['sub_category_description'].iloc[0]
-        categoria = df_material['category_description'].iloc[0]
-        n_dias_propio = len(df_material)
+    for material_ean, df_material_completo in df_panel.groupby('material_ean'):
+        subcat = df_material_completo['sub_category_description'].iloc[0]
+        categoria = df_material_completo['category_description'].iloc[0]
 
-        # --- Modelo propio (umbral bajo -- el shrinkage regula la
-        #  confianza) ---
+        df_material_regular = df_material_completo[
+            df_material_completo['estado'] == 'Regular']
+        n_dias_regular_real = len(df_material_regular)
+
         info_propio = None
-        if n_dias_propio >= MIN_DIAS_PARA_INTENTAR_MODELO_PROPIO:
+        n_dias_propio = 0
+        origen_propio = None
+        df_entrenamiento_propio = None
+
+        if n_dias_regular_real > MIN_DIAS_PARA_COMPARAR_REGIMEN:
+            # --- Camino de SIEMPRE, sin cambios: suficiente Regular real
             incluir_estacionalidad = (
-                n_dias_propio >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
-            candidato = _entrenar_modelo(df_material, incluir_estacionalidad)
+                n_dias_regular_real >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
+            candidato = _entrenar_modelo(df_material_regular, incluir_estacionalidad)
             if candidato['modelo'] is not None:
                 info_propio = candidato
+                n_dias_propio = n_dias_regular_real
+                origen_propio = 'regular_real'
+                df_entrenamiento_propio = df_material_regular
+
+        elif n_dias_regular_real >= MIN_DIAS_PARA_INTENTAR_MODELO_PROPIO:
+            # --- Caso limite (45-150 dias): comparar Regular real vs.
+            # regimen dinamico, se queda con el de mejor R2 ---
+            incluir_est_regular = (
+                n_dias_regular_real >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
+            candidato_regular = _entrenar_modelo(
+                df_material_regular, incluir_est_regular)
+
+            dias_regimen = _dias_del_regimen_dinamico(df_material_completo)
+            candidato_regimen = None
+            if len(dias_regimen) >= MIN_DIAS_PARA_INTENTAR_MODELO_PROPIO:
+                incluir_est_regimen = (
+                    len(dias_regimen) >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
+                candidato_regimen = _entrenar_modelo(dias_regimen, incluir_est_regimen)
+
+            r2_regular = (
+                candidato_regular['r2_ajustado']
+                if candidato_regular['modelo'] is not None else np.nan)
+            tiene_regimen = (
+                candidato_regimen is not None
+                and candidato_regimen['modelo'] is not None)
+            r2_regimen = candidato_regimen['r2_ajustado'] if tiene_regimen else np.nan
+
+            if pd.notna(r2_regimen) and (
+                    pd.isna(r2_regular) or r2_regimen > r2_regular):
+                info_propio = candidato_regimen
+                n_dias_propio = len(dias_regimen)
+                origen_propio = 'regimen_dinamico'
+                df_entrenamiento_propio = dias_regimen
+            elif pd.notna(r2_regular):
+                info_propio = candidato_regular
+                n_dias_propio = n_dias_regular_real
+                origen_propio = 'regular_real'
+                df_entrenamiento_propio = df_material_regular
+
+        else:
+            # --- Sin Regular suficiente (0-44 dias): cascada de 2
+            # intentos -- regimen dinamico primero, toda la historia
+            # como respaldo (con umbral minimo de calidad) ---
+            dias_regimen = _dias_del_regimen_dinamico(df_material_completo)
+            candidato_regimen = None
+            if len(dias_regimen) >= MIN_DIAS_PARA_INTENTAR_MODELO_PROPIO:
+                incluir_est_regimen = (
+                    len(dias_regimen) >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
+                candidato_regimen = _entrenar_modelo(dias_regimen, incluir_est_regimen)
+
+            tiene_regimen = (
+                candidato_regimen is not None
+                and candidato_regimen['modelo'] is not None)
+            if tiene_regimen:
+                info_propio = candidato_regimen
+                n_dias_propio = len(dias_regimen)
+                origen_propio = 'regimen_dinamico'
+                df_entrenamiento_propio = dias_regimen
+            else:
+                incluir_est_todo = (
+                    len(df_material_completo) >= MIN_DIAS_PARA_INCLUIR_ESTACIONALIDAD)
+                candidato_todo = _entrenar_modelo(
+                    df_material_completo, incluir_est_todo)
+                if (candidato_todo['modelo'] is not None
+                        and candidato_todo['r2_ajustado'] >= MIN_R2_TODA_HISTORIA):
+                    info_propio = candidato_todo
+                    n_dias_propio = len(df_material_completo)
+                    origen_propio = 'historia_completa'
+                    df_entrenamiento_propio = df_material_completo
 
         # --- Modelo de grupo: subcategoria primero, si no categoria ---
         info_grupo, nivel_grupo, factor_escala_grupo = None, None, np.nan
@@ -585,7 +708,7 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
             ('categoria', modelos_categoria.get(categoria)),
         ]:
             if candidato_dict is not None and candidato_dict.get('modelo') is not None:
-                fe = _calcular_factor_escala(df_material, candidato_dict)
+                fe = _calcular_factor_escala(df_material_completo, candidato_dict)
                 if np.isfinite(fe):
                     info_grupo = candidato_dict
                     nivel_grupo = candidato_nivel
@@ -593,7 +716,7 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
                     break
 
         if info_propio is None and info_grupo is None:
-            baselines[material] = {
+            baselines[material_ean] = {
                 'nivel': 'sin_baseline', 'peso_propio': np.nan, 'nivel_grupo': None,
                 'modelo_propio': None, 'variables_propio': [],
                 'factor_correccion_propio': np.nan,
@@ -605,7 +728,7 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
                 'variables_continuas_grupo': [], 'centro_grupo': None,
                 'cov_inv_grupo': None,
                 'umbral_mahalanobis_grupo': None, 'factor_escala_grupo': np.nan,
-                'r2_ajustado': np.nan, 'n_dias_entrenamiento': n_dias_propio,
+                'r2_ajustado': np.nan, 'n_dias_entrenamiento': n_dias_regular_real,
             }
             continue
 
@@ -644,10 +767,24 @@ def construir_baselines(df_panel: pd.DataFrame) -> dict:
             'n_dias_entrenamiento': n_dias_propio,
         }
 
-        if _es_baseline_confiable(df_material, info_blend):
-            baselines[material] = info_blend
+        # Validar honestidad contra lo que efectivamente entreno al
+        # candidato propio ganador (Regular real, regimen dinamico, o
+        # toda la historia) -- la funcion es generica, no le importa
+        # el origen de los dias, solo chequea calibracion.
+        df_para_validar = (
+            df_entrenamiento_propio if df_entrenamiento_propio is not None
+            else df_material_completo
+        )
+
+        if _es_baseline_confiable(df_para_validar, info_blend):
+            nivel_final = 'blend'
+            if origen_propio == 'regimen_dinamico':
+                nivel_final = 'blend_regimen_dinamico'
+            elif origen_propio == 'historia_completa':
+                nivel_final = 'blend_historia_completa'
+            baselines[material_ean] = {**info_blend, 'nivel': nivel_final}
         else:
-            baselines[material] = {
+            baselines[material_ean] = {
                 **info_blend,
                 'nivel': 'sin_baseline',
             }
@@ -712,6 +849,7 @@ def main() -> None:  # noqa: D103
     # -------------------------------------------------------------------
     df_venta = df_venta.copy()
     df_venta['material'] = df_venta['material'].astype(str)
+    df_venta['ean'] = df_venta['ean'].astype(str)
     df_venta['p_date'] = pd.to_datetime(df_venta['p_date'])
     df_venta['precio_promedio'] = df_venta['precio_promedio'].astype(float)
     df_venta['cantidad_total'] = df_venta['cantidad_total'].astype(float)
@@ -723,25 +861,47 @@ def main() -> None:  # noqa: D103
     df_promo = df_promo.copy()
     if not df_promo.empty:
         df_promo['material'] = df_promo['material'].astype(str)
+        df_promo['ean'] = df_promo['ean'].astype(str)
         df_promo['p_date'] = pd.to_datetime(df_promo['p_date'])
-        df_promo = df_promo.drop_duplicates(subset=['material', 'p_date'])
+        df_promo = df_promo.drop_duplicates(subset=['material', 'ean', 'p_date'])
 
+    columnas_promo = ['material', 'ean', 'p_date', 'atributo_promocion']
     df_panel = df_venta.merge(
-        df_promo[['material', 'p_date', 'atributo_promocion']] if not df_promo.empty
-        else pd.DataFrame(columns=['material', 'p_date', 'atributo_promocion']),
-        on=['material', 'p_date'],
+        (df_promo[columnas_promo] if not df_promo.empty
+        else pd.DataFrame(columns=columnas_promo)),
+        on=['material', 'ean', 'p_date'],
         how='left',
     )
 
     df_panel['estado'] = df_panel['atributo_promocion'].fillna('Regular')
     df_panel['es_regular'] = (df_panel['estado'] == 'Regular').astype(int)
 
+    # Cada EAN es un producto real distinto (formato/tamaño propio) --
+    # de aqui en adelante, TODO se agrupa por esta clave combinada, no
+    # solo por material.
+    df_panel['material_ean'] = df_panel['material'] + '_' + df_panel['ean']
+
     feriados = agregarFeriados(df_panel[['p_date']].drop_duplicates())
     df_panel = df_panel.merge(feriados, on='p_date', how='left')
 
     df_panel = agregar_variables_calendario(df_panel)
 
-    df_panel = df_panel.sort_values(['material', 'p_date']).reset_index(drop=True)
+    df_panel = df_panel.sort_values(['material_ean', 'p_date']).reset_index(drop=True)
+
+    # precio_suavizado: mediana movil centrada, SIEMPRE calculada (no
+    # decide nada aqui -- ver nota en VENTANA_SUAVIZADO_DIAS). Sirve de
+    # candidato adicional para elasticidad_general.py cuando el precio
+    # crudo da una regresion de elasticidad poco confiable.
+    df_panel['precio_suavizado'] = (
+        df_panel.groupby('material_ean')['precio_promedio']
+        .transform(lambda s: s.rolling(
+            VENTANA_SUAVIZADO_DIAS, center=True,
+            min_periods=VENTANA_SUAVIZADO_DIAS // 2).median())
+    )
+    df_panel['precio_suavizado'] = (
+        df_panel.groupby('material_ean')['precio_suavizado']
+        .transform(lambda s: s.bfill().ffill())
+    )
 
     logging.info(f'Panel diario construido: {df_panel.shape}')
     # ENDREGION
@@ -758,21 +918,24 @@ def main() -> None:  # noqa: D103
     # REGION: Prediccion del baseline para todo el panel
     # -------------------------------------------------------------------
     piezas_prediccion = []
-    for material, df_material in df_panel.groupby('material'):
-        info_baseline = baselines.get(material, {'nivel': 'sin_baseline'})
+    for material_ean, df_material in df_panel.groupby('material_ean'):
+        info_baseline = baselines.get(material_ean, {'nivel': 'sin_baseline'})
         pred = predecir_baseline(df_material, info_baseline)
         piezas_prediccion.append(pred)
 
     df_panel['cantidad_esperada_baseline'] = pd.concat(piezas_prediccion).sort_index()
-    df_panel['nivel_baseline'] = df_panel['material'].map(
-        lambda m: baselines.get(m, {}).get('nivel', 'sin_baseline'))
-    df_panel['peso_propio_baseline'] = df_panel['material'].map(
-        lambda m: baselines.get(m, {}).get('peso_propio', np.nan))
+    df_panel['nivel_baseline'] = df_panel['material_ean'].map(
+        lambda me: baselines.get(me, {}).get('nivel', 'sin_baseline'))
+    df_panel['peso_propio_baseline'] = df_panel['material_ean'].map(
+        lambda me: baselines.get(me, {}).get('peso_propio', np.nan))
     df_panel['indice_venta'] = (
         df_panel['cantidad_total'] / df_panel['cantidad_esperada_baseline'])
 
+    n_material_ean = df_panel['material_ean'].nunique()
     n_materiales = df_panel['material'].nunique()
-    logging.info(f'Prediccion de baseline completa para {n_materiales:,} materiales')
+    logging.info(
+        f'Prediccion de baseline completa para {n_material_ean:,} combinaciones '
+        f'material x ean ({n_materiales:,} materiales distintos)')
     # ENDREGION
 
     # REGION: Carga a BigQuery
@@ -780,7 +943,8 @@ def main() -> None:  # noqa: D103
     columnas_a_subir = [
         'material', 'ean', 'product_description', 'category_description',
         'sub_category_description', 'sales_uom', 'p_date', 'estado', 'precio_promedio',
-        'cantidad_total', 'cantidad_esperada_baseline', 'indice_venta',
+        'precio_suavizado', 'cantidad_total', 'cantidad_esperada_baseline',
+        'indice_venta',
         'nivel_baseline', 'peso_propio_baseline',
     ]
     columnas_disponibles = [c for c in columnas_a_subir if c in df_panel.columns]

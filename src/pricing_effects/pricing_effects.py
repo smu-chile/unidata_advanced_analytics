@@ -36,14 +36,11 @@ with open(
 PROJECT_NAME = 'pricing_effects'
 
 STORE_BANNER_LIST = [
+    'Super 10', 'Ecommerce Alvi'
     #'Unimarc',
-    'Super 10', 'Alvi','Ecommerce Unimarc', 'Ecommerce Alvi',
+    #'Super 10', 'Alvi','Ecommerce Unimarc', 'Ecommerce Alvi',
 ]
 
-# Unimarc es, por lejos, el banner con mas materiales -- el driver
-# fallaba con SIGKILL (exit 137, presion de memoria) usando los
-# recursos por defecto. Se le da mas poder solo a este banner; el
-# resto sigue con la configuracion default del operador.
 RECURSOS_EXTRA_POR_BANNER = {
     'Unimarc': {
         'spark_driver_cores': 8,

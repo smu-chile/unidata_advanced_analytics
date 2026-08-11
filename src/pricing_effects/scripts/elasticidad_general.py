@@ -87,8 +87,9 @@ MAPA_BANNER_REGRESSION_ECOMMERCE = {
 SQL_QUERIES = QueryDict({  # Region: Explicacion de query
 
     # indice_venta ya viene neto de calendario/sustitutos -- es la
-    # variable dependiente del modelo. Solo se traen los SKU con
-    # nivel_baseline='blend' (los unicos con indice calculable).
+    # variable dependiente del modelo. Se traen los SKU con nivel_baseline
+    # 'blend' (camino de siempre) y los 2 nuevos caminos del regimen de
+    # precio de referencia dinamico -- los unicos 3 con indice calculable.
     'query_baseline_panel':
     """
     SELECT
@@ -101,11 +102,14 @@ SQL_QUERIES = QueryDict({  # Region: Explicacion de query
         p_date,
         estado,
         precio_promedio,
+        precio_suavizado,
         indice_venta,
         nivel_baseline
     FROM `${table}`
-    WHERE store_banner = '${store_banner}' AND nivel_baseline = 'blend'
-    ORDER BY material, p_date
+    WHERE store_banner = '${store_banner}'
+        AND nivel_baseline IN (
+            'blend', 'blend_regimen_dinamico', 'blend_historia_completa')
+    ORDER BY material, ean, p_date
     """,
 
     # Mecanica promocional (progreso, frecuencia reciente) -- el
@@ -114,13 +118,14 @@ SQL_QUERIES = QueryDict({  # Region: Explicacion de query
     """
     SELECT
         material,
+        ean,
         p_date,
         atributo_promocion,
         progreso_promocion,
         frecuencia_promocional_90d
     FROM `${table}`
     WHERE store_banner = '${store_banner}'
-    ORDER BY material, p_date
+    ORDER BY material, ean, p_date
     """,
 
     # Identidad del sustituto mas cercano (para la cascada de 3 niveles)
@@ -128,11 +133,12 @@ SQL_QUERIES = QueryDict({  # Region: Explicacion de query
     """
     SELECT
         material,
+        ean,
         p_date,
         ean_sustituto_1
     FROM `${table}`
     WHERE store_banner = '${store_banner}'
-    ORDER BY material, p_date
+    ORDER BY material, ean, p_date
     """,
 
     # Elasticidades de transicion ya calculadas (para el parche de casos
@@ -236,8 +242,44 @@ def _entrenar_elasticidad(df_material: pd.DataFrame) -> dict:
         return vacio
 
     return {
-        'modelo': modelo, 'variables': variables_finales, 'r2_ajustado': modelo.rsquared_adj,
+        'modelo': modelo, 'variables': variables_finales,
+        'r2_ajustado': modelo.rsquared_adj,
     }
+
+
+def _entrenar_elasticidad_con_reintento(df_material: pd.DataFrame) -> dict:
+    """Entrena con precio crudo primero. Si el coeficiente de log_precio
+    sale positivo o no se pudo estimar, reintenta usando precio_suavizado
+    (mediana movil 45 dias, calculada en baseline.py) en su lugar --
+    solo se justifica cuando la relacion precio-venta con el dato diario
+    crudo no da una sensibilidad negativa medible. Devuelve el resultado
+    ganador mas 'metodo_precio' ('crudo' o 'suavizado') para trazabilidad.
+    """
+    info_crudo = _entrenar_elasticidad(df_material)
+    coef_crudo = (
+        info_crudo['modelo'].params.get('log_precio', np.nan)
+        if info_crudo['modelo'] is not None else np.nan
+    )
+    if pd.notna(coef_crudo) and coef_crudo < 0:
+        return {**info_crudo, 'metodo_precio': 'crudo'}
+
+    if 'precio_suavizado' not in df_material.columns:
+        return {**info_crudo, 'metodo_precio': 'crudo'}
+
+    df_suavizado = df_material.copy()
+    df_suavizado['log_precio'] = np.log(df_suavizado['precio_suavizado'].clip(lower=1))
+    info_suavizado = _entrenar_elasticidad(df_suavizado)
+    coef_suavizado = (
+        info_suavizado['modelo'].params.get('log_precio', np.nan)
+        if info_suavizado['modelo'] is not None else np.nan
+    )
+    if pd.notna(coef_suavizado) and coef_suavizado < 0:
+        return {**info_suavizado, 'metodo_precio': 'suavizado'}
+
+    # Ninguno de los 2 dio una sensibilidad negativa medible -- se
+    # devuelve el crudo (su comportamiento aguas abajo, incluido el
+    # parche de Regla 1/2/3, sigue siendo el mismo de siempre).
+    return {**info_crudo, 'metodo_precio': 'crudo'}
 
 
 # -------------------------------------------------------------------------
@@ -302,7 +344,7 @@ def main() -> None:  # noqa: D103
     # -------------------------------------------------------------------
     usuario = 'elasticidad_general'
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'ELASTICITY'
+    tabla = 'ELASTICITY_PR'
     dataset_regression = 'TMP'
 
     if store_banner in MAPA_BANNER_REGRESSION_ECOMMERCE:
@@ -345,8 +387,9 @@ def main() -> None:  # noqa: D103
     df_transiciones_para_parche = readBigQuery(
         query=query_transiciones, user=usuario, gbq_client=gbq_client)
 
-    query_materiales_sin_baseline = SQL_QUERIES['query_materiales_sin_baseline'].substitute(
-        table=table_baseline_panel, store_banner=store_banner)
+    query_materiales_sin_baseline = (
+        SQL_QUERIES['query_materiales_sin_baseline'].substitute(
+            table=table_baseline_panel, store_banner=store_banner))
     df_materiales_sin_baseline = readBigQuery(
         query=query_materiales_sin_baseline, user=usuario, gbq_client=gbq_client)
     # ENDREGION
@@ -355,28 +398,36 @@ def main() -> None:  # noqa: D103
     # dummies de promo
     # -------------------------------------------------------------------
     df_panel['material'] = df_panel['material'].astype(str)
+    df_panel['ean'] = df_panel['ean'].astype(str)
     df_panel['p_date'] = pd.to_datetime(df_panel['p_date'])
     df_panel['precio_promedio'] = df_panel['precio_promedio'].astype(float)
     df_panel['indice_venta'] = df_panel['indice_venta'].astype(float)
 
-    df_panel = df_panel.drop_duplicates(subset=['material', 'p_date'], keep='last')
+    df_panel = df_panel.drop_duplicates(
+        subset=['material', 'ean', 'p_date'], keep='last')
+    df_panel['material_ean'] = df_panel['material'] + '_' + df_panel['ean']
 
     df_promo_mecanica['material'] = df_promo_mecanica['material'].astype(str)
+    df_promo_mecanica['ean'] = df_promo_mecanica['ean'].astype(str)
     df_promo_mecanica['p_date'] = pd.to_datetime(df_promo_mecanica['p_date'])
-    df_promo_mecanica = df_promo_mecanica.drop_duplicates(subset=['material', 'p_date'])
+    df_promo_mecanica = df_promo_mecanica.drop_duplicates(
+        subset=['material', 'ean', 'p_date'])
 
     df_sustituto_identidad['material'] = df_sustituto_identidad['material'].astype(str)
+    df_sustituto_identidad['ean'] = df_sustituto_identidad['ean'].astype(str)
     df_sustituto_identidad['p_date'] = pd.to_datetime(df_sustituto_identidad['p_date'])
-    df_sustituto_identidad = df_sustituto_identidad.drop_duplicates(subset=['material', 'p_date'])
+    df_sustituto_identidad = df_sustituto_identidad.drop_duplicates(
+        subset=['material', 'ean', 'p_date'])
 
+    columnas_mecanica = [
+        'material', 'ean', 'p_date', 'progreso_promocion', 'frecuencia_promocional_90d']
     df_panel = df_panel.merge(
-        df_promo_mecanica[
-            ['material', 'p_date', 'progreso_promocion', 'frecuencia_promocional_90d']],
-        on=['material', 'p_date'], how='left',
+        df_promo_mecanica[columnas_mecanica],
+        on=['material', 'ean', 'p_date'], how='left',
     )
     df_panel = df_panel.merge(
-        df_sustituto_identidad[['material', 'p_date', 'ean_sustituto_1']],
-        on=['material', 'p_date'], how='left',
+        df_sustituto_identidad[['material', 'ean', 'p_date', 'ean_sustituto_1']],
+        on=['material', 'ean', 'p_date'], how='left',
     )
 
     df_panel['log_precio'] = np.log(df_panel['precio_promedio'].clip(lower=1))
@@ -387,56 +438,67 @@ def main() -> None:  # noqa: D103
     for intensidad in ORDEN_INTENSIDAD:
         df_panel[intensidad] = (df_panel['estado'] == intensidad).astype(int)
 
-    df_panel = df_panel.sort_values(['material', 'p_date']).reset_index(drop=True)
+    df_panel = df_panel.sort_values(['material_ean', 'p_date']).reset_index(drop=True)
 
     logging.info(f'Panel construido: {df_panel.shape}')
     # ENDREGION
 
-    # REGION: Mapeo material_sustituto_1
+    # REGION: Mapeo material_ean_sustituto_1
     # (identidad, para la cascada de 3 niveles)
     # -------------------------------------------------------------------
-    lookup_ean_material = (
-        df_panel[['ean', 'material']].dropna().drop_duplicates(subset=['ean'])
-        .set_index('ean')['material']
+    lookup_ean_material_ean = (
+        df_panel[['ean', 'material_ean']].dropna().drop_duplicates(subset=['ean'])
+        .set_index('ean')['material_ean']
     )
 
-    ean_sustituto_por_material = (
+    ean_sustituto_por_material_ean = (
         df_panel.dropna(subset=['ean_sustituto_1'])
-        .groupby('material')['ean_sustituto_1']
+        .groupby('material_ean')['ean_sustituto_1']
         .agg(lambda s: s.mode().iloc[0] if not s.mode().empty else np.nan)
     )
 
-    material_sustituto_1 = ean_sustituto_por_material.map(lookup_ean_material)
-    logging.info(f'Materiales con sustituto identificado y mapeado: '
-                f'{material_sustituto_1.notna().sum():,} de {len(material_sustituto_1):,}')
+    material_ean_sustituto_1 = (
+        ean_sustituto_por_material_ean.map(lookup_ean_material_ean))
+    n_con_sustituto = material_ean_sustituto_1.notna().sum()
+    n_material_ean_total = len(material_ean_sustituto_1)
+    logging.info(f'Combinaciones material x ean con sustituto identificado y mapeado: '
+                f'{n_con_sustituto:,} de {n_material_ean_total:,}')
     # ENDREGION
 
     # REGION: Loop principal -- elasticidad propia por material
     # -------------------------------------------------------------------
     resultados = []
 
-    for material, df_material in df_panel.groupby('material'):
+    for material_ean, df_material in df_panel.groupby('material_ean'):
         n_dias = len(df_material)
+        material = df_material['material'].iloc[0]
+        ean = df_material['ean'].iloc[0]
         subcat = df_material['sub_category_description'].iloc[0]
         categoria = df_material['category_description'].iloc[0]
-        ean = df_material['ean'].iloc[0]
         product_description = df_material['product_description'].iloc[0]
         sales_uom = df_material['sales_uom'].iloc[0]
+        nivel_baseline_material = df_material['nivel_baseline'].iloc[0]
 
         precio = df_material['precio_promedio']
-        rango_pct = (precio.max() - precio.min()) / precio.mean() * 100 if precio.mean() > 0 else 0
+        rango_pct = (
+            (precio.max() - precio.min()) / precio.mean() * 100
+            if precio.mean() > 0 else 0
+        )
 
-        info_modelo = {'modelo': None, 'variables': [], 'r2_ajustado': np.nan}
+        info_modelo = {'modelo': None, 'variables': [], 'r2_ajustado': np.nan,
+                        'metodo_precio': 'crudo'}
         if (n_dias >= MIN_DIAS_PARA_INTENTAR_ELASTICIDAD_PROPIA
                 and rango_pct >= MIN_RANGO_PRECIO_PCT_PARA_ESTIMAR):
-            info_modelo = _entrenar_elasticidad(df_material)
+            info_modelo = _entrenar_elasticidad_con_reintento(df_material)
 
         fila = {
-            'material': material, 'ean': ean, 'product_description': product_description,
+            'material': material, 'ean': ean, 'material_ean': material_ean,
+            'product_description': product_description,
             'category_description': categoria, 'sub_category_description': subcat,
-            'sales_uom': sales_uom,
+            'sales_uom': sales_uom, 'nivel_baseline': nivel_baseline_material,
             'n_dias': n_dias, 'rango_precio_pct': round(rango_pct, 2),
             'r2_ajustado': info_modelo['r2_ajustado'],
+            'metodo_precio': info_modelo['metodo_precio'],
         }
 
         if info_modelo['modelo'] is not None:
@@ -460,8 +522,11 @@ def main() -> None:  # noqa: D103
     df_coeficientes = pd.DataFrame(resultados)
 
     n_con_propia = df_coeficientes['coef_log_precio'].notna().sum()
-    logging.info(f'Materiales con elasticidad propia estimada: '
+    n_via_suavizado = (df_coeficientes['metodo_precio'] == 'suavizado').sum()
+    logging.info(f'Combinaciones material x ean con elasticidad propia estimada: '
                 f'{n_con_propia:,} de {len(df_coeficientes):,}')
+    logging.info(f'De esas, resueltas via precio suavizado (3er intento): '
+                f'{n_via_suavizado:,}')
     # ENDREGION
 
     # REGION: Materiales SIN baseline confiable -- se agregan para heredar
@@ -481,6 +546,7 @@ def main() -> None:  # noqa: D103
         )
         fila_vacia = {
             'material': fila_material['material'], 'ean': fila_material['ean'],
+            'material_ean': f"{fila_material['material']}_{fila_material['ean']}",
             'product_description': fila_material['product_description'],
             'category_description': fila_material['category_description'],
             'sub_category_description': fila_material['sub_category_description'],
@@ -496,7 +562,8 @@ def main() -> None:  # noqa: D103
     df_coeficientes = pd.concat([df_coeficientes, df_sin_baseline], ignore_index=True)
 
     n_nunca_regular = (df_coeficientes['motivo_sin_baseline'] == 'nunca_regular').sum()
-    n_honestidad = (df_coeficientes['motivo_sin_baseline'] == 'honestidad_fallida').sum()
+    n_honestidad = (
+        df_coeficientes['motivo_sin_baseline'] == 'honestidad_fallida').sum()
     logging.info(f'Materiales sin baseline agregados para heredar elasticidad: '
                 f'{len(df_sin_baseline):,} '
                 f'({n_nunca_regular:,} nunca tuvieron dia Regular, '
@@ -514,7 +581,7 @@ def main() -> None:  # noqa: D103
     prior_subcat = (
         con_propia.groupby('sub_category_description')
         .agg(elasticidad_subcat_prior=('coef_log_precio', 'median'),
-            n_sku_subcat_prior=('material', 'nunique'))
+            n_sku_subcat_prior=('material_ean', 'nunique'))
         .reset_index()
     )
     prior_categoria = (
@@ -525,23 +592,26 @@ def main() -> None:  # noqa: D103
     df_coeficientes = df_coeficientes.merge(prior_subcat, on='sub_category_description', how='left')  # noqa: E501
     df_coeficientes = df_coeficientes.merge(prior_categoria, on='category_description', how='left')  # noqa: E501
 
-    df_coeficientes['material_sustituto_1'] = df_coeficientes['material'].map(material_sustituto_1)
+    df_coeficientes['material_ean_sustituto_1'] = (
+        df_coeficientes['material_ean'].map(material_ean_sustituto_1))
 
     lookup_propio = (
-        df_coeficientes.set_index('material')[['coef_log_precio', 'n_dias_evidencia']]
+        df_coeficientes.set_index('material_ean')
+        [['coef_log_precio', 'n_dias_evidencia']]
         .rename(columns={'coef_log_precio': 'elasticidad_sustituto_prior',
                         'n_dias_evidencia': 'n_dias_sustituto'})
     )
 
     df_coeficientes = df_coeficientes.merge(
-        lookup_propio, left_on='material_sustituto_1', right_index=True, how='left'
+        lookup_propio, left_on='material_ean_sustituto_1', right_index=True, how='left'
     )
 
     sustituto_calificado = (
-        df_coeficientes['material_sustituto_1'].notna()
+        df_coeficientes['material_ean_sustituto_1'].notna()
         & (df_coeficientes['n_dias_sustituto'] >= MIN_DIAS_SUSTITUTO_CONFIABLE)
     )
-    subcat_calificada = df_coeficientes['n_sku_subcat_prior'] >= MIN_SKU_PRIOR_SUBCATEGORIA
+    subcat_calificada = (
+        df_coeficientes['n_sku_subcat_prior'] >= MIN_SKU_PRIOR_SUBCATEGORIA)
 
     df_coeficientes['elasticidad_prior_final'] = np.select(
         [sustituto_calificado, subcat_calificada],
@@ -549,12 +619,39 @@ def main() -> None:  # noqa: D103
         default=df_coeficientes['elasticidad_categoria_prior'],
     )
 
+    tiene_evidencia_propia = df_coeficientes['n_dias_evidencia'] > 0
+    tiene_categoria_prior = df_coeficientes['elasticidad_categoria_prior'].notna()
     df_coeficientes['origen_elasticidad'] = np.select(
-        [df_coeficientes['n_dias_evidencia'] > 0, sustituto_calificado, subcat_calificada,
-        df_coeficientes['elasticidad_categoria_prior'].notna()],
+        [tiene_evidencia_propia, sustituto_calificado, subcat_calificada,
+        tiene_categoria_prior],
         ['propia', 'heredada_sustituto', 'heredada_subcategoria', 'heredada_categoria'],
         default='sin_evidencia',
     )
+
+    # Sub-clasificar 'propia' segun el camino que gano en Baseline --
+    # para distinguir una elasticidad medida con Regular real de una
+    # medida via el regimen de precio de referencia dinamico (que no
+    # captura el uplift promocional, solo la sensibilidad al precio
+    # dentro del propio regimen del SKU -- ver documento de arquitectura).
+    es_propia = df_coeficientes['origen_elasticidad'] == 'propia'
+    mascara_regimen = es_propia & (
+        df_coeficientes['nivel_baseline'] == 'blend_regimen_dinamico')
+    mascara_historia = es_propia & (
+        df_coeficientes['nivel_baseline'] == 'blend_historia_completa')
+    df_coeficientes.loc[mascara_regimen, 'origen_elasticidad'] = (
+        'propia_regimen_dinamico')
+    df_coeficientes.loc[mascara_historia, 'origen_elasticidad'] = (
+        'propia_historia_completa')
+
+    # El precio suavizado es un caso aparte -- puede pasar con
+    # CUALQUIERA de los 3 caminos de Baseline (Regular real, regimen,
+    # o historia completa), ya que resuelve un problema distinto (precio
+    # diario demasiado ruidoso para la regresion de elasticidad, no
+    # falta de dias). Se marca con prioridad porque es el caveat mas
+    # importante para interpretar el numero.
+    mascara_suavizado = es_propia & (df_coeficientes['metodo_precio'] == 'suavizado')
+    df_coeficientes.loc[mascara_suavizado, 'origen_elasticidad'] = (
+        'propia_precio_suavizado')
 
     # Los materiales que nunca tuvieron baseline confiable (motivo_sin_
     # baseline no-nulo) jamas pueden tener origen 'propia' -- pero para
@@ -565,8 +662,9 @@ def main() -> None:  # noqa: D103
     # columna 'motivo_sin_baseline' para diagnostico, sin saturar el
     # string de origen reportado.
     mascara_sin_baseline = df_coeficientes['motivo_sin_baseline'].notna()
+    origen_base = df_coeficientes.loc[mascara_sin_baseline, 'origen_elasticidad']
     df_coeficientes.loc[mascara_sin_baseline, 'origen_elasticidad'] = (
-        'sin_baseline_' + df_coeficientes.loc[mascara_sin_baseline, 'origen_elasticidad']
+        'sin_baseline_' + origen_base
     )
 
     df_coeficientes['peso_propio'] = (
@@ -575,15 +673,20 @@ def main() -> None:  # noqa: D103
     )
 
     coef_log_precio_seguro = df_coeficientes['coef_log_precio'].fillna(0)
+    peso_propio = df_coeficientes['peso_propio']
+    coef_propio_sin_shrinkage = np.where(
+        df_coeficientes['n_dias_evidencia'] > 0,
+        df_coeficientes['coef_log_precio'], np.nan)
 
     df_coeficientes['elasticidad_final'] = np.where(
         df_coeficientes['elasticidad_prior_final'].notna(),
-        (df_coeficientes['peso_propio'] * coef_log_precio_seguro
-        + (1 - df_coeficientes['peso_propio']) * df_coeficientes['elasticidad_prior_final']),
-        np.where(df_coeficientes['n_dias_evidencia'] > 0, df_coeficientes['coef_log_precio'], np.nan),  # noqa: E501
+        (peso_propio * coef_log_precio_seguro
+        + (1 - peso_propio) * df_coeficientes['elasticidad_prior_final']),
+        coef_propio_sin_shrinkage,
     )
 
-    df_coeficientes['confianza'] = df_coeficientes['n_dias_evidencia'].apply(_calcular_confianza)
+    df_coeficientes['confianza'] = (
+        df_coeficientes['n_dias_evidencia'].apply(_calcular_confianza))
     df_coeficientes['store_banner'] = store_banner
 
     logging.info('Distribucion de origen de la elasticidad:')
@@ -592,25 +695,35 @@ def main() -> None:  # noqa: D103
 
     # REGION: Parche -- casos de elasticidad_final fuera del rango [-5, 0]
     # -------------------------------------------------------------------
-    df_transiciones_para_parche['material'] = df_transiciones_para_parche['material'].astype(str)
+    df_transiciones_para_parche['material'] = (
+        df_transiciones_para_parche['material'].astype(str))
 
-    evidencia_por_material = df_transiciones_para_parche.groupby('material')['n_eventos'].sum()
-    mediana_por_material = df_transiciones_para_parche.groupby('material')['elasticidad_arco_final'].median()  # noqa: E501
+    evidencia_por_material = (
+        df_transiciones_para_parche.groupby('material')['n_eventos'].sum())
+    mediana_por_material = (
+        df_transiciones_para_parche.groupby('material')['elasticidad_arco_final']
+        .median()
+    )
 
-    df_coeficientes['mediana_transiciones'] = df_coeficientes['material'].map(mediana_por_material)
+    df_coeficientes['mediana_transiciones'] = (
+        df_coeficientes['material'].map(mediana_por_material))
     df_coeficientes['evidencia_transiciones_total'] = (
         df_coeficientes['material'].map(evidencia_por_material).fillna(0)
     )
 
-    df_coeficientes['elasticidad_final_parcheada'] = df_coeficientes['elasticidad_final']
+
+    df_coeficientes['elasticidad_final_parcheada'] = (
+        df_coeficientes['elasticidad_final'])
 
     es_positiva = df_coeficientes['elasticidad_final'] > 0
     tiene_evidencia_transiciones = (
-        (df_coeficientes['evidencia_transiciones_total'] > 0) & df_coeficientes['mediana_transiciones'].notna()  # noqa: E501
+        (df_coeficientes['evidencia_transiciones_total'] > 0)
+        & df_coeficientes['mediana_transiciones'].notna()
     )
 
     regla_1 = es_positiva & tiene_evidencia_transiciones
-    df_coeficientes.loc[regla_1, 'elasticidad_final_parcheada'] = df_coeficientes.loc[regla_1, 'mediana_transiciones']  # noqa: E501
+    df_coeficientes.loc[regla_1, 'elasticidad_final_parcheada'] = (
+        df_coeficientes.loc[regla_1, 'mediana_transiciones'])
 
     regla_2 = es_positiva & (~tiene_evidencia_transiciones)
     df_coeficientes.loc[regla_2, 'elasticidad_final_parcheada'] = -1.0
@@ -625,17 +738,24 @@ def main() -> None:  # noqa: D103
     df_coeficientes.loc[parcheado & ~mascara_sin_baseline, 'origen_elasticidad'] = (
         'Sin evidencia - Acotado al rango'
     )
-    df_coeficientes['elasticidad_final'] = df_coeficientes['elasticidad_final_parcheada']
+    df_coeficientes['elasticidad_final'] = (
+        df_coeficientes['elasticidad_final_parcheada'])
 
-    logging.info(f'Regla 1 (positiva + evidencia en transiciones -> mediana): {regla_1.sum():,} materiales')  # noqa: E501
-    logging.info(f'Regla 2 (positiva + sin evidencia -> -1.0): {regla_2.sum():,} materiales')
-    logging.info(f'Regla 3 (mas negativa que {RANGO_ELASTICIDAD_MIN} -> {RANGO_ELASTICIDAD_MIN}): {regla_3.sum():,} materiales')  # noqa: E501
+    n_regla1, n_regla2, n_regla3 = regla_1.sum(), regla_2.sum(), regla_3.sum()
+    logging.info(
+        f'Regla 1 (positiva + evidencia en transiciones -> mediana): '
+        f'{n_regla1:,} materiales')
+    logging.info(f'Regla 2 (positiva + sin evidencia -> -1.0): {n_regla2:,} materiales')
+    logging.info(
+        f'Regla 3 (mas negativa que {RANGO_ELASTICIDAD_MIN} -> '
+        f'{RANGO_ELASTICIDAD_MIN}): {n_regla3:,} materiales')
     logging.info(f'Total parcheados: {parcheado.sum():,} de {len(df_coeficientes):,}')
     # ENDREGION
 
     # REGION: Re-parche -- heredar de subcategoria/categoria antes del
     # -------------------------------------------------------------------
-    con_propia_acotado = df_coeficientes[df_coeficientes['origen_elasticidad'] == 'propia']
+    con_propia_acotado = (
+        df_coeficientes[df_coeficientes['origen_elasticidad'] == 'propia'])
 
     prior_subcat_acotado = (
         con_propia_acotado.groupby('sub_category_description')
@@ -648,38 +768,54 @@ def main() -> None:  # noqa: D103
         .median().rename('elasticidad_prior_cat_acotado').reset_index()
     )
 
-    df_coeficientes = df_coeficientes.merge(prior_subcat_acotado, on='sub_category_description', how='left')  # noqa: E501
-    df_coeficientes = df_coeficientes.merge(prior_cat_acotado, on='category_description', how='left')  # noqa: E501
+    df_coeficientes = df_coeficientes.merge(
+        prior_subcat_acotado, on='sub_category_description', how='left')
+    df_coeficientes = df_coeficientes.merge(
+        prior_cat_acotado, on='category_description', how='left')
 
     ETIQUETA_ACOTADO_SIN_BASELINE = f'sin_baseline_{ETIQUETA_ACOTADO}'  # noqa: N806
     necesita_reparche = df_coeficientes['origen_elasticidad'].isin(
         [ETIQUETA_ACOTADO, ETIQUETA_ACOTADO_SIN_BASELINE])
-    era_sin_baseline = df_coeficientes['origen_elasticidad'] == ETIQUETA_ACOTADO_SIN_BASELINE
-    subcat_califica_acotado = df_coeficientes['n_sku_subcat_prior_acotado'].fillna(0) >= MIN_SKU_PRIOR_SUBCATEGORIA_ACOTADO  # noqa: E501
+    era_sin_baseline = (
+        df_coeficientes['origen_elasticidad'] == ETIQUETA_ACOTADO_SIN_BASELINE)
+    subcat_califica_acotado = (
+        df_coeficientes['n_sku_subcat_prior_acotado'].fillna(0)
+        >= MIN_SKU_PRIOR_SUBCATEGORIA_ACOTADO
+    )
     subcat_disponible_acotado = necesita_reparche & subcat_califica_acotado
+    tiene_prior_cat_acotado = df_coeficientes['elasticidad_prior_cat_acotado'].notna()
     categoria_disponible_acotado = (
-        necesita_reparche & (~subcat_califica_acotado) & df_coeficientes['elasticidad_prior_cat_acotado'].notna()  # noqa: E501
+        necesita_reparche & (~subcat_califica_acotado) & tiene_prior_cat_acotado
     )
 
     df_coeficientes.loc[subcat_disponible_acotado, 'elasticidad_final'] = (
-        df_coeficientes.loc[subcat_disponible_acotado, 'elasticidad_prior_subcat_acotado']
+        df_coeficientes.loc[
+            subcat_disponible_acotado, 'elasticidad_prior_subcat_acotado']
     )
-    df_coeficientes.loc[subcat_disponible_acotado & era_sin_baseline, 'origen_elasticidad'] = (
+    df_coeficientes.loc[
+        subcat_disponible_acotado & era_sin_baseline, 'origen_elasticidad'] = (
         'sin_baseline_heredada_subcategoria_tras_acotado')
-    df_coeficientes.loc[subcat_disponible_acotado & ~era_sin_baseline, 'origen_elasticidad'] = (
+    df_coeficientes.loc[
+        subcat_disponible_acotado & ~era_sin_baseline, 'origen_elasticidad'] = (
         'heredada_subcategoria_tras_acotado')
 
     df_coeficientes.loc[categoria_disponible_acotado, 'elasticidad_final'] = (
-        df_coeficientes.loc[categoria_disponible_acotado, 'elasticidad_prior_cat_acotado']
+        df_coeficientes.loc[
+            categoria_disponible_acotado, 'elasticidad_prior_cat_acotado']
     )
-    df_coeficientes.loc[categoria_disponible_acotado & era_sin_baseline, 'origen_elasticidad'] = (
+    df_coeficientes.loc[
+        categoria_disponible_acotado & era_sin_baseline, 'origen_elasticidad'] = (
         'sin_baseline_heredada_categoria_tras_acotado')
-    df_coeficientes.loc[categoria_disponible_acotado & ~era_sin_baseline, 'origen_elasticidad'] = (
+    df_coeficientes.loc[
+        categoria_disponible_acotado & ~era_sin_baseline, 'origen_elasticidad'] = (
         'heredada_categoria_tras_acotado')
 
-    logging.info(f'De los {necesita_reparche.sum():,} materiales "acotados al rango" (con o sin '
-                f'baseline): {subcat_disponible_acotado.sum():,} resueltos por subcategoria, '
-                f'{categoria_disponible_acotado.sum():,} por categoria')
+    n_reparche_subcat = subcat_disponible_acotado.sum()
+    n_reparche_cat = categoria_disponible_acotado.sum()
+    logging.info(
+        f'De los {necesita_reparche.sum():,} materiales "acotados al rango" (con o sin '
+        f'baseline): {n_reparche_subcat:,} resueltos por subcategoria, '
+        f'{n_reparche_cat:,} por categoria')
     # ENDREGION
 
     # REGION: Segmento high/low
@@ -720,7 +856,7 @@ def main() -> None:  # noqa: D103
 
     uploadFrame(
         df_elasticidad_final,
-        table_ddl_json_path=os.path.join('gbq_objects', 'ingest_elasticity.json'),
+        table_ddl_json_path=os.path.join('gbq_objects', 'ingest_elasticity_pr.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='append'
