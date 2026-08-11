@@ -16,8 +16,6 @@ from google.cloud.bigquery import Client
 from sklearn.preprocessing import MinMaxScaler
 from dateutil.relativedelta import relativedelta
 
-import common.office365_extended.sharepoint as sp
-
 # import common.office365_extended.sharepoint as sp  # noqa: ERA001
 # Own
 from common.constants import LOGGING_CONFIG
