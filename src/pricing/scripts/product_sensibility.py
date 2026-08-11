@@ -553,7 +553,7 @@ def main() -> None:  # noqa: D103
     factor_outliers = 10
 
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'PRODUCT_SENSIBILITY'
+    tabla = 'PRODUCT_SENSIBILITY_ENERO_2026'
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
