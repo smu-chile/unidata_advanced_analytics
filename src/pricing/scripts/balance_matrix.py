@@ -354,7 +354,7 @@ def main() -> None:  # noqa: D103
             'Documentos%20compartidos/'
             'Pricing/'
             'Balance Matrix AA - GCP/'
-            f'Balance_Matrix_AA_{store_banner}.xlsx'
+            f'Balance_Matrix_AA_{store_banner}_TEMP.xlsx'
         )
     ).upload(buffer)
     logging.info('Tabla subida en Sharepoint')
@@ -370,7 +370,7 @@ def main() -> None:  # noqa: D103
 
     # Parametros
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'BALANCE_MATRIX'
+    tabla = 'BALANCE_MATRIX_TEMP'
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
