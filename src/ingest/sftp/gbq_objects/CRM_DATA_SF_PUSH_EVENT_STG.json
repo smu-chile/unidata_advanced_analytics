@@ -30,7 +30,7 @@
         },
          {
             "name": "MESSAGE_ID",
-            "field_type": "INTEGER",
+            "field_type": "STRING",
             "mode": "NULLABLE"
         },
         {
