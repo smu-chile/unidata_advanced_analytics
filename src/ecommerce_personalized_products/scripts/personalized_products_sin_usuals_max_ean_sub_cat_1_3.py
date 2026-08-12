@@ -82,23 +82,6 @@ SQL_QUERIES = QueryDict({
         FROM`${gcp_project}.ML_LAB.W2V_CUSTOMER_EMBEDDINGS`
         WHERE date = '${fecha_emb}'
         AND store_banner = '${store_banner}'
-        AND customer_key IN (
-            FROM_BASE64('aSg9tFRjxdgT12sSbnG7LA=='),
-            FROM_BASE64('eYPo7nMndFtbrPoMzXExdA=='),
-            FROM_BASE64('DQaqL1qALLNUlXl0HICjDQ'),
-            FROM_BASE64('emQwxVeJ34weHj3P+omSFg=='),
-            FROM_BASE64('eRzgTneP0tGKsnMZ9U2xQQ=='),
-            FROM_BASE64('iSFrmN+kHVbHRQqBaaRdQQ=='),
-            FROM_BASE64('P5uD9Q6vg6/Z9pAuRas65g=='),
-            FROM_BASE64('eomAD4slCiWWkUDz/zwwLQ=='),
-            FROM_BASE64('5lvjTzd2D7/4Hzx9OOb3fg=='),
-            FROM_BASE64('QA+qP4odVW3QOOCyXfArgQ=='),
-            FROM_BASE64('G3eG4XSovD/2EsL5eAP2wQ=='),
-            FROM_BASE64('zSQdiN4QvKm39gwe5zqxUA=='),
-            FROM_BASE64('UA+lolcjjhcXXdbjN9aB8w=='),
-            FROM_BASE64('Srko2maBU6R9BrmQ8jHw5A=='),
-            FROM_BASE64('7K3bbBkZLsufdmbDUngOSQ==')
-        )
     ) customer_emb
 
     INNER JOIN (
@@ -229,23 +212,6 @@ SQL_QUERIES = QueryDict({
                 SELECT MARKET_BASKET_KEY
                 FROM `${gcp_project}.CDA_VISTAS.VW_FACT_MARKET_BASKET_E_COMMERCE`
                 WHERE CANAL_VENTA IN ('PEDIDOS YA','UBER EATS','RAPPI','RAPPI TURBO')
-            )
-            AND A.customer_key IN (
-                FROM_BASE64('aSg9tFRjxdgT12sSbnG7LA=='),
-                FROM_BASE64('eYPo7nMndFtbrPoMzXExdA=='),
-                FROM_BASE64('DQaqL1qALLNUlXl0HICjDQ'),
-                FROM_BASE64('emQwxVeJ34weHj3P+omSFg=='),
-                FROM_BASE64('eRzgTneP0tGKsnMZ9U2xQQ=='),
-                FROM_BASE64('iSFrmN+kHVbHRQqBaaRdQQ=='),
-                FROM_BASE64('P5uD9Q6vg6/Z9pAuRas65g=='),
-                FROM_BASE64('eomAD4slCiWWkUDz/zwwLQ=='),
-                FROM_BASE64('5lvjTzd2D7/4Hzx9OOb3fg=='),
-                FROM_BASE64('QA+qP4odVW3QOOCyXfArgQ=='),
-                FROM_BASE64('G3eG4XSovD/2EsL5eAP2wQ=='),
-                FROM_BASE64('zSQdiN4QvKm39gwe5zqxUA=='),
-                FROM_BASE64('UA+lolcjjhcXXdbjN9aB8w=='),
-                FROM_BASE64('Srko2maBU6R9BrmQ8jHw5A=='),
-                FROM_BASE64('7K3bbBkZLsufdmbDUngOSQ==')
             )
     )
 
