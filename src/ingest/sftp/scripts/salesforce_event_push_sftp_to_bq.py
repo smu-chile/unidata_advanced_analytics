@@ -521,7 +521,7 @@ def main():  # noqa: ANN201, D103
     # ---------------------------------------------------------
     # VALIDACIÓN FINAL
     # ---------------------------------------------------------
-    validar_carga_final(client=bq_client, 
+    validar_carga_final(client=bq_client,
         stg_table=table_ref, final_table=FINAL_TABLE_ID)
 
 # ---------------------------------------------------------------------
