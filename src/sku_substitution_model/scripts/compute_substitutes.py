@@ -721,7 +721,7 @@ def main() -> None:
 
     logging.info('Removing past run data')
     gbq_extended.deleteFromTable(
-        os.path.join('gbq_objects', 'sku_substitutes_by_category2.json'),
+        os.path.join('gbq_objects', 'sku_substitutes_by_category.json'),
         project=gcp_project,
         where_clause=f"""
             date = DATE('{execution_date}')
@@ -749,11 +749,11 @@ def main() -> None:
             sku_sophistication_scores=sophistication_score,
             score_ponderations={
                 'w2v_distance_filter': 8e-1,
-                'tfidf_distance_filter': 5e-3,
-                'ots_distance_filter': 4e-2,
-                'other_units_filter': 1e-3,
-                'hm_pu_ppum_filter': 4e-2,
-                'container_filter': 5e-3,
+                'tfidf_distance_filter': 0e-1,
+                'ots_distance_filter': 9.5e-2,
+                'other_units_filter': 0e-1,
+                'hm_pu_ppum_filter': 9.5e-2,
+                'container_filter': 1e-2,
             },
             output='rank',
             top_k=n_substitutes
@@ -768,7 +768,7 @@ def main() -> None:
 
         gbq_extended.uploadFrame(
             substitutes,
-            table_ddl_json_path=os.path.join('gbq_objects', 'sku_substitutes_by_category2.json'),
+            table_ddl_json_path=os.path.join('gbq_objects', 'sku_substitutes_by_category.json'),
             project=gcp_project,
             gbq_client=gbq_client,
             if_exists='append'
