@@ -314,6 +314,8 @@ def main() -> None:
     now = pendulum.now()
     expiration = now.add(minutes=1440)
 
+    logging.info('Creacion Tabla Base')
+
     createTableAsSelect(
         query=SQL_QUERIES['base'].substitute(
             gcp_project = gcp_project,
@@ -336,6 +338,8 @@ def main() -> None:
         expiration = expiration,
         gbq_client= gbq_client
     )
+
+    logging.info('Rankeo de productos complementarios')
 
     ranking = readBigQuery(SQL_QUERIES['ranking'].substitute(
         gcp_project = gcp_project,
@@ -362,6 +366,8 @@ def main() -> None:
 
     ranking['store_banner'] = store_banner
     ranking['date'] = execution_date
+
+    logging.info('Ingesta de datos')
 
     deleteFromTable(
         table_ref=f'{gcp_project}.ML_LAB.COMPLEMENTARY_PRODUCTS',
