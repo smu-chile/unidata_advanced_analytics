@@ -38,11 +38,15 @@ PROJECT_NAME = 'pricing_effects'
 STORE_BANNER_LIST = ['Unimarc', 'Super 10', 'Alvi']
 
 REGIONES = [
-    'I Tarapacá', 'II Antofagasta', 'III Atacama', 'IV Región de Coquimbo',
-    'V Región de Valparaíso', 'VI Región de OHiggins', 'VII Región del Maule',
-    'VIII Región del Bío-Bío', 'IX Región de la Araucanía', 'X Región de Los Lagos',
-    'XI Región de Aysén', 'XII Magallanes', 'XIII Región Metropolitana',
-    'XIV Región de Los Ríos', 'XV Arica y Parinacota', 'XVI Región de Ñuble',
+    'I Tarapacá', 'II Antofagasta'
+    #, 'III Atacama', 'IV Región de Coquimbo',
+    #'V Región de Valparaíso', 'VI Región de OHiggins',
+    # 'VII Región del Maule',
+    #'VIII Región del Bío-Bío', 'IX Región de la Araucanía',
+    # 'X Región de Los Lagos',
+    #'XI Región de Aysén', 'XII Magallanes', 'XIII Región Metropolitana',
+    #'XIV Región de Los Ríos', 'XV Arica y Parinacota',
+    # 'XVI Región de Ñuble',
 ]
 
 RECURSOS_EXTRA_POR_BANNER = {
