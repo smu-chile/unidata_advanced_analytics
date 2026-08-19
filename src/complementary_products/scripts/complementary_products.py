@@ -319,6 +319,7 @@ def main() -> None:
             gcp_project = gcp_project,
             store_banner = store_banner,
             fecha = execution_date,
+            month_interval = month_interval,
             min_canasta = min_canasta,
             min_freq_conj = min_freq_conj,
             max_ir = max_ir
@@ -377,18 +378,11 @@ def main() -> None:
             'store_banner',
             'date'
         ]],
-        table_ddl_json_path=os.path.join('gbq_objects','tmp_complementary_products.json'),
+        table_ddl_json_path=os.path.join('gbq_objects','complementary_products.json'),
         project = gcp_project,
         gbq_client = gbq_client,
         if_exists = 'append'
     )
 
-
-
-
-
-
-
 if __name__ == '__main__':
     main()
-

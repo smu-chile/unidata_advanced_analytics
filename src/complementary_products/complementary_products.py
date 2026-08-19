@@ -62,7 +62,7 @@ dag_args = {
 
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
-    month_interval = "{{ dag_run.conf.get('month_interval', 6) }}"
+    month_interval = "{{ dag_run.conf.get('month_interval', 3) }}"
     min_canasta = "{{ dag_run.conf.get('min_canasta', 500) }}"
     min_freq_conj = "{{ dag_run.conf.get('min_freq_conj', 500) }}"
     max_ir = "{{ dag_run.conf.get('max_ir', 0.8) }}"
