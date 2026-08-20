@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import logging
 import argparse
@@ -9,8 +9,7 @@ from google.cloud.bigquery import Client
 
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.gcp_extended.bigquery import uploadFrame, readBigQuery
-
+from common.gcp_extended.bigquery import readBigQuery, uploadFrame
 
 config.dictConfig(LOGGING_CONFIG)
 
@@ -47,6 +46,53 @@ SELECT DISTINCT
         WHEN DSH.STE_ID = '15' THEN 'XV Arica y Parinacota'
         WHEN DSH.STE_ID = '16' THEN 'XVI Región de Ñuble'
     END AS region,
+    CASE
+        WHEN DSH.STE_ID IN ('01', '15', '02') THEN 'Norte Grande'
+        WHEN DSH.STE_ID IN ('03', '04') THEN 'Norte Chico'
+        WHEN DSH.STE_ID IN ('05', '06', '07') THEN 'Central'
+        WHEN DSH.STE_ID = '13' THEN 'Metropolitana'
+        WHEN DSH.STE_ID IN ('09', '08', '14', '10', '16') THEN 'Sur'
+        WHEN DSH.STE_ID IN ('11', '12') THEN 'Austral'
+    END AS zona,
+    -- Sector solo aplica dentro de la Region Metropolitana (STE_ID=13)
+    -- -- fuera de ahi, siempre NULL (se agrupa por region o zona).
+    CASE
+        WHEN DSH.STE_ID != '13' THEN NULL
+        WHEN DSH.COUNTY_DESC LIKE '%SANTIAGO%' THEN 'Centro'
+        WHEN DSH.COUNTY_DESC LIKE '%PROVIDENCIA%'
+            OR DSH.COUNTY_DESC LIKE '%ÑUÑOA%'
+            OR DSH.COUNTY_DESC LIKE '%LA REINA%'
+            OR DSH.COUNTY_DESC LIKE '%VITACURA%'
+            OR DSH.COUNTY_DESC LIKE '%LO BARNECHEA%'
+            OR DSH.COUNTY_DESC LIKE '%LAS CONDES%'
+            OR DSH.COUNTY_DESC LIKE '%MACUL%' THEN 'Oriente'
+        WHEN DSH.COUNTY_DESC LIKE '%QUINTA NORMAL%'
+            OR DSH.COUNTY_DESC LIKE '%LO PRADO%'
+            OR DSH.COUNTY_DESC LIKE '%PUDAHUEL%'
+            OR DSH.COUNTY_DESC LIKE '%CERRO NAVIA%'
+            OR DSH.COUNTY_DESC LIKE '%RENCA%'
+            OR DSH.COUNTY_DESC LIKE '%QUILICURA%'
+            OR DSH.COUNTY_DESC LIKE '%CONCHALI%'
+            OR DSH.COUNTY_DESC LIKE '%HUECHURABA%'
+            OR DSH.COUNTY_DESC LIKE '%INDEPENDENCIA%'
+            OR DSH.COUNTY_DESC LIKE '%RECOLETA%' THEN 'Norte'
+        WHEN DSH.COUNTY_DESC LIKE '%EL BOSQUE%'
+            OR DSH.COUNTY_DESC LIKE '%SAN BERNARDO%'
+            OR DSH.COUNTY_DESC LIKE '%LA PINTANA%'
+            OR DSH.COUNTY_DESC LIKE '%SAN RAMON%'
+            OR DSH.COUNTY_DESC LIKE '%SAN MIGUEL%'
+            OR DSH.COUNTY_DESC LIKE '%LA CISTERNA%' THEN 'Sur'
+        WHEN DSH.COUNTY_DESC LIKE '%SAN JOAQUIN%'
+            OR DSH.COUNTY_DESC LIKE '%LA GRANJA%'
+            OR DSH.COUNTY_DESC LIKE '%PEÑALOLEN%'
+            OR DSH.COUNTY_DESC LIKE '%LA FLORIDA%'
+            OR DSH.COUNTY_DESC LIKE '%PUENTE ALTO%' THEN 'Sur Oriente'
+        WHEN DSH.COUNTY_DESC LIKE '%MAIPU%'
+            OR DSH.COUNTY_DESC LIKE '%PEDRO AGUIRRE CERDA%'
+            OR DSH.COUNTY_DESC LIKE '%LO ESPEJO%'
+            OR DSH.COUNTY_DESC LIKE '%ESTACION CENTRAL%'
+            OR DSH.COUNTY_DESC LIKE '%CERRILLOS%' THEN 'Poniente'
+    END AS sector,
     LTRIM(DSH.STORE_ID,'0') AS store_id
 FROM (
     SELECT PRODUCT_KEY_1, STORE_KEY, DATE_KEY, ITM_TXN_FCN_TP_DSC,
@@ -106,14 +152,30 @@ def main() -> None:  # noqa: D103
     df_tiendas_activas = readBigQuery(query=query, user=usuario, gbq_client=gbq_client)
     df_tiendas_activas = df_tiendas_activas[df_tiendas_activas['store_banner'] != 'NO APLICA']
     df_tiendas_activas = df_tiendas_activas[df_tiendas_activas['region'].notna()]
+    # 'sector' queda NULL fuera de la Metropolitana -- es esperado
 
     logging.info(f'Tiendas activas resueltas: {len(df_tiendas_activas):,}')
     logging.info(
         df_tiendas_activas.groupby(['store_banner', 'region'])['store_id']
         .count().to_string()
     )
+    logging.info('Desglose de Metropolitana por sector:')
+    logging.info(
+        df_tiendas_activas[df_tiendas_activas['region'] == 'XIII Región Metropolitana']
+        .groupby(['store_banner', 'sector'])['store_id'].count().to_string()
+    )
 
     tabla_destino = f'{proyecto}.TMP.TMP_TIENDAS_ACTIVAS_POR_REGION'
+
+    # Mismo resguardo que en processed_regression_data_region.py --
+    # uploadFrame asigna nombres de columna por posicion, no por
+    # nombre. Se fuerza el orden explicito para evitar el mismo bug.
+    columnas_schema_orden = ['store_banner', 'region', 'zona', 'sector', 'store_id']
+    mapa_columnas_actual = {c.lower(): c for c in df_tiendas_activas.columns}
+    df_tiendas_activas = df_tiendas_activas[
+        [mapa_columnas_actual[c] for c in columnas_schema_orden]
+    ]
+
     uploadFrame(
         df_tiendas_activas,
         table_ddl_json_path='gbq_objects/ingest_tiendas_activas_por_region.json',
