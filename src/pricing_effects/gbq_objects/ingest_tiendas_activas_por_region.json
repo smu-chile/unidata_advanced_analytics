@@ -1,0 +1,25 @@
+{
+    "schema": "TMP",
+    "table": "TMP_TIENDAS_ACTIVAS_POR_REGION",
+
+    "columns": [
+        {
+            "name": "store_banner",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Banner al que pertenece la tienda (Unimarc, Alvi, Super 10, Mayorista 10)"
+        },
+        {
+            "name": "region",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Region geografica de Chile a la que pertenece la tienda"
+        },
+        {
+            "name": "store_id",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Codigo de tienda (sin ceros a la izquierda), confirmado con venta real en el periodo de la corrida actual"
+        }
+    ]
+}

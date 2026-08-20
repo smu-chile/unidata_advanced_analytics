@@ -61,28 +61,9 @@ parser.add_argument(
 SQL_QUERIES = QueryDict({
 'query_tiendas_por_region':
 """
-SELECT DISTINCT
-    LTRIM(DH.STORE_ID,'0') AS STORE_ID
-FROM `cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_STORE_HIERARCHY` DH
-WHERE
-    CASE
-        WHEN DH.STE_ID = '01' THEN 'I Tarapacá'
-        WHEN DH.STE_ID = '02' THEN 'II Antofagasta'
-        WHEN DH.STE_ID = '03' THEN 'III Atacama'
-        WHEN DH.STE_ID = '04' THEN 'IV Región de Coquimbo'
-        WHEN DH.STE_ID = '05' THEN 'V Región de Valparaíso'
-        WHEN DH.STE_ID = '06' THEN 'VI Región de OHiggins'
-        WHEN DH.STE_ID = '07' THEN 'VII Región del Maule'
-        WHEN DH.STE_ID = '08' THEN 'VIII Región del Bío-Bío'
-        WHEN DH.STE_ID = '09' THEN 'IX Región de la Araucanía'
-        WHEN DH.STE_ID = '10' THEN 'X Región de Los Lagos'
-        WHEN DH.STE_ID = '11' THEN 'XI Región de Aysén'
-        WHEN DH.STE_ID = '12' THEN 'XII Magallanes'
-        WHEN DH.STE_ID = '13' THEN 'XIII Región Metropolitana'
-        WHEN DH.STE_ID = '14' THEN 'XIV Región de Los Ríos'
-        WHEN DH.STE_ID = '15' THEN 'XV Arica y Parinacota'
-        WHEN DH.STE_ID = '16' THEN 'XVI Región de Ñuble'
-    END = '${region}'
+SELECT DISTINCT store_id AS STORE_ID
+FROM `${proyecto}.TMP.TMP_TIENDAS_ACTIVAS_POR_REGION`
+WHERE store_banner = '${store_banner}' AND region = '${region}'
 """,
 'query_master_table':
 """
@@ -423,7 +404,7 @@ def main() -> None:  # noqa: D103
     # Parse input variables
     args = vars(parser.parse_args())
     execution_date: str = args['execution_date']
-    proyecto: str = args['project_id']  # noqa: F841
+    proyecto: str = args['project_id']
     store_banner:str = args['store_banner']
     use:str = args['use']
     region: str = args['region']
@@ -439,7 +420,9 @@ def main() -> None:  # noqa: D103
     # Resolver que tiendas pertenecen a esta region -- el resto del
     # pipeline queda igual, solo cambia el listado de tiendas de entrada
     query_tiendas_por_region = SQL_QUERIES['query_tiendas_por_region'].substitute(
-        region=region
+        region=region,
+        store_banner=store_banner,
+        proyecto=proyecto,
     )
     df_tiendas_region = readBigQuery(
         query=query_tiendas_por_region,
@@ -1117,7 +1100,7 @@ def main() -> None:  # noqa: D103
 
     df_final['region'] = region
     df_final['store_id'] = store_id_str  # se mantiene para trazabilidad -- que tiendas
-                                        # componen esta region en es
+                                    # componen esta region en esta corrida
 
     logging.info('Se elimina inicio frio...')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1126,7 +1109,8 @@ def main() -> None:  # noqa: D103
     # REGION: Se sube la tabla a BIG QUERY
     #--------------------------------------------------------------------------
 
-    #Parche 4: tabla final identificada por REGION
+    #Parche 4: tabla final identificada por REGION,
+    # no por listado de tiendas.
     if use == 'ELASTICITY':
         deleteFromTable(table_ref='cl-bigdata-analytics-preprod.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_REGION',
                 where_clause=f"store_banner = '{store_banner}' and region = '{region}'",
@@ -1142,6 +1126,7 @@ def main() -> None:  # noqa: D103
         )
 
     logging.info(f'Se sube info actualizada del formato {store_banner}...')
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
 
 

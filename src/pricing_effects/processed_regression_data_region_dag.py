@@ -49,6 +49,10 @@ REGIONES = [
     # 'XVI Región de Ñuble',
 ]
 
+# Unimarc es, por lejos, el banner con mas materiales -- el driver
+# fallaba con SIGKILL (exit 137, presion de memoria) usando los
+# recursos por defecto. Se le da mas poder solo a este banner; el
+# resto sigue con la configuracion default del operador.
 RECURSOS_EXTRA_POR_BANNER = {
     'Unimarc': {
         'spark_driver_cores': 8,
@@ -62,7 +66,13 @@ dag_args = {
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
-    'concurrency': 8,
+    # El DAG original (givenlist.py) usa concurrency=1 -- nunca corre 2
+    # consultas pesadas contra VW_SALES_ITEM al mismo tiempo. 8 aca
+    # generaba contencion real de slots de BigQuery (varias corridas
+    # pesadas compitiendo a la vez), explicando el cuelgue observado.
+    # Se deja en 2 como punto intermedio conservador -- ajustar si se
+    # confirma que sigue habiendo contencion.
+    'concurrency': 2,
     'tags': [
         PROJECT_NAME,
         'jsanmartin'
@@ -100,6 +110,31 @@ with DAG(**dag_args) as dag:
         "dag.timezone.convert("
         "data_interval_end"
         ").strftime('%Y-%m-%d')) }}"
+    )
+
+    # ---------- Tarea resolver -- corre 1 sola vez, deja la tabla
+    # TMP_TIENDAS_ACTIVAS_POR_REGION lista para que las 48 tareas de
+    # region solo lean (barato), en vez de resolver cada una por su
+    # cuenta contra las tablas de transacciones (caro, x48).
+    resolver_task = ExtendedDataprocCreateBatchOperator(
+        task_id='resolver_tiendas_activas_region',
+        python_script_path=(
+            f'{PROJECT_NAME}/'
+            'scripts/'
+            'resolver_tiendas_activas_region.py'
+        ),
+        dag_env_config=dag_env_config,
+        docker_image_name=PROJECT_NAME,
+        pyspark_batch_args=[
+            '--project_id',
+            dag_env_config['project_id'],
+            '--execution_date',
+            EXECUTION_DATE,
+        ],
+        include_paths=[
+            'common/',
+            f'{PROJECT_NAME}/gbq_objects/'
+        ],
     )
 
     for store_banner in STORE_BANNER_LIST:
@@ -143,3 +178,5 @@ with DAG(**dag_args) as dag:
                     **kwargs_recursos,
                 )
             )
+
+            resolver_task >> regression_data_task
