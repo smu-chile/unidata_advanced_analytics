@@ -1069,7 +1069,7 @@ def main() -> None:  # noqa: D103
         )
 
     if use == 'ELASTICITY':
-        deleteFromTable(table_ref='cl-bigdata-analytics-preprod.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY',
+        deleteFromTable(table_ref='cl-bigdata-analytics-preprod.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_ECOMMERCE',
                 where_clause=f"store_banner = '{store_banner}'",
                 gbq_client=gbq_client)
 
