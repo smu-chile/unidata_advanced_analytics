@@ -16,6 +16,18 @@
             "description": "Region geografica de Chile a la que pertenece la tienda"
         },
         {
+            "name": "zona",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Macro-zona geografica (Norte Grande, Norte Chico, Central, Metropolitana, Sur, Austral) -- nivel de agrupacion usado para banners con menor densidad de tiendas (Super 10, Alvi)"
+        },
+        {
+            "name": "sector",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Sector dentro de la Region Metropolitana (Centro, Oriente, Norte, Sur, Sur Oriente, Poniente), segun comuna. NULL fuera de la Metropolitana."
+        },
+        {
             "name": "store_id",
             "field_type": "STRING",
             "mode": "REQUIRED",
