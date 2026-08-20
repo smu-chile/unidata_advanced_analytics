@@ -1100,7 +1100,38 @@ def main() -> None:  # noqa: D103
 
     df_final['region'] = region
     df_final['store_id'] = store_id_str  # se mantiene para trazabilidad -- que tiendas
-                                    # componen esta region en esta corrida
+                                        # componen esta region en esta
+
+    # FIX critico: uploadFrame aparentemente asigna los nombres de
+    # columna del esquema por POSICION, no por nombre -- si el orden
+    # real de df_final no calza exacto con el orden declarado en el
+    # JSON, los valores quedan mal asignados (esto causo el error real
+    # "PRODUCT_DESCRIPTION cayendo en la columna MATERIAL"). Se fuerza
+    # el orden explicito aca, de forma robusta al case real de cada
+    # columna (mayuscula/minuscula puede variar segun como BigQuery
+    # devuelve cada alias).
+    columnas_schema_orden = [
+        'STORE_BANNER', 'REGION', 'CATEGORY_DESCRIPTION', 'SUB_CATEGORY_DESCRIPTION',
+        'MATERIAL', 'PRODUCT_DESCRIPTION', 'EAN', 'SALES_UOM', 'SALES_UNIT', 'P_DATE',
+        'P_WEEK', 'P_MONTH', 'VENTAS_TOTALES_PRODUCTO', 'CANTIDAD_TOTAL', 'PRECIO_PROMEDIO',
+        'PRIMER_DIA_MES', 'ULTIMO_DIA_MES', 'MULTIPLICADOR_X05', 'APO',
+        'PROPORCION_CATEGORIA', 'EAN_SUSTITUTO_1', 'EAN_SUSTITUTO_2', 'EAN_SUSTITUTO_3',
+        'EAN_SUSTITUTO_4', 'EAN_SUSTITUTO_5', 'VARIACION_PORCENTUAL_SUBCATEGORIA',
+        'VARIACION_TOP1_SUSTITUTO', 'VARIACION_TOP3_SUSTITUTOS', 'STORE_ID',
+    ]
+    mapa_columnas_actual = {c.upper(): c for c in df_final.columns}
+    columnas_faltantes = [c for c in columnas_schema_orden if c not in mapa_columnas_actual]
+    if columnas_faltantes:
+        msg = (
+            f'Columnas esperadas por el esquema pero ausentes en df_final: '
+            f'{columnas_faltantes}. Columnas reales: {list(df_final.columns)}'
+        )
+        raise ValueError(msg)
+
+    columnas_reales_en_orden = [mapa_columnas_actual[c] for c in columnas_schema_orden]
+    df_final = df_final[columnas_reales_en_orden]
+    logging.info(f'Columnas de df_final reordenadas para calzar con el esquema '
+                f'({len(df_final.columns)} columnas)')
 
     logging.info('Se elimina inicio frio...')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1109,8 +1140,7 @@ def main() -> None:  # noqa: D103
     # REGION: Se sube la tabla a BIG QUERY
     #--------------------------------------------------------------------------
 
-    #Parche 4: tabla final identificada por REGION,
-    # no por listado de tiendas.
+    #Parche 4: tabla final identificada por REGION, no por listado
     if use == 'ELASTICITY':
         deleteFromTable(table_ref='cl-bigdata-analytics-preprod.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_REGION',
                 where_clause=f"store_banner = '{store_banner}' and region = '{region}'",
