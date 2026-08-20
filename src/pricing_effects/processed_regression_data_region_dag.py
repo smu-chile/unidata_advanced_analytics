@@ -1,5 +1,5 @@
 # Default
-import json
+import json  # noqa: I001
 import platform
 import importlib
 from datetime import timedelta
@@ -135,54 +135,3 @@ with DAG(**dag_args) as dag:
             f'{PROJECT_NAME}/gbq_objects/'
         ],
     )
-
-    # =======================================================================
-    # BLOQUE DESACTIVADO TEMPORALMENTE -- solo se quiere correr el
-    # resolver por ahora, para validar la tabla TMP_TIENDAS_ACTIVAS_POR_REGION
-    # antes de disparar las 48 tareas de regresion. Descomentar todo
-    # este bloque (incluida la ultima linea, resolver_task >> ...)
-    # cuando se quiera volver a correr la regresion completa.
-    # =======================================================================
-    # for store_banner in STORE_BANNER_LIST:
-    #     banner_suffix = store_banner.replace(' ', '_').lower()
-    #     kwargs_recursos = RECURSOS_EXTRA_POR_BANNER.get(store_banner, {})
-    #
-    #     for region in REGIONES:
-    #         # sufijo de tarea legible y estable -- sin tildes ni espacios
-    #         region_suffix = (
-    #             region.lower().replace(' ', '_').replace('í', 'i')
-    #             .replace('ó', 'o').replace('é', 'e').replace('á', 'a')
-    #             .replace('ñ', 'n').replace('ú', 'u')
-    #         )
-    #
-    #         regression_data_task = (
-    #             ExtendedDataprocCreateBatchOperator(
-    #                 task_id=f'regression_data_{banner_suffix}_{region_suffix}',
-    #                 python_script_path=(
-    #                     f'{PROJECT_NAME}/'
-    #                     'scripts/'
-    #                     'processed_regression_data_region.py'
-    #                 ),
-    #                 dag_env_config=dag_env_config,
-    #                 docker_image_name=PROJECT_NAME,
-    #                 pyspark_batch_args=[
-    #                     '--project_id',
-    #                     dag_env_config['project_id'],
-    #                     '--execution_date',
-    #                     EXECUTION_DATE,
-    #                     '--store_banner',
-    #                     store_banner,
-    #                     '--use',
-    #                     'ELASTICITY',
-    #                     '--region',
-    #                     region,
-    #                 ],
-    #                 include_paths=[
-    #                     'common/',
-    #                     f'{PROJECT_NAME}/gbq_objects/'
-    #                 ],
-    #                 **kwargs_recursos,
-    #             )
-    #         )
-    #
-    #         resolver_task >> regression_data_task
