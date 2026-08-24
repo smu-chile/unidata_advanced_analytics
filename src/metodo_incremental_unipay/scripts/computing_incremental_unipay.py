@@ -417,13 +417,14 @@ def balancear_targets_full(  # noqa: D417
     )
 
 
-def balancear_formato_a_thusa(
+def balancear_formato_a_thusa(  # noqa: D417
     df,
     var1,
     var2,
     grupo_control='CLIENTE FORMATO',
     grupo_comparativo='CLIENTE TH USA',
-    random_state=42
+    random_state=42,
+    n_objetivo=None
 ):
     """Ajusta CLIENTE FORMATO para igualar la distribución de TH USA.
 
@@ -443,9 +444,20 @@ def balancear_formato_a_thusa(
 
     Es decir, el estrato más "escaso" en FORMATO (relativo a su peso
     en TH USA) determina cuántos clientes de FORMATO se pueden usar
-    en total sin romper la proporción. Luego se muestrea
-    n_estrato = round(pct_THUSA_estrato * N_max) clientes de FORMATO
-    por estrato.
+    en total sin romper la proporción.
+
+    Parameters
+    ----------
+    n_objetivo : int | None
+        Si se especifica, el N a usar es `min(n_objetivo, N_max)` —
+        es decir, se respeta el tope pedido salvo que el pool real
+        no alcance, en cuyo caso se usa el máximo posible (nunca se
+        "inventan" clientes). Si es None (default), se usa N_max
+        completo, igual que antes.
+
+    Luego se muestrea n_estrato = round(pct_THUSA_estrato * N)
+    clientes de FORMATO por estrato, donde N es el valor final
+    definido arriba.
 
     Caso borde: si TH USA tiene clientes en un estrato donde FORMATO
     no tiene NINGUNO, ese estrato es matemáticamente imposible de
@@ -521,6 +533,15 @@ def balancear_formato_a_thusa(
         )
         raise ValueError(msg)
 
+    # Si se pidió un N objetivo, se respeta ese tope salvo que el
+    # pool real no alcance (nunca se "inventan" clientes por sobre
+    # el máximo matemáticamente posible).
+    n_final = (
+        n_max
+        if n_objetivo is None
+        else min(n_objetivo, n_max)
+    )
+
     ids_control = []
 
     for _, row in dist_utilizable.iterrows():
@@ -529,7 +550,7 @@ def balancear_formato_a_thusa(
         g2 = row[var2]
 
         n_sample = round(
-            row['pct'] * n_max
+            row['pct'] * n_final
         )
 
         if n_sample <= 0:
@@ -830,6 +851,97 @@ def balancear_clientes_auditoria(df_principal):
             df=df_tmp,
             var1=var1,
             var2=var2
+        )
+
+        df_th_no_usa = balancear_targets_full(
+            df=df_tmp,
+            var1=var1,
+            var2=var2,
+            target_base='CLIENTE TH USA',
+            targets=['CLIENTE TH NO USA']
+        )
+
+        df_balanceado_grupo = pd.concat(
+            [df_formato_thusa, df_th_no_usa],
+            ignore_index=True
+        )
+
+        dfs_balanceados.append(
+            df_balanceado_grupo
+        )
+
+        tabla_uni, tabla_biv = auditar_balanceo(
+            df_grupo=df_balanceado_grupo,
+            banner=banner,
+            tipo=tipo,
+            var1=var1,
+            var2=var2
+        )
+
+        tablas_univariante.append(tabla_uni)
+        tablas_bivariante.append(tabla_biv)
+
+    if not dfs_balanceados:
+        msg = 'No fue posible balancear ningún segmento.'
+        raise ValueError(
+            msg
+        )
+
+    df_balanceado = pd.concat(
+        dfs_balanceados,
+        ignore_index=True
+    )
+
+    tabla_univariante = pd.concat(
+        tablas_univariante, ignore_index=True
+    )
+
+    tabla_bivariante = pd.concat(
+        tablas_bivariante, ignore_index=True
+    )
+
+    return df_balanceado, tabla_univariante, tabla_bivariante
+
+
+def balancear_clientes_corregido_n_fijo(df_principal, n_objetivo=10_000):
+    """Balanceo CORREGIDO con un tamaño de muestra FIJO por segmento.
+
+    Misma lógica que `balancear_clientes_auditoria` (CLIENTE FORMATO
+    ajustado a la distribución de CLIENTE TH USA, TH USA intacto),
+    pero en vez de usar el N máximo alcanzable por segmento, fija un
+    tope de `n_objetivo` clientes de FORMATO (por defecto 10.000).
+
+    Si algún segmento no alcanza ese N sin romper la proporción
+    (poco frecuente si tu FORMATO es mucho más grande que TH USA),
+    se usa el máximo posible para ese segmento en particular — nunca
+    se fuerza a llegar a 10.000 inventando clientes ni rompiendo la
+    igualdad de distribución. `auditar_balanceo` lo seguiría
+    marcando como IGUALADO si la proporción sigue calzando, solo que
+    con menos clientes de los pedidos.
+
+    Retorna una tupla (df_balanceado, tabla_univariante, tabla_bivariante).
+    """
+
+    dfs_balanceados = []
+    tablas_univariante = []
+    tablas_bivariante = []
+
+    for (banner, tipo), (var1, var2) in REGLAS_BALANCEO.items():
+
+        df_tmp = df_principal[
+            (df_principal['STORE_BANNER'] == banner)
+            &
+            (df_principal['TIPO_CLIENTE'] == tipo)
+        ].copy()
+
+        if df_tmp.empty:
+            continue
+
+        df_formato_thusa = balancear_formato_a_thusa(
+            df=df_tmp,
+            var1=var1,
+            var2=var2,
+            n_objetivo=n_objetivo
         )
 
         df_th_no_usa = balancear_targets_full(
@@ -1327,6 +1439,15 @@ def main() -> None:  # noqa: D103
         df_principal
     )
 
+    (
+        df_balanceado_10k,
+        tabla_univariante_10k,
+        tabla_bivariante_10k
+    ) = balancear_clientes_corregido_n_fijo(
+        df_principal,
+        n_objetivo=10_000
+    )
+
     # PERIODO se agrega recién aquí (no viene de balancear_clientes)
     # para poder historizar estas tablas en BigQuery igual que la
     # tabla principal (delete + append por PERIODO).
@@ -1413,6 +1534,45 @@ def main() -> None:  # noqa: D103
         ]
     ]
 
+    # Mismo tratamiento para las tablas del balanceo CORREGIDO con N
+    # fijo (10.000 clientes de FORMATO por segmento)
+    tabla_univariante_10k['PERIODO'] = anomes_cerrado
+    tabla_bivariante_10k['PERIODO'] = anomes_cerrado
+
+    tabla_univariante_10k = tabla_univariante_10k[
+        [
+            'PERIODO',
+            'STORE_BANNER',
+            'TIPO_CLIENTE',
+            'VARIABLE',
+            'CATEGORIA',
+            'Q_CONTROL',
+            'PCT_CONTROL',
+            'Q_COMPARATIVO',
+            'PCT_COMPARATIVO',
+            'DIFF_PCT',
+            'IGUALADO'
+        ]
+    ]
+
+    tabla_bivariante_10k = tabla_bivariante_10k[
+        [
+            'PERIODO',
+            'STORE_BANNER',
+            'TIPO_CLIENTE',
+            'VAR1_NOMBRE',
+            'VAR2_NOMBRE',
+            'VAR1_VALOR',
+            'VAR2_VALOR',
+            'Q_CONTROL',
+            'PCT_CONTROL',
+            'Q_COMPARATIVO',
+            'PCT_COMPARATIVO',
+            'DIFF_PCT',
+            'IGUALADO'
+        ]
+    ]
+
     path_auditoria = guardar_auditoria_json(
         tabla_univariante=tabla_univariante,
         tabla_bivariante=tabla_bivariante,
@@ -1469,6 +1629,24 @@ def main() -> None:  # noqa: D103
 
     df_resultado_corregido = construir_resultado(
         df_incremental=df_incremental_corregido,
+        df_venta_bruta=df_venta_bruta,
+        df_costo_promocional=df_costo_promocional
+    )
+
+    # ---------------------------------------------------------------------
+    # Resultado incremental CORREGIDO con N FIJO (10.000, referencia)
+    # ---------------------------------------------------------------------
+
+    tablas_gasto_10k = calcular_tablas_gasto(
+        df_balanceado_10k
+    )
+
+    df_incremental_10k = calcular_incremental(
+        tablas_gasto_10k
+    )
+
+    df_resultado_10k = construir_resultado(
+        df_incremental=df_incremental_10k,
         df_venta_bruta=df_venta_bruta,
         df_costo_promocional=df_costo_promocional
     )
@@ -1709,6 +1887,117 @@ def main() -> None:  # noqa: D103
     logging.info(
         'Incremental CORREGIDO subido a BigQuery: '
         f'{path_tabla_incremental_corregido_bq}'
+    )
+
+    # ---------------------------------------------------------------------
+    # Subida de tablas del balanceo CORREGIDO con N FIJO (10.000)
+    # ---------------------------------------------------------------------
+
+    tabla_uni_10k_bq = 'UNIPAY_AUDITORIA_BALANCEO_UNIVARIANTE_10K'
+    tabla_biv_10k_bq = 'UNIPAY_AUDITORIA_BALANCEO_BIVARIANTE_10K'
+    tabla_incremental_10k_bq = 'UNIPAY_INCREMENTAL_10K'
+
+    path_tabla_uni_10k_bq = (
+        f'{project_id}.{esquema}.{tabla_uni_10k_bq}'
+    )
+    path_tabla_biv_10k_bq = (
+        f'{project_id}.{esquema}.{tabla_biv_10k_bq}'
+    )
+    path_tabla_incremental_10k_bq = (
+        f'{project_id}.{esquema}.{tabla_incremental_10k_bq}'
+    )
+
+    createTableFromJSON(
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_auditoria_balanceo_univariante_10k.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='ignore'
+    )
+
+    createTableFromJSON(
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_auditoria_balanceo_bivariante_10k.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='ignore'
+    )
+
+    createTableFromJSON(
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_incremental_10k.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='ignore'
+    )
+
+    deleteFromTable(
+        table_ref=path_tabla_uni_10k_bq,
+        where_clause=(
+            f"PERIODO = '{anomes_cerrado}'"
+        ),
+        gbq_client=gbq_client
+    )
+
+    deleteFromTable(
+        table_ref=path_tabla_biv_10k_bq,
+        where_clause=(
+            f"PERIODO = '{anomes_cerrado}'"
+        ),
+        gbq_client=gbq_client
+    )
+
+    deleteFromTable(
+        table_ref=path_tabla_incremental_10k_bq,
+        where_clause=(
+            f"PERIODO = '{anomes_cerrado}'"
+        ),
+        gbq_client=gbq_client
+    )
+
+    uploadFrame(
+        tabla_univariante_10k,
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_auditoria_balanceo_univariante_10k.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    uploadFrame(
+        tabla_bivariante_10k,
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_auditoria_balanceo_bivariante_10k.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    uploadFrame(
+        df_resultado_10k,
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_incremental_10k.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    logging.info(
+        'Balanceo con N fijo (10.000) subido a BigQuery: '
+        f'{path_tabla_uni_10k_bq} / {path_tabla_biv_10k_bq} / '
+        f'{path_tabla_incremental_10k_bq}'
     )
 
     logging.info(
