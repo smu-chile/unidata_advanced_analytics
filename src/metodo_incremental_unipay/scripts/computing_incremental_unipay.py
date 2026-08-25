@@ -753,7 +753,14 @@ def balancear_formato_a_th_combinado(
         )
         raise ValueError(msg)
 
-    n_final = min(n_objetivo, n_max)
+    # Si se pidió un N objetivo, se respeta ese tope salvo que el
+    # pool real no alcance. Si n_objetivo es None, se usa el N
+    # máximo alcanzable (sin tope).
+    n_final = (
+        n_max
+        if n_objetivo is None
+        else min(n_objetivo, n_max)
+    )
 
     ids_control = []
 
@@ -1357,6 +1364,15 @@ def main() -> None:  # noqa: D103
         n_objetivo=10_000
     )
 
+    (
+        df_balanceado_historico_sin_tope,
+        tabla_univariante_historico_sin_tope,
+        tabla_bivariante_historico_sin_tope
+    ) = balancear_clientes_metodo_historico(
+        df_principal,
+        n_objetivo=None
+    )
+
     # PERIODO se agrega recién aquí (no viene de balancear_clientes)
     # para poder historizar estas tablas en BigQuery igual que la
     # tabla principal (delete + append por PERIODO).
@@ -1439,6 +1455,46 @@ def main() -> None:  # noqa: D103
         ]
     ]
 
+    # Mismo tratamiento para las tablas del método HISTÓRICO SIN TOPE
+    # (mismo mecanismo de calibración, pero N máximo alcanzable en
+    # vez de limitarse a 10.000)
+    tabla_univariante_historico_sin_tope['PERIODO'] = anomes_cerrado
+    tabla_bivariante_historico_sin_tope['PERIODO'] = anomes_cerrado
+
+    tabla_univariante_historico_sin_tope = tabla_univariante_historico_sin_tope[
+        [
+            'PERIODO',
+            'STORE_BANNER',
+            'TIPO_CLIENTE',
+            'VARIABLE',
+            'CATEGORIA',
+            'Q_CONTROL',
+            'PCT_CONTROL',
+            'Q_COMPARATIVO',
+            'PCT_COMPARATIVO',
+            'DIFF_PCT',
+            'IGUALADO'
+        ]
+    ]
+
+    tabla_bivariante_historico_sin_tope = tabla_bivariante_historico_sin_tope[
+        [
+            'PERIODO',
+            'STORE_BANNER',
+            'TIPO_CLIENTE',
+            'VAR1_NOMBRE',
+            'VAR2_NOMBRE',
+            'VAR1_VALOR',
+            'VAR2_VALOR',
+            'Q_CONTROL',
+            'PCT_CONTROL',
+            'Q_COMPARATIVO',
+            'PCT_COMPARATIVO',
+            'DIFF_PCT',
+            'IGUALADO'
+        ]
+    ]
+
     path_auditoria = guardar_auditoria_json(
         tabla_univariante=tabla_univariante_original,
         tabla_bivariante=tabla_bivariante_original,
@@ -1492,6 +1548,27 @@ def main() -> None:  # noqa: D103
 
     df_resultado_historico = construir_resultado(
         df_incremental=df_incremental_historico,
+        df_venta_bruta=df_venta_bruta,
+        df_costo_promocional=df_costo_promocional
+    )
+
+    # ---------------------------------------------------------------------
+    # Resultado incremental método HISTÓRICO SIN TOPE (N máximo)
+    # ---------------------------------------------------------------------
+    # Mismo mecanismo de calibración que el histórico con N=10.000,
+    # pero usando el N máximo alcanzable en vez del tope fijo — para
+    # ver si limitar la muestra a 10.000 influye en el resultado.
+
+    tablas_gasto_historico_sin_tope = calcular_tablas_gasto(
+        df_balanceado_historico_sin_tope
+    )
+
+    df_incremental_historico_sin_tope = calcular_incremental(
+        tablas_gasto_historico_sin_tope
+    )
+
+    df_resultado_historico_sin_tope = construir_resultado(
+        df_incremental=df_incremental_historico_sin_tope,
         df_venta_bruta=df_venta_bruta,
         df_costo_promocional=df_costo_promocional
     )
@@ -1722,6 +1799,117 @@ def main() -> None:  # noqa: D103
         'Método HISTÓRICO subido a BigQuery: '
         f'{path_tabla_uni_historico_bq} / {path_tabla_biv_historico_bq} / '
         f'{path_tabla_incremental_historico_bq}'
+    )
+
+    # ---------------------------------------------------------------------
+    # Subida de tablas del método HISTÓRICO SIN TOPE (N máximo)
+    # ---------------------------------------------------------------------
+
+    tabla_uni_hst_bq = 'UNIPAY_AUDITORIA_BALANCEO_UNIVARIANTE_HISTORICO_SIN_TOPE'
+    tabla_biv_hst_bq = 'UNIPAY_AUDITORIA_BALANCEO_BIVARIANTE_HISTORICO_SIN_TOPE'
+    tabla_incremental_hst_bq = 'UNIPAY_INCREMENTAL_HISTORICO_SIN_TOPE'
+
+    path_tabla_uni_hst_bq = (
+        f'{project_id}.{esquema}.{tabla_uni_hst_bq}'
+    )
+    path_tabla_biv_hst_bq = (
+        f'{project_id}.{esquema}.{tabla_biv_hst_bq}'
+    )
+    path_tabla_incremental_hst_bq = (
+        f'{project_id}.{esquema}.{tabla_incremental_hst_bq}'
+    )
+
+    createTableFromJSON(
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_auditoria_balanceo_univariante_historico_sin_tope.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='ignore'
+    )
+
+    createTableFromJSON(
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_auditoria_balanceo_bivariante_historico_sin_tope.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='ignore'
+    )
+
+    createTableFromJSON(
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_incremental_historico_sin_tope.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='ignore'
+    )
+
+    deleteFromTable(
+        table_ref=path_tabla_uni_hst_bq,
+        where_clause=(
+            f"PERIODO = '{anomes_cerrado}'"
+        ),
+        gbq_client=gbq_client
+    )
+
+    deleteFromTable(
+        table_ref=path_tabla_biv_hst_bq,
+        where_clause=(
+            f"PERIODO = '{anomes_cerrado}'"
+        ),
+        gbq_client=gbq_client
+    )
+
+    deleteFromTable(
+        table_ref=path_tabla_incremental_hst_bq,
+        where_clause=(
+            f"PERIODO = '{anomes_cerrado}'"
+        ),
+        gbq_client=gbq_client
+    )
+
+    uploadFrame(
+        tabla_univariante_historico_sin_tope,
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_auditoria_balanceo_univariante_historico_sin_tope.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    uploadFrame(
+        tabla_bivariante_historico_sin_tope,
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_auditoria_balanceo_bivariante_historico_sin_tope.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    uploadFrame(
+        df_resultado_historico_sin_tope,
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_incremental_historico_sin_tope.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    logging.info(
+        'Método HISTÓRICO SIN TOPE subido a BigQuery: '
+        f'{path_tabla_uni_hst_bq} / {path_tabla_biv_hst_bq} / '
+        f'{path_tabla_incremental_hst_bq}'
     )
 
     logging.info(

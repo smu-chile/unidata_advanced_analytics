@@ -1,0 +1,52 @@
+{
+    "schema": "UNIPAY",
+    "table": "UNIPAY_INCREMENTAL_HISTORICO_SIN_TOPE",
+    "columns": [
+        {
+            "name": "PERIODO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Periodo de cálculo del indicador en formato YYYYMM."
+        },
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato comercial al que corresponde el cálculo del indicador."
+        },
+        {
+            "name": "TIPO_CLIENTE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Tipo de cliente utilizado para el cálculo del factor incremental."
+        },
+        {
+            "name": "FACTOR_INCREMENTAL_PCT",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Factor incremental replicando el método manual histórico (control calibrado contra TH USA + TH NO USA combinados, incremental calculado contra TH USA solo), pero SIN tope de N — usa el máximo de FORMATO alcanzable en vez de limitarse a 10.000 como UNIPAY_INCREMENTAL_HISTORICO. Sirve para ver si el tope de 10.000 influye en el resultado."
+        },
+        {
+            "name": "VENTA_NETA",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Venta neta del periodo calculada como venta bruta dividida por 1,19. Idéntica a UNIPAY_INCREMENTAL, ya que no depende del balanceo de clientes."
+        },
+        {
+            "name": "VENTA_INCREMENTAL_NETA",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Venta neta incremental obtenida al aplicar el FACTOR_INCREMENTAL_PCT (calculado con balanceo corregido) sobre la venta neta."
+        },
+        {
+            "name": "COSTO_PROMOCIONAL_NETO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Costo promocional neto del periodo calculado como costo promocional bruto dividido por 1,19. Idéntico a UNIPAY_INCREMENTAL, ya que no depende del balanceo de clientes."
+        }
+    ],
+    "clustering_fields": [
+        "PERIODO",
+        "STORE_BANNER"
+    ]
+}
