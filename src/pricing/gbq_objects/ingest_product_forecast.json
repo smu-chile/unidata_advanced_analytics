@@ -54,13 +54,13 @@
         {
             "name": "R2",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Métrica R2 del modelo"
         },
         {
             "name": "Elasticidad",
-            "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
             "description": "Coeficiente de elasticidad entregado por el modelo"
         },
         {
@@ -84,61 +84,61 @@
         {
             "name": "BASELINE_UV",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Baseline unidades"
         },
         {
             "name": "UV_INCREMENTAL_REAL",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Incremental unidades"
         },
         {
             "name": "UV_INCREMENTAL_PROYECCION",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Incremental en unidades proyectado"
         },
         {
             "name": "UV_REAL",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Unidades observadas"
         },
         {
             "name": "UV_PROYECCION",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Unidades proyectadas"
         },
         {
             "name": "BASELINE_VENTA",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Baseline venta (unidades x precio)"
         },
         {
             "name": "VENTA_INCREMENTAL_REAL",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Incremental en venta observado"
         },
         {
             "name": "VENTA_INCREMENTAL_PROYECTADA",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Incremental en venta proyectado"
         },
         {
             "name": "VENTA_REAL",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Venta observada"
         },
         {
             "name": "VENTA_PROYECTADA",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Venta proyectada (unidades x precio)"
         },
         {
