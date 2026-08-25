@@ -2390,19 +2390,21 @@ def main():
 
     logging.info('[Anexo]: Estado de las proyecciones:\n%s', df_proyecciones['Comentario'].value_counts())  # noqa: E501
 
-
+    print('Antes de subir a GCP: ', df_proyecciones.info())
+    print('Execution date: ', execution_date, 'type ', type(execution_date))
 
     # ---- Parte 5: Subida resultados a Sharepoint ---- #
     logging.info('[5/5]: Guardado de resultados...')
 
-    output_buffer = generar_excel_buffer(df_proyecciones)
+    output_buffer = generar_excel_buffer(df_proyecciones)  # noqa: F841
 
-    subir_archivo_sharepoint(
-        contenido=output_buffer,
-        nombre_archivo=nombre_output,
-        outputs_dir=outputs_dir,
-        sp_cred=sp_cred
-    )
+    #subir_archivo_sharepoint(
+    #    contenido=output_buffer,  # noqa: ERA001
+    #    nombre_archivo=nombre_output,  # noqa: ERA001
+    #    outputs_dir=outputs_dir,  # noqa: ERA001
+    #    sp_cred=sp_cred  # noqa: ERA001
+    #)  # noqa: ERA001
+
 
 if __name__ == '__main__':
 
