@@ -28,16 +28,34 @@
             "description": "Medio de pago (Efectivo, Debito, Tarjeta Credito, Unipay, etc.)."
         },
         {
-            "name": "TARGET_CLIENTE",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "Grupo de cliente (CLIENTE FORMATO, CLIENTE TH USA, CLIENTE TH NO USA)."
-        },
-        {
-            "name": "GASTO_PROMEDIO",
+            "name": "GASTO_FORMATO",
             "field_type": "FLOAT",
             "mode": "NULLABLE",
-            "description": "Gasto promedio per cápita del grupo en ese medio de pago: suma de VENTA_NETA de ese medio dividido por el total de clientes únicos del grupo (no solo los que usaron ese medio). Null cuando ese grupo no tuvo actividad en ese medio (ej. FORMATO nunca usa Unipay por definición)."
+            "description": "Gasto promedio per cápita de CLIENTE FORMATO en ese medio de pago. Null si FORMATO no tuvo actividad en ese medio (ej. nunca usa Unipay por definición)."
+        },
+        {
+            "name": "GASTO_TH_USA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Gasto promedio per cápita de CLIENTE TH USA en ese medio de pago."
+        },
+        {
+            "name": "DIFERENCIA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "GASTO_TH_USA - GASTO_FORMATO. Para la fila Unipay es el gasto base (punto de partida del cálculo), no una resta. Para el resto de los medios: si es negativa, FORMATO gasta más que TH USA en ese medio."
+        },
+        {
+            "name": "ES_SUSTITUCION",
+            "field_type": "BOOLEAN",
+            "mode": "REQUIRED",
+            "description": "True cuando DIFERENCIA < 0 en un medio distinto de Unipay — esa diferencia se resta del gasto Unipay de TH USA al calcular FACTOR_INCREMENTAL_PCT, porque se interpreta como sustitución de canal (no gasto incremental nuevo). Siempre False en la fila de Unipay."
+        },
+        {
+            "name": "INTERPRETACION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Explicación en texto de qué representa esta fila dentro del cálculo del factor incremental, para dar transparencia sin tener que reconstruir la lógica manualmente."
         },
         {
             "name": "FACTOR_INCREMENTAL_PCT",

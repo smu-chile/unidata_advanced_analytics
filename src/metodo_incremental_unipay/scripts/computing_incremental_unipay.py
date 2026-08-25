@@ -686,33 +686,84 @@ def construir_tabla_gasto_larga(
     df_incremental,
     anomes_cerrado
 ):
-    """Convierte las tablas de gasto (pivot MEDIO_DE_PAGO x
-    TARGET_CLIENTE) a formato LARGO — una fila por
-    (STORE_BANNER, TIPO_CLIENTE, MEDIO_DE_PAGO, TARGET_CLIENTE) — que
-    es el formato que se comporta bien en BigQuery (columnas fijas,
-    nada de nombres de columna dinámicos como "CLIENTE FORMATO").
+    """Arma la tabla de gasto por medio de pago, comparando
+    DIRECTAMENTE CLIENTE FORMATO vs CLIENTE TH USA — los dos únicos
+    grupos que realmente participan en `calcular_factor_incremental`
+    (CLIENTE TH NO USA se descarta acá; se audita por separado en las
+    tablas `_ORIGINAL`/`_HISTORICO`, pero no interviene en este
+    cálculo).
 
-    Cada fila queda etiquetada con el FACTOR_INCREMENTAL_PCT de su
-    segmento, para poder consultar el gasto y el % incremental sin
-    necesidad de cruzar con otra tabla.
+    Una fila por (STORE_BANNER, TIPO_CLIENTE, MEDIO_DE_PAGO), con
+    GASTO_FORMATO y GASTO_TH_USA lado a lado, más DIFERENCIA y una
+    interpretación en texto — replicando exactamente la lógica de
+    `calcular_factor_incremental`:
+
+      DIFERENCIA = GASTO_TH_USA - GASTO_FORMATO (excepto en la fila
+      de Unipay, que es el punto de partida del cálculo, no una
+      resta)
+
+      Si DIFERENCIA < 0 (FORMATO gasta más que TH USA en ese medio):
+      se interpreta como sustitución — esa plata se resta del gasto
+      Unipay al calcular el % incremental.
+
+    Pensada para dar transparencia directa del cálculo a quien
+    consulte la tabla en BigQuery, sin tener que reconstruirlo a
+    mano.
     """
 
     filas = []
 
     for (banner, tipo), tabla in tablas_gasto.items():
 
-        tabla_larga = (
+        tabla_comparacion = (
             tabla
-            .reset_index()
-            .melt(
-                id_vars='MEDIO_DE_PAGO',
-                var_name='TARGET_CLIENTE',
-                value_name='GASTO_PROMEDIO'
+            .reset_index()[
+                ['MEDIO_DE_PAGO', 'CLIENTE FORMATO', 'CLIENTE TH USA']
+            ]
+            .rename(
+                columns={
+                    'CLIENTE FORMATO': 'GASTO_FORMATO',
+                    'CLIENTE TH USA': 'GASTO_TH_USA'
+                }
             )
         )
 
-        tabla_larga.insert(0, 'TIPO_CLIENTE', tipo)
-        tabla_larga.insert(0, 'STORE_BANNER', banner)
+        tabla_comparacion['DIFERENCIA'] = (
+            tabla_comparacion['GASTO_TH_USA']
+            -
+            tabla_comparacion['GASTO_FORMATO']
+        )
+
+        def _interpretar(row):
+            if row['MEDIO_DE_PAGO'] == 'Unipay':
+                return (
+                    'Gasto base de Unipay en TH USA — punto de '
+                    'partida del cálculo (no es una resta)'
+                )
+            if pd.isna(row['DIFERENCIA']):
+                return 'Sin datos suficientes para comparar'
+            if row['DIFERENCIA'] < 0:
+                return (
+                    'FORMATO gasta más que TH USA en este medio — '
+                    'se resta como sustitución'
+                )
+            return (
+                'TH USA gasta igual o más — no se resta '
+                '(no indica sustitución)'
+            )
+
+        tabla_comparacion['INTERPRETACION'] = (
+            tabla_comparacion.apply(_interpretar, axis=1)
+        )
+
+        tabla_comparacion['ES_SUSTITUCION'] = (
+            (tabla_comparacion['MEDIO_DE_PAGO'] != 'Unipay')
+            &
+            (tabla_comparacion['DIFERENCIA'] < 0)
+        )
+
+        tabla_comparacion.insert(0, 'TIPO_CLIENTE', tipo)
+        tabla_comparacion.insert(0, 'STORE_BANNER', banner)
 
         fila_incremental = df_incremental[
             (df_incremental['STORE_BANNER'] == banner)
@@ -726,25 +777,27 @@ def construir_tabla_gasto_larga(
             else None
         )
 
-        tabla_larga['FACTOR_INCREMENTAL_PCT'] = factor_pct
+        tabla_comparacion['FACTOR_INCREMENTAL_PCT'] = factor_pct
 
-        filas.append(tabla_larga)
+        filas.append(tabla_comparacion)
 
-    tabla_gasto_larga = pd.concat(filas, ignore_index=True)
+    tabla_gasto_comparada = pd.concat(filas, ignore_index=True)
 
-    tabla_gasto_larga.insert(0, 'PERIODO', anomes_cerrado)
+    tabla_gasto_comparada.insert(0, 'PERIODO', anomes_cerrado)
 
-    # GASTO_PROMEDIO puede venir NaN (ej. FORMATO nunca usa Unipay) —
-    # se deja como null explícito, no se rellena con 0 (0 implicaría
-    # "gastó cero", que es distinto de "no aplica para este grupo").
-    return tabla_gasto_larga[
+    # GASTO_FORMATO/GASTO_TH_USA pueden venir NaN (ej. FORMATO nunca
+    # usa Unipay) — se deja como null explícito, no se rellena con 0.
+    return tabla_gasto_comparada[
         [
             'PERIODO',
             'STORE_BANNER',
             'TIPO_CLIENTE',
             'MEDIO_DE_PAGO',
-            'TARGET_CLIENTE',
-            'GASTO_PROMEDIO',
+            'GASTO_FORMATO',
+            'GASTO_TH_USA',
+            'DIFERENCIA',
+            'ES_SUSTITUCION',
+            'INTERPRETACION',
             'FACTOR_INCREMENTAL_PCT'
         ]
     ]
