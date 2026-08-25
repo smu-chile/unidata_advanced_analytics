@@ -100,11 +100,10 @@ with DAG(**dag_args) as dag:
                 f'{PROJECT_NAME}-{SUBPROJECT_NAME}'
             ),
             pyspark_batch_args=[
-                        '--project_id',
-                        GCP_PROJECT_ID,
-                        '--schema_file',
-                        '/var/dataproc/tmp/gbq_objects/CRM_DATA_SF_PUSH_EVENT_STG.json',
-                    ],
+                '--schema_file',
+                f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/'  # noqa: ISC004
+                'CRM_DATA_SF_PUSH_EVENT_STG.json',
+            ],
             include_paths=[
                 'common/',
                 f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/',
