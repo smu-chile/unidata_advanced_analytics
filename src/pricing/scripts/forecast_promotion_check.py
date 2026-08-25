@@ -2422,6 +2422,7 @@ def main():
     esquema = 'PRECIO_PROMOCIONES'
     tabla = 'FORECAST_PROMOCIONES'
 
+    print('Subiendo a GCP: ')
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
                     where_clause=where_clause,
