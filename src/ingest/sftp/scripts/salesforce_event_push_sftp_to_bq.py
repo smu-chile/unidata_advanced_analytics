@@ -1,9 +1,8 @@
-import os  # noqa: D100
-import csv
+import csv  # noqa: D100
 import json
 import time
 import logging
-import argparse  # noqa: F401
+import argparse
 import datetime
 
 import pandas as pd
