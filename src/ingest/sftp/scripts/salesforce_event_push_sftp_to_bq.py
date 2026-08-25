@@ -223,9 +223,10 @@ def main():  # noqa: ANN201, D103
 
     args = parser.parse_args()
     schema_file = args.schema_file
-    logging.info('Schema file: %s', schema_file)
+    json_path = f'gbq_objects/{schema_file}'
+    logging.info('Schema file: %s', json_path)
 
-    with open(schema_file, 'r', encoding='utf-8') as f:  # noqa: UP015
+    with open(json_path, 'r', encoding='utf-8') as f:  # noqa: UP015
         schema_json = json.load(f)
 
     schema = [
