@@ -1,0 +1,153 @@
+{
+    "schema": "TMP",
+    "table": "TMP_FORECAST",
+
+    "columns": [
+        {
+            "name": "EXECUTION_DATE",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha ejecución proyección"
+        },
+        {
+            "name": "n_promocion",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "id numérico de la promoción"
+        },
+        {
+            "name": "Nombre promocion",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre de la promoción"
+        },
+        {
+            "name": "Categoria",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoría del producto"
+        },
+        {
+            "name": "Descripcion",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Descripción del producto"
+        },
+        {
+            "name": "Material",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Material"
+        },
+        {
+            "name": "UMV",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "UMV"
+        },
+        {
+            "name": "EAN",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "EAN del producto"
+        },
+        {
+            "name": "R2",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Métrica R2 del modelo"
+        },
+        {
+            "name": "Elasticidad",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Coeficiente de elasticidad entregado por el modelo"
+        },
+        {
+            "name": "Estable",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Indicador de estabilidad de la proyección (legacy)"
+        },
+        {
+            "name": "INICIO_PROYECCION",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha de inicio de la promoción a proyectar"
+        },
+        {
+            "name": "FIN_PROYECCION",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha de término de la promoción a proyectar"
+        },
+        {
+            "name": "BASELINE_UV",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Baseline unidades"
+        },
+        {
+            "name": "UV_INCREMENTAL_REAL",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Incremental unidades"
+        },
+        {
+            "name": "UV_INCREMENTAL_PROYECCION",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Incremental en unidades proyectado"
+        },
+        {
+            "name": "UV_REAL",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Unidades observadas"
+        },
+        {
+            "name": "UV_PROYECCION",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Unidades proyectadas"
+        },
+        {
+            "name": "BASELINE_VENTA",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Baseline venta (unidades x precio)"
+        },
+        {
+            "name": "VENTA_INCREMENTAL_REAL",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Incremental en venta observado"
+        },
+        {
+            "name": "VENTA_INCREMENTAL_PROYECTADA",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Incremental en venta proyectado"
+        },
+        {
+            "name": "VENTA_REAL",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Venta observada"
+        },
+        {
+            "name": "VENTA_PROYECTADA",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Venta proyectada (unidades x precio)"
+        },
+        {
+            "name": "COMENTARIO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Indicador estado de la proyección"
+        }
+    ],
+
+    "clustering_fields": ["EXECUTION_DATE"]
+}
