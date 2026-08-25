@@ -95,13 +95,16 @@ with DAG(**dag_args) as dag:
                 'scripts/'
                 'salesforce_event_push_sftp_to_bq.py'
             ),
-
             dag_env_config=dag_env_config,
-
             docker_image_name=(
                 f'{PROJECT_NAME}-{SUBPROJECT_NAME}'
             ),
-
+            pyspark_batch_args=[
+                        '--project_id',
+                        GCP_PROJECT_ID,
+                        '--schema_file',
+                        '/var/dataproc/tmp/gbq_objects/CRM_DATA_SF_PUSH_EVENT_STG.json',
+                    ],
             include_paths=[
                 'common/',
                 f'{PROJECT_NAME}/{SUBPROJECT_NAME}/gbq_objects/',

@@ -3,6 +3,7 @@ import csv
 import json
 import time
 import logging
+import argparse  # noqa: F401
 import datetime
 
 import pandas as pd
@@ -211,9 +212,15 @@ def validar_carga_final(  # noqa: D103
 # ---------------------------------------------------------------------
 def main():  # noqa: ANN201, D103
 
-    schema_file = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)),
-    'gbq_objects', 'CRM_DATA_SF_PUSH_EVENT_STG.json')
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--schema_file',
+        required=True,
+        help='Ruta al archivo JSON con el schema de la tabla STG.')
+
+    args = parser.parse_args()
+    schema_file = args.schema_file
+    logging.info('Schema file: %s', schema_file)
 
     with open(schema_file, 'r', encoding='utf-8') as f:  # noqa: UP015
         schema_json = json.load(f)
