@@ -696,6 +696,14 @@ def construir_tabla_gasto_larga(
 
     tabla_gasto_comparada = pd.concat(filas, ignore_index=True)
 
+    # .insert() falla si la columna ya existe — se saca primero por
+    # si acaso, para no depender de que nunca vaya a venir PERIODO
+    # desde el origen de tablas_gasto.
+    if 'PERIODO' in tabla_gasto_comparada.columns:
+        tabla_gasto_comparada = tabla_gasto_comparada.drop(
+            columns=['PERIODO']
+        )
+
     tabla_gasto_comparada.insert(0, 'PERIODO', anomes_cerrado)
 
     # GASTO_FORMATO/GASTO_TH_USA pueden venir NaN (ej. FORMATO nunca
@@ -739,6 +747,15 @@ def construir_detalle_clientes_balanceados(df_balanceado, anomes_cerrado):
             ['CLIENTE FORMATO', 'CLIENTE TH USA', 'CLIENTE TH NO USA']
         )
     ].copy()
+
+    # df_balanceado ya trae PERIODO desde query_principal (ANOMES_CERRADO
+    # AS PERIODO). Se saca y se vuelve a insertar con el anomes_cerrado
+    # "canónico" del DAG, en la posición 0 — tanto para evitar el
+    # ValueError de .insert() sobre una columna que ya existe, como para
+    # asegurar que el valor sea exactamente el mismo que usan las demás
+    # tablas del periodo (por si alguna vez difirieran).
+    if 'PERIODO' in df_detalle.columns:
+        df_detalle = df_detalle.drop(columns=['PERIODO'])
 
     df_detalle.insert(0, 'PERIODO', anomes_cerrado)
 
