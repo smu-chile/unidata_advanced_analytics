@@ -59,7 +59,7 @@
         },
         {
             "name": "Elasticidad",
-            "field_type": "STRING",
+            "field_type": "FLOAT",
             "mode": "NULLABLE",
             "description": "Coeficiente de elasticidad entregado por el modelo"
         },
