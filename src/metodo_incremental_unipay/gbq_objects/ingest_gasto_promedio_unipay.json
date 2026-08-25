@@ -1,0 +1,54 @@
+{
+    "schema": "UNIPAY",
+    "table": "UNIPAY_GASTO_PROMEDIO",
+
+    "columns": [
+        {
+            "name": "PERIODO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Periodo (anomes_cerrado) al que corresponde el cálculo, formato YYYYMM."
+        },
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato comercial al que corresponde el cálculo."
+        },
+        {
+            "name": "TIPO_CLIENTE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Tipo de cliente (PERSONA/COMERCIANTE)."
+        },
+        {
+            "name": "MEDIO_DE_PAGO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Medio de pago (Efectivo, Debito, Tarjeta Credito, Unipay, etc.)."
+        },
+        {
+            "name": "TARGET_CLIENTE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Grupo de cliente (CLIENTE FORMATO, CLIENTE TH USA, CLIENTE TH NO USA)."
+        },
+        {
+            "name": "GASTO_PROMEDIO",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Gasto promedio per cápita del grupo en ese medio de pago: suma de VENTA_NETA de ese medio dividido por el total de clientes únicos del grupo (no solo los que usaron ese medio). Null cuando ese grupo no tuvo actividad en ese medio (ej. FORMATO nunca usa Unipay por definición)."
+        },
+        {
+            "name": "FACTOR_INCREMENTAL_PCT",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "FACTOR_INCREMENTAL_PCT del segmento (STORE_BANNER, TIPO_CLIENTE) al que pertenece esta fila — igual en todas las filas de un mismo segmento, denormalizado para poder consultar el detalle de gasto y el % incremental sin tener que cruzar con UNIPAY_INCREMENTAL."
+        }
+    ],
+
+    "clustering_fields": [
+        "PERIODO",
+        "STORE_BANNER"
+    ]
+}

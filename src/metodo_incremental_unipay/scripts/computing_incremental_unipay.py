@@ -598,6 +598,158 @@ def guardar_auditoria_json(
     return path_salida
 
 
+def guardar_tablas_gasto_json(  # noqa: D417
+    tablas_gasto,
+    df_incremental,
+    anomes_cerrado,
+    metodo,
+    output_dir='.'
+):
+    """Guarda las tablas de gasto promedio + el factor incremental
+    resultante, en un único JSON consultable directamente.
+
+    Por cada (STORE_BANNER, TIPO_CLIENTE) queda:
+      - tabla_gasto_promedio: la tabla de `calcular_tablas_gasto`
+        (gasto promedio por MEDIO_DE_PAGO x TARGET_CLIENTE) tal cual
+        se usó para el cálculo — para poder revisar a mano de dónde
+        salió el % incremental sin tener que ir a BigQuery ni
+        reconstruir el pivot en memoria.
+      - factor_incremental: la fila correspondiente de
+        `calcular_incremental` (incluye UNIPAY_TH, A,
+        FACTOR_INCREMENTAL, FACTOR_INCREMENTAL_PCT — el detalle
+        completo del cálculo, no solo el % final).
+
+    Parameters
+    ----------
+    metodo : str
+        Etiqueta para el nombre de archivo (ej. 'legacy',
+        'historico', 'historico_sin_tope'), para no pisar el JSON de
+        un método con el de otro.
+    """
+
+    segmentos = {}
+
+    for (banner, tipo), tabla in tablas_gasto.items():
+
+        clave = f'{banner}|{tipo}'
+
+        tabla_records = json.loads(
+            tabla.reset_index().to_json(orient='records')
+        )
+
+        fila_incremental = df_incremental[
+            (df_incremental['STORE_BANNER'] == banner)
+            &
+            (df_incremental['TIPO_CLIENTE'] == tipo)
+        ]
+
+        incremental_records = json.loads(
+            fila_incremental.to_json(orient='records')
+        )
+
+        detalle_incremental = (
+            incremental_records[0]
+            if incremental_records
+            else {}
+        )
+
+        segmentos[clave] = {
+            'store_banner': banner,
+            'tipo_cliente': tipo,
+            'tabla_gasto_promedio': tabla_records,
+            'factor_incremental': detalle_incremental
+        }
+
+    salida = {
+        'anomes_cerrado': anomes_cerrado,
+        'metodo': metodo,
+        'segmentos': segmentos
+    }
+
+    path_salida = os.path.join(
+        output_dir,
+        f'tablas_gasto_{metodo}_{anomes_cerrado}.json'
+    )
+
+    with open(path_salida, 'w', encoding='utf-8') as f:
+        json.dump(salida, f, ensure_ascii=False, indent=2)
+
+    logging.info(
+        f'Tablas de gasto ({metodo}) guardadas en: {path_salida}'
+    )
+
+    return path_salida
+
+
+def construir_tabla_gasto_larga(
+    tablas_gasto,
+    df_incremental,
+    anomes_cerrado
+):
+    """Convierte las tablas de gasto (pivot MEDIO_DE_PAGO x
+    TARGET_CLIENTE) a formato LARGO — una fila por
+    (STORE_BANNER, TIPO_CLIENTE, MEDIO_DE_PAGO, TARGET_CLIENTE) — que
+    es el formato que se comporta bien en BigQuery (columnas fijas,
+    nada de nombres de columna dinámicos como "CLIENTE FORMATO").
+
+    Cada fila queda etiquetada con el FACTOR_INCREMENTAL_PCT de su
+    segmento, para poder consultar el gasto y el % incremental sin
+    necesidad de cruzar con otra tabla.
+    """
+
+    filas = []
+
+    for (banner, tipo), tabla in tablas_gasto.items():
+
+        tabla_larga = (
+            tabla
+            .reset_index()
+            .melt(
+                id_vars='MEDIO_DE_PAGO',
+                var_name='TARGET_CLIENTE',
+                value_name='GASTO_PROMEDIO'
+            )
+        )
+
+        tabla_larga.insert(0, 'TIPO_CLIENTE', tipo)
+        tabla_larga.insert(0, 'STORE_BANNER', banner)
+
+        fila_incremental = df_incremental[
+            (df_incremental['STORE_BANNER'] == banner)
+            &
+            (df_incremental['TIPO_CLIENTE'] == tipo)
+        ]
+
+        factor_pct = (
+            fila_incremental['FACTOR_INCREMENTAL_PCT'].iloc[0]
+            if not fila_incremental.empty
+            else None
+        )
+
+        tabla_larga['FACTOR_INCREMENTAL_PCT'] = factor_pct
+
+        filas.append(tabla_larga)
+
+    tabla_gasto_larga = pd.concat(filas, ignore_index=True)
+
+    tabla_gasto_larga.insert(0, 'PERIODO', anomes_cerrado)
+
+    # GASTO_PROMEDIO puede venir NaN (ej. FORMATO nunca usa Unipay) —
+    # se deja como null explícito, no se rellena con 0 (0 implicaría
+    # "gastó cero", que es distinto de "no aplica para este grupo").
+    return tabla_gasto_larga[
+        [
+            'PERIODO',
+            'STORE_BANNER',
+            'TIPO_CLIENTE',
+            'MEDIO_DE_PAGO',
+            'TARGET_CLIENTE',
+            'GASTO_PROMEDIO',
+            'FACTOR_INCREMENTAL_PCT'
+        ]
+    ]
+
+
 def balancear_clientes_legacy(df_principal):
     """Balanceo ORIGINAL (histórico), sin cambios.
 
@@ -1521,6 +1673,24 @@ def main() -> None:  # noqa: D103
         tablas_gasto
     )
 
+    path_tablas_gasto_legacy = guardar_tablas_gasto_json(
+        tablas_gasto=tablas_gasto,
+        df_incremental=df_incremental,
+        anomes_cerrado=anomes_cerrado,
+        metodo='legacy'
+    )
+
+    logging.info(
+        f'Tablas de gasto + factor incremental (legacy, respaldo '
+        f'local): {path_tablas_gasto_legacy}'
+    )
+
+    tabla_gasto_larga = construir_tabla_gasto_larga(
+        tablas_gasto=tablas_gasto,
+        df_incremental=df_incremental,
+        anomes_cerrado=anomes_cerrado
+    )
+
     # ---------------------------------------------------------------------
     # Resultado final
     # ---------------------------------------------------------------------
@@ -1546,6 +1716,18 @@ def main() -> None:  # noqa: D103
         tablas_gasto_historico
     )
 
+    path_tablas_gasto_historico = guardar_tablas_gasto_json(
+        tablas_gasto=tablas_gasto_historico,
+        df_incremental=df_incremental_historico,
+        anomes_cerrado=anomes_cerrado,
+        metodo='historico'
+    )
+
+    logging.info(
+        f'Tablas de gasto + factor incremental (histórico, respaldo '
+        f'local): {path_tablas_gasto_historico}'
+    )
+
     df_resultado_historico = construir_resultado(
         df_incremental=df_incremental_historico,
         df_venta_bruta=df_venta_bruta,
@@ -1565,6 +1747,24 @@ def main() -> None:  # noqa: D103
 
     df_incremental_historico_sin_tope = calcular_incremental(
         tablas_gasto_historico_sin_tope
+    )
+
+    path_tablas_gasto_historico_sin_tope = guardar_tablas_gasto_json(
+        tablas_gasto=tablas_gasto_historico_sin_tope,
+        df_incremental=df_incremental_historico_sin_tope,
+        anomes_cerrado=anomes_cerrado,
+        metodo='historico_sin_tope'
+    )
+
+    logging.info(
+        'Tablas de gasto + factor incremental (histórico sin tope, '
+        f'respaldo local): {path_tablas_gasto_historico_sin_tope}'
+    )
+
+    tabla_gasto_larga_historico_sin_tope = construir_tabla_gasto_larga(
+        tablas_gasto=tablas_gasto_historico_sin_tope,
+        df_incremental=df_incremental_historico_sin_tope,
+        anomes_cerrado=anomes_cerrado
     )
 
     df_resultado_historico_sin_tope = construir_resultado(
@@ -1910,6 +2110,83 @@ def main() -> None:  # noqa: D103
         'Método HISTÓRICO SIN TOPE subido a BigQuery: '
         f'{path_tabla_uni_hst_bq} / {path_tabla_biv_hst_bq} / '
         f'{path_tabla_incremental_hst_bq}'
+    )
+
+    # ---------------------------------------------------------------------
+    # Subida de tablas de gasto promedio (legacy + histórico sin tope)
+    # ---------------------------------------------------------------------
+
+    tabla_gasto_bq = 'UNIPAY_GASTO_PROMEDIO'
+    tabla_gasto_hst_bq = 'UNIPAY_GASTO_PROMEDIO_HISTORICO_SIN_TOPE'
+
+    path_tabla_gasto_bq = (
+        f'{project_id}.{esquema}.{tabla_gasto_bq}'
+    )
+    path_tabla_gasto_hst_bq = (
+        f'{project_id}.{esquema}.{tabla_gasto_hst_bq}'
+    )
+
+    createTableFromJSON(
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_gasto_promedio_unipay.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='ignore'
+    )
+
+    createTableFromJSON(
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_gasto_promedio_historico_sin_tope.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='ignore'
+    )
+
+    deleteFromTable(
+        table_ref=path_tabla_gasto_bq,
+        where_clause=(
+            f"PERIODO = '{anomes_cerrado}'"
+        ),
+        gbq_client=gbq_client
+    )
+
+    deleteFromTable(
+        table_ref=path_tabla_gasto_hst_bq,
+        where_clause=(
+            f"PERIODO = '{anomes_cerrado}'"
+        ),
+        gbq_client=gbq_client
+    )
+
+    uploadFrame(
+        tabla_gasto_larga,
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_gasto_promedio_unipay.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    uploadFrame(
+        tabla_gasto_larga_historico_sin_tope,
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_gasto_promedio_historico_sin_tope.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    logging.info(
+        'Tablas de gasto promedio subidas a BigQuery: '
+        f'{path_tabla_gasto_bq} / {path_tabla_gasto_hst_bq}'
     )
 
     logging.info(
