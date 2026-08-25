@@ -2413,6 +2413,27 @@ def main():
         value=execution_date
     )
 
+    columnas_metricas = [
+        'R²',
+        'Elasticidad',
+        'Baseline_UV',
+        'UV Incremental Real',
+        'UV Incremental Proy',
+        'UV Real',
+        'UV Proy',
+        'Baseline Venta',
+        'Venta Incremental Real',
+        'Venta Incremental Proy',
+        'Venta Real',
+        'Venta Proy',
+    ]
+
+    df_proyecciones[columnas_metricas] = (
+        df_proyecciones[columnas_metricas]
+        .replace('-', np.nan)
+        .apply(pd.to_numeric, errors='coerce')
+    )
+
     # Definir el WHERE
     print('Justo antes de subir a GCP: ', df_proyecciones.info())
     where_clause = f"execution_date = '{execution_date}'"
