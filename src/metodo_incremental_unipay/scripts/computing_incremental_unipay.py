@@ -298,129 +298,6 @@ REGLAS_BALANCEO = {
 # Balanceo de clientes
 # ------------------------------------------------------------------------
 
-def balancear_targets_full(  # noqa: D417
-    df,
-    var1,
-    var2,
-    target_base='CLIENTE TH USA',
-    random_state=42,
-    targets=None
-):
-    """Balancea los grupos utilizando como referencia el target_base.
-
-    Este es un balanceo APROXIMADO por cuota/proporción: a cada grupo
-    target se le intenta asignar, en cada estrato (var1, var2), la
-    misma proporción que tiene target_base. No garantiza igualdad
-    exacta si el pool de algún grupo es insuficiente en un estrato
-    (en ese caso simplemente toma lo que hay disponible).
-
-    Se usa aquí solo para grupos que NO requieren igualdad garantizada
-    con target_base (ej. 'CLIENTE TH NO USA', que no participa del
-    cálculo del factor incremental). Para el par
-    CLIENTE FORMATO <-> CLIENTE TH USA se usa
-    `balancear_formato_vs_thusa`, que sí garantiza igualdad exacta.
-
-    Parameters
-    ----------
-    targets : list[str] | None
-        Si se especifica, solo se balancean esos valores de
-        TARGET_CLIENTE (además de target_base, que siempre se
-        recalcula como referencia). Si es None, se balancean todos
-        los targets presentes en el dataframe.
-    """
-
-    np.random.seed(random_state)  # noqa: NPY002
-
-    base_df = df.drop_duplicates(
-        subset=['CUSTOMER_KEY']
-    )
-
-    base = base_df[
-        base_df['TARGET_CLIENTE'] == target_base
-    ]
-
-    dist = (
-        base
-        .groupby([var1, var2])['CUSTOMER_KEY']
-        .count()
-        .reset_index(name='n')
-    )
-
-    dist['pct'] = dist['n'] / dist['n'].sum()
-
-    total_por_target = (
-        base_df
-        .groupby('TARGET_CLIENTE')['CUSTOMER_KEY']
-        .count()
-        .to_dict()
-    )
-
-    if targets is not None:
-        # OJO: no se agrega target_base aquí a propósito. Cuando esta
-        # función se usa solo para balancear grupos "secundarios"
-        # (ej. CLIENTE TH NO USA), target_base (CLIENTE TH USA) NO debe
-        # volver a muestrearse aquí, porque ya fue emparejado de forma
-        # exacta contra CLIENTE FORMATO en `balancear_formato_vs_thusa`.
-        # Si se vuelve a muestrear aquí se generaría un segundo
-        # subconjunto de TH USA distinto al ya emparejado, y al
-        # concatenar ambos resultados se duplicarían/mezclarían
-        # clientes TH USA, rompiendo la igualdad ya lograda.
-        total_por_target = {
-            k: v
-            for k, v in total_por_target.items()
-            if k in set(targets)
-        }
-
-    ids = []
-
-    for target, total in total_por_target.items():
-
-        df_target = base_df[
-            base_df['TARGET_CLIENTE'] == target
-        ]
-
-        for _, row in dist.iterrows():
-
-            g1 = row[var1]
-            g2 = row[var2]
-
-            n_sample = round(
-                row['pct'] * total
-            )
-
-            pool = (
-                df_target[
-                    (df_target[var1] == g1)
-                    &
-                    (df_target[var2] == g2)
-                ]
-                .sort_values('CUSTOMER_KEY')
-            )
-
-            if pool.empty:
-                continue
-
-            sample_ids = pool.sample(
-                n=min(n_sample, len(pool)),
-                random_state=random_state
-            )['CUSTOMER_KEY']
-
-            ids.extend(
-                sample_ids.tolist()
-            )
-
-    return (
-        df[
-            df['CUSTOMER_KEY'].isin(ids)
-        ]
-        .reset_index(drop=True)
-    )
-
-
-# ------------------------------------------------------------------------
-# Auditoría de balanceo (control vs comparativo)
-# ------------------------------------------------------------------------
-
 TOLERANCIA_PP = 1.0  # puntos porcentuales de diferencia máxima aceptada
 
 
@@ -593,6 +470,42 @@ def guardar_auditoria_json(
 
     logging.info(
         f'Auditoría de balanceo guardada en: {path_salida}'
+    )
+
+    return path_salida
+
+
+def guardar_json_generico(
+    datos,
+    nombre_archivo,
+    anomes_cerrado,
+    output_dir='.'
+):
+    """Guarda un DataFrame como JSON local (records), de forma
+    genérica — para respaldos que no necesitan la estructura
+    específica de `guardar_auditoria_json` o
+    `guardar_tablas_gasto_json`.
+    """
+
+    registros = json.loads(
+        datos.to_json(orient='records')
+    )
+
+    salida = {
+        'anomes_cerrado': anomes_cerrado,
+        'registros': registros
+    }
+
+    path_salida = os.path.join(
+        output_dir,
+        nombre_archivo
+    )
+
+    with open(path_salida, 'w', encoding='utf-8') as f:
+        json.dump(salida, f, ensure_ascii=False, indent=2)
+
+    logging.info(
+        f'JSON guardado en: {path_salida}'
     )
 
     return path_salida
@@ -803,57 +716,54 @@ def construir_tabla_gasto_larga(
     ]
 
 
-def balancear_clientes_legacy(df_principal):
-    """Balanceo ORIGINAL (histórico), sin cambios.
+def construir_detalle_clientes_balanceados(df_balanceado, anomes_cerrado):
+    """Detalle cliente por cliente de los 3 grupos ya balanceados:
+    CLIENTE FORMATO, CLIENTE TH USA y CLIENTE TH NO USA — los que
+    efectivamente se usan en el balanceo (aunque TH NO USA no entre
+    a la fórmula de `calcular_factor_incremental`, sí forma parte
+    del grupo de referencia contra el que se calibra FORMATO, así
+    que queda incluido para trazabilidad completa).
 
-    Esta es exactamente la lógica que tenía el script antes de
-    incorporar el balanceo corregido: cada target (CLIENTE FORMATO,
-    CLIENTE TH NO USA, CLIENTE TH USA) se balancea por proporción
-    contra la distribución de CLIENTE TH USA usando
-    `balancear_targets_full`, sin ninguna restricción de "targets".
+    Una fila por (CUSTOMER_KEY, MEDIO_DE_PAGO) — igual que vienen los
+    datos crudos — con el tipo de cliente, el medio de pago, el monto
+    (VENTA_NETA) y todas las variables de elección usadas para el
+    balanceo (ZONA, SHABITS, RANGO_EDAD, CLASIFICACION_CLIENTE).
 
-    Se usa para calcular el resultado incremental que se sube a
-    UNIPAY_INCREMENTAL, para que los valores históricos del
-    indicador no cambien mientras se evalúa el nuevo método.
-
-    Las tablas de auditoría (univariante/bivariante) NO salen de
-    aquí — para eso ver `balancear_clientes_auditoria`, que usa el
-    método corregido (FORMATO se ajusta a TH USA sin reducirlo).
+    Sirve para poder trazar/auditar exactamente qué clientes
+    concretos entraron al cálculo de un periodo dado, no solo los
+    agregados.
     """
 
-    dfs_balanceados = []
-
-    for (banner, tipo), (var1, var2) in REGLAS_BALANCEO.items():
-
-        df_tmp = df_principal[
-            (df_principal['STORE_BANNER'] == banner)
-            &
-            (df_principal['TIPO_CLIENTE'] == tipo)
-        ].copy()
-
-        if df_tmp.empty:
-            continue
-
-        df_bal = balancear_targets_full(
-            df=df_tmp,
-            var1=var1,
-            var2=var2
+    df_detalle = df_balanceado[
+        df_balanceado['TARGET_CLIENTE'].isin(
+            ['CLIENTE FORMATO', 'CLIENTE TH USA', 'CLIENTE TH NO USA']
         )
+    ].copy()
 
-        dfs_balanceados.append(
-            df_bal
-        )
+    df_detalle.insert(0, 'PERIODO', anomes_cerrado)
 
-    if not dfs_balanceados:
-        msg = 'No fue posible balancear ningún segmento.'
-        raise ValueError(
-            msg
-        )
+    columnas = [
+        'PERIODO',
+        'CUSTOMER_KEY',
+        'STORE_BANNER',
+        'TIPO_CLIENTE',
+        'TARGET_CLIENTE',
+        'MEDIO_DE_PAGO',
+        'VENTA_NETA',
+        'ZONA',
+        'SHABITS',
+        'RANGO_EDAD',
+        'CLASIFICACION_CLIENTE'
+    ]
 
-    return pd.concat(
-        dfs_balanceados,
-        ignore_index=True
-    )
+    # Solo se incluyen las columnas que efectivamente vienen en
+    # query_principal — si algún banner no trae CLASIFICACION_CLIENTE
+    # o ZONA, por ejemplo, no se cae, simplemente no aparece.
+    columnas_presentes = [
+        c for c in columnas if c in df_detalle.columns
+    ]
+
+    return df_detalle[columnas_presentes].reset_index(drop=True)
 
 
 def balancear_formato_a_th_combinado(
@@ -1123,65 +1033,15 @@ def balancear_clientes_metodo_historico(df_principal, n_objetivo=10_000):
     return df_balanceado, tabla_univariante, tabla_bivariante
 
 
-def auditar_balanceo_legacy(df_principal):
-    """Audita el balanceo ORIGINAL (legacy) contra CLIENTE TH USA.
-
-    A diferencia de `balancear_clientes_auditoria` (que audita el
-    balanceo CORREGIDO), esta función corre `balancear_targets_full`
-    —el mismo método que hoy alimenta el cálculo del
-    FACTOR_INCREMENTAL_PCT vía `balancear_clientes_legacy`— y compara
-    la distribución resultante de CLIENTE FORMATO contra CLIENTE TH
-    USA. Sirve para exponer, con datos reales, qué tan desproporcionado
-    (o no) deja el método que efectivamente se usa hoy para el cálculo.
-
-    No se usa para calcular ningún resultado — es solo para las
-    tablas UNIPAY_AUDITORIA_BALANCEO_UNIVARIANTE_ORIGINAL y
-    UNIPAY_AUDITORIA_BALANCEO_BIVARIANTE_ORIGINAL.
-
-    Retorna una tupla (tabla_univariante, tabla_bivariante).
-    """
-
-    tablas_univariante = []
-    tablas_bivariante = []
-
-    for (banner, tipo), (var1, var2) in REGLAS_BALANCEO.items():
-
-        df_tmp = df_principal[
-            (df_principal['STORE_BANNER'] == banner)
-            &
-            (df_principal['TIPO_CLIENTE'] == tipo)
-        ].copy()
-
-        if df_tmp.empty:
-            continue
-
-        df_legacy_grupo = balancear_targets_full(
-            df=df_tmp,
-            var1=var1,
-            var2=var2
-        )
-
-        tabla_uni, tabla_biv = auditar_balanceo(
-            df_grupo=df_legacy_grupo,
-            banner=banner,
-            tipo=tipo,
-            var1=var1,
-            var2=var2
-        )
-
-        tablas_univariante.append(tabla_uni)
-        tablas_bivariante.append(tabla_biv)
-
-    if not tablas_univariante:
-        msg = 'No fue posible auditar ningún segmento (legacy).'
-        raise ValueError(
-            msg
-        )
-
-    return (
-        pd.concat(tablas_univariante, ignore_index=True),
-        pd.concat(tablas_bivariante, ignore_index=True)
-    )
+# Combinaciones (STORE_BANNER, MEDIO_DE_PAGO) que no tienen sentido de
+# negocio y se excluyen del cálculo de gasto/incremental (no solo se
+# muestran en 0 — se sacan por completo, porque incluirlas distorsiona
+# la interpretación de "sustitución de canal"). Ejemplo: Ecommerce es
+# 100% online, no debería tener transacciones en Efectivo — si
+# aparecen, son un artefacto de datos, no gasto real de ese canal.
+EXCLUSIONES_MEDIO_PAGO = {
+    'Ecommerce': ['Efectivo'],
+}
 
 
 def calcular_tablas_gasto(df_balanceado):
@@ -1199,6 +1059,16 @@ def calcular_tablas_gasto(df_balanceado):
 
         if df_tmp.empty:
             continue
+
+        # Excluir combinaciones banner + medio de pago sin sentido de
+        # negocio (ver EXCLUSIONES_MEDIO_PAGO) ANTES de sumar venta,
+        # para que ni la tabla de gasto ni el cálculo del incremental
+        # las vean.
+        medios_excluidos = EXCLUSIONES_MEDIO_PAGO.get(banner, [])
+        if medios_excluidos:
+            df_tmp = df_tmp[
+                ~df_tmp['MEDIO_DE_PAGO'].isin(medios_excluidos)
+            ]
 
         clientes_target = (
             df_tmp
@@ -1229,7 +1099,7 @@ def calcular_tablas_gasto(df_balanceado):
             ventas['CLIENTES_TARGET']
         )
 
-        tablas_gasto[(banner, tipo)] = (
+        tabla = (
             ventas
             .pivot_table(
                 index='MEDIO_DE_PAGO',
@@ -1238,6 +1108,22 @@ def calcular_tablas_gasto(df_balanceado):
             )
             .round(0)
         )
+
+        # FORMATO por definición no usa Unipay (si lo usara, sería
+        # TH USA) — cualquier valor no-cero ahí es artefacto de datos
+        # (ej. clasificación tardía). Se fuerza a 0 explícitamente.
+        # OJO: esto es puramente cosmético — calcular_factor_incremental
+        # nunca lee el valor de FORMATO en la fila Unipay (solo usa
+        # CLIENTE TH USA ahí), así que este parche NO cambia el
+        # FACTOR_INCREMENTAL_PCT, solo corrige lo que se reporta.
+        if (
+            'Unipay' in tabla.index
+            and
+            'CLIENTE FORMATO' in tabla.columns
+        ):
+            tabla.loc['Unipay', 'CLIENTE FORMATO'] = 0.0
+
+        tablas_gasto[(banner, tipo)] = tabla
 
     return tablas_gasto
 
@@ -1530,63 +1416,42 @@ def main() -> None:  # noqa: D103
     )
 
     # ---------------------------------------------------------------------
-    # Balanceo de clientes
+    # Balanceo de clientes — MÉTODO ÚNICO VALIDADO
     # ---------------------------------------------------------------------
-    # Se corren DOS balanceos en paralelo sobre el mismo df_principal:
+    # Tras varias iteraciones comparando métodos (legacy, corregido,
+    # réplica histórica con y sin tope de N), el método validado y
+    # único que queda en producción es el HISTÓRICO SIN TOPE:
     #
-    #   1) balancear_clientes_legacy: método ORIGINAL (histórico), sin
-    #      cambios. Su resultado (df_balanceado) es el que alimenta el
-    #      cálculo del FACTOR_INCREMENTAL_PCT, para no alterar los
-    #      valores históricos del indicador.
+    #   - CLIENTE FORMATO se calibra contra CLIENTE TH USA +
+    #     CLIENTE TH NO USA combinados (replicando el proceso manual
+    #     histórico), usando el N máximo alcanzable (sin topar a
+    #     10.000).
+    #   - CLIENTE TH USA queda 100% intacto.
+    #   - El cálculo del FACTOR_INCREMENTAL_PCT sigue restando
+    #     específicamente contra CLIENTE TH USA (no contra el grupo
+    #     combinado), como siempre.
     #
-    #   2) balancear_clientes_auditoria: método CORREGIDO (FORMATO se
-    #      ajusta a TH USA, TH USA queda intacto). Su resultado se usa
-    #      ÚNICAMENTE para las tablas de auditoría/reporte — no
-    #      alimenta el cálculo del incremental.
-    #
-    # Esto es intencional mientras se evalúa el cambio metodológico:
-    # el indicador de negocio sigue calculándose igual que siempre,
-    # y la auditoría muestra en paralelo cómo se vería con el método
-    # corregido, sin generar ruido en el histórico.
-
-    df_balanceado = balancear_clientes_legacy(
-        df_principal
-    )
+    # Este es ahora el único balanceo que alimenta UNIPAY_INCREMENTAL,
+    # UNIPAY_AUDITORIA_BALANCEO_UNIVARIANTE/BIVARIANTE y
+    # UNIPAY_GASTO_PROMEDIO.
 
     (
-        tabla_univariante_original,
-        tabla_bivariante_original
-    ) = auditar_balanceo_legacy(
-        df_principal
-    )
-
-    (
-        df_balanceado_historico,
-        tabla_univariante_historico,
-        tabla_bivariante_historico
-    ) = balancear_clientes_metodo_historico(
-        df_principal,
-        n_objetivo=10_000
-    )
-
-    (
-        df_balanceado_historico_sin_tope,
-        tabla_univariante_historico_sin_tope,
-        tabla_bivariante_historico_sin_tope
+        df_balanceado,
+        tabla_univariante,
+        tabla_bivariante
     ) = balancear_clientes_metodo_historico(
         df_principal,
         n_objetivo=None
     )
 
-    # PERIODO se agrega recién aquí (no viene de balancear_clientes)
-    # para poder historizar estas tablas en BigQuery igual que la
-    # tabla principal (delete + append por PERIODO).
+    tabla_univariante['PERIODO'] = anomes_cerrado
+    tabla_bivariante['PERIODO'] = anomes_cerrado
 
-    # Mismo tratamiento para las tablas del balanceo ORIGINAL (legacy)
-    tabla_univariante_original['PERIODO'] = anomes_cerrado
-    tabla_bivariante_original['PERIODO'] = anomes_cerrado
-
-    tabla_univariante_original = tabla_univariante_original[
+    # uploadFrame castea por POSICIÓN según el orden del JSON de
+    # esquema, así que hay que reordenar las columnas del DataFrame
+    # para que calcen exacto con el orden declarado en los
+    # ingest_*.json.
+    tabla_univariante = tabla_univariante[
         [
             'PERIODO',
             'STORE_BANNER',
@@ -1602,87 +1467,7 @@ def main() -> None:  # noqa: D103
         ]
     ]
 
-    tabla_bivariante_original = tabla_bivariante_original[
-        [
-            'PERIODO',
-            'STORE_BANNER',
-            'TIPO_CLIENTE',
-            'VAR1_NOMBRE',
-            'VAR2_NOMBRE',
-            'VAR1_VALOR',
-            'VAR2_VALOR',
-            'Q_CONTROL',
-            'PCT_CONTROL',
-            'Q_COMPARATIVO',
-            'PCT_COMPARATIVO',
-            'DIFF_PCT',
-            'IGUALADO'
-        ]
-    ]
-
-    # Mismo tratamiento para las tablas del método HISTÓRICO (réplica
-    # del proceso manual: control calibrado contra TH USA + TH NO USA
-    # combinados, auditado aquí contra TH USA solo)
-    tabla_univariante_historico['PERIODO'] = anomes_cerrado
-    tabla_bivariante_historico['PERIODO'] = anomes_cerrado
-
-    tabla_univariante_historico = tabla_univariante_historico[
-        [
-            'PERIODO',
-            'STORE_BANNER',
-            'TIPO_CLIENTE',
-            'VARIABLE',
-            'CATEGORIA',
-            'Q_CONTROL',
-            'PCT_CONTROL',
-            'Q_COMPARATIVO',
-            'PCT_COMPARATIVO',
-            'DIFF_PCT',
-            'IGUALADO'
-        ]
-    ]
-
-    tabla_bivariante_historico = tabla_bivariante_historico[
-        [
-            'PERIODO',
-            'STORE_BANNER',
-            'TIPO_CLIENTE',
-            'VAR1_NOMBRE',
-            'VAR2_NOMBRE',
-            'VAR1_VALOR',
-            'VAR2_VALOR',
-            'Q_CONTROL',
-            'PCT_CONTROL',
-            'Q_COMPARATIVO',
-            'PCT_COMPARATIVO',
-            'DIFF_PCT',
-            'IGUALADO'
-        ]
-    ]
-
-    # Mismo tratamiento para las tablas del método HISTÓRICO SIN TOPE
-    # (mismo mecanismo de calibración, pero N máximo alcanzable en
-    # vez de limitarse a 10.000)
-    tabla_univariante_historico_sin_tope['PERIODO'] = anomes_cerrado
-    tabla_bivariante_historico_sin_tope['PERIODO'] = anomes_cerrado
-
-    tabla_univariante_historico_sin_tope = tabla_univariante_historico_sin_tope[
-        [
-            'PERIODO',
-            'STORE_BANNER',
-            'TIPO_CLIENTE',
-            'VARIABLE',
-            'CATEGORIA',
-            'Q_CONTROL',
-            'PCT_CONTROL',
-            'Q_COMPARATIVO',
-            'PCT_COMPARATIVO',
-            'DIFF_PCT',
-            'IGUALADO'
-        ]
-    ]
-
-    tabla_bivariante_historico_sin_tope = tabla_bivariante_historico_sin_tope[
+    tabla_bivariante = tabla_bivariante[
         [
             'PERIODO',
             'STORE_BANNER',
@@ -1701,41 +1486,57 @@ def main() -> None:  # noqa: D103
     ]
 
     path_auditoria = guardar_auditoria_json(
-        tabla_univariante=tabla_univariante_original,
-        tabla_bivariante=tabla_bivariante_original,
+        tabla_univariante=tabla_univariante,
+        tabla_bivariante=tabla_bivariante,
         anomes_cerrado=anomes_cerrado
     )
 
     logging.info(
-        f'Auditoría de balanceo ORIGINAL (respaldo local): {path_auditoria}'
+        f'Auditoría de balanceo (respaldo local): {path_auditoria}'
     )
 
     # ---------------------------------------------------------------------
-    # Tablas de gasto
+    # Detalle de clientes balanceados (FORMATO + TH USA)
+    # ---------------------------------------------------------------------
+
+    detalle_clientes = construir_detalle_clientes_balanceados(
+        df_balanceado=df_balanceado,
+        anomes_cerrado=anomes_cerrado
+    )
+
+    path_detalle_clientes = guardar_json_generico(
+        datos=detalle_clientes,
+        nombre_archivo=f'detalle_clientes_balanceados_{anomes_cerrado}.json',
+        anomes_cerrado=anomes_cerrado
+    )
+
+    logging.info(
+        f'Detalle de clientes balanceados (respaldo local): '
+        f'{path_detalle_clientes}'
+    )
+
+    # ---------------------------------------------------------------------
+    # Tablas de gasto y factor incremental
     # ---------------------------------------------------------------------
 
     tablas_gasto = calcular_tablas_gasto(
         df_balanceado
     )
 
-    # ---------------------------------------------------------------------
-    # Factor incremental
-    # ---------------------------------------------------------------------
-
     df_incremental = calcular_incremental(
         tablas_gasto
     )
 
-    path_tablas_gasto_legacy = guardar_tablas_gasto_json(
+    path_tablas_gasto = guardar_tablas_gasto_json(
         tablas_gasto=tablas_gasto,
         df_incremental=df_incremental,
         anomes_cerrado=anomes_cerrado,
-        metodo='legacy'
+        metodo='historico_sin_tope'
     )
 
     logging.info(
-        f'Tablas de gasto + factor incremental (legacy, respaldo '
-        f'local): {path_tablas_gasto_legacy}'
+        f'Tablas de gasto + factor incremental (respaldo local): '
+        f'{path_tablas_gasto}'
     )
 
     tabla_gasto_larga = construir_tabla_gasto_larga(
@@ -1750,78 +1551,6 @@ def main() -> None:  # noqa: D103
 
     df_resultado = construir_resultado(
         df_incremental=df_incremental,
-        df_venta_bruta=df_venta_bruta,
-        df_costo_promocional=df_costo_promocional
-    )
-
-    # ---------------------------------------------------------------------
-    # Resultado incremental método HISTÓRICO (réplica proceso manual)
-    # ---------------------------------------------------------------------
-    # Control calibrado contra TH USA + TH NO USA combinados, pero
-    # calcular_incremental sigue restando contra TH USA solo — el
-    # mismo descalce intencional que tenía el proceso en Excel.
-
-    tablas_gasto_historico = calcular_tablas_gasto(
-        df_balanceado_historico
-    )
-
-    df_incremental_historico = calcular_incremental(
-        tablas_gasto_historico
-    )
-
-    path_tablas_gasto_historico = guardar_tablas_gasto_json(
-        tablas_gasto=tablas_gasto_historico,
-        df_incremental=df_incremental_historico,
-        anomes_cerrado=anomes_cerrado,
-        metodo='historico'
-    )
-
-    logging.info(
-        f'Tablas de gasto + factor incremental (histórico, respaldo '
-        f'local): {path_tablas_gasto_historico}'
-    )
-
-    df_resultado_historico = construir_resultado(
-        df_incremental=df_incremental_historico,
-        df_venta_bruta=df_venta_bruta,
-        df_costo_promocional=df_costo_promocional
-    )
-
-    # ---------------------------------------------------------------------
-    # Resultado incremental método HISTÓRICO SIN TOPE (N máximo)
-    # ---------------------------------------------------------------------
-    # Mismo mecanismo de calibración que el histórico con N=10.000,
-    # pero usando el N máximo alcanzable en vez del tope fijo — para
-    # ver si limitar la muestra a 10.000 influye en el resultado.
-
-    tablas_gasto_historico_sin_tope = calcular_tablas_gasto(
-        df_balanceado_historico_sin_tope
-    )
-
-    df_incremental_historico_sin_tope = calcular_incremental(
-        tablas_gasto_historico_sin_tope
-    )
-
-    path_tablas_gasto_historico_sin_tope = guardar_tablas_gasto_json(
-        tablas_gasto=tablas_gasto_historico_sin_tope,
-        df_incremental=df_incremental_historico_sin_tope,
-        anomes_cerrado=anomes_cerrado,
-        metodo='historico_sin_tope'
-    )
-
-    logging.info(
-        'Tablas de gasto + factor incremental (histórico sin tope, '
-        f'respaldo local): {path_tablas_gasto_historico_sin_tope}'
-    )
-
-    tabla_gasto_larga_historico_sin_tope = construir_tabla_gasto_larga(
-        tablas_gasto=tablas_gasto_historico_sin_tope,
-        df_incremental=df_incremental_historico_sin_tope,
-        anomes_cerrado=anomes_cerrado
-    )
-
-    df_resultado_historico_sin_tope = construir_resultado(
-        df_incremental=df_incremental_historico_sin_tope,
         df_venta_bruta=df_venta_bruta,
         df_costo_promocional=df_costo_promocional
     )
@@ -1866,24 +1595,28 @@ def main() -> None:  # noqa: D103
         if_exists='append'
     )
 
-    # ---------------------------------------------------------------------
-    # Subida de tablas de auditoría del balanceo ORIGINAL (legacy)
-    # ---------------------------------------------------------------------
-
-    tabla_uni_original_bq = 'UNIPAY_AUDITORIA_BALANCEO_UNIVARIANTE_ORIGINAL'
-    tabla_biv_original_bq = 'UNIPAY_AUDITORIA_BALANCEO_BIVARIANTE_ORIGINAL'
-
-    path_tabla_uni_original_bq = (
-        f'{project_id}.{esquema}.{tabla_uni_original_bq}'
+    logging.info(
+        f'Incremental subido a BigQuery: {path_table}'
     )
-    path_tabla_biv_original_bq = (
-        f'{project_id}.{esquema}.{tabla_biv_original_bq}'
+
+    # ---------------------------------------------------------------------
+    # Subida de tablas de auditoría de balanceo
+    # ---------------------------------------------------------------------
+
+    tabla_uni_bq = 'UNIPAY_AUDITORIA_BALANCEO_UNIVARIANTE'
+    tabla_biv_bq = 'UNIPAY_AUDITORIA_BALANCEO_BIVARIANTE'
+
+    path_tabla_uni_bq = (
+        f'{project_id}.{esquema}.{tabla_uni_bq}'
+    )
+    path_tabla_biv_bq = (
+        f'{project_id}.{esquema}.{tabla_biv_bq}'
     )
 
     createTableFromJSON(
         table_ddl_json_path=os.path.join(
             'gbq_objects',
-            'ingest_auditoria_balanceo_univariante_original.json'
+            'ingest_auditoria_balanceo_univariante.json'
         ),
         project=project_id,
         gbq_client=gbq_client,
@@ -1893,7 +1626,7 @@ def main() -> None:  # noqa: D103
     createTableFromJSON(
         table_ddl_json_path=os.path.join(
             'gbq_objects',
-            'ingest_auditoria_balanceo_bivariante_original.json'
+            'ingest_auditoria_balanceo_bivariante.json'
         ),
         project=project_id,
         gbq_client=gbq_client,
@@ -1901,7 +1634,7 @@ def main() -> None:  # noqa: D103
     )
 
     deleteFromTable(
-        table_ref=path_tabla_uni_original_bq,
+        table_ref=path_tabla_uni_bq,
         where_clause=(
             f"PERIODO = '{anomes_cerrado}'"
         ),
@@ -1909,7 +1642,7 @@ def main() -> None:  # noqa: D103
     )
 
     deleteFromTable(
-        table_ref=path_tabla_biv_original_bq,
+        table_ref=path_tabla_biv_bq,
         where_clause=(
             f"PERIODO = '{anomes_cerrado}'"
         ),
@@ -1917,10 +1650,10 @@ def main() -> None:  # noqa: D103
     )
 
     uploadFrame(
-        tabla_univariante_original,
+        tabla_univariante,
         table_ddl_json_path=os.path.join(
             'gbq_objects',
-            'ingest_auditoria_balanceo_univariante_original.json'
+            'ingest_auditoria_balanceo_univariante.json'
         ),
         project=project_id,
         gbq_client=gbq_client,
@@ -1928,10 +1661,10 @@ def main() -> None:  # noqa: D103
     )
 
     uploadFrame(
-        tabla_bivariante_original,
+        tabla_bivariante,
         table_ddl_json_path=os.path.join(
             'gbq_objects',
-            'ingest_auditoria_balanceo_bivariante_original.json'
+            'ingest_auditoria_balanceo_bivariante.json'
         ),
         project=project_id,
         gbq_client=gbq_client,
@@ -1939,244 +1672,18 @@ def main() -> None:  # noqa: D103
     )
 
     logging.info(
-        'Auditoría de balanceo ORIGINAL subida a BigQuery: '
-        f'{path_tabla_uni_original_bq} / {path_tabla_biv_original_bq}'
+        'Auditoría de balanceo subida a BigQuery: '
+        f'{path_tabla_uni_bq} / {path_tabla_biv_bq}'
     )
 
     # ---------------------------------------------------------------------
-    # Subida de tablas del método HISTÓRICO (réplica proceso manual)
-    # ---------------------------------------------------------------------
-
-    tabla_uni_historico_bq = 'UNIPAY_AUDITORIA_BALANCEO_UNIVARIANTE_HISTORICO'
-    tabla_biv_historico_bq = 'UNIPAY_AUDITORIA_BALANCEO_BIVARIANTE_HISTORICO'
-    tabla_incremental_historico_bq = 'UNIPAY_INCREMENTAL_HISTORICO'
-
-    path_tabla_uni_historico_bq = (
-        f'{project_id}.{esquema}.{tabla_uni_historico_bq}'
-    )
-    path_tabla_biv_historico_bq = (
-        f'{project_id}.{esquema}.{tabla_biv_historico_bq}'
-    )
-    path_tabla_incremental_historico_bq = (
-        f'{project_id}.{esquema}.{tabla_incremental_historico_bq}'
-    )
-
-    createTableFromJSON(
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_auditoria_balanceo_univariante_historico.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='ignore'
-    )
-
-    createTableFromJSON(
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_auditoria_balanceo_bivariante_historico.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='ignore'
-    )
-
-    createTableFromJSON(
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_incremental_historico.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='ignore'
-    )
-
-    deleteFromTable(
-        table_ref=path_tabla_uni_historico_bq,
-        where_clause=(
-            f"PERIODO = '{anomes_cerrado}'"
-        ),
-        gbq_client=gbq_client
-    )
-
-    deleteFromTable(
-        table_ref=path_tabla_biv_historico_bq,
-        where_clause=(
-            f"PERIODO = '{anomes_cerrado}'"
-        ),
-        gbq_client=gbq_client
-    )
-
-    deleteFromTable(
-        table_ref=path_tabla_incremental_historico_bq,
-        where_clause=(
-            f"PERIODO = '{anomes_cerrado}'"
-        ),
-        gbq_client=gbq_client
-    )
-
-    uploadFrame(
-        tabla_univariante_historico,
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_auditoria_balanceo_univariante_historico.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='append'
-    )
-
-    uploadFrame(
-        tabla_bivariante_historico,
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_auditoria_balanceo_bivariante_historico.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='append'
-    )
-
-    uploadFrame(
-        df_resultado_historico,
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_incremental_historico.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='append'
-    )
-
-    logging.info(
-        'Método HISTÓRICO subido a BigQuery: '
-        f'{path_tabla_uni_historico_bq} / {path_tabla_biv_historico_bq} / '
-        f'{path_tabla_incremental_historico_bq}'
-    )
-
-    # ---------------------------------------------------------------------
-    # Subida de tablas del método HISTÓRICO SIN TOPE (N máximo)
-    # ---------------------------------------------------------------------
-
-    tabla_uni_hst_bq = 'UNIPAY_AUDITORIA_BALANCEO_UNIVARIANTE_HISTORICO_SIN_TOPE'
-    tabla_biv_hst_bq = 'UNIPAY_AUDITORIA_BALANCEO_BIVARIANTE_HISTORICO_SIN_TOPE'
-    tabla_incremental_hst_bq = 'UNIPAY_INCREMENTAL_HISTORICO_SIN_TOPE'
-
-    path_tabla_uni_hst_bq = (
-        f'{project_id}.{esquema}.{tabla_uni_hst_bq}'
-    )
-    path_tabla_biv_hst_bq = (
-        f'{project_id}.{esquema}.{tabla_biv_hst_bq}'
-    )
-    path_tabla_incremental_hst_bq = (
-        f'{project_id}.{esquema}.{tabla_incremental_hst_bq}'
-    )
-
-    createTableFromJSON(
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_auditoria_balanceo_univariante_historico_sin_tope.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='ignore'
-    )
-
-    createTableFromJSON(
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_auditoria_balanceo_bivariante_historico_sin_tope.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='ignore'
-    )
-
-    createTableFromJSON(
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_incremental_historico_sin_tope.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='ignore'
-    )
-
-    deleteFromTable(
-        table_ref=path_tabla_uni_hst_bq,
-        where_clause=(
-            f"PERIODO = '{anomes_cerrado}'"
-        ),
-        gbq_client=gbq_client
-    )
-
-    deleteFromTable(
-        table_ref=path_tabla_biv_hst_bq,
-        where_clause=(
-            f"PERIODO = '{anomes_cerrado}'"
-        ),
-        gbq_client=gbq_client
-    )
-
-    deleteFromTable(
-        table_ref=path_tabla_incremental_hst_bq,
-        where_clause=(
-            f"PERIODO = '{anomes_cerrado}'"
-        ),
-        gbq_client=gbq_client
-    )
-
-    uploadFrame(
-        tabla_univariante_historico_sin_tope,
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_auditoria_balanceo_univariante_historico_sin_tope.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='append'
-    )
-
-    uploadFrame(
-        tabla_bivariante_historico_sin_tope,
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_auditoria_balanceo_bivariante_historico_sin_tope.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='append'
-    )
-
-    uploadFrame(
-        df_resultado_historico_sin_tope,
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_incremental_historico_sin_tope.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='append'
-    )
-
-    logging.info(
-        'Método HISTÓRICO SIN TOPE subido a BigQuery: '
-        f'{path_tabla_uni_hst_bq} / {path_tabla_biv_hst_bq} / '
-        f'{path_tabla_incremental_hst_bq}'
-    )
-
-    # ---------------------------------------------------------------------
-    # Subida de tablas de gasto promedio (legacy + histórico sin tope)
+    # Subida de la tabla de gasto promedio
     # ---------------------------------------------------------------------
 
     tabla_gasto_bq = 'UNIPAY_GASTO_PROMEDIO'
-    tabla_gasto_hst_bq = 'UNIPAY_GASTO_PROMEDIO_HISTORICO_SIN_TOPE'
 
     path_tabla_gasto_bq = (
         f'{project_id}.{esquema}.{tabla_gasto_bq}'
-    )
-    path_tabla_gasto_hst_bq = (
-        f'{project_id}.{esquema}.{tabla_gasto_hst_bq}'
     )
 
     createTableFromJSON(
@@ -2189,26 +1696,8 @@ def main() -> None:  # noqa: D103
         if_exists='ignore'
     )
 
-    createTableFromJSON(
-        table_ddl_json_path=os.path.join(
-            'gbq_objects',
-            'ingest_gasto_promedio_historico_sin_tope.json'
-        ),
-        project=project_id,
-        gbq_client=gbq_client,
-        if_exists='ignore'
-    )
-
     deleteFromTable(
         table_ref=path_tabla_gasto_bq,
-        where_clause=(
-            f"PERIODO = '{anomes_cerrado}'"
-        ),
-        gbq_client=gbq_client
-    )
-
-    deleteFromTable(
-        table_ref=path_tabla_gasto_hst_bq,
         where_clause=(
             f"PERIODO = '{anomes_cerrado}'"
         ),
@@ -2226,11 +1715,43 @@ def main() -> None:  # noqa: D103
         if_exists='append'
     )
 
-    uploadFrame(
-        tabla_gasto_larga_historico_sin_tope,
+    logging.info(
+        f'Tabla de gasto promedio subida a BigQuery: {path_tabla_gasto_bq}'
+    )
+
+    # ---------------------------------------------------------------------
+    # Subida del detalle de clientes balanceados
+    # ---------------------------------------------------------------------
+
+    tabla_detalle_bq = 'UNIPAY_DETALLE_CLIENTES_BALANCEADOS'
+
+    path_tabla_detalle_bq = (
+        f'{project_id}.{esquema}.{tabla_detalle_bq}'
+    )
+
+    createTableFromJSON(
         table_ddl_json_path=os.path.join(
             'gbq_objects',
-            'ingest_gasto_promedio_historico_sin_tope.json'
+            'ingest_detalle_clientes_balanceados.json'
+        ),
+        project=project_id,
+        gbq_client=gbq_client,
+        if_exists='ignore'
+    )
+
+    deleteFromTable(
+        table_ref=path_tabla_detalle_bq,
+        where_clause=(
+            f"PERIODO = '{anomes_cerrado}'"
+        ),
+        gbq_client=gbq_client
+    )
+
+    uploadFrame(
+        detalle_clientes,
+        table_ddl_json_path=os.path.join(
+            'gbq_objects',
+            'ingest_detalle_clientes_balanceados.json'
         ),
         project=project_id,
         gbq_client=gbq_client,
@@ -2238,8 +1759,8 @@ def main() -> None:  # noqa: D103
     )
 
     logging.info(
-        'Tablas de gasto promedio subidas a BigQuery: '
-        f'{path_tabla_gasto_bq} / {path_tabla_gasto_hst_bq}'
+        'Detalle de clientes balanceados subido a BigQuery: '
+        f'{path_tabla_detalle_bq}'
     )
 
     logging.info(

@@ -1,0 +1,78 @@
+{
+    "schema": "UNIPAY",
+    "table": "UNIPAY_DETALLE_CLIENTES_BALANCEADOS",
+
+    "columns": [
+        {
+            "name": "PERIODO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Periodo (anomes_cerrado) al que corresponde el detalle, formato YYYYMM."
+        },
+        {
+            "name": "CUSTOMER_KEY",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Identificador único del cliente."
+        },
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato comercial al que corresponde el cliente."
+        },
+        {
+            "name": "TIPO_CLIENTE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Tipo de cliente (PERSONA/COMERCIANTE)."
+        },
+        {
+            "name": "TARGET_CLIENTE",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Grupo al que pertenece el cliente ya balanceado: CLIENTE FORMATO (control, calibrado contra TH USA + TH NO USA combinados), CLIENTE TH USA (comparativo, 100% intacto), o CLIENTE TH NO USA (grupo de referencia para la calibración, 100% intacto, no participa del cálculo del factor incremental pero sí de la calibración del control)."
+        },
+        {
+            "name": "MEDIO_DE_PAGO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Medio de pago de esta transacción/fila (Efectivo, Debito, Tarjeta Credito, Unipay, Resto)."
+        },
+        {
+            "name": "VENTA_NETA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Monto de venta neta del cliente en ese medio de pago, para ese periodo."
+        },
+        {
+            "name": "ZONA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Zona geográfica del cliente (una de las variables de elección usadas para el balanceo, según el banner)."
+        },
+        {
+            "name": "SHABITS",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Hábito de compra / nivel de fidelización del cliente (VIP, ORO, PLATA, BRONCE) — una de las variables de elección usadas para el balanceo, según el banner."
+        },
+        {
+            "name": "RANGO_EDAD",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Tramo etario del cliente — una de las variables de elección usadas para el balanceo, según el banner."
+        },
+        {
+            "name": "CLASIFICACION_CLIENTE",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Clasificación comercial del cliente (ej. UP MARKET, MID MARKET, PRICE SENSITIVE) — variable de elección usada para el balanceo en algunos banners (ej. Ecommerce)."
+        }
+    ],
+
+    "clustering_fields": [
+        "PERIODO",
+        "STORE_BANNER"
+    ]
+}
