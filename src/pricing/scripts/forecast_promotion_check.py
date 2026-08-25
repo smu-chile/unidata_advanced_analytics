@@ -2398,6 +2398,7 @@ def main():
 
     output_buffer = generar_excel_buffer(df_proyecciones)  # noqa: F841
 
+
     #subir_archivo_sharepoint(
     #    contenido=output_buffer,  # noqa: ERA001
     #    nombre_archivo=nombre_output,  # noqa: ERA001
@@ -2406,6 +2407,42 @@ def main():
     #)  # noqa: ERA001
 
 
+    df_proyecciones.insert(
+        loc=0,
+        column='execution_date',
+        value=execution_date
+    )
+
+    # Definir el WHERE
+    print('Justo antes de subir a GCP: ', df_proyecciones.info())
+    where_clause = f"execution_date = '{execution_date}'"
+
+    # Parametros
+    # Parche 3: Tabla ajustada a sector oriente
+    esquema = 'PRECIO_PROMOCIONES'
+    tabla = 'FORECAST_PROMOCIONES'
+
+    # Se elimina los datos para cierto store_banner y rango (si existen)
+    deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
+                    where_clause=where_clause,
+                    gbq_client=gbq_client)
+
+
+
+    # Se carga en BQ con los datos recalculados
+    # Parche 4: json ajustado a sector oriente
+    # Parche 5: append -> replace.
+
+    uploadFrame(
+        df_proyecciones,
+        table_ddl_json_path=os.path.join('gbq_objects',
+                                         'ingest_product_forecast.json'),
+        project=proyecto,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    logging.info('Se sube la tabla a GCP')
 if __name__ == '__main__':
 
     main()
