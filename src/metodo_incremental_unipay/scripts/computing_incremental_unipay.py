@@ -619,7 +619,7 @@ def _tabla_distribucion(df_grupo, variables):
     return tabla
 
 
-def auditar_balanceo(
+def auditar_balanceo(  # noqa: D417
     df_grupo,
     banner,
     tipo,
@@ -630,6 +630,16 @@ def auditar_balanceo(
     tolerancia_pp=TOLERANCIA_PP
 ):
     """Compara la distribución de control vs comparativo.
+
+    Parameters
+    ----------
+    grupo_comparativo : str | list | tuple
+        Puede ser un único valor de TARGET_CLIENTE (ej.
+        'CLIENTE TH USA') o una lista/tupla de valores, en cuyo caso
+        se comparan combinados (ej. ('CLIENTE TH USA',
+        'CLIENTE TH NO USA') para comparar contra todos los
+        tarjetahabientes juntos, replicando cómo se calibra
+        `balancear_formato_a_th_combinado`).
 
     Retorna dos dataframes:
       - tabla_univariante: Q y % por cada variable por separado
@@ -642,9 +652,14 @@ def auditar_balanceo(
         df_grupo['TARGET_CLIENTE'] == grupo_control
     ]
 
-    df_comparativo = df_grupo[
-        df_grupo['TARGET_CLIENTE'] == grupo_comparativo
-    ]
+    if isinstance(grupo_comparativo, (list, tuple, set)):  # noqa: UP038
+        df_comparativo = df_grupo[
+            df_grupo['TARGET_CLIENTE'].isin(grupo_comparativo)
+        ]
+    else:
+        df_comparativo = df_grupo[
+            df_grupo['TARGET_CLIENTE'] == grupo_comparativo
+        ]
 
     filas_univariante = []
 
@@ -1001,7 +1016,7 @@ def balancear_formato_a_th_combinado(
     grupo_control='CLIENTE FORMATO',
     grupos_referencia=('CLIENTE TH USA', 'CLIENTE TH NO USA'),
     random_state=42,
-    n_objetivo=100_000
+    n_objetivo=10_000
 ):
     """Replica el método manual histórico (script Excel/ETL antiguo).
 
@@ -1027,7 +1042,7 @@ def balancear_formato_a_th_combinado(
     no porque se considere el método recomendado. Para la versión
     correctamente calibrada, ver `balancear_formato_a_thusa`.
 
-    n_objetivo por defecto es 100.000, replicando el tamaño de
+    n_objetivo por defecto es 10.000, replicando el tamaño de
     muestra fijo que usaba el proceso manual (`Q_ALEATORIO` con
     `.mul(10_000)`). Si el pool real no alcanza, se usa el máximo
     posible (igual que en `balancear_formato_a_thusa`).
@@ -1159,6 +1174,16 @@ def balancear_clientes_metodo_historico(df_principal, n_objetivo=10_000):
     descalce del método histórico (ver advertencia en
     `balancear_formato_a_th_combinado`).
 
+    VALIDACIÓN INTERNA: antes de auditar contra TH USA (el descalce
+    esperado), esta función primero valida que el MECANISMO de
+    calibración en sí funcione — comparando FORMATO contra el grupo
+    combinado (TH USA + TH NO USA), que es contra lo que
+    efectivamente se calibró. Esto debería dar ~0.00pp de diferencia
+    en todos los estratos (igual que se confirmó con datos reales del
+    proceso Excel: Grupo Control vs TarjetaHabiente). Si no da eso,
+    hay un bug real en el sampling, no solo el descalce esperado —
+    por eso se registra un warning si no calza.
+
     Retorna una tupla (df_balanceado, tabla_univariante, tabla_bivariante),
     donde las tablas de auditoría comparan el FORMATO resultante
     contra CLIENTE TH USA (el grupo con el que realmente se compara
@@ -1192,6 +1217,30 @@ def balancear_clientes_metodo_historico(df_principal, n_objetivo=10_000):
             df_balanceado_grupo
         )
 
+        # Validación interna: el mecanismo debe calzar ~0.00pp
+        # contra el grupo combinado (contra el que se calibró).
+        _, tabla_biv_validacion = auditar_balanceo(
+            df_grupo=df_balanceado_grupo,
+            banner=banner,
+            tipo=tipo,
+            var1=var1,
+            var2=var2,
+            grupo_comparativo=(
+                'CLIENTE TH USA', 'CLIENTE TH NO USA'
+            )
+        )
+
+        if not tabla_biv_validacion['IGUALADO'].all():
+            logging.warning(
+                f'[{banner}/{tipo}] El mecanismo de calibración del '
+                'método histórico NO calzó contra el grupo combinado '
+                '(esto NO es el descalce esperado vs TH USA, es un '
+                'problema real en el sampling). Revisar '
+                'balancear_formato_a_th_combinado.'
+            )
+
+        # Auditoría "oficial": FORMATO vs CLIENTE TH USA solo — el
+        # descalce esperado y documentado del método histórico.
         tabla_uni, tabla_biv = auditar_balanceo(
             df_grupo=df_balanceado_grupo,
             banner=banner,
