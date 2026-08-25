@@ -213,6 +213,10 @@ def main():  # noqa: ANN201, D103
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '--project_id',
+        required=False,
+        help='ID del proyecto GCP.')
+    parser.add_argument(
         '--schema_file',
         required=True,
         help='Ruta al archivo JSON con el schema de la tabla STG.')
