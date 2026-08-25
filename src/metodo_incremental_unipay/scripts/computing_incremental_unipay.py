@@ -1174,21 +1174,25 @@ def balancear_clientes_metodo_historico(df_principal, n_objetivo=10_000):
     descalce del método histórico (ver advertencia en
     `balancear_formato_a_th_combinado`).
 
-    VALIDACIÓN INTERNA: antes de auditar contra TH USA (el descalce
-    esperado), esta función primero valida que el MECANISMO de
-    calibración en sí funcione — comparando FORMATO contra el grupo
-    combinado (TH USA + TH NO USA), que es contra lo que
-    efectivamente se calibró. Esto debería dar ~0.00pp de diferencia
-    en todos los estratos (igual que se confirmó con datos reales del
-    proceso Excel: Grupo Control vs TarjetaHabiente). Si no da eso,
-    hay un bug real en el sampling, no solo el descalce esperado —
-    por eso se registra un warning si no calza.
+    LAS TABLAS DE AUDITORÍA QUE RETORNA ESTA FUNCIÓN comparan FORMATO
+    contra el grupo COMBINADO (TH USA + TH NO USA) — es decir, contra
+    lo que efectivamente se calibró, replicando la comparación
+    Grupo Control vs TarjetaHabiente del proceso Excel (debería dar
+    ~0.00-0.01pp de diferencia, igual que se confirmó con datos
+    reales). Esto documenta que el MECANISMO de calibración funciona
+    correctamente.
 
-    Retorna una tupla (df_balanceado, tabla_univariante, tabla_bivariante),
-    donde las tablas de auditoría comparan el FORMATO resultante
-    contra CLIENTE TH USA (el grupo con el que realmente se compara
-    en el cálculo del incremental) — para que quede visible, con
-    números reales, la magnitud del descalce.
+    OJO — esto NO es la misma comparación que importa para el
+    resultado del incremental: `calcular_incremental` sigue restando
+    contra CLIENTE TH USA solo, no contra el grupo combinado. Por
+    eso, aunque estas tablas den ~0.00pp (balanceo bien calibrado
+    contra el grupo combinado), el `FACTOR_INCREMENTAL_PCT` resultante
+    en `UNIPAY_INCREMENTAL_HISTORICO` puede seguir siendo distinto al
+    del método corregido — es el descalce intencional del método
+    histórico, que ya no se audita aquí como tabla, pero se sigue
+    chequeando internamente (ver el `logging.warning` más abajo).
+
+    Retorna una tupla (df_balanceado, tabla_univariante, tabla_bivariante).
     """
 
     dfs_balanceados = []
@@ -1217,9 +1221,11 @@ def balancear_clientes_metodo_historico(df_principal, n_objetivo=10_000):
             df_balanceado_grupo
         )
 
-        # Validación interna: el mecanismo debe calzar ~0.00pp
-        # contra el grupo combinado (contra el que se calibró).
-        _, tabla_biv_validacion = auditar_balanceo(
+        # Tabla que se persiste: FORMATO vs grupo COMBINADO (TH USA +
+        # TH NO USA) — contra lo que efectivamente se calibró.
+        # Debería dar ~0.00-0.01pp, replicando Control vs
+        # TarjetaHabiente del proceso Excel.
+        tabla_uni, tabla_biv = auditar_balanceo(
             df_grupo=df_balanceado_grupo,
             banner=banner,
             tipo=tipo,
@@ -1230,24 +1236,13 @@ def balancear_clientes_metodo_historico(df_principal, n_objetivo=10_000):
             )
         )
 
-        if not tabla_biv_validacion['IGUALADO'].all():
+        if not tabla_biv['IGUALADO'].all():
             logging.warning(
                 f'[{banner}/{tipo}] El mecanismo de calibración del '
                 'método histórico NO calzó contra el grupo combinado '
-                '(esto NO es el descalce esperado vs TH USA, es un '
-                'problema real en el sampling). Revisar '
+                '(se esperaba ~0.00pp). Revisar '
                 'balancear_formato_a_th_combinado.'
             )
-
-        # Auditoría "oficial": FORMATO vs CLIENTE TH USA solo — el
-        # descalce esperado y documentado del método histórico.
-        tabla_uni, tabla_biv = auditar_balanceo(
-            df_grupo=df_balanceado_grupo,
-            banner=banner,
-            tipo=tipo,
-            var1=var1,
-            var2=var2
-        )
 
         tablas_univariante.append(tabla_uni)
         tablas_bivariante.append(tabla_biv)

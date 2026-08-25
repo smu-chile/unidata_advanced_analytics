@@ -42,7 +42,7 @@
             "name": "PCT_CONTROL",
             "field_type": "FLOAT",
             "mode": "NULLABLE",
-            "description": "Porcentaje que representa esa categoría dentro del grupo control (CLIENTE FORMATO) calibrado contra el grupo combinado."
+            "description": "Porcentaje que representa esa categoría dentro del grupo control (CLIENTE FORMATO), calibrado contra TH USA + TH NO USA combinados (N fijo 10.000), replicando el proceso manual histórico."
         },
         {
             "name": "Q_COMPARATIVO",
@@ -54,7 +54,7 @@
             "name": "PCT_COMPARATIVO",
             "field_type": "FLOAT",
             "mode": "NULLABLE",
-            "description": "Porcentaje dentro de CLIENTE TH USA — el grupo contra el que efectivamente se calcula el FACTOR_INCREMENTAL_PCT, distinto del grupo (combinado) contra el que se calibró el control. La diferencia aquí es intencional y esperada: documenta el descalce del método histórico."
+            "description": "Porcentaje dentro de CLIENTE TH USA + CLIENTE TH NO USA combinados — el grupo contra el que efectivamente se calibró el control (no contra el que se calcula el incremental). Debería dar ~0.00-0.01pp de diferencia con PCT_CONTROL, igual que se confirmó con datos reales del proceso Excel (Grupo Control vs TarjetaHabiente). OJO: calcular_factor_incremental sigue restando contra CLIENTE TH USA solo, no contra este grupo combinado — ver UNIPAY_INCREMENTAL_HISTORICO."
         },
         {
             "name": "DIFF_PCT",
@@ -66,7 +66,7 @@
             "name": "IGUALADO",
             "field_type": "BOOLEAN",
             "mode": "NULLABLE",
-            "description": "Con este método se espera mayormente False: el control se calibró contra TH USA+TH NO USA combinados, no contra TH USA solo, replicando a propósito el descalce del proceso manual histórico."
+            "description": "Se espera mayormente True (~0.00-0.01pp), confirmando que el mecanismo de calibración replica correctamente el proceso Excel. Si da False de forma sistemática, es una señal de un problema real en el sampling, no el descalce esperado del método histórico (ese descalce está documentado en UNIPAY_INCREMENTAL_HISTORICO, no aquí)."
         }
     ],
     "clustering_fields": [
