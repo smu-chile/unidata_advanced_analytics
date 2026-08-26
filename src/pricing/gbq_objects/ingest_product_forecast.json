@@ -1,5 +1,5 @@
 {
-    "schema": "PRECIONES_PROMOCIONES",
+    "schema": "PRECIOS_PROMOCIONES",
     "table": "FORECAST_PROMOCIONES",
 
     "columns": [
