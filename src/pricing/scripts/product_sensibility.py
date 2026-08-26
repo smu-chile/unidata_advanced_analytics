@@ -16,8 +16,7 @@ from google.cloud.bigquery import Client
 from sklearn.preprocessing import MinMaxScaler
 from dateutil.relativedelta import relativedelta
 
-import common.office365_extended.sharepoint as sp
-
+# import common.office365_extended.sharepoint as sp  # noqa: ERA001
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
@@ -26,7 +25,7 @@ from common.gcp_extended.bigquery import (
     readBigQuery,
     deleteFromTable,
 )
-from common.gcp_extended.secretsmanager import getSecret
+from common.gcp_extended.secretsmanager import getSecret  # noqa: F401
 
 
 # -------------------------------------------------------------------------
@@ -552,7 +551,7 @@ def main() -> None:  # noqa: D103
     factor_outliers = 10
 
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'PRODUCT_SENSIBILITY_ENERO_2026'
+    tabla = 'PRODUCT_SENSIBILITY'
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -811,6 +810,11 @@ def main() -> None:  # noqa: D103
 
     print('Post media armómina: ', df_detalle2.info())
 
+
+    # PATCH revisión 0 en sensibilidad
+    cantidad_ceros = (df_detalle2['media_geometrica'] == 0).sum()
+    print(f'Cantidad de ceros: {cantidad_ceros}')
+
     #----------------------------------------------------------------------
     # ENDREGION
 
@@ -872,84 +876,8 @@ def main() -> None:  # noqa: D103
 
     df_detalle4 = df_detalle3.merge(df_gasto_total, on='material',how='left')
 
-
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
-
-
-    # REGION: *OPCIONAL* Forzar Las 80 categorias
-    #----------------------------------------------------------------------
-
-
-    # Paso 1: Agrupar por categoría y sumar gastos de productos
-    category_sums = df_detalle4.groupby('category_description'
-                                         )['gasto_material'].sum()
-
-    # Paso 2: Seleccionar las top 80 categorías con más gasto
-    top_categories = category_sums.nlargest(80).index  # noqa: ERA001
-
-    # Filtrar el DataFrame original para incluir solo esas 80
-    # categorías
-    filtered_df = df_detalle4[df_detalle4['category_description'].isin(  # noqa: ERA001, W505
-        top_categories)]
-
-    # Paso 3 y 4: Seleccionar productos por categoría
-    result_list = []  # noqa: ERA001
-    for i, category in enumerate(top_categories, start=1):
-        category_data = filtered_df[filtered_df['category_description'] == category]  # noqa: E501, ERA001, W505
-        category_data = category_data.sort_values('media_geometrica_familia',  # noqa: W505
-                                                ascending=False)
-        if i <= 10:  # noqa: SIM114
-            top_products = category_data.head(3)  # noqa: ERA001
-        elif i <= 20:  # noqa: ERA001, SIM114
-            top_products = category_data.head(3)  # noqa: ERA001
-        elif i <= 30:  # noqa: ERA001, SIM114
-            top_products = category_data.head(3)  # noqa: ERA001
-        elif i <= 40:  # noqa: ERA001
-            top_products = category_data.head(3)  # noqa: ERA001
-        elif i <= 50:  # noqa: ERA001, SIM114
-            top_products = category_data.head(2)  # noqa: ERA001
-        elif i <= 60:  # noqa: ERA001, SIM114
-            top_products = category_data.head(2)  # noqa: ERA001
-        elif i <= 70:  # noqa: ERA001, SIM114
-            top_products = category_data.head(2)  # noqa: ERA001
-        elif i <= 80:  # noqa: ERA001
-            top_products = category_data.head(2)  # noqa: ERA001
-
-        result_list.append(top_products[['material',
-                                        'product_description',
-                                        'sku_padre']])
-
-    # Concatenar todos los DataFrames recolectados en result_list
-    df_impuestos = pd.concat(result_list, ignore_index=True)  # noqa: ERA001, W505
-
-    # Paso 5: Obtener la lista de familias únicos de df_impuestos
-    materiales_impuestos = df_impuestos['sku_padre'].unique()  # noqa: ERA001, W505
-
-    # Paso 6: Filtrar df_detalle3 para los materiales en df_impuestos
-    filtro = df_detalle4['sku_padre'].isin(materiales_impuestos)  # noqa: ERA001, W505
-
-    df_detalle4['Era_High_Antes_RankingCat'] = (
-        df_detalle4['cluster'].eq('high')
-    ).astype(int)
-
-    #[PATCH] revisión actualización paso 7
-    df_detalle4['Forzado_RankingCat'] = 0  # noqa: ERA001
-    df_detalle4.loc[filtro, 'Forzado_RankingCat'] = 1  # noqa: ERA001
-
-
-    # Paso 7: Actualizar los valores a 'high'
-    df_detalle4.loc[filtro, 'cluster'] = 'high'  # noqa: ERA001
-
-    df_detalle4['Forzado_Efectivo_RankingCat'] = (
-        filtro & df_detalle4['Era_High_Antes_RankingCat'].eq(0)
-    ).astype(int)
-
-
-    print('Se hace el merge con gasto de productos y se imponen ciertas categorias')
-    #----------------------------------------------------------------------
-    # ENDREGION
-
 
     # REGION: SE GENERA DF_FINAL
     # ---------------------------------------------------------------------
@@ -984,82 +912,21 @@ def main() -> None:  # noqa: D103
         'porcentaje',
         'porcentaje_categoria',
         'media_geometrica_original',
-        'gasto_producto',
-        'gasto_categoria',
-        'gasto_material',
-        'Forzado_RankingCat',
-        'Era_High_Antes_RankingCat',
-        'Forzado_Efectivo_RankingCat',
     ]]
 
+# [PATCH 110826] -> se le añaden columnas: gasto: prod, cat y material
+# para monitoreo de cálculo de sensibilidad.
+#
     print('Se crea dataframe final')
 
     #----------------------------------------------------------------------
     # ENDREGION
 
-    # REGION: SE FUERZAN PRODUCTOS
-    # ---------------------------------------------------------------------
-
-    df_forzados = sp.SharePointFile(**{
-            **getSecret(
-                'bdaa_sharepoint_credentials',
-                proyecto,
-            ),
-            'server_relative_path': (
-                '/sites/'
-                'BigDatayAdvancedAnalytics/'
-                'Documentos compartidos/'
-                'Pricing/'
-                'Balance Matrix AA/'
-                'Productos forzados/'
-                'Productos Sensibilidad Forzada.xlsx'
-            )
-        }).toFrame()
-
-
-    df_forzados.columns = df_forzados.columns.str.lower()
-    df_forzados = df_forzados.rename(columns={'código material':'material',
-                                            'sensibilidad':'KVI',
-                                            'formato':'store_banner'})
-
-
-    # Se limpian nombres del store_banner por si hay error humano
-    for col in df_forzados.select_dtypes(include='object'):
-        df_forzados[col] = df_forzados[col].str.strip()
-
-    df_forzados['store_banner'] = df_forzados['store_banner'].replace(
-                                                            {'S10': 'Super 10'})
-
-
-    # Nos quedamos solo con las columnas necesarias de df_forzados
-    # y evitamos duplicados
-    df_forzados_min = df_forzados[['material', 'store_banner', 'KVI']].drop_duplicates()
-
-    # # Hacemos el merge por material y formato
-    df_final = df_final.merge(
-        df_forzados_min,
-        on=['material', 'store_banner'],
-        how='left',
-        suffixes=('', '_forzado')
-    )
-
-    df_final['flag_forzado'] = (
-        df_final['KVI_forzado'].notna()
-        & (df_final['KVI_forzado'] != df_final['KVI'])
-    ).astype(int)
-
-    df_final['KVI'] = df_final['KVI_forzado'].fillna(df_final['KVI'])
-
-    df_final = df_final.drop(columns=['KVI_forzado'])
-
-    print('Se fuerzan los productos señalados por equipo de Pricing')
     print('Columnas justo antes de subirse  GCP: ', df_final.columns)
     print('INFO df_final antes de GCP: ', df_final.info())
 
     #----------------------------------------------------------------------
     # ENDREGION
-
-
 
     # REGION: SUBIR A GCP LA TABLA
     # ---------------------------------------------------------------------
@@ -1078,7 +945,7 @@ def main() -> None:  # noqa: D103
     uploadFrame(
         df_final,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                        'ingest_product_sensibility_enero2026.json'),
+                                        'ingest_product_sensibility.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='append'
