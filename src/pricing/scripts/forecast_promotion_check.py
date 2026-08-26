@@ -1871,7 +1871,7 @@ def calcular_resultados_escenario(
     dict
         Métricas agregadas del escenario.
     """
-    df_pred = obtenerProyeccionV2(df_proj, modelo)
+    df_pred, precio_usado = obtenerProyeccionV2(df_proj, modelo)
 
     dias = df_pred['p_date'].unique()
     hist = df_hist[df_hist['p_date'].isin(dias)]
@@ -1882,7 +1882,8 @@ def calcular_resultados_escenario(
         'venta_real': hist['ventas_totales_producto'].sum(),
         'venta_proy': df_pred['ventas_totales_producto_predicha'].sum(),
         'contiene_art': (df_pred['cantidad_total'] == -1).any(),
-        'df_pred': df_pred
+        'df_pred': df_pred,
+        'precio_usado': precio_usado
     }
 
 #4.10.1.1
@@ -1933,7 +1934,8 @@ def obtenerProyeccionV2(
 
     df_pred['p_date'] = pd.to_datetime(df_pred['p_date'])
 
-    return df_pred
+    #temp
+    return df_pred, df_pred['precio_promedio'].max()
 
 #4.11
 def adicion_registro_proyeccion(
@@ -2004,6 +2006,8 @@ def adicion_registro_proyeccion(
     logs_iteracion['Venta Proy'] = res_promo['venta_proy']
     logs_iteracion['Venta Incremental Real'] = venta_inc_real
     logs_iteracion['Venta Incremental Proy'] = venta_inc_proy
+    logs_iteracion['Precio Modal'] = res_base['precio_usado']
+    logs_iteracion['Precio Promocional'] = res_promo['precio_usado']
 
     return logs_iteracion
 
@@ -2399,12 +2403,12 @@ def main():
     output_buffer = generar_excel_buffer(df_proyecciones)  # noqa: F841
 
 
-    subir_archivo_sharepoint(
-        contenido=output_buffer,  # noqa: ERA001
-        nombre_archivo=nombre_output,  # noqa: ERA001
-        outputs_dir=outputs_dir,  # noqa: ERA001
-        sp_cred=sp_cred  # noqa: ERA001
-    )  # noqa: ERA001
+    #subir_archivo_sharepoint(
+    #   contenido=output_buffer,  # noqa: ERA001
+    #    nombre_archivo=nombre_output,  # noqa: ERA001
+    #   outputs_dir=outputs_dir,  # noqa: ERA001
+    #   sp_cred=sp_cred  # noqa: ERA001
+    #)  # noqa: ERA001
 
 
     df_proyecciones.insert(
