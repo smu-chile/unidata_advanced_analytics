@@ -303,7 +303,7 @@ def main() -> None:  # noqa: D103
         return df_temp
 
     clasificar_kvi(df_balance_matrix_sp, sensibilidad='indice_sensibilidad_familia')
-    df_balance_matrix['segmento_bm_new'] = df_balance_matrix.apply(asignar_segmento_bm_NUEVO_METODO, axis=1)  # noqa: E501
+    df_balance_matrix['segmento_bm_new'] = df_balance_matrix_sp.apply(asignar_segmento_bm_NUEVO_METODO, axis=1)  # noqa: E501
 
     print('info df_temp post nuevos KVI: ', df_balance_matrix_sp.info())
 
