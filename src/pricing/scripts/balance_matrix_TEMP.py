@@ -301,8 +301,9 @@ def main() -> None:  # noqa: D103
 
         return df
 
-    clasificar_kvi(df_balance_matrix_sp, sensibilidad='indice _sensibilidad_familia')
+    clasificar_kvi(df_balance_matrix_sp, sensibilidad='indice_sensibilidad_familia')
 
+    print('info df post nuevos KVI: ', df_balance_matrix_sp.info())
 
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
         'store_banner':'Formato',
