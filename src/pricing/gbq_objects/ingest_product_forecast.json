@@ -1,6 +1,6 @@
 {
-    "schema": "TMP",
-    "table": "TMP_FORECAST",
+    "schema": "PRECIONES_PROMOCIONES",
+    "table": "FORECAST_PROMOCIONES",
 
     "columns": [
         {
