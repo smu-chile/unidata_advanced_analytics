@@ -1,0 +1,63 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "ELASTICITY_PROMOCIONAL",
+
+    "columns": [
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la informacion"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria a la que pertenece el producto"
+        },
+        {
+            "name": "MATERIAL",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Codigo del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "DESCRIPCION_MATERIAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre o descripcion del producto"
+        },
+        {
+            "name": "EAN",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del producto -- un material puede tener varios EAN (formatos/tamanos distintos); cada combinacion material x ean se trata como su propia serie"
+        },
+        {
+            "name": "UMV",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Unidad de medida de venta"
+        },
+        {
+            "name": "ORIGEN",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Origen del valor. Esta tabla mide elasticidad usando UNICAMENTE dias de promocion (nunca dias en estado Regular). Valores posibles: 'propia' (elasticidad medida directo con los dias de promocion reales del material x ean, comparando entre si los distintos niveles de descuento/mecanica que tuvo), 'propia_regimen_dinamico'/'propia_historia_completa' (el material x ean necesito uno de estos caminos para su baseline -- comun en materiales que viven mayormente en promocion, no invalida esta tabla), 'propia_precio_suavizado' (la regresion se reentreno con precio suavizado, mediana movil 45 dias, porque el precio crudo daba una relacion positiva o sin ajuste), 'heredada_sustituto', 'heredada_subcategoria', 'heredada_categoria', 'sin_evidencia', o sus variantes con prefijo 'sin_baseline_'"
+        },
+        {
+            "name": "ELASTICIDAD",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Elasticidad precio-demanda estimada usando solo dias de promocion. Mide sensibilidad a profundizar el descuento DADO que el material ya esta en promocion (comparando entre si los distintos niveles/mecanicas de descuento observados) -- NO mide la sensibilidad al precio en el rango normal (para eso, ver ELASTICITY_REGULAR). El bucket de intensidad de menor profundidad presente en la historia del material se usa como categoria de referencia implicita."
+        },
+        {
+            "name": "SEGMENTO_ELASTICIDAD",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Segmento de elasticidad (high/low), segun el punto de corte definido para el banner"
+        }
+    ],
+
+    "clustering_fields": ["STORE_BANNER", "CATEGORIA"]
+} 
