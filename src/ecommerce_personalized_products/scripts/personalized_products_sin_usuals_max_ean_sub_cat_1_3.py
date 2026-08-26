@@ -201,6 +201,9 @@ SQL_QUERIES = QueryDict({
         ON A.customer_key = D.customer_key
         AND CAST(A.ean AS INT) = D.ean
 
+        INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` E
+        USING (store_id)
+
         WHERE
             TRANSACTION_DATE >= DATE_TRUNC(DATE_SUB(DATE '${execution_date}', INTERVAL ${month_interval} MONTH), MONTH)
             AND TRANSACTION_DATE < DATE '${execution_date}'
@@ -208,6 +211,7 @@ SQL_QUERIES = QueryDict({
             AND TRANSACTION_TYPE IN ('NE','FX','BX','B ','BE','FE','F ','NC','TN','TF')
             AND ITM_TXN_FCN_TP_DSC = 'V'
             AND VALUE > 0
+            AND E.STORE_BANNER = '${store_banner}'
             AND MARKET_BASKET_KEY NOT IN (
                 SELECT MARKET_BASKET_KEY
                 FROM `${gcp_project}.CDA_VISTAS.VW_FACT_MARKET_BASKET_E_COMMERCE`
