@@ -105,6 +105,17 @@ def asignar_segmento_bm(row):
         return 'Low-Lower'
     return 'Otro'  # En caso de que haya algún valor inesperado
 
+def asignar_segmento_bm_NUEVO_METODO(row):
+    if row['NUEVOS_KVI'] == 'BKG' and row['segmento_elasticidad'] == 'high':
+        return 'Hi-Lo'
+    if row['NUEVOS_KVI'] == 'BKG' and row['segmento_elasticidad'] == 'low':
+        return 'Margin'
+    if row['NUEVOS_KVI'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'low':
+        return 'EDLP'
+    if row['NUEVOS_KVI'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'high':
+        return 'Low-Lower'
+    return 'Otro'  # En caso de que haya algún valor inesperado
+
 
 # -------------------------------------------------------------------------
 # Main function
@@ -262,46 +273,37 @@ def main() -> None:  # noqa: D103
                                             'segmento_elasticidad',
                                             'segmento_bm']]
 
+
     def clasificar_kvi(df, ventas='ventas_totales',
                     sensibilidad='indice _sensibilidad_familia'):
-        required = {ventas, sensibilidad}
-        missing = required - set(df.columns)
-        if missing:
-            msg = f'Columnas faltantes: {missing}'
-            raise KeyError(msg)
-
         total_ventas = df[ventas].sum()
+
         if total_ventas <= 0:
-            msg_0 = f"'{ventas}' debe sumar más de 0."
-            raise ValueError(msg_0)
+            msg = f"'{ventas}' debe sumar más de 0."
+            raise ValueError(msg)
 
-        ranking = (
-            df[[ventas, sensibilidad]]
-            .sort_values(sensibilidad, ascending=False, kind='stable')
-            .copy()
-        )
+        df = df.sort_values(
+            sensibilidad,
+            ascending=False,
+            kind='stable'
+        ).copy()
 
-        ranking['pct_ventas'] = ranking[ventas] / total_ventas
-        ranking['pct_ventas_acumulado'] = ranking['pct_ventas'].cumsum()
+        df['pct_ventas'] = df[ventas] / total_ventas
+        df['pct_ventas_acumulado'] = df['pct_ventas'].cumsum()
 
-        ranking['NUEVOS_KVI'] = np.select(
+        df['NUEVOS_KVI'] = np.select(
             [
-                ranking['pct_ventas_acumulado'] <= 0.30,
-                ranking['pct_ventas_acumulado'] <= 0.60,
+                df['pct_ventas_acumulado'] <= 0.30,
+                df['pct_ventas_acumulado'] <= 0.60,
             ],
             ['KVI', 'KCI'],
             default='BKG'
         )
 
-        # Agrega las nuevas columnas al df original, respetando su índice
-        #  y orden
-        df[['pct_ventas', 'pct_ventas_acumulado', 'NUEVOS_KVI']] = (
-            ranking[['pct_ventas', 'pct_ventas_acumulado', 'NUEVOS_KVI']]
-        )
-
         return df
 
     clasificar_kvi(df_balance_matrix_sp, sensibilidad='indice_sensibilidad_familia')
+    df_balance_matrix['segmento_bm_new'] = df_balance_matrix.apply(asignar_segmento_bm_NUEVO_METODO, axis=1)  # noqa: E501
 
     print('info df post nuevos KVI: ', df_balance_matrix_sp.info())
 
@@ -320,11 +322,11 @@ def main() -> None:  # noqa: D103
         'kvi':'KVI',
         'codigo_sensibilidad': 'Código sensibilidad',
         'segmento_elasticidad': 'Segmento elasticidad',
-        'segmento_bm': 'Segmento Balance Matrix'
-
+        'segmento_bm': 'Segmento Balance Matrix',
+        'segmento_bm_new': 'Segmento Balance Matrix Nuevo'
     })
 
-    df_balance_matrix_sp.sort_values(by='Categoria')
+    #df_balance_matrix_sp.sort_values(by='Categoria')  # noqa: ERA001
 
     logging.info('Cambio de nombres para Excel listo')
     #----------------------------------------------------------------------
@@ -336,7 +338,7 @@ def main() -> None:  # noqa: D103
 
     # ordenar antes por Categoria
 
-    df_balance_matrix_sp = df_balance_matrix_sp.sort_values(by='Categoria')
+    # df_balance_matrix_sp = df_balance_matrix_sp.sort_values(by='Categoria')  # noqa: ERA001
 
     print(f'[PARCHE] Balance Matrix Dimensiones: {df_balance_matrix_sp.shape}')
     cantidad_eliminadas = df_balance_matrix_sp['Elasticidad'].isna().sum()
