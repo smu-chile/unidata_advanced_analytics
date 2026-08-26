@@ -109,6 +109,12 @@
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Nueva clasificación sensibilidad"
+        },
+        {
+            "name": "SEGMENTO_BM_NUEVO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Cluster al que pertenece el producto según cruce de elasticidad y sensibilidad"
         }
     ],
 
