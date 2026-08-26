@@ -142,12 +142,6 @@
             "description": "Venta proyectada (unidades x precio)"
         },
         {
-            "name": "COMENTARIO",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "Indicador estado de la proyección"
-        },
-        {
             "name": "PRECIO_MODAL",
             "field_type": "FLOAT",
             "mode": "REQUIRED",
@@ -158,7 +152,14 @@
             "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": "Precio Promocional usado para la proyección"
-        }
+        },
+        {
+            "name": "COMENTARIO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Indicador estado de la proyección"
+        },
+
     ],
 
     "clustering_fields": ["EXECUTION_DATE"]
