@@ -2440,7 +2440,7 @@ def main():
 
     # Parametros
     # Parche 3: Tabla ajustada a sector oriente
-    esquema = 'PRECIOS_PROMOCIONES'
+    esquema = 'PRECIO_PROMOCIONES'
     tabla = 'FORECAST_PROMOCIONES'
 
     print('Subiendo a GCP: ')
