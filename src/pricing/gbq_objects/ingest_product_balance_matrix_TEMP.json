@@ -102,7 +102,7 @@
             "name": "PCT_VENTAS_ACUMULADO",
             "field_type": "FLOAT",
             "mode": "REQUIRED",
-            "description": "Porcentaje acumulado de ventas"
+            "description": "Porcentaje acumulado de ventas respecto del total"
         },
         {
             "name": "NUEVOS_KVI",
