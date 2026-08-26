@@ -55,7 +55,7 @@ ORDEN_INTENSIDAD = [
 # Filtro de variacion minima de precio (misma causa raiz ya resuelta en
 # el baseline: con poco movimiento real de precio, el coeficiente queda
 # mal identificado).
-MIN_RANGO_PRECIO_PCT_PARA_ESTIMAR = 2.0
+MIN_RANGO_PRECIO_PCT_PARA_ESTIMAR = 5.0
 MIN_DIAS_PARA_INTENTAR_ELASTICIDAD_PROPIA = 60
 
 MAX_VIF_ELASTICIDAD = 5.0
