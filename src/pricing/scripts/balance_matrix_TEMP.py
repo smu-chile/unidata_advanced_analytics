@@ -338,7 +338,7 @@ def main() -> None:  # noqa: D103
 
     # ordenar antes por Categoria
 
-    # df_balance_matrix_sp = df_balance_matrix_sp.sort_values(by='Categoria')  # noqa: ERA001
+    # df_balance_matrix_sp = df_balance_matrix_sp.sort_values(by='Categoria')  # noqa: ERA001, W505
 
     print(f'[PARCHE] Balance Matrix Dimensiones: {df_balance_matrix_sp.shape}')
     cantidad_eliminadas = df_balance_matrix_sp['Elasticidad'].isna().sum()
