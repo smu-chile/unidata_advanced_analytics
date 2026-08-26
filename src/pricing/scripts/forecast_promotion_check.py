@@ -2399,12 +2399,12 @@ def main():
     output_buffer = generar_excel_buffer(df_proyecciones)  # noqa: F841
 
 
-    #subir_archivo_sharepoint(
-    #    contenido=output_buffer,  # noqa: ERA001
-    #    nombre_archivo=nombre_output,  # noqa: ERA001
-    #    outputs_dir=outputs_dir,  # noqa: ERA001
-    #    sp_cred=sp_cred  # noqa: ERA001
-    #)  # noqa: ERA001
+    subir_archivo_sharepoint(
+        contenido=output_buffer,  # noqa: ERA001
+        nombre_archivo=nombre_output,  # noqa: ERA001
+        outputs_dir=outputs_dir,  # noqa: ERA001
+        sp_cred=sp_cred  # noqa: ERA001
+    )  # noqa: ERA001
 
 
     df_proyecciones.insert(
