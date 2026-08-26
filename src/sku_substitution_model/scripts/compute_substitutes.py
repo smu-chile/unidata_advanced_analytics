@@ -749,11 +749,11 @@ def main() -> None:  # noqa: D103
             sku_sophistication_scores=sophistication_score,
             score_ponderations={
                 'w2v_distance_filter': 8e-1,
-                'tfidf_distance_filter': 5e-3,
-                'ots_distance_filter': 4e-2,
-                'other_units_filter': 1e-3,
-                'hm_pu_ppum_filter': 4e-2,
-                'container_filter': 5e-3,
+                'tfidf_distance_filter': 0e-1,
+                'ots_distance_filter': 9.5e-2,
+                'other_units_filter': 0e-1,
+                'hm_pu_ppum_filter': 9.5e-2,
+                'container_filter': 1e-2,
             },
             output='rank',
             top_k=n_substitutes
