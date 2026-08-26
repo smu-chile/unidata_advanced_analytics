@@ -274,38 +274,38 @@ def main() -> None:  # noqa: D103
                                             'segmento_bm']]
 
 
-    def clasificar_kvi(df, ventas='ventas_totales',
+    def clasificar_kvi(df_temp, ventas='ventas_totales',
                     sensibilidad='indice _sensibilidad_familia'):
-        total_ventas = df[ventas].sum()
+        total_ventas = df_temp[ventas].sum()
 
         if total_ventas <= 0:
             msg = f"'{ventas}' debe sumar más de 0."
             raise ValueError(msg)
 
-        df = df.sort_values(
+        df_temp = df_temp.sort_values(
             sensibilidad,
             ascending=False,
             kind='stable'
         ).copy()
 
-        df['pct_ventas'] = df[ventas] / total_ventas
-        df['pct_ventas_acumulado'] = df['pct_ventas'].cumsum()
+        df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
+        df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
 
-        df['NUEVOS_KVI'] = np.select(
+        df_temp['NUEVOS_KVI'] = np.select(
             [
-                df['pct_ventas_acumulado'] <= 0.30,
-                df['pct_ventas_acumulado'] <= 0.60,
+                df_temp['pct_ventas_acumulado'] <= 0.30,
+                df_temp['pct_ventas_acumulado'] <= 0.60,
             ],
             ['KVI', 'KCI'],
             default='BKG'
         )
 
-        return df
+        return df_temp
 
     clasificar_kvi(df_balance_matrix_sp, sensibilidad='indice_sensibilidad_familia')
     df_balance_matrix['segmento_bm_new'] = df_balance_matrix.apply(asignar_segmento_bm_NUEVO_METODO, axis=1)  # noqa: E501
 
-    print('info df post nuevos KVI: ', df_balance_matrix_sp.info())
+    print('info df_temp post nuevos KVI: ', df_balance_matrix_sp.info())
 
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
         'store_banner':'Formato',
