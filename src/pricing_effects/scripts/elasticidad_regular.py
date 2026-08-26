@@ -23,7 +23,7 @@ from common.gcp_extended.bigquery import (
 )
 
 
-# -------------------------------------------------------------------------
+## ------------------------------------------------------------------------
 #  Config
 # -------------------------------------------------------------------------
 config.dictConfig(LOGGING_CONFIG)
@@ -288,9 +288,26 @@ def _entrenar_elasticidad_con_reintento(df_material: pd.DataFrame) -> dict:
 def asignar_segmento_elasticidad(elasticidades: pd.Series) -> pd.Series:
     """Percentil 1/99 para outliers, KMeans k=2 sobre el interior,
     'high' = el cluster cuyo centroide es MAS NEGATIVO.
+
+    Si no hay suficientes valores validos para segmentar (0 o muy
+    pocos materiales con elasticidad calculada -- puede pasar en
+    banners/tablas con poca evidencia), devuelve la serie vacia (NaN)
+    en vez de fallar -- no se puede clasificar en high/low lo que no
+    existe.
     """
     elasticidades_num = pd.to_numeric(elasticidades, errors='coerce')
     mascara_valida = elasticidades_num.notna()
+
+    segmento = pd.Series(index=elasticidades.index, dtype='object')
+
+    MIN_VALORES_PARA_SEGMENTAR = 2  # KMeans(k=2) exige al menos 2 puntos  # noqa: N806
+    if mascara_valida.sum() < MIN_VALORES_PARA_SEGMENTAR:
+        logging.warning(
+            f'Solo {mascara_valida.sum()} material(es) con elasticidad valida -- '
+            'no hay suficiente evidencia para segmentar high/low en este banner. '
+            'SEGMENTO_ELASTICIDAD quedara vacio (NaN) para todos.'
+        )
+        return segmento
 
     percentil_bajo = np.percentile(elasticidades_num[mascara_valida], 1)
     percentil_alto = np.percentile(elasticidades_num[mascara_valida], 99)
@@ -302,6 +319,17 @@ def asignar_segmento_elasticidad(elasticidades: pd.Series) -> pd.Series:
     mascara_outlier_alto = elasticidades_num > percentil_alto
 
     valores_interiores = elasticidades_num[mascara_interior].to_numpy().reshape(-1, 1)
+
+    if len(valores_interiores) < MIN_VALORES_PARA_SEGMENTAR:
+        logging.warning(
+            'Menos de 2 valores dentro del rango interior (percentil 1-99) -- '
+            'no se puede correr KMeans. SEGMENTO_ELASTICIDAD quedara vacio '
+            '(NaN) para los que caen en el interior; outliers se marcan igual.'
+        )
+        segmento[mascara_outlier_bajo] = 'high'
+        segmento[mascara_outlier_alto] = 'low'
+        return segmento
+
     kmeans = KMeans(n_clusters=2, n_init=10, random_state=42)
     labels_kmeans = kmeans.fit_predict(valores_interiores)
 
@@ -310,7 +338,6 @@ def asignar_segmento_elasticidad(elasticidades: pd.Series) -> pd.Series:
     mapeo = {label_high: 'high', 1 - label_high: 'low'}
     labels_asignados = [mapeo[label] for label in labels_kmeans]
 
-    segmento = pd.Series(index=elasticidades.index, dtype='object')
     segmento[mascara_interior] = labels_asignados
     segmento[mascara_outlier_bajo] = 'high'
     segmento[mascara_outlier_alto] = 'low'
@@ -446,7 +473,6 @@ def main() -> None:  # noqa: D103
     # regimen dinamico/historia completa para su baseline (que
     # existen justamente porque tenian pocos dias Regular) quedaran
     # naturalmente fuera por no alcanzar MIN_DIAS_PARA_INTENTAR_ELASTICIDAD
-    # PROPIA.
     n_dias_antes = len(df_panel)
     df_panel = df_panel[df_panel['estado'] == 'Regular'].copy()
     logging.info(f'Panel filtrado a solo dias Regular: {len(df_panel):,} de '

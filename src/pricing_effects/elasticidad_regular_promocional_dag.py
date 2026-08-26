@@ -36,9 +36,8 @@ with open(
 PROJECT_NAME = 'pricing_effects'
 
 STORE_BANNER_LIST = [
-    'Super 10', 'Ecommerce Alvi'
-    #'Unimarc',
-    #'Super 10', 'Alvi','Ecommerce Unimarc', 'Ecommerce Alvi',
+    'Unimarc', 'Super 10', 'Alvi','Ecommerce Unimarc', 'Ecommerce Alvi'
+#
 ]
 
 RECURSOS_EXTRA_POR_BANNER = {
