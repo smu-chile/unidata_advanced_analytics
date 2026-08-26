@@ -1,6 +1,6 @@
 {
     "schema": "PRECIO_PROMOCIONES",
-    "table": "FORECAST_PROMOCIONES",
+    "table": "FORECAST_PROMOCIONES_TO_REMOVE",
 
     "columns": [
         {
@@ -146,6 +146,18 @@
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Indicador estado de la proyección"
+        },
+        {
+            "name": "PRECIO_MODAL",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Precio Modal usado para la proyección base"
+        },
+        {
+            "name": "PRECIO_PROMOCIONAL",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Precio Promocional usado para la proyección"
         }
     ],
 
