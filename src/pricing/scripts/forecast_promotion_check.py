@@ -2445,7 +2445,7 @@ def main():
     # Parametros
     # Parche 3: Tabla ajustada a sector oriente
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'FORECAST_PROMOCIONES_TO_REMOVE'
+    tabla = 'FORECAST_PROMOCIONES'
 
     print('Subiendo a GCP: ')
     # Se elimina los datos para cierto store_banner y rango (si existen)
