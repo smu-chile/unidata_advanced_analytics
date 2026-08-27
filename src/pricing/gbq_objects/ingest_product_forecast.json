@@ -1,6 +1,6 @@
 {
     "schema": "PRECIO_PROMOCIONES",
-    "table": "FORECAST_PROMOCIONES_TO_REMOVE",
+    "table": "FORECAST_PROMOCIONES",
 
     "columns": [
         {
@@ -35,7 +35,7 @@
         },
         {
             "name": "Material",
-            "field_type": "FLOAT",
+            "field_type": "INT64",
             "mode": "REQUIRED",
             "description": "Material"
         },
