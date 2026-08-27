@@ -150,13 +150,13 @@
         {
             "name": "PRECIO_MODAL",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Precio Modal usado para la proyección base"
         },
         {
             "name": "PRECIO_PROMOCIONAL",
             "field_type": "FLOAT",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Precio Promocional usado para la proyección"
         }
     ],
