@@ -36,7 +36,7 @@ PROJECT_NAME = 'complementary_products'
 
 dag_args = {
     'dag_id': 'complementary_products',
-    'schedule_interval': None,
+    'schedule_interval': '0 5 2 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
