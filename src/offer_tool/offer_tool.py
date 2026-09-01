@@ -37,7 +37,7 @@ store_banner_list = ['Unimarc', 'Alvi', 'Mayorista', 'Super 10']
 PROJECT_NAME = 'offer_tool'
 dag_args = {
     'dag_id': 'offer_tool',
-    'schedule_interval': '0 16 1 * *',
+    'schedule_interval': '0 16 2 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
