@@ -83,6 +83,7 @@ with DAG(**dag_args) as dag:
                 'common/',
                 f'{PROJECT_NAME}/gbq_objects/'
             ],
+            ttl=43200,
 
             # Driver config (dinámico por banner)
             spark_driver_cores = 8 if store_banner == 'Unimarc' else 4,
@@ -118,6 +119,7 @@ with DAG(**dag_args) as dag:
                 'common/',
                 f'{PROJECT_NAME}/gbq_objects/'
             ],
+            ttl=43200,
 
             # Driver config (dinámico por banner)
             spark_driver_cores = 8 if store_banner == 'Unimarc' else 4,
