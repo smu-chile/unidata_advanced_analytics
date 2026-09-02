@@ -80,79 +80,79 @@ with DAG(**dag_args) as dag:
     for store_banner in store_banner_list:
         banner_suffix = store_banner.replace(' ', '_').lower()
 
-        # ---------- Task script1: product_sensibility ----------
-        sensibility_task = DataprocCreateBatchOperator(
-            task_id=f'{script1}_{banner_suffix}',
-            batch={
-                'pyspark_batch': {
-                    # Main file to run in the dataproc pod
-                    'main_python_file_uri': (
-                        f'gs://{dag_env_config["scripts_gcs"]}/'
-                        f'{PROJECT_NAME}/'
-                        'scripts/'
-                        f'{script1}.py'
-                    ),
-                    # Common files
-                    'python_file_uris': [
-                        (
-                            f'gs://{dag_env_config["scripts_gcs"]}/'
-                            'common/'
-                        ),
-                        (
-                            f'gs://{dag_env_config["scripts_gcs"]}/'
-                            f'{PROJECT_NAME}/'
-                            'gbq_objects/'
-                        ),
-                    ],
-                    # For Google Big Query read/write
-                    'jar_file_uris': [
-                        'gs://spark-lib/bigquery/'
-                        'spark-3.5-bigquery-0.42.2.jar'
-                    ],
-                    # Main file arguments
-                    'args': [
-                        '--project_id',
-                        dag_env_config['project_id'],
-                        '--execution_date',
-                        EXECUTION_DATE,
-                        '--store_banner',
-                        store_banner,
-                    ],
-                },
-                # Docker image to be used in the dataproc pod
-                'runtime_config': {
-                    'version': '2.2',
-                    'container_image': (
-                        'us-east1-docker.pkg.dev/'
-                        f'{dag_env_config["project_id"]}/'
-                        'dataproc-worker-images/'
-                        f"{PROJECT_NAME.replace('_', '-')}:latest"
-                    ),
-                    # Executor hardware config
-                    'properties': {
-                        # Executor instances
-                        'spark.executor.instances': '2',
-                        'spark.executor.cores': '4',
-                        'spark.executor.memory': '4096m',
-                        # Driver instances
-                        'spark.driver.cores': '4',
-                        'spark.driver.memory': '20g',
-                    },
-                },
-                # Privileges config
-                'environment_config': {
-                    'execution_config': {
-                        'service_account': dag_env_config['g_service_account'],
-                        'network_uri': dag_env_config['network'],
-                        'subnetwork_uri': dag_env_config['subnetwork'],
-                        'ttl': '14400s',
-                    },
-                },
-            },
-            # Leaves Airflow Trigger to track the status of Dataproc batch
-            batch_id='batch-{{ macros.uuid.uuid4() }}',
-            project_id=dag_env_config['project_id'],
-        )
+        # # ---------- Task script1: product_sensibility ----------
+        # sensibility_task = DataprocCreateBatchOperator(  # noqa: ERA001
+        #     task_id=f'{script1}_{banner_suffix}',  # noqa: ERA001
+        #     batch={  # noqa: ERA001
+        #         'pyspark_batch': {  # noqa: ERA001
+        #             # Main file to run in the dataproc pod
+        #             'main_python_file_uri': (
+        #                 f'gs://{dag_env_config["scripts_gcs"]}/'  # noqa: ERA001, W505
+        #                 f'{PROJECT_NAME}/'  # noqa: ERA001
+        #                 'scripts/'
+        #                 f'{script1}.py'  # noqa: ERA001
+        #             ),
+        #             # Common files
+        #             'python_file_uris': [
+        #                 (  # noqa: ERA001
+        #                     f'gs://{dag_env_config["scripts_gcs"]}/'  # noqa: ERA001, W505
+        #                     'common/'
+        #                 ),
+        #                 (  # noqa: ERA001
+        #                     f'gs://{dag_env_config["scripts_gcs"]}/'  # noqa: ERA001, W505
+        #                     f'{PROJECT_NAME}/'  # noqa: ERA001
+        #                     'gbq_objects/'
+        #                 ),
+        #             ],
+        #             # For Google Big Query read/write
+        #             'jar_file_uris': [
+        #                 'gs://spark-lib/bigquery/'  # noqa: ERA001
+        #                 'spark-3.5-bigquery-0.42.2.jar'
+        #             ],
+        #             # Main file arguments
+        #             'args': [
+        #                 '--project_id',
+        #                 dag_env_config['project_id'],  # noqa: ERA001
+        #                 '--execution_date',
+        #                 EXECUTION_DATE,
+        #                 '--store_banner',
+        #                 store_banner,
+        #             ],
+        #         },
+        #         # Docker image to be used in the dataproc pod
+        #         'runtime_config': {  # noqa: ERA001
+        #             'version': '2.2',  # noqa: ERA001
+        #             'container_image': (
+        #                 'us-east1-docker.pkg.dev/'
+        #                 f'{dag_env_config["project_id"]}/'  # noqa: ERA001, W505
+        #                 'dataproc-worker-images/'
+        #                 f"{PROJECT_NAME.replace('_', '-')}:latest"  # noqa: ERA001, W505
+        #             ),
+        #             # Executor hardware config
+    #               'properties': {  # noqa: ERA001
+        #                 # Executor instances
+        #                 'spark.executor.instances': '2',
+        #                 'spark.executor.cores': '4',
+        #                 'spark.executor.memory': '4096m',
+        #                 # Driver instances
+        #                 'spark.driver.cores': '4',
+        #                 'spark.driver.memory': '20g',
+        #             },
+        #         },
+        #         # Privileges config
+        #         'environment_config': {  # noqa: ERA001
+        #             'execution_config': {  # noqa: ERA001
+        #                 'service_account': dag_env_config['g_service_account'],  # noqa: E501, ERA001, W505
+        #                 'network_uri': dag_env_config['network'],  # noqa: ERA001, W505
+        #                 'subnetwork_uri': dag_env_config['subnetwork'],  # noqa: ERA001, W505
+        #                 'ttl': '14400s',  # noqa: ERA001
+        #             },
+        #         },
+        #     },
+        #     # Leaves Airflow Trigger to track the status of Dataproc batch
+        #     batch_id='batch-{{ macros.uuid.uuid4() }}',  # noqa: ERA001
+        #     project_id=dag_env_config['project_id'],  # noqa: ERA001
+        # )  # noqa: ERA001
 
 
         # ---------- Task script4: balance_matrix ----------
@@ -222,8 +222,8 @@ with DAG(**dag_args) as dag:
 
         # Dependencia por formato: primero script1, luego script2
         # elasticidad se extrae directamente de tabla GCP
-        sensibility_task  >> bm_task
+       #sensibility_task  >> bm_task
 
-        sensibility_tasks.append(sensibility_task)
+        #sensibility_tasks.append(sensibility_task)  # noqa: ERA001
         bm_tasks.append(bm_task)
 
