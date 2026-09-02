@@ -46,6 +46,10 @@ parser.add_argument(
     '--store_banner', type=str,
     help='Store banner'
 )
+parser.add_argument(
+    '--store_id', type=tuple,
+    help='Store id'
+)
 
 
 # -------------------------------------------------------------------------
@@ -63,6 +67,7 @@ SQL_QUERIES = QueryDict({
     #   - ${fecha_inicial_ano}: mes inicial (YYYY-MM-DD); la ventana
     #       corre 12 meses hacia adelante.
     #   - ${formato}: banner de tienda (p. ej., 'Unimarc').
+    #   - $(store_id): tuple con id de tiends. (ej: ('355))
     #   - ${minimo_items_categoria}: mínimo de ítems por cliente-categoría
     #       para ser considerado.
     #
@@ -126,8 +131,7 @@ category_counts AS (
     A.TRANSACTION_DATE >= DATE('${fecha_inicial_ano}')
     AND A.TRANSACTION_DATE < DATE_ADD(DATE('${fecha_inicial_ano}'), INTERVAL  12 MONTH)
     AND DS.STORE_BANNER = '${formato}'
-    AND DS.STORE_ID IN ('355','352','469','335','326','224','333','340',
-    '671','926','476','325','917','327','357','41','362')
+    AND DS.STORE_ID IN '${store_id}'
   GROUP BY A.CUSTOMER_KEY, P.CATEGORY_DESCRIPTION
   HAVING COUNT(*) >= ${minimo_items_categoria}
 
@@ -201,8 +205,7 @@ WHERE
                 WHERE CANAL_VENTA IN ('PEDIDOS YA','UBER EATS','RAPPI','RAPPI TURBO')
             )
   AND D.STORE_BANNER = '${formato}'
-  AND D.STORE_ID IN ('355','352','469','335','326','224','333','340',
-    '671','926','476','325','917','327','357','41','362')
+  AND D.STORE_ID IN '${store_id}'
   AND A.CUSTOMER_KEY <> MD5('CST^CL^-1')
   )
 
@@ -578,6 +581,7 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']  # noqa: F841
     formato:str = args['store_banner']
+    store_id:tuple = args['store_id']
     logging.info(f'execution_date: {execution_date}')
 
 
@@ -673,6 +677,7 @@ def main() -> None:  # noqa: D103
     query_sophistication = SQL_QUERIES['query_sophistication'].substitute(
             fecha_inicial_ano = fecha_inicial_ano,
             formato = formato,
+            store_id = store_id,
             minimo_items_categoria = minimo_items_categoria,
             proyecto =  proyecto
     )

@@ -1,6 +1,6 @@
 {
     "schema": "TMP",
-    "table": "TMP_REGRESSION_PROCESSED_DATA_FORECAST",
+    "table": "TMP_REGRESSION_PROCESSED_DATA_FORECAST_V2",
 
     "columns": [
         {
@@ -172,5 +172,5 @@
         "type_": "DAY"
     },
 
-    "clustering_fields": ["STORE_BANNER", "CATEGORY_DESCRIPTION"]
+    "clustering_fields": ["STORE_BANNER", "CATEGORY_DESCRIPTION", "EAN"]
 }

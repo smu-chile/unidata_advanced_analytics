@@ -1,6 +1,6 @@
 {
     "schema": "PRECIO_PROMOCIONES",
-    "table": "BALANCE_MATRIX_TEMP",
+    "table": "BALANCE_MATRIX",
 
     "columns": [
         {
@@ -88,6 +88,30 @@
         },
         {
             "name": "SEGMENTO_BM",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Cluster al que pertenece el producto según cruce de elasticidad y sensibilidad"
+        },
+        {
+            "name": "PCT_VENTAS",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Porcentaje de ventas 12M respecto del total de productos"
+        },
+        {
+            "name": "PCT_VENTAS_ACUMULADO",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": "Porcentaje acumulado de ventas respecto del total"
+        },
+        {
+            "name": "NUEVOS_KVI",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nueva clasificación sensibilidad"
+        },
+        {
+            "name": "SEGMENTO_BM_NUEVO",
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Cluster al que pertenece el producto según cruce de elasticidad y sensibilidad"
