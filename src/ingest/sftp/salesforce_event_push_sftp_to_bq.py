@@ -51,7 +51,7 @@ REGION = dag_env_config['region']
 
 dag_args = {
     'dag_id': 'salesforce_event_push_sftp_to_bq',
-    'schedule_interval': None,
+    'schedule_interval': '0 5 * * *', # todos los días a las 05:00am
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 1,
