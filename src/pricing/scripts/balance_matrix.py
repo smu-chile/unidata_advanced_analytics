@@ -54,7 +54,10 @@ SQL_QUERIES = QueryDict({    # Region: Explicación de query
 
  'query_sensibilidad':
 """
-SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY`
+SELECT
+* EXCEPT (MATERIAL),
+  CAST(MATERIAL AS INT64) AS MATERIAL
+FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY`
 where STORE_BANNER = '${store_banner}'
 """,
 
