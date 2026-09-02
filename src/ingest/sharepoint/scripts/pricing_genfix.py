@@ -74,6 +74,9 @@ def main() -> None:  # noqa: D103
     logging.info(f'Last time modified: {last_time_modified}')
     df_file = sharepoint.toFrame()
     df_file =cleaning_func(df_file)
+
+    df_file = df_file.dropna(subset=['SKU Padre'])
+
     # Upload data
     logging.info('Uploading data')
     gbq_extended.uploadFrame(
