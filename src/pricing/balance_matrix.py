@@ -149,7 +149,7 @@ with DAG(**dag_args) as dag:
         #             },
         #         },
         #     },
-        #     # Leaves Airflow Trigger to track the status of Dataproc batch
+        #     # Leaves Airflow Trigger to track the status of Dataproc batch  # noqa: W505
         #     batch_id='batch-{{ macros.uuid.uuid4() }}',  # noqa: ERA001
         #     project_id=dag_env_config['project_id'],  # noqa: ERA001
         # )  # noqa: ERA001
