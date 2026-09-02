@@ -7,6 +7,8 @@ import logging
 import argparse
 from logging import config
 
+import numpy as np
+
 # Pip
 import pandas as pd
 from google.cloud.bigquery import Client
@@ -58,7 +60,7 @@ where STORE_BANNER = '${store_banner}'
 
 'query_elasticidad':
 """
-SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.ELASTICITY_PR`
+SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_ELASTICITY`
 where STORE_BANNER = '${store_banner}'
 """,
 
@@ -100,6 +102,17 @@ def asignar_segmento_bm(row):
     if row['kvi'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'low':
         return 'EDLP'
     if row['kvi'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'high':
+        return 'Low-Lower'
+    return 'Otro'  # En caso de que haya algún valor inesperado
+
+def asignar_segmento_bm_NUEVO_METODO(row):
+    if row['NUEVOS_KVI'] == 'BKG' and row['segmento_elasticidad'] == 'high':
+        return 'Hi-Lo'
+    if row['NUEVOS_KVI'] == 'BKG' and row['segmento_elasticidad'] == 'low':
+        return 'Margin'
+    if row['NUEVOS_KVI'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'low':
+        return 'EDLP'
+    if row['NUEVOS_KVI'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'high':
         return 'Low-Lower'
     return 'Otro'  # En caso de que haya algún valor inesperado
 
@@ -260,6 +273,44 @@ def main() -> None:  # noqa: D103
                                             'segmento_elasticidad',
                                             'segmento_bm']]
 
+
+    def clasificar_kvi(df_temp, ventas='ventas_totales',
+                    sensibilidad='indice_sensibilidad_familia'):
+        total_ventas = df_temp[ventas].sum()
+
+        if total_ventas <= 0:
+            msg = f"'{ventas}' debe sumar más de 0."
+            raise ValueError(msg)
+
+        df_temp = df_temp.sort_values(
+            sensibilidad,
+            ascending=False,
+            kind='stable'
+        ).copy()
+
+        df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
+        df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
+
+        df_temp['NUEVOS_KVI'] = np.select(
+            [
+                df_temp['pct_ventas_acumulado'] <= 0.30,
+                df_temp['pct_ventas_acumulado'] <= 0.60,
+            ],
+            ['KVI', 'KCI'],
+            default='BKG'
+        )
+
+        return df_temp
+
+    df_balance_matrix_sp = clasificar_kvi(
+        df_balance_matrix_sp,
+        sensibilidad='indice_sensibilidad_familia'
+    )
+
+    df_balance_matrix_sp['segmento_bm_new'] = df_balance_matrix_sp.apply(asignar_segmento_bm_NUEVO_METODO, axis=1)  # noqa: E501
+
+    print('info df_temp post nuevos KVI: ', df_balance_matrix_sp.info())
+
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
         'store_banner':'Formato',
         'categoria':'Categoria',
@@ -275,22 +326,23 @@ def main() -> None:  # noqa: D103
         'kvi':'KVI',
         'codigo_sensibilidad': 'Código sensibilidad',
         'segmento_elasticidad': 'Segmento elasticidad',
-        'segmento_bm': 'Segmento Balance Matrix'
-
+        'segmento_bm': 'Segmento Balance Matrix',
+        'segmento_bm_new': 'Segmento Balance Matrix Nuevo'
     })
 
-    df_balance_matrix_sp.sort_values(by='Categoria')
+    #df_balance_matrix_sp.sort_values(by='Categoria')  # noqa: ERA001
 
     logging.info('Cambio de nombres para Excel listo')
     #----------------------------------------------------------------------
     # ENDREGION
+
 
     # REGION: Se sube a sharepoint
     #----------------------------------------------------------------------
 
     # ordenar antes por Categoria
 
-    df_balance_matrix_sp = df_balance_matrix_sp.sort_values(by='Categoria')
+    #df_balance_matrix_sp = df_balance_matrix_sp.sort_values(by='Categoria')  # noqa: ERA001, W505
 
     print(f'[PARCHE] Balance Matrix Dimensiones: {df_balance_matrix_sp.shape}')
     cantidad_eliminadas = df_balance_matrix_sp['Elasticidad'].isna().sum()
@@ -354,7 +406,7 @@ def main() -> None:  # noqa: D103
             'Documentos%20compartidos/'
             'Pricing/'
             'Balance Matrix AA - GCP/'
-            f'Balance_Matrix_AA_{store_banner}_TEMP.xlsx'
+            f'Balance_Matrix_AA_{store_banner}_{execution_date}.xlsx'
         )
     ).upload(buffer)
     logging.info('Tabla subida en Sharepoint')
@@ -370,7 +422,7 @@ def main() -> None:  # noqa: D103
 
     # Parametros
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'BALANCE_MATRIX_TEMP'
+    tabla = 'BALANCE_MATRIX'
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
