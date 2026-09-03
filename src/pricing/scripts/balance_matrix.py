@@ -348,6 +348,8 @@ def main() -> None:  # noqa: D103
 
     df_balance_matrix_sp['segmento_bm_new'] = df_balance_matrix_sp.apply(asignar_segmento_bm_NUEVO_METODO, axis=1)  # noqa: E501
 
+    df_balance_matrix_sp = df_balance_matrix.drop(columns=['KVI', 'segmento_bm'], errors='ignore')  # noqa: ERA001
+
     print('info df_temp post nuevos KVI: ', df_balance_matrix_sp.info())
 
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
@@ -362,11 +364,12 @@ def main() -> None:  # noqa: D103
         'indice_sensibilidad': 'Índice sensibilidad',
         'indice_sensibilidad_familia': 'Índice sensibilidad familia',
         'elasticidad': 'Elasticidad',
-        'kvi':'KVI',
+        #'kvi':'KVI',  # noqa: ERA001
+        'NUEVOS_KVI': 'KVI',
         'codigo_sensibilidad': 'Código sensibilidad',
         'segmento_elasticidad': 'Segmento elasticidad',
-        'segmento_bm': 'Segmento Balance Matrix',
-        'segmento_bm_new': 'Segmento Balance Matrix Nuevo',
+        # 'segmento_bm': 'Segmento Balance Matrix',  # noqa: ERA001
+        'segmento_bm_new': 'Segmento Balance Matrix',
         'orden_kvi': 'Orden KVI'
     })
 
