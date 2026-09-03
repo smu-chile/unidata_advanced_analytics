@@ -358,6 +358,15 @@ def main() -> None:  # noqa: D103
     df_balance_matrix_sp['codigo_sensibilidad'] = df_balance_matrix_sp['NUEVOS_KVI'].map(mapa)
     print('info df_temp post nuevos KVI: ', df_balance_matrix_sp.info())
 
+    # Orden Columnas y renombramiento para Excel
+    df_balance_matrix_sp = df_balance_matrix_sp[
+        ['store_banner', 'categoria', 'sub_category_description',
+         'descripcion_material', 'material', 'umv', 'ean',
+         'ventas_totales', 'indice_sensibilidad', 'indice_sensibilidad_familia',
+         'elasticidad', 'NUEVOS_KVI','codigo_sensibilidad', 'segmento_elasticidad',
+         'segmento_bm_new', 'pct_ventas', 'pct_ventas_acumulado', 'orden_kvi']
+    ]
+
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
         'store_banner':'Formato',
         'categoria':'Categoria',
