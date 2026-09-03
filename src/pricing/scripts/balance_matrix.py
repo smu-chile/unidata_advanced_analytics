@@ -308,7 +308,7 @@ def main() -> None:  # noqa: D103
     def clasificar_kvi(df_temp,
                     ventas='ventas_totales',
                     sensibilidad='indice_sensibilidad_familia',
-                    desempate='EAN'):   # columna única por producto
+                    desempate='ean'):   # columna única por producto
         total_ventas = df_temp[ventas].sum()
 
         if total_ventas <= 0:
