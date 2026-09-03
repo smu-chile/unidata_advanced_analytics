@@ -348,7 +348,7 @@ def main() -> None:  # noqa: D103
 
     df_balance_matrix_sp['segmento_bm_new'] = df_balance_matrix_sp.apply(asignar_segmento_bm_NUEVO_METODO, axis=1)  # noqa: E501
 
-    df_balance_matrix_sp = df_balance_matrix.drop(columns=['KVI', 'segmento_bm'], errors='ignore')  # noqa: ERA001
+    df_balance_matrix_sp = df_balance_matrix_sp.drop(columns=['KVI', 'segmento_bm'], errors='ignore')  # noqa: E501, ERA001
 
     #Nota: codigo sensibilidad viene con la frecuencia de la sensibilidad
     # sin forzados
