@@ -1,6 +1,6 @@
 {
     "schema": "PRECIO_PROMOCIONES",
-    "table": "BALANCE_MATRIX",
+    "table": "BALANCE_MATRIX_TESTING_ORDER_JULIO_2026",
 
     "columns": [
         {
@@ -115,6 +115,12 @@
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Cluster al que pertenece el producto según cruce de elasticidad y sensibilidad"
+        },
+        {
+            "name": "ORDEN ACUMULADO",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Orden de cálculo para porcentaje acumulado de ventas respecto del total"
         }
     ],
 

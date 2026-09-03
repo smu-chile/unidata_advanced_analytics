@@ -277,7 +277,7 @@ def main() -> None:  # noqa: D103
                                             'segmento_bm']]
 
 
-    def clasificar_kvi(df_temp, ventas='ventas_totales',
+    def clasificar_kvi_old(df_temp, ventas='ventas_totales',
                     sensibilidad='indice_sensibilidad_familia'):
         total_ventas = df_temp[ventas].sum()
 
@@ -291,6 +291,41 @@ def main() -> None:  # noqa: D103
             kind='stable'
         ).copy()
 
+        df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
+        df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
+
+        df_temp['NUEVOS_KVI'] = np.select(
+            [
+                df_temp['pct_ventas_acumulado'] <= 0.30,
+                df_temp['pct_ventas_acumulado'] <= 0.60,
+            ],
+            ['KVI', 'KCI'],
+            default='BKG'
+        )
+
+        return df_temp
+
+    def clasificar_kvi(df_temp,
+                    ventas='ventas_totales',
+                    sensibilidad='indice_sensibilidad_familia',
+                    desempate='EAN'):   # columna única por producto
+        total_ventas = df_temp[ventas].sum()
+
+        if total_ventas <= 0:
+            raise ValueError(f"'{ventas}' debe sumar más de 0.")
+
+        # Orden: sensibilidad de familia desc -> ventas del producto desc.
+        # El desempate único garantiza un orden reproducible en BigQuery.
+        df_temp = df_temp.sort_values(
+            by=[sensibilidad, ventas, desempate],
+            ascending=[False, False, True],
+            kind='stable'
+        ).reset_index(drop=True)
+
+        # Columna explícita que fija el orden usado para el acumulado.
+        df_temp['orden_kvi'] = range(1, len(df_temp) + 1)
+
+        # Acumulado a nivel PRODUCTO sobre el total del formato.
         df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
         df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
 
@@ -330,7 +365,8 @@ def main() -> None:  # noqa: D103
         'codigo_sensibilidad': 'Código sensibilidad',
         'segmento_elasticidad': 'Segmento elasticidad',
         'segmento_bm': 'Segmento Balance Matrix',
-        'segmento_bm_new': 'Segmento Balance Matrix Nuevo'
+        'segmento_bm_new': 'Segmento Balance Matrix Nuevo',
+        'orden_kvi': 'Orden KVI'
     })
 
     #df_balance_matrix_sp.sort_values(by='Categoria')  # noqa: ERA001
@@ -409,7 +445,7 @@ def main() -> None:  # noqa: D103
             'Documentos%20compartidos/'
             'Pricing/'
             'Balance Matrix AA - GCP/'
-            f'Balance_Matrix_AA_{store_banner}_{execution_date}.xlsx'
+            f'Balance_Matrix_AA_{store_banner}_{execution_date}_v2.xlsx'
         )
     ).upload(buffer)
     logging.info('Tabla subida en Sharepoint')
@@ -425,7 +461,7 @@ def main() -> None:  # noqa: D103
 
     # Parametros
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'BALANCE_MATRIX'
+    tabla = 'BALANCE_MATRIX_TESTING_ORDER_JULIO_2026'
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
