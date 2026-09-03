@@ -350,6 +350,10 @@ def main() -> None:  # noqa: D103
 
     df_balance_matrix_sp = df_balance_matrix.drop(columns=['KVI', 'segmento_bm'], errors='ignore')  # noqa: ERA001
 
+    #Nota: codigo sensibilidad viene con la frecuencia de la sensibilidad
+    # sin forzados
+    mapa = {'BKG': 'FS', 'KCI': 'SG', 'KVI': 'SE'}
+    df_balance_matrix_sp['codigo_sensibilidad'] = df_balance_matrix_sp['NUEVOS_KVI'].map(mapa)
     print('info df_temp post nuevos KVI: ', df_balance_matrix_sp.info())
 
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
