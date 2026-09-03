@@ -312,7 +312,8 @@ def main() -> None:  # noqa: D103
         total_ventas = df_temp[ventas].sum()
 
         if total_ventas <= 0:
-            raise ValueError(f"'{ventas}' debe sumar más de 0.")
+            msg = f"'{ventas}' debe sumar más de 0."
+            raise ValueError(msg)
 
         # Orden: sensibilidad de familia desc -> ventas del producto desc.
         # El desempate único garantiza un orden reproducible en BigQuery.
