@@ -210,7 +210,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     df_balance_matrix = df_elasticidad.merge(
-        df_sensibilidad[['material', 'indice_sensibilidad', 'indice_sensibilidad_familia','kvi']],
+        df_sensibilidad[['material', 'material_padre', 'indice_sensibilidad', 'indice_sensibilidad_familia','kvi']],  # noqa: E501
         on='material',
         how='left'
     )
@@ -270,6 +270,7 @@ def main() -> None:  # noqa: D103
                                             'ventas_totales',
                                             'indice_sensibilidad',
                                             'indice_sensibilidad_familia',
+                                            'material_padre',
                                             'elasticidad',
                                             'kvi',
                                             'codigo_sensibilidad',
@@ -277,35 +278,9 @@ def main() -> None:  # noqa: D103
                                             'segmento_bm']]
 
 
-    def clasificar_kvi_old(df_temp, ventas='ventas_totales',
-                    sensibilidad='indice_sensibilidad_familia'):
-        total_ventas = df_temp[ventas].sum()
 
-        if total_ventas <= 0:
-            msg = f"'{ventas}' debe sumar más de 0."
-            raise ValueError(msg)
 
-        df_temp = df_temp.sort_values(
-            sensibilidad,
-            ascending=False,
-            kind='stable'
-        ).copy()
-
-        df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
-        df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
-
-        df_temp['NUEVOS_KVI'] = np.select(
-            [
-                df_temp['pct_ventas_acumulado'] <= 0.30,
-                df_temp['pct_ventas_acumulado'] <= 0.60,
-            ],
-            ['KVI', 'KCI'],
-            default='BKG'
-        )
-
-        return df_temp
-
-    def clasificar_kvi(df_temp,
+    def clasificar_kvi_old(df_temp,
                     ventas='ventas_totales',
                     sensibilidad='indice_sensibilidad_familia',
                     desempate='ean'):   # columna única por producto
@@ -341,10 +316,82 @@ def main() -> None:  # noqa: D103
 
         return df_temp
 
+    def clasificar_kvi(df_temp,
+                    ventas='ventas_totales',
+                    sensibilidad='indice_sensibilidad_familia',
+                    familia='material_padre',      # identificador único de familia
+                    desempate='ean'):           # columna única por producto
+        total_ventas = df_temp[ventas].sum()
+
+        if total_ventas <= 0:
+            msg = f"'{ventas}' debe sumar más de 0."
+            raise ValueError(msg)
+
+        # ------------------------------------------------------------
+        # 1. ORDEN DE PRODUCTOS
+        #    Sensibilidad de familia desc -> ventas del producto desc.
+        #    Se ordena también por familia para que sus productos queden
+        #    contiguos y ninguna familia quede "interrumpida" por otra.
+        # ------------------------------------------------------------
+        df_temp = df_temp.sort_values(
+            by=[sensibilidad, familia, ventas, desempate],
+            ascending=[False, False, False, True],
+            kind='stable'
+        ).reset_index(drop=True)
+
+        df_temp['orden_kvi'] = range(1, len(df_temp) + 1)
+
+        # Acumulado a nivel PRODUCTO sobre el total del formato.
+        df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
+        df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
+
+        # ------------------------------------------------------------
+        # 2. CLASIFICACIÓN A NIVEL DE FAMILIA (sin partir familias)
+        #    Se construye el orden de familias respetando el orden de
+        #    productos ya definido, y se acumulan las ventas por familia.
+        # ------------------------------------------------------------
+        orden_familias = df_temp[familia].drop_duplicates().tolist()
+
+        ventas_familia = (
+            df_temp.groupby(familia)[ventas].sum()
+            .reindex(orden_familias)
+        )
+
+        pct_familia = ventas_familia / total_ventas
+
+        # Acumulado ANTES de cada familia (exclusivo): lo ya acumulado
+        # por las familias anteriores en el orden.
+        acum_antes_familia = pct_familia.cumsum().shift(fill_value=0.0)
+
+        # Regla 2 (redondeo hacia arriba): una familia entra en el tramo
+        # mientras el acumulado ANTES de ella no haya superado el umbral.
+        # Así, si una familia previa dejó el acumulado en 0.3299, la
+        # siguiente familia todavía entra como KVI y el corte queda un
+        # poco por encima de 0.33 (idem para 0.66).
+        clasificacion_familia = np.select(
+            [
+                acum_antes_familia < 0.33,
+                acum_antes_familia < 0.66,
+            ],
+            ['KVI', 'KCI'],
+            default='BKG'
+        )
+
+        mapa_familia = dict(zip(orden_familias, clasificacion_familia))
+
+        # ------------------------------------------------------------
+        # 3. PROPAGAR LA CLASIFICACIÓN A CADA PRODUCTO DE LA FAMILIA
+        # ------------------------------------------------------------
+        df_temp['NUEVOS_KVI'] = df_temp[familia].map(mapa_familia)
+
+        return df_temp
+
     df_balance_matrix_sp = clasificar_kvi(
         df_balance_matrix_sp,
         sensibilidad='indice_sensibilidad_familia'
     )
+
+    df_balance_matrix_sp = df_balance_matrix_sp.drop(columns=['material_padre'], errors='ignore')  # noqa: E501
 
     df_balance_matrix_sp['segmento_bm_new'] = df_balance_matrix_sp.apply(asignar_segmento_bm_NUEVO_METODO, axis=1)  # noqa: E501
 
@@ -464,7 +511,7 @@ def main() -> None:  # noqa: D103
             'Documentos%20compartidos/'
             'Pricing/'
             'Balance Matrix AA - GCP/'
-            f'Balance_Matrix_AA_{store_banner}_{execution_date}_v2.xlsx'
+            f'Balance_Matrix_AA_{store_banner}_{execution_date}_v3.xlsx'
         )
     ).upload(buffer)
     logging.info('Tabla subida en Sharepoint')
