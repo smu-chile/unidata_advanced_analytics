@@ -94,7 +94,7 @@ def cleaning_func(df_file, week,file):
         df_file = df_file.dropna(axis=0,subset=['departamento','cl_xc_categoria'])
         df_file = df_file.replace('|', '', regex=True)
     if file == 'venta_negocio':
-        df_file = df_file.iloc[:, :18]
+        df_file = df_file.iloc[:, :15]
         #rename columns
         df_file.columns = ['negocio','cl_total_store',
                      'periodos', 'total_mercado_vtas_valor', 'total_mercado_vtas_unit',
