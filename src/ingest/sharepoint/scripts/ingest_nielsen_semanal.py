@@ -94,20 +94,9 @@ def cleaning_func(df_file, week,file):
         df_file = df_file.dropna(axis=0,subset=['departamento','cl_xc_categoria'])
         df_file = df_file.replace('|', '', regex=True)
     if file == 'venta_negocio':
-        df_file = df_file.iloc[:, :18]
-        # Asigna nombres según cómo vienen en el Excel
+        df_file = df_file.iloc[:, :15]
+
         df_file.columns = [
-            'cl_total_store', 'negocio', 'periodos',
-            'total_mercado_vtas_valor', 'total_mercado_vtas_unit',
-            'unimarc_vtas_valor', 'unimarc_vtas_unit',
-            'm10s10_vtas_valor', 'm10s10_vtas_unit',
-            'total_ciudades_m10_amp_valor', 'total_ciudades_m10_amp_unit',
-            'total_supermercados_amp_internet_valor', 'total_supermercados_amp_internet_unit',
-            'total_supermercados_internet_r_valor', 'total_supermercados_internet_r_unit',
-            'total_unimarc_internet_valor', 'total_unimarc_internet_unit'
-        ]
-        # Reordena explícitamente para que coincida con el JSON (15 columnas)  # noqa: W505
-        df_file = df_file[[
             'negocio', 'cl_total_store', 'periodos',
             'total_mercado_vtas_valor', 'total_mercado_vtas_unit',
             'unimarc_vtas_valor', 'unimarc_vtas_unit',
@@ -115,7 +104,8 @@ def cleaning_func(df_file, week,file):
             'unimarc_internet_vtas_valor', 'unimarc_internet_vtas_unit',
             'total_internet_vtas_valor', 'total_internet_vtas_unit',
             'total_mercado_internet_vtas_valor', 'total_mercado_internet_vtas_unit'
-        ]]
+        ]
+
         #Drop trailing rows
         df_file = df_file.dropna(axis=0,subset=['cl_total_store'])
         df_file = df_file.replace('|', '', regex=True)
