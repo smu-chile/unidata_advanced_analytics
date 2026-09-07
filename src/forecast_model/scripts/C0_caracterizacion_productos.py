@@ -6,6 +6,9 @@ import logging
 import argparse
 from logging import config
 
+import numpy as np
+import pandas as pd
+
 # Pip
 from google.cloud.bigquery import Client
 
@@ -477,6 +480,112 @@ parser.add_argument(
 usuario = 'pricing'
 
 
+##########---------- 1. Funciones principales ----------##########
+
+#####----- 1.1 Creación de variables temporales frugales
+def agregar_features_frugales(df_final: pd.DataFrame) -> pd.DataFrame:
+    """Variables temporales optimizadas (Fourier y Tendencia Continua)
+
+    para evitar la multicolinealidad y sobre-parametrización.
+    """
+    df_final = df_final.copy()
+
+    # 1. Asegurar formato datetime en P_DATE
+    if not pd.api.types.is_datetime64_any_dtype(df_final['P_DATE']):
+        df_final['P_DATE'] = pd.to_datetime(df_final['P_DATE'])
+
+    # 2. Tendencia lineal continua (Días transcurridos desde la fecha mínima global)  # noqa: W505
+    p_date_min = df_final['P_DATE'].min()
+    df_final['tendencia_lineal'] = (
+        df_final['P_DATE'] - p_date_min
+    ).dt.days.astype(np.int32)
+
+    # 3. Componentes de Fourier (Estacionalidad anual suave)
+    dias_del_ano = df_final['P_DATE'].dt.dayofyear.values  # noqa: PD011
+    angulos = 2 * np.pi * dias_del_ano / 365.25
+
+    df_final['sin_anual'] = np.sin(angulos).astype(np.float32)
+    df_final['cos_anual'] = np.cos(angulos).astype(np.float32)
+
+    return df_final
+
+def procesar_feriados_chile(df_final: pd.DataFrame) -> pd.DataFrame:
+    """Reconstruye de forma determinista y frugal las dummies agregadas de
+    feriados para Chile: 'Feriado' y 'Pre_Feriado', omitiendo los feriados
+    irrenunciables sin registros de venta.
+    """
+    df_final = df_final.copy()
+
+    # Asegurar tipo datetime
+    if not pd.api.types.is_datetime64_any_dtype(df_final['P_DATE']):
+        df_final['P_DATE'] = pd.to_datetime(df_final['P_DATE'])
+
+    # 1. Definir Feriados Fijos Generales (Mes, Día), incluyendo los irrenunciables  # noqa: W505
+    feriados_fijos = {
+        (1, 1),
+        (5, 1),
+        (5, 21),
+        (6, 20),
+        (6, 29),
+        (7, 16),
+        (8, 15),
+        (9, 18),
+        (9, 19),
+        (10, 12),
+        (10, 31),
+        (11, 1),
+        (12, 8),
+        (12, 25),
+    }
+
+    # 2. Feriados Religiosos Móviles
+    feriados_moviles = {
+        2024: [pd.Timestamp('2024-03-29'), pd.Timestamp('2024-03-30')],
+        2025: [pd.Timestamp('2025-04-18'), pd.Timestamp('2025-04-19')],
+        2026: [pd.Timestamp('2026-04-03'), pd.Timestamp('2026-04-04')],
+    }
+
+    # Extraer fechas únicas presentes para evaluación de calendario
+    fechas_unicas = df_final['P_DATE'].drop_duplicates()
+
+    # Función para determinar si una fecha cualquiera en el calendario es
+    #  feriado
+    def es_fecha_feriado(dt):
+        año = dt.year
+        if año in feriados_moviles and dt in feriados_moviles[año]:
+            return True
+        return (dt.month, dt.day) in feriados_fijos
+
+    # Evaluar si la fecha es Feriado
+    es_fer = fechas_unicas.apply(es_fecha_feriado)
+
+    # Evaluar si la fecha SIGUIENTE (t + 1 día) es Feriado -> Pre_Feriado
+    es_pre = (fechas_unicas + pd.Timedelta(days=1)).apply(es_fecha_feriado)
+
+    # DataFrame auxiliar de mapeo
+    df_map = pd.DataFrame(
+        {
+            'P_DATE': fechas_unicas,
+            'FERIADO': es_fer.astype(np.int8),
+            'PRE_FERIADO': es_pre.astype(np.int8),
+        }
+    )
+
+    # Limpiar columnas previas si existían
+    cols_a_borrar = [
+        c
+        for c in ['FERIADO', 'PRE_FERIADO', 'FERIADO_IRRENUNCIABLE']
+        if c in df_final.columns
+    ]
+    if cols_a_borrar:
+        df_final = df_final.drop(columns=cols_a_borrar)
+
+    # Unir con el dataset principal
+    df_final = df_final.merge(df_map, on='P_DATE', how='left')
+
+    return df_final
+
+
 def main():
 
     #------- Inputs ---------#
@@ -511,7 +620,7 @@ def main():
                     gbq_client=gbq_client)
 
     logging.info('[1.1] Dimensiones df hist_venta: %s', df_hist_venta.shape)
-    logging.info('[1.1] Eans únicos: %s', df_hist_venta['ean'].nunique())
+    logging.info('[1.1] Eans únicos: %s', df_hist_venta['EAN'].nunique())
     logging.info(f'[1.1] Memoria utilizada: {df_hist_venta.memory_usage(deep=True).sum() / 1024**2:.2f} MB')  # noqa: E501
 
 
@@ -539,6 +648,15 @@ def main():
     logging.info('[1.3] Dimensiones df promos tratada: %s', df_promos_tratada.shape)
     logging.info('[1.3] Eans únicos: %s', df_promos_tratada['ean'].nunique())
     logging.info(f'[1.3] Memoria utilizada: {df_promos_tratada.memory_usage(deep=True).sum() / 1024**2:.2f} MB')  # noqa: E501
+
+
+    logging.info('##### [P2] Agregar features frugales y feriados #####')
+
+    logging.info('[2.1] Agregando features frugales: tendencia lineal y estacionalidad anual')
+    df_hist_venta = agregar_features_frugales(df_hist_venta)
+
+    logging.info('[2.2] Agregando dummies de feriados y pre-feriados para Chile')
+    df_hist_venta = procesar_feriados_chile(df_hist_venta)
 
 if __name__ == '__main__':
 
