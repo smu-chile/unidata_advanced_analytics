@@ -1,27 +1,50 @@
 # Default
-from __future__ import annotations  # noqa: I001
-import argparse
-import logging
+"""Elasticidad de precios V7.x -- metodo general.
+
+Calcula elasticidad precio-cantidad por material para un store_banner,
+usando una cascada de metodos (Log_log, GAM, RDD, RLM_robusto, GAMM_like,
+Intermittent_GAMM) con fallback jerarquico (sustituto -> subcategoria ->
+categoria -> tipo_cluster -> banner_completo) para garantizar 100% de
+cobertura. El resultado se sube a
+PRECIO_PROMOCIONES.ELASTICITY_PR en BigQuery.
+"""
+from __future__ import annotations
+
 import os
+import time
+import logging
+import argparse
 import warnings
+from typing import TYPE_CHECKING
 from logging import config
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from pygam.terms import TermList
+
 # Pip
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-from google.cloud.bigquery import Client, DatasetReference
 from pygam import LinearGAM, l, s
+from joblib import Parallel, delayed, parallel_config
+from scipy.stats import t as student_t
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
+from google.cloud.bigquery import Client, DatasetReference
 from sklearn.preprocessing import StandardScaler
+
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.gcp_extended.bigquery import (
-    deleteFromTable,
-    readBigQuery,
     uploadFrame,
+    readBigQuery,
+    deleteFromTable,
 )
+
 
 warnings.filterwarnings('ignore')
 
@@ -93,6 +116,95 @@ MIN_MATERIALES_TIPO_CLUSTER = 20
 
 # Ecommerce tiene su PROPIA tabla productiva de regresion (mismo patron
 # que elasticidad_general.py -- replicado, no reinventado).
+
+# Constantes promovidas a nivel de modulo (antes vivian dentro de
+# main(), heredadas de las celdas del notebook original) -- N806
+# exige mayuscula solo a nivel de modulo, no dentro de funciones.
+VENTANA_SUAVIZADO_DIAS = 45
+COLUMNAS_FEATURES = [
+    'frecuencia_cambio_precio',
+    'n_niveles_precio',
+    'cv_cantidad',
+    'pct_dias_sin_venta',
+    'racha_max_sin_venta',
+    'salto_nivel_tercios',
+    'pendiente_tendencia',
+    'autocorrelacion_1',
+    'asimetria_cantidad',
+    'correlacion_precio_cantidad',
+]
+PERCENTIL_CORTE_TRANSICION = 0.95  # ~5% del catalogo como "atipico"
+UMBRAL_ANCHO_DISCONTINUIDAD = 0.06
+UMBRAL_LANZAMIENTO_NIVEL_PREVIO = 0.15
+UMBRAL_LANZAMIENTO_PUNTO_TEMPRANO = 0.35
+MIN_CAMBIO_PRECIO_EVENTO = 0.02
+MODELOS_POR_TIPO = {
+    'limpio': ['Log_log', 'GAM'],
+    'ciclos_rapidos': ['GAMM_like', 'GAM', 'RDD'],
+    'intermitente': ['Intermittent_GAMM', 'Log_log'],
+    'picos_extremos': ['RLM_robusto'],
+    'tendencia_fuerte': ['GAMM_like', 'RDD'],
+    'precio_no_relevante': ['Log_log', 'GAM'],
+    # NUEVO -- tipos de patron temporal (rampas/discontinuidades/
+    # lanzamientos), detectados con prioridad sobre el cluster en
+    # extraer_caracteristicas.
+    #   - GAM_lanzamiento: GAM + edad_producto + dias_desde_transicion
+    #   - GAM_declive: GAM + dias_desde_transicion
+    #   - RDD_estabilizado: RDD entrenado y evaluado SOLO en el
+    #     periodo posterior a la transicion detectada -- confirmado
+    #     con caso real que esto es CRITICO para lanzamiento/declive:
+    #     durante la transicion misma el precio casi no varia (el
+    #     crecimiento es organico, no de precio), y cualquier modelo
+    #     que use toda la historia confunde esa variacion organica
+    #     con sensibilidad al precio -- verificado con un material
+    #     real donde GAM_lanzamiento daba -35 (disparatado) y
+    #     RDD_estabilizado dio -3.5 (sano, coincide con el calculo
+    #     manual del unico evento de precio limpio de ese material).
+    #   - GAM: generico, sin covariables extra (rampa ascendente que
+    #     no calza con el patron especifico de lanzamiento).
+    'lanzamiento': ['GAM_lanzamiento', 'RDD_estabilizado', 'GAM'],
+    'rampa_ascendente': ['GAM', 'Log_log'],
+    'rampa_descendente': ['GAM_declive', 'RDD_estabilizado', 'GAM'],
+    'discontinuidad': ['GAM', 'RDD'],
+}
+N_JOBS = -1
+BATCH_SIZE = 100
+BATCH_SIZE_IC = 100
+N_JOBS_IC = -1
+UMBRAL_R2_CLIP = 0.70
+UMBRAL_HIGH = 0.30
+MAPEO_COLUMNAS_SLIM = {
+    'material': 'MATERIAL',
+    'ean': 'EAN',
+    'product_description': 'DESCRIPCION_MATERIAL',
+    'category_description': 'CATEGORIA',
+    'umv': 'UMV',
+    'tipo_cluster': 'CLUSTER',
+    'elasticidad_final': 'ELASTICIDAD',
+    'segmento_elasticidad': 'SEGMENTO_ELASTICIDAD',
+    'nivel_herencia': 'ORIGEN',
+    'metodo': 'METODO',
+    'N_Eventos': 'N_Eventos',
+    'score_confiabilidad': 'SCORE_CONFIABILIDAD',
+    'confiabilidad': 'CONFIABILIDAD',
+}
+COLUMNAS_FINALES_ORDENADAS = [
+    'STORE_BANNER',
+    'CATEGORIA',
+    'MATERIAL',
+    'DESCRIPCION_MATERIAL',
+    'EAN',
+    'UMV',
+    'CLUSTER',
+    'ORIGEN',
+    'ELASTICIDAD',
+    'SEGMENTO_ELASTICIDAD',
+    'N_Eventos',
+    'METODO',
+    'SCORE_CONFIABILIDAD',
+    'CONFIABILIDAD',
+]
+
 MAPA_BANNER_REGRESSION_ECOMMERCE = {
     'Ecommerce Unimarc': 'Unimarc',
     'Ecommerce Alvi': 'Alvi',
@@ -207,7 +319,7 @@ SQL_QUERIES = QueryDict(
 )  # ENDREGION
 
 
-def main() -> None:
+def main() -> None:  # noqa: D103
 
     # Parse input variables
     args = vars(parser.parse_args())
@@ -218,13 +330,13 @@ def main() -> None:
     logger.info(f'proyecto: {proyecto}')
     logger.info(f'store_banner: {store_banner}')
 
-    N_CLUSTERS = 8 if store_banner == 'Unimarc' else 6  # noqa: N806
+    n_clusters_banner = 8 if store_banner == 'Unimarc' else 6
 
     # Set gbq client for all subsequent queries
     gbq_client = Client()
 
     # REGION: Inputs del proceso
-    # -------------------------------------------------------------------
+    # ----------------------------------------------------------------
     usuario = 'elasticidad_general'
     esquema = 'PRECIO_PROMOCIONES'
     tabla = 'ELASTICITY_PR'
@@ -247,13 +359,13 @@ def main() -> None:
     # ENDREGION
 
     # REGION: Asegurar que el dataset de destino exista
-    # -------------------------------------------------------------------
+    # ----------------------------------------------------------------
     dataset_ref = DatasetReference(proyecto, esquema)
     gbq_client.create_dataset(dataset_ref, exists_ok=True)
     # ENDREGION
 
     # REGION: Carga de datos
-    # -------------------------------------------------------------------
+    # ----------------------------------------------------------------
     query_panel = SQL_QUERIES['query_panel'].substitute(
         table=table_regression, store_banner=store_banner_regression
     )
@@ -324,7 +436,7 @@ def main() -> None:
     # ---- celda_03 ----
 
     # %% [PASO 1D -- precio_suavizado (mediana movil 45 dias
-    # ==============================================================
+    # ================================================================
     # SIEMPRE se calcula, pero no decide nada por si solo -- es un
     # candidato adicional que solo se usa mas adelante, en el reintento
     # posterior para materiales que no ganaron con precio crudo. No
@@ -334,7 +446,6 @@ def main() -> None:
     # Formula identica a baseline.py: mediana movil CENTRADA de 45 dias,
     # min_periods=22, con relleno hacia adelante/atras en los bordes.
     # ================================================================
-    VENTANA_SUAVIZADO_DIAS = 45  # noqa: N806
     df_panel = df_panel.sort_values(['material_ean', 'p_date']).reset_index(drop=True)
     df_panel['precio_suavizado'] = df_panel.groupby('material_ean')[
         'precio_promedio'
@@ -350,14 +461,14 @@ def main() -> None:
 
     # ---- celda_06 ----
 
-    def agregar_features_calendario(df):
-        df = df.copy()  # noqa: PD901
+    def agregar_features_calendario(df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
         fechas = pd.to_datetime(df['p_date'])
         dia_anio = fechas.dt.dayofyear
         df['estacional_sin'] = np.sin(2 * np.pi * dia_anio / 365.25)
         df['estacional_cos'] = np.cos(2 * np.pi * dia_anio / 365.25)
-        arr_fer = FECHAS_FERIADO.values.astype('datetime64[D]')  # noqa: PD011
-        arr_fecha = fechas.values.astype('datetime64[D]')  # noqa: PD011
+        arr_fer = FECHAS_FERIADO.to_numpy().astype('datetime64[D]')
+        arr_fecha = fechas.to_numpy().astype('datetime64[D]')
         dias_hasta = np.empty(len(df), dtype=float)
         for i, fecha in enumerate(arr_fecha):
             diffs = (arr_fer - fecha).astype('timedelta64[D]').astype(int)
@@ -384,12 +495,17 @@ def main() -> None:
 
     # ---- celda_07 ----
 
-    def _detectar_transicion_de_nivel(cantidad, fechas, ventana=7):
-        """Encuentra el punto de mayor cambio de nivel en la serie, y mide
-        que tan ANCHA es la transicion (dias para pasar del 10% al 90% del
-        cambio). Transicion angosta = discontinuidad. Transicion ancha =
-        rampa gradual. Retorna (ancho_relativo, magnitud_relativa,
-        punto_relativo, nivel_previo_normalizado, fecha_transicion)."""
+    def _detectar_transicion_de_nivel(
+        cantidad: np.ndarray, fechas: pd.Series, ventana: int = 7
+    ) -> tuple[float, float, float, float, pd.Timestamp | None]:
+        """Encuentra el punto de mayor cambio de nivel en la serie.
+
+        Tambien mide que tan ANCHA es la transicion (dias para pasar del
+        10% al 90% del cambio). Transicion angosta = discontinuidad.
+        Transicion ancha = rampa gradual. Retorna (ancho_relativo,
+        magnitud_relativa, punto_relativo, nivel_previo_normalizado,
+        fecha_transicion).
+        """
         s = pd.Series(cantidad)
         media_movil_completa = s.rolling(
             ventana, min_periods=ventana, center=True
@@ -434,7 +550,7 @@ def main() -> None:
             fecha_transicion,
         )
 
-    def extraer_caracteristicas(df_material):
+    def extraer_caracteristicas(df_material: pd.DataFrame) -> dict:
         dm = df_material.sort_values('p_date').reset_index(drop=True)
         precio = dm['precio_promedio'].to_numpy(float)
         cantidad = dm['cantidad_total'].to_numpy(float)
@@ -529,22 +645,10 @@ def main() -> None:
             'correlacion_precio_cantidad',
         ]
     )
-    COLUMNAS_FEATURES = [  # noqa: N806
-        'frecuencia_cambio_precio',
-        'n_niveles_precio',
-        'cv_cantidad',
-        'pct_dias_sin_venta',
-        'racha_max_sin_venta',
-        'salto_nivel_tercios',
-        'pendiente_tendencia',
-        'autocorrelacion_1',
-        'asimetria_cantidad',
-        'correlacion_precio_cantidad',
-    ]
     scaler = StandardScaler()
     x_escalado = scaler.fit_transform(df_features[COLUMNAS_FEATURES])
     kmeans = KMeans(
-        n_clusters=min(N_CLUSTERS, len(df_features)),
+        n_clusters=min(n_clusters_banner, len(df_features)),
         n_init=10,
         random_state=RANDOM_STATE,
     )
@@ -553,7 +657,7 @@ def main() -> None:
     promedio_general = df_features[COLUMNAS_FEATURES].mean()
     desv_general = df_features[COLUMNAS_FEATURES].std()
 
-    def clasificar_tipo_cluster(fila):
+    def clasificar_tipo_cluster(fila: pd.Series) -> str:
         if abs(fila['pendiente_tendencia']) > 0.008:
             return 'tendencia_fuerte'
         if fila['pct_dias_sin_venta'] > 0.30 or fila['racha_max_sin_venta'] > 45:
@@ -580,7 +684,7 @@ def main() -> None:
     tipo_por_cluster = {c: clasificar_tipo_cluster(perfil.loc[c]) for c in perfil.index}
     df_features['tipo_cluster'] = df_features['cluster'].map(tipo_por_cluster)
 
-    # ===================================================================
+    # ================================================================
     # NUEVO -- clasificacion de patrones temporales, CON PRIORIDAD sobre el
     # tipo de cluster. Si no detecta nada relevante (retorna None), el
     # material sigue con la clasificacion por cluster de siempre, sin
@@ -589,35 +693,31 @@ def main() -> None:
     # Umbrales: punto de partida razonado con datos sinteticos -- revisar
     # la distribucion real despues de correr sobre el catalogo completo y
     # recalibrar si hace falta (mismo criterio que K=1.0 del shrinkage).
-    # ===================================================================
-    # ===================================================================
+    # ================================================================
+    # ================================================================
     # UMBRAL DINAMICO -- se recalcula con la distribucion REAL de este
     # banner, cada vez que corre. Garantiza ~5% del catalogo capturado
     # como "atipico", sea cual sea el banner -- sin retocar ningun numero
     # entre 1 banner y otro (antes era un valor fijo de 0.60, calibrado
     # solo con sinteticos -- con datos reales capturaba mas del 70% del
     # catalogo, muy por encima de lo esperado).
-    # ===================================================================
-    PERCENTIL_CORTE_TRANSICION = 0.95  # ~5% del catalogo como "atipico"  # noqa: N806
-    UMBRAL_MAGNITUD_TRANSICION = (  # noqa: N806
+    # ================================================================
+    umbral_magnitud_transicion = (
         df_features['magnitud_transicion_relativa']
         .abs()
         .quantile(PERCENTIL_CORTE_TRANSICION)
     )
     logger.info(
         f'Umbral de magnitud (percentil {PERCENTIL_CORTE_TRANSICION * 100:.0f}%, '
-        f'autoajustado a este banner): {UMBRAL_MAGNITUD_TRANSICION:.3f}'
+        f'autoajustado a este banner): {umbral_magnitud_transicion:.3f}'
     )
-    UMBRAL_ANCHO_DISCONTINUIDAD = 0.06  # noqa: N806
-    UMBRAL_LANZAMIENTO_NIVEL_PREVIO = 0.15  # noqa: N806
-    UMBRAL_LANZAMIENTO_PUNTO_TEMPRANO = 0.35  # noqa: N806
 
-    def clasificar_patron_temporal(fila):
+    def clasificar_patron_temporal(fila: pd.Series) -> str | None:
         ancho = fila['ancho_transicion_relativo']
         magnitud = fila['magnitud_transicion_relativa']
         punto = fila['punto_transicion_relativo']
         nivel_previo = fila['nivel_previo_transicion_normalizado']
-        if pd.isna(magnitud) or abs(magnitud) < UMBRAL_MAGNITUD_TRANSICION:
+        if pd.isna(magnitud) or abs(magnitud) < umbral_magnitud_transicion:
             return None
         if pd.notna(ancho) and ancho < UMBRAL_ANCHO_DISCONTINUIDAD:
             return 'discontinuidad'
@@ -656,7 +756,7 @@ def main() -> None:
         how='inner',
     )
     train_parts, test_parts = [], []
-    for material_ean, dm in df_panel_cl.groupby('material_ean'):  # noqa: B007
+    for _material_ean, dm in df_panel_cl.groupby('material_ean'):
         dm = dm.sort_values('p_date').copy()
         if len(dm) < MIN_OBS_MODELO:
             continue
@@ -673,7 +773,7 @@ def main() -> None:
 
     # ---- celda_09 ----
 
-    def agregar_features_gap(df):
+    def agregar_features_gap(df: pd.DataFrame) -> pd.DataFrame:
         d = df.sort_values(['material_ean', 'p_date']).copy()
         d['gap_days'] = d.groupby('material_ean')['p_date'].diff().dt.days
         med_gap = d.groupby('material_ean')['gap_days'].transform('median')
@@ -712,7 +812,7 @@ def main() -> None:
     # ---- celda_10 ----
 
     # %% [covariables_edad_y_transicion]
-    # =================================================================
+    # ================================================================
     # Calcula edad_producto y dias_desde_transicion sobre df_train y
     # df_test -- necesarias para GAM_lanzamiento/GAM_declive. Se calculan
     # UNA VEZ aca (no dentro de competir_un_material) para no tocar el
@@ -722,7 +822,7 @@ def main() -> None:
     # tiene costo evitarlo). dias_desde_transicion: solo tiene sentido
     # para materiales con fecha_transicion detectada (lanzamiento/
     # rampa_descendente) -- para el resto queda en 0 (neutro).
-    # =================================================================
+    # ================================================================
     fecha_primera_venta_por_material = df_panel.groupby('material_ean')['p_date'].min()
     fecha_transicion_por_material = df_features.set_index('material_ean')[
         'fecha_transicion'
@@ -744,7 +844,7 @@ def main() -> None:
         f'{len(fecha_transicion_por_material):,}'
     )
 
-    # ===================================================================
+    # ================================================================
     # NUEVO -- tendencia_temporal: control de crecimiento/caida MACRO entre
     # años, para Log_log y RLM_robusto (que hoy no tienen NINGUN termino de
     # tiempo -- GAM ya lo cubre via s(tiempo)). Confirmado con datos reales
@@ -757,7 +857,7 @@ def main() -> None:
     # Referencia GLOBAL (fecha minima del panel, no por material) --
     # a diferencia de edad_producto, esto mide tiempo calendario compartido
     # no la edad individual de cada producto.
-    # ==================================================================
+    # ================================================================
     fecha_minima_panel_completo = df_panel['p_date'].min()
     for df_split in [df_train, df_test]:
         df_split['tendencia_temporal'] = (
@@ -767,7 +867,7 @@ def main() -> None:
 
     # ---- celda_11 ----
 
-    def _baseline_design(dm, incluir_gap=False):
+    def _baseline_design(dm: pd.DataFrame, incluir_gap: bool = False) -> np.ndarray:
         d = dm.copy().sort_values('p_date')
         t0 = d['p_date'].min()
         t = (d['p_date'] - t0).dt.days.astype(float)
@@ -776,18 +876,18 @@ def main() -> None:
         if incluir_gap and 'log_gap' in d.columns:
             cols.append(d['log_gap'].to_numpy(float))
         cols.append(d[COLUMNAS_CALENDARIO].astype(float).to_numpy())
-        X = np.column_stack(cols)  # noqa: N806
-        return sm.add_constant(X, has_constant='add')
+        x = np.column_stack(cols)
+        return sm.add_constant(x, has_constant='add')
 
-    def calcular_pesos_cola(dm, incluir_gap=False):
+    def calcular_pesos_cola(dm: pd.DataFrame, incluir_gap: bool = False) -> pd.Series:
         d = dm.sort_values('p_date').copy()
         if len(d) < ANOMALY_MIN_OBS:
             return pd.Series(1.0, index=d.index, dtype=float)
-        X = _baseline_design(d, incluir_gap=incluir_gap)  # noqa: N806
+        x = _baseline_design(d, incluir_gap=incluir_gap)
         y = np.log(d['cantidad_total'].to_numpy(float))
         try:
-            base = sm.OLS(y, X).fit()
-            resid = y - base.predict(X)
+            base = sm.OLS(y, x).fit()
+            resid = y - base.predict(x)
         except Exception:  # noqa: BLE001 -- fallo numerico esperado, se descarta el candidato
             resid = y - np.median(y)
         med = np.median(resid)
@@ -800,7 +900,7 @@ def main() -> None:
         weights = np.clip(weights, MIN_TAIL_WEIGHT, 1.0)
         return pd.Series(weights, index=d.index, dtype=float)
 
-    def construir_cache_pesos(df):
+    def construir_cache_pesos(df: pd.DataFrame) -> dict:
         out = {}
         for m, dm in df.groupby('material_ean'):
             tipo = dm['tipo_cluster'].iloc[0]
@@ -826,12 +926,14 @@ def main() -> None:
 
     # ---- celda_12 ----
 
-    def _weighted_arrays(dm, weights):
+    def _weighted_arrays(
+        dm: pd.DataFrame, weights: pd.Series
+    ) -> tuple[pd.DataFrame, np.ndarray]:
         w = np.asarray(weights, float)
         keep = np.isfinite(w) & (w > 0)
         return dm.loc[keep].copy(), w[keep]
 
-    def _get_weights(dm):
+    def _get_weights(dm: pd.DataFrame) -> pd.Series:
         idx = dm.index
         m = dm['material_ean'].iloc[0]
         cached = weights_cache.get(m)
@@ -839,23 +941,20 @@ def main() -> None:
             return np.ones(len(dm), dtype=float)
         return cached.reindex(idx).fillna(1.0).to_numpy(float)
 
-    def ref_slice(dm, max_rows=30):
+    def ref_slice(dm: pd.DataFrame, max_rows: int = 30) -> pd.DataFrame:
         if len(dm) <= max_rows:
             return dm.copy()
         i = max(0, len(dm) // 2 - max_rows // 2)
         return dm.iloc[i : i + max_rows].copy()
 
     def construir_X_gam(
-        df,
-        incluir_gap=False,
-        incluir_edad=False,
-        incluir_dias_transicion=False,
-        t0=None,
-        t_scale=None,
-        n_price=N_SPLINES_PRICE,  # noqa: ARG001
-        n_time=N_SPLINES_TIME,  # noqa: ARG001
-        n_gap=N_SPLINES_GAP,  # noqa: ARG001
-    ):
+        df: pd.DataFrame,
+        incluir_gap: bool = False,
+        incluir_edad: bool = False,
+        incluir_dias_transicion: bool = False,
+        t0: pd.Timestamp | None = None,
+        t_scale: float | None = None,
+    ) -> tuple[np.ndarray, pd.Timestamp, float]:
         d = df.copy()
         if t0 is None:
             t0 = d['p_date'].min()
@@ -868,23 +967,24 @@ def main() -> None:
         blocks = [lp, t]
         if incluir_gap:
             if 'log_gap' not in d.columns:
-                raise ValueError('incluir_gap=True requiere columna log_gap')  # noqa: EM101
+                msg = 'incluir_gap=True requiere columna log_gap'
+                raise ValueError(msg)
             blocks.append(d['log_gap'].to_numpy(float).reshape(-1, 1))
         # NUEVO: edad_producto -- log(dias desde la primera venta) -- para
         # materiales tipo 'lanzamiento', le da al modelo la forma tipica
         # de ganancia de traccion sin depender solo de s(tiempo)
         if incluir_edad:
             if 'edad_producto' not in d.columns:
-                raise ValueError('incluir_edad=True requiere columna edad_producto')  # noqa: EM101
+                msg = 'incluir_edad=True requiere columna edad_producto'
+                raise ValueError(msg)
             blocks.append(d['edad_producto'].to_numpy(float).reshape(-1, 1))
         # NUEVO: dias_desde_transicion -- log(dias desde el quiebre
         # detectado) -- para 'lanzamiento'/'rampa_descendente', distingue
         # adaptacion reciente de nuevo regimen ya estable
         if incluir_dias_transicion:
             if 'dias_desde_transicion' not in d.columns:
-                raise ValueError(
-                    'incluir_dias_transicion requiere columna dias_desde_transicion'  # noqa: EM101
-                )
+                msg = 'incluir_dias_transicion requiere columna dias_desde_transicion'
+                raise ValueError(msg)
             blocks.append(d['dias_desde_transicion'].to_numpy(float).reshape(-1, 1))
         # NUEVO: variables promocionales -- incondicional, igual criterio
         # que COLUMNAS_CALENDARIO (el merge+fillna en PASO 1B/1C garantiza
@@ -896,8 +996,10 @@ def main() -> None:
         return np.column_stack(blocks), t0, t_scale
 
     def crear_terms_gam(
-        incluir_gap=False, incluir_edad=False, incluir_dias_transicion=False
-    ):
+        incluir_gap: bool = False,
+        incluir_edad: bool = False,
+        incluir_dias_transicion: bool = False,
+    ) -> TermList:
         terms = s(0, n_splines=N_SPLINES_PRICE, spline_order=3, lam=LAMBDA_GAM)
         terms += s(1, n_splines=N_SPLINES_TIME, spline_order=3, lam=LAMBDA_GAM)
         offset = 2
@@ -921,7 +1023,9 @@ def main() -> None:
             terms += l(offset + j)
         return terms
 
-    def _elasticidad_from_prediction(predict_fn, ref, price_ref):
+    def _elasticidad_from_prediction(
+        predict_fn: Callable, ref: pd.DataFrame, price_ref: float
+    ) -> float:
         h = 1e-3
         pp = float(price_ref) * np.exp(h)
         pm = float(price_ref) * np.exp(-h)
@@ -929,7 +1033,7 @@ def main() -> None:
         q_m = max(float(np.mean(predict_fn(ref, pm))), 1e-12)
         return (np.log(q_p) - np.log(q_m)) / (2 * h)
 
-    # ===============================================================
+    # ================================================================
     # NUEVO -- RDD, reconstruido desde el diseno documentado del proyecto
     # (no existia en el codigo V7.x actual -- se habia quedado en una
     # version anterior del pipeline, previa al refactor de GAMM_like).
@@ -939,16 +1043,14 @@ def main() -> None:
     # semana calculado desde los propios datos del material -- sin esto,
     # RDD pierde el Quality Gate por wape/r2 (no por la elasticidad en si,
     # que puede ser correcta) simplemente por ignorar el patron semanal.
-    # ===============================================================
-    VENTANA_RDD = 5  # noqa: N806
-    MIN_CAMBIO_PRECIO_EVENTO = 0.02  # noqa: N806
+    # ================================================================
 
-    def detectar_eventos_precio(dm):
+    def detectar_eventos_precio(dm: pd.DataFrame) -> np.ndarray:
         precio = dm['precio_promedio'].to_numpy()
         cambios = np.abs(np.diff(precio)) / np.maximum(precio[:-1], 1e-9)
         return np.where(cambios > MIN_CAMBIO_PRECIO_EVENTO)[0] + 1
 
-    def entrenar_rdd(dm):
+    def entrenar_rdd(dm: pd.DataFrame) -> object | None:
         dm = dm.sort_values('p_date').reset_index(drop=True)
         indices_evento = detectar_eventos_precio(dm)
         if len(indices_evento) == 0:
@@ -1001,7 +1103,7 @@ def main() -> None:
         )
         obj.factor_dow = factor_dow.reindex(range(7)).fillna(1.0)
 
-        def predict(df):
+        def predict(df: pd.DataFrame) -> np.ndarray:
             p = df['precio_promedio'].to_numpy(float)
             factor_precio = (p / obj.price_ref) ** obj.elasticidad
             dow_df = pd.to_datetime(df['p_date']).dt.dayofweek
@@ -1013,7 +1115,7 @@ def main() -> None:
 
     # ---- celda_13 ----
 
-    def _obj_base(metodo):
+    def _obj_base(metodo: str) -> object:
         class Obj:
             pass
 
@@ -1024,7 +1126,7 @@ def main() -> None:
         o.elasticidad = np.nan
         return o
 
-    def entrenar_log_log(dm):
+    def entrenar_log_log(dm: pd.DataFrame) -> object | None:
         d = dm[dm['cantidad_total'] > 0].copy().sort_values('p_date')
         if len(d) < MIN_OBS_MODELO or d['precio_promedio'].nunique() < 2:
             return None
@@ -1035,10 +1137,10 @@ def main() -> None:
             *COLUMNAS_PROMOCIONALES,
             *COLUMNAS_CALENDARIO,
         ]
-        X = sm.add_constant(d[xcols].astype(float), has_constant='add')  # noqa: N806
+        x = sm.add_constant(d[xcols].astype(float), has_constant='add')
         y = np.log(d['cantidad_total'].to_numpy(float))
         w = _get_weights(d)
-        model = sm.WLS(y, X, weights=w).fit(cov_type='HC3')
+        model = sm.WLS(y, x, weights=w).fit(cov_type='HC3')
         obj = _obj_base('Log_log')
         obj.model = model
         obj.df_ref = d
@@ -1050,22 +1152,22 @@ def main() -> None:
         obj.is_gam = False
         obj.is_pooled = False
 
-        def predict(df):
+        def predict(df: pd.DataFrame) -> np.ndarray:
             dd = df.copy()
             dd['log_precio'] = np.log(dd['precio_promedio'])
-            Xp = sm.add_constant(dd[xcols].astype(float), has_constant='add')  # noqa: N806
-            return np.exp(model.predict(Xp))
+            xp = sm.add_constant(dd[xcols].astype(float), has_constant='add')
+            return np.exp(model.predict(xp))
 
         obj.predict = predict
         return obj
 
     def entrenar_gam(
-        dm,
-        incluir_gap=False,
-        incluir_edad=False,
-        incluir_dias_transicion=False,
-        metodo=None,
-    ):
+        dm: pd.DataFrame,
+        incluir_gap: bool = False,
+        incluir_edad: bool = False,
+        incluir_dias_transicion: bool = False,
+        metodo: str | None = None,
+    ) -> object | None:
         d = dm[dm['cantidad_total'] > 0].copy().sort_values('p_date')
         if len(d) < MIN_OBS_MODELO or d['precio_promedio'].nunique() < 2:
             return None
@@ -1075,7 +1177,7 @@ def main() -> None:
             return None
         if incluir_dias_transicion and 'dias_desde_transicion' not in d.columns:
             return None
-        X, t0, t_scale = construir_X_gam(  # noqa: N806
+        x, t0, t_scale = construir_X_gam(
             d,
             incluir_gap=incluir_gap,
             incluir_edad=incluir_edad,
@@ -1088,7 +1190,7 @@ def main() -> None:
             incluir_edad=incluir_edad,
             incluir_dias_transicion=incluir_dias_transicion,
         )
-        model = LinearGAM(terms).fit(X, y, weights=w)
+        model = LinearGAM(terms).fit(x, y, weights=w)
         obj = _obj_base(metodo or ('GAM_Intermittent' if incluir_gap else 'GAM'))
         obj.model = model
         obj.df_ref = d
@@ -1102,11 +1204,11 @@ def main() -> None:
         obj.params = np.asarray(model.coef_)
         cov0 = model.statistics_.get('cov')
         obj.cov = np.asarray(cov0) if cov0 is not None else None
-        obj.X_train = X.copy()
+        obj.X_train = x.copy()
         obj.w_train = w.copy()
         obj.price_ref = float(d['precio_promedio'].median())
 
-        def predict(df):
+        def predict(df: pd.DataFrame) -> np.ndarray:
             xx, _, _ = construir_X_gam(
                 df,
                 incluir_gap=incluir_gap,
@@ -1124,7 +1226,7 @@ def main() -> None:
         )
         return obj
 
-    def entrenar_rlm_robusto(dm):
+    def entrenar_rlm_robusto(dm: pd.DataFrame) -> object | None:
         d = dm[dm['cantidad_total'] > 0].copy().sort_values('p_date')
         if len(d) < MIN_OBS_MODELO or d['precio_promedio'].nunique() < 2:
             return None
@@ -1135,22 +1237,22 @@ def main() -> None:
             *COLUMNAS_PROMOCIONALES,
             *COLUMNAS_CALENDARIO,
         ]
-        X = sm.add_constant(d[xcols].astype(float), has_constant='add').to_numpy(float)  # noqa: N806
+        x = sm.add_constant(d[xcols].astype(float), has_constant='add').to_numpy(float)
         y = np.log(d['cantidad_total'].to_numpy(float))
         tail_w = _get_weights(d)
         beta = np.linalg.lstsq(
-            X * np.sqrt(tail_w[:, None]), y * np.sqrt(tail_w), rcond=None
+            x * np.sqrt(tail_w[:, None]), y * np.sqrt(tail_w), rcond=None
         )[0]
         for _ in range(6):
-            resid = y - X @ beta
+            resid = y - x @ beta
             scale = max(1.4826 * np.median(np.abs(resid - np.median(resid))), 1e-3)
             z = np.abs(resid) / (1.345 * scale)
             huber_w = np.minimum(1.0, 1.0 / np.maximum(z, 1.0))
             w = tail_w * huber_w
-            beta = np.linalg.lstsq(X * np.sqrt(w[:, None]), y * np.sqrt(w), rcond=None)[
+            beta = np.linalg.lstsq(x * np.sqrt(w[:, None]), y * np.sqrt(w), rcond=None)[
                 0
             ]
-        model = sm.WLS(y, X, weights=w).fit(cov_type='HC3')
+        model = sm.WLS(y, x, weights=w).fit(cov_type='HC3')
         obj = _obj_base('RLM_robusto')
         obj.model = model
         obj.df_ref = d
@@ -1162,11 +1264,11 @@ def main() -> None:
         obj.price_ref = float(d['precio_promedio'].median())
         obj.elasticidad = float(beta[1])
 
-        def predict(df):
+        def predict(df: pd.DataFrame) -> np.ndarray:
             dd = df.copy()
             dd['log_precio'] = np.log(dd['precio_promedio'])
-            Xp = sm.add_constant(dd[xcols].astype(float), has_constant='add')  # noqa: N806
-            return np.exp(model.predict(Xp))
+            xp = sm.add_constant(dd[xcols].astype(float), has_constant='add')
+            return np.exp(model.predict(xp))
 
         obj.predict = predict
         return obj
@@ -1174,7 +1276,15 @@ def main() -> None:
     # ---- celda_14 ----
 
     class PooledGAMM:
-        def __init__(self, model, t0, t_scale, incluir_gap, adjustments, metodo):
+        def __init__(
+            self,
+            model: LinearGAM,
+            t0: pd.Timestamp,
+            t_scale: float,
+            incluir_gap: bool,
+            adjustments: dict,
+            metodo: str,
+        ) -> None:
             self.model = model
             self.t0 = t0
             self.t_scale = t_scale
@@ -1192,7 +1302,7 @@ def main() -> None:
             self.price_ref = np.nan
             self.price_center = np.nan
 
-        def predict(self, df):
+        def predict(self, df: pd.DataFrame) -> np.ndarray:
             xx, _, _ = construir_X_gam(
                 df, incluir_gap=self.incluir_gap, t0=self.t0, t_scale=self.t_scale
             )
@@ -1208,8 +1318,11 @@ def main() -> None:
             return np.exp(np.clip(logq, -30.0, 30.0))
 
     def entrenar_pooled_gamm(
-        df_train_local, tipo, incluir_gap=False, metodo='GAMM_like'
-    ):
+        df_train_local: pd.DataFrame,
+        tipo: str,
+        incluir_gap: bool = False,
+        metodo: str = 'GAMM_like',
+    ) -> object | None:
         d = (
             df_train_local[df_train_local['tipo_cluster'] == tipo]
             .copy()
@@ -1217,13 +1330,13 @@ def main() -> None:
         )
         if d['material_ean'].nunique() < MIN_MATERIALES_PARA_POOLED or len(d) < 200:
             return None
-        X, t0, t_scale = construir_X_gam(d, incluir_gap=incluir_gap)  # noqa: N806
+        x, t0, t_scale = construir_X_gam(d, incluir_gap=incluir_gap)
         y = np.log(d['cantidad_total'].to_numpy(float))
         w = np.concatenate(
             [_get_weights(g) for _, g in d.groupby('material_ean', sort=False)]
         )
-        model = LinearGAM(crear_terms_gam(incluir_gap=incluir_gap)).fit(X, y, weights=w)
-        resid = y - model.predict(X)
+        model = LinearGAM(crear_terms_gam(incluir_gap=incluir_gap)).fit(x, y, weights=w)
+        resid = y - model.predict(x)
         center = float(np.log(d['precio_promedio'].median()))
         adjustments = {}
         d2 = d.copy()
@@ -1264,35 +1377,6 @@ def main() -> None:
 
     # ---- celda_15 ----
 
-    MODELOS_POR_TIPO = {  # noqa: N806
-        'limpio': ['Log_log', 'GAM'],
-        'ciclos_rapidos': ['GAMM_like', 'GAM', 'RDD'],
-        'intermitente': ['Intermittent_GAMM', 'Log_log'],
-        'picos_extremos': ['RLM_robusto'],
-        'tendencia_fuerte': ['GAMM_like', 'RDD'],
-        'precio_no_relevante': ['Log_log', 'GAM'],
-        # NUEVO -- tipos de patron temporal (rampas/discontinuidades/
-        # lanzamientos), detectados con prioridad sobre el cluster en
-        # extraer_caracteristicas.
-        #   - GAM_lanzamiento: GAM + edad_producto + dias_desde_transicion
-        #   - GAM_declive: GAM + dias_desde_transicion
-        #   - RDD_estabilizado: RDD entrenado y evaluado SOLO en el
-        #     periodo posterior a la transicion detectada -- confirmado
-        #     con caso real que esto es CRITICO para lanzamiento/declive:
-        #     durante la transicion misma el precio casi no varia (el
-        #     crecimiento es organico, no de precio), y cualquier modelo
-        #     que use toda la historia confunde esa variacion organica
-        #     con sensibilidad al precio -- verificado con un material
-        #     real donde GAM_lanzamiento daba -35 (disparatado) y
-        #     RDD_estabilizado dio -3.5 (sano, coincide con el calculo
-        #     manual del unico evento de precio limpio de ese material).
-        #   - GAM: generico, sin covariables extra (rampa ascendente que
-        #     no calza con el patron especifico de lanzamiento).
-        'lanzamiento': ['GAM_lanzamiento', 'RDD_estabilizado', 'GAM'],
-        'rampa_ascendente': ['GAM', 'Log_log'],
-        'rampa_descendente': ['GAM_declive', 'RDD_estabilizado', 'GAM'],
-        'discontinuidad': ['GAM', 'RDD'],
-    }
     logger.info('Routing V7.5 (RDD_estabilizado agregado para lanzamiento/declive):')
     for tipo, mets in MODELOS_POR_TIPO.items():
         logger.info(f'  {tipo}: {mets}')
@@ -1322,32 +1406,25 @@ def main() -> None:
     #   3) respuesta precio vectorizada
     #   4) limitar threads internos BLAS
     #   5) reducir overhead de joblib
-    # ===========================================================
-    import time
+    # ================================================================
 
-    import numpy as np
-    import pandas as pd
-    from joblib import Parallel, delayed, parallel_config
-
-    # =================================================================
+    # ================================================================
     # 0. CONFIGURACIÓN DE PARALELISMO
-    # =================================================================
+    # ================================================================
     # No necesariamente conviene usar todos los cores lógicos.
     # Mantener esto configurable para poder comparar.
-    N_JOBS = -1  # noqa: N806
     # Número de SKU que recibe cada worker por tarea.
     # 50-150 suele ser un buen compromiso.
-    BATCH_SIZE = 100  # noqa: N806
     logger.info('=' * 110)
     logger.info('V7.3 FAST — COMPETENCIA OPTIMIZADA')
     logger.info('=' * 110)
     logger.info(f'N_JOBS    : {N_JOBS}')
     logger.info(f'BATCH_SIZE: {BATCH_SIZE}')
 
-    # ==============================================================
+    # ================================================================
     # 1. MÉTRICAS
-    # ==============================================================
-    def metricas(q_real, q_pred):
+    # ================================================================
+    def metricas(q_real: np.ndarray, q_pred: np.ndarray) -> dict:
         q_real = np.asarray(q_real, float)
         q_pred = np.asarray(q_pred, float)
         pred_finita = np.all(np.isfinite(q_pred))
@@ -1393,18 +1470,18 @@ def main() -> None:
             'pred_no_negativa': pred_no_negativa,
         }
 
-    # ===========================================================
+    # ================================================================
     # 2. ELASTICIDAD SANA
-    # ===========================================================
-    def sano(e):
+    # ================================================================
+    def sano(e: float) -> bool:
         return bool(
             np.isfinite(e)
             and RANGO_SANO_ELASTICIDAD[0] <= e < RANGO_SANO_ELASTICIDAD[1]
         )
 
-    # ==============================================================
+    # ================================================================
     # 3. RESPUESTA AL PRECIO — VERSIÓN VECTORIZADA
-    # ==============================================================
+    # ================================================================
     #
     # La lógica es la misma.
     #
@@ -1416,14 +1493,14 @@ def main() -> None:
     #   una sola llamada predict()
     #
     # Esto es especialmente importante para GAM.
-    # ===========================
+    # ================================================================
     def evaluar_respuesta_precio(
-        obj,
-        dm_ref,
-        price_ref=None,
-        escenarios=PRICE_SCENARIOS,
-        elasticidad_externa=None,
-    ):
+        obj: object,
+        dm_ref: pd.DataFrame,
+        price_ref: float | None = None,
+        escenarios: list = PRICE_SCENARIOS,
+        elasticidad_externa: float | None = None,
+    ) -> dict:
         if obj is None or dm_ref.empty:
             return {
                 'price_response_monotonic': False,
@@ -1533,9 +1610,9 @@ def main() -> None:
                 'q_change_plus10': np.nan,
             }
 
-    # ==========================
+    # ================================================================
     # 4. FILTRO TEMPRANO
-    # ==========================
+    # ================================================================
     inicio_total = time.perf_counter()
     conteo_train = df_train.groupby('material_ean').size()
     materiales_viables = set(conteo_train[conteo_train >= MIN_OBS_MODELO].index)
@@ -1544,22 +1621,22 @@ def main() -> None:
         f'\nMateriales con suficiente historia (>= {MIN_OBS_MODELO} días): '
         f'{len(materiales_viables):,} de {n_material_ean_train:,}'
     )
-    # ==========================
+    # ================================================================
     # 5. AGRUPAR TEST UNA SOLA VEZ
-    # ==========================
+    # ================================================================
     inicio = time.perf_counter()
-    diccionario_test_por_material = {  # noqa: C416
-        m: g for m, g in df_test.groupby('material_ean', sort=False)
-    }
+    diccionario_test_por_material = dict(
+        df_test.groupby('material_ean', sort=False)
+    )
     logger.info(f'df_test agrupado: {len(diccionario_test_por_material):,} materiales')
     logger.info(f'Tiempo agrupación test: {time.perf_counter() - inicio:.2f} s')
-    # ===============================================================
+    # ================================================================
     # 6. ARMAR TAREAS
-    # ==========================================================
+    # ================================================================
     #
     # IMPORTANTE:
     # NO hacemos dm_test.copy()
-    # ===========================================================
+    # ================================================================
     tareas = []
     for material_ean, dm_train in df_train.groupby('material_ean', sort=False):
         if material_ean not in materiales_viables:
@@ -1572,24 +1649,24 @@ def main() -> None:
             continue
         tareas.append((material_ean, cluster_id, tipo, candidatos, dm_train, dm_test))
     logger.info(f'Tareas a procesar: {len(tareas):,}')
-    # ==============================================================
+    # ================================================================
     # 7. DIVIDIR TAREAS EN BATCHES
     batches = [tareas[i : i + BATCH_SIZE] for i in range(0, len(tareas), BATCH_SIZE)]
     logger.info(f'Batches creados: {len(batches):,}')
     logger.info(f'Promedio SKU/batch: {np.mean([len(x) for x in batches]):.1f}')
 
-    # ==============================================
+    # ================================================================
     # 8. FUNCIÓN DE COMPETENCIA DE UN SKU
-    # ==============================================
+    # ================================================================
     def competir_un_material(
-        material_ean,
-        cluster_id,
-        tipo,
-        candidatos,
-        dm_train,
-        dm_test,
-        pooled_models_local,
-    ):
+        material_ean: str,
+        cluster_id: str,
+        tipo: str,
+        candidatos: list,
+        dm_train: pd.DataFrame,
+        dm_test: pd.DataFrame,
+        pooled_models_local: dict,
+    ) -> tuple[list, dict, list]:
         filas_resultado = []
         objetos_material = {}
         predicciones_material = []
@@ -1748,9 +1825,11 @@ def main() -> None:
                 )
         return (filas_resultado, objetos_material, predicciones_material)
 
-    # ====================================================================
+    # ================================================================
     # 9. PROCESAR UN BATCH
-    def procesar_batch(batch, pooled_models_local):
+    def procesar_batch(
+        batch: list[tuple], pooled_models_local: dict
+    ) -> tuple[list, dict, list]:
         resultados_batch = []
         cache_batch = {}
         predicciones_batch = []
@@ -1769,10 +1848,10 @@ def main() -> None:
             predicciones_batch.extend(preds)
         return (resultados_batch, cache_batch, predicciones_batch)
 
-    # ====================================================================
+    # ================================================================
     # 10. PARALELIZACIÓN
-    # ====================================================================
-    logger.info('\n' + '=' * 110)  # noqa: G003
+    # ================================================================
+    logger.info(f"\n{'=' * 110}")
     logger.info('INICIANDO ENTRENAMIENTO / COMPETENCIA')
     logger.info('=' * 110)
     inicio_modelos = time.perf_counter()
@@ -1782,9 +1861,9 @@ def main() -> None:
         )
     tiempo_modelos = time.perf_counter() - inicio_modelos
     logger.info(f'\nTiempo competencia: {tiempo_modelos / 60:.2f} minutos')
-    # ====================================================================
+    # ================================================================
     # 11. CONSOLIDAR RESULTADOS
-    # ====================================================================
+    # ================================================================
     resultados = []
     model_cache = {}
     predicciones = []
@@ -1792,17 +1871,17 @@ def main() -> None:
         resultados.extend(filas)
         model_cache.update(objetos)
         predicciones.extend(preds)
-    # ===================================================================
+    # ================================================================
     # 12. DATAFRAME FINAL
-    # ===================================================================
+    # ================================================================
     df_validacion = pd.DataFrame(resultados)
     logger.info(f'\nCandidatos evaluados: {len(df_validacion):,}')
     n_elasticidades_validas = df_validacion['elasticidad'].notna().sum()
     logger.info(f'Elasticidades válidas: {n_elasticidades_validas:,}')
-    # ===================================================================
+    # ================================================================
     # 13. CONTROL DE INTEGRIDAD
-    # ===================================================================
-    logger.info('\n' + '=' * 110)  # noqa: G003
+    # ================================================================
+    logger.info(f"\n{'=' * 110}")
     logger.info('CONTROL DE INTEGRIDAD')
     logger.info('=' * 110)
     n_sku_unicos = df_validacion['material_ean'].nunique()
@@ -1822,7 +1901,7 @@ def main() -> None:
     # ---- celda_17 ----
 
     # %% [V7.1 — IC SELECTIVO + PROGRESO + ETA]
-    # ==================================================================
+    # ================================================================
     # IC OPTIMIZADO
     #
     # NO entrena modelos
@@ -1846,13 +1925,7 @@ def main() -> None:
     #
     #   5. Se muestra progreso REAL y ETA.
     #
-    # =============================================================
-    import time
-
-    import numpy as np
-    import pandas as pd
-    from joblib import Parallel, delayed
-    from scipy.stats import t as student_t
+    # ================================================================
 
     logger.info('=' * 110)
     logger.info('V7.1 — IC SELECTIVO OPTIMIZADO')
@@ -1867,11 +1940,11 @@ def main() -> None:
     # suficiente calidad en las métricas básicas.
     # ================================================================
     dv = df_validacion.copy()
-    cond_elasticidad = dv['elasticidad_sana'].fillna(False).astype(bool)  # noqa: FBT003
-    cond_prediccion = dv['pred_finita'].fillna(False).astype(bool) & dv[  # noqa: FBT003
+    cond_elasticidad = dv['elasticidad_sana'].fillna(value=False).astype(bool)
+    cond_prediccion = dv['pred_finita'].fillna(value=False).astype(bool) & dv[
         'pred_no_negativa'
-    ].fillna(False).astype(bool)  # noqa: FBT003
-    cond_respuesta = dv['price_response_monotonic'].fillna(False).astype(bool)  # noqa: FBT003
+    ].fillna(value=False).astype(bool)
+    cond_respuesta = dv['price_response_monotonic'].fillna(value=False).astype(bool)
     cond_r2 = np.isfinite(dv['r2']) & (dv['r2'] >= 0)
     cond_metricas = (
         np.isfinite(dv['wape']) & np.isfinite(dv['mae']) & np.isfinite(dv['rmse'])
@@ -1885,7 +1958,7 @@ def main() -> None:
     n_total = len(dv)
     n_pre_ic = int(cond_pre_ic.sum())
     n_descartados = n_total - n_pre_ic
-    logger.info('\n' + '-' * 110)  # noqa: G003
+    logger.info(f"\n{'-' * 110}")
     logger.info('FILTRO PRE-IC')
     logger.info('-' * 110)
     logger.info(f'Candidatos totales              : {n_total:,}')
@@ -1898,16 +1971,16 @@ def main() -> None:
     # 3. TRAIN AGRUPADO UNA SOLA VEZ
     # ================================================================
     t_group = time.time()
-    train_por_material_ic = {  # noqa: C416
-        m: g for m, g in df_train.groupby('material_ean', sort=False)
-    }
+    train_por_material_ic = dict(
+        df_train.groupby('material_ean', sort=False)
+    )
     logger.info(f'\nTrain agrupado: {len(train_por_material_ic):,} materiales')
     logger.info(f'Tiempo agrupación: {time.time() - t_group:.2f} s')
 
-    # ===================================================================
+    # ================================================================
     # 4. FUNCIONES AUXILIARES
-    # ===================================================================
-    def _cov_from_gam_obj(obj):
+    # ================================================================
+    def _cov_from_gam_obj(obj: object) -> np.ndarray | None:
         try:
             cov0 = getattr(obj, 'cov', None)
             beta = np.asarray(obj.params, dtype=float)
@@ -1922,25 +1995,25 @@ def main() -> None:
             # Reconstrucción
             # ---------------------------------------------------------
             model = getattr(obj, 'model', None)
-            X = np.asarray(getattr(obj, 'X_train', np.empty((0, 0))), dtype=float)  # noqa: N806
-            if model is not None and X.size == 0:
-                Xmat = model._modelmat(X)  # noqa: N806, SLF001
-                X = np.asarray(  # noqa: N806
-                    Xmat.toarray() if hasattr(Xmat, 'toarray') else Xmat, dtype=float
+            x = np.asarray(getattr(obj, 'X_train', np.empty((0, 0))), dtype=float)
+            if model is not None and x.size == 0:
+                xmat = model._modelmat(x)  # noqa: SLF001 -- pygam no expone alternativa publica
+                x = np.asarray(
+                    xmat.toarray() if hasattr(xmat, 'toarray') else xmat, dtype=float
                 )
-            if X.ndim != 2 or X.shape[1] != len(beta):
+            if x.ndim != 2 or x.shape[1] != len(beta):
                 return None
-            w = np.asarray(getattr(obj, 'w_train', np.ones(X.shape[0])), dtype=float)
+            w = np.asarray(getattr(obj, 'w_train', np.ones(x.shape[0])), dtype=float)
             y = np.log(
                 np.maximum(np.asarray(obj.df_ref['cantidad_total'], dtype=float), 1e-12)
             )
-            if len(y) != len(X):
+            if len(y) != len(x):
                 return None
-            pred = X @ beta
+            pred = x @ beta
             resid = y - pred
-            dof = max(len(y) - X.shape[1], 1)
+            dof = max(len(y) - x.shape[1], 1)
             scale = float(np.sum(w * resid**2) / dof)
-            xtwx = X.T @ (w[:, None] * X)
+            xtwx = x.T @ (w[:, None] * x)
             cov = scale * np.linalg.pinv(xtwx, rcond=1e-10)
             if cov.shape == (len(beta), len(beta)) and np.all(np.isfinite(cov)):
                 return cov
@@ -1948,36 +2021,38 @@ def main() -> None:
         except Exception:  # noqa: BLE001 -- fallo numerico esperado, se descarta el candidato
             return None
 
-    def _gam_design(obj, df):
-        X, _, _ = construir_X_gam(  # noqa: N806
+    def _gam_design(obj: object, df: pd.DataFrame) -> np.ndarray:
+        x, _, _ = construir_X_gam(
             df, incluir_gap=obj.incluir_gap, t0=obj.t0, t_scale=obj.t_scale
         )
-        Xmat = obj.model._modelmat(X)  # noqa: N806, SLF001
+        xmat = obj.model._modelmat(x)  # noqa: SLF001 -- sin alternativa publica
         return np.asarray(
-            Xmat.toarray() if hasattr(Xmat, 'toarray') else Xmat, dtype=float
+            xmat.toarray() if hasattr(xmat, 'toarray') else xmat, dtype=float
         )
 
-    def _elasticidad_y_gradiente_gam(obj, ref, price_ref):
+    def _elasticidad_y_gradiente_gam(
+        obj: object, ref: pd.DataFrame, price_ref: float
+    ) -> tuple[float, np.ndarray]:
         h = 1e-3
         pp = price_ref * np.exp(h)
         pm = price_ref * np.exp(-h)
         rp = ref.assign(precio_promedio=pp)
         rm = ref.assign(precio_promedio=pm)
-        Xp = _gam_design(obj, rp)  # noqa: N806
-        Xm = _gam_design(obj, rm)  # noqa: N806
+        xp = _gam_design(obj, rp)
+        xm = _gam_design(obj, rm)
         beta = np.asarray(obj.params, dtype=float)
-        qp = np.exp(np.clip(Xp @ beta, -30, 30))
-        qm = np.exp(np.clip(Xm @ beta, -30, 30))
+        qp = np.exp(np.clip(xp @ beta, -30, 30))
+        qm = np.exp(np.clip(xm @ beta, -30, 30))
         e = float((np.log(qp.mean()) - np.log(qm.mean())) / (2 * h))
-        gp = Xp.T @ (qp / np.maximum(qp.sum(), 1e-12))
-        gm = Xm.T @ (qm / np.maximum(qm.sum(), 1e-12))
+        gp = xp.T @ (qp / np.maximum(qp.sum(), 1e-12))
+        gm = xm.T @ (qm / np.maximum(qm.sum(), 1e-12))
         grad = (gp - gm) / (2 * h)
         return e, grad
 
-    # ===================================================================
+    # ================================================================
     # 5. IC LINEAL
-    # =====================================================================
-    def ci_lineal(obj):
+    # ================================================================
+    def ci_lineal(obj: object) -> tuple[float, float]:
         if obj is None:
             return np.nan, np.nan
         try:
@@ -1995,10 +2070,12 @@ def main() -> None:
         except Exception:  # noqa: BLE001 -- fallo numerico esperado, se descarta el candidato
             return np.nan, np.nan
 
-    # ====================================================================
+    # ================================================================
     # 6. IC GAM / GAMM
-    # ====================================================================
-    def ci_delta(obj, ref, price_ref):
+    # ================================================================
+    def ci_delta(
+        obj: object, ref: pd.DataFrame, price_ref: float
+    ) -> tuple[float, float]:
         if obj is None:
             return np.nan, np.nan
         try:
@@ -2017,9 +2094,9 @@ def main() -> None:
         except Exception:  # noqa: BLE001 -- fallo numerico esperado, se descarta el candidato
             return np.nan, np.nan
 
-    # =================================================================
+    # ================================================================
     # V7.1 — IC SELECTIVO BATCHED + THREADING + PROGRESO
-    # =================================================================
+    # ================================================================
     #
     # REEMPLAZA desde "filas_pre_ic" hacia abajo.
     #
@@ -2035,26 +2112,21 @@ def main() -> None:
     #   - usa THREADING para evitar PicklingError de Windows
     #   - muestra progreso real + velocidad + ETA
     #
-    # ============================================================
-    import time
+    # ================================================================
 
-    import numpy as np
-    import pandas as pd
-    from joblib import Parallel, delayed
-
-    logger.info('\n' + '=' * 110)  # noqa: G003
+    logger.info(f"\n{'=' * 110}")
     logger.info('V7.1 — IC SELECTIVO BATCHED + THREADING')
     logger.info('=' * 110)
     t_inicio_ic = time.time()
-    # ============================================================
+    # ================================================================
     # 1. FILTRO PRE-IC
-    # ============================================================
+    # ================================================================
     dv = df_validacion.copy()
-    cond_elasticidad = dv['elasticidad_sana'].fillna(False).astype(bool)  # noqa: FBT003
-    cond_prediccion = dv['pred_finita'].fillna(False).astype(bool) & dv[  # noqa: FBT003
+    cond_elasticidad = dv['elasticidad_sana'].fillna(value=False).astype(bool)
+    cond_prediccion = dv['pred_finita'].fillna(value=False).astype(bool) & dv[
         'pred_no_negativa'
-    ].fillna(False).astype(bool)  # noqa: FBT003
-    cond_respuesta = dv['price_response_monotonic'].fillna(False).astype(bool)  # noqa: FBT003
+    ].fillna(value=False).astype(bool)
+    cond_respuesta = dv['price_response_monotonic'].fillna(value=False).astype(bool)
     cond_r2 = np.isfinite(dv['r2']) & (dv['r2'] >= 0)
     cond_metricas = (
         np.isfinite(dv['wape']) & np.isfinite(dv['mae']) & np.isfinite(dv['rmse'])
@@ -2069,7 +2141,7 @@ def main() -> None:
         .reset_index(drop=True)
     )
     n_tareas_ic = len(filas_pre_ic)
-    logger.info('\n' + '-' * 110)  # noqa: G003
+    logger.info(f"\n{'-' * 110}")
     logger.info('FILTRO PRE-IC')
     logger.info('-' * 110)
     logger.info(f'Candidatos totales              : {n_total:,}')
@@ -2078,25 +2150,29 @@ def main() -> None:
     logger.info(
         f'Reducción cálculo IC : {100 * (1 - n_tareas_ic / max(n_total, 1)):.2f}%'
     )
-    # ====================================================================
+    # ================================================================
     # 2. AGRUPAR TRAIN UNA SOLA VEZ
-    # ====================================================================
+    # ================================================================
     t_group = time.time()
-    train_por_material_ic = {  # noqa: C416
-        m: g for m, g in df_train.groupby('material_ean', sort=False)
-    }
+    train_por_material_ic = dict(
+        df_train.groupby('material_ean', sort=False)
+    )
     logger.info(f'\nTrain agrupado: {len(train_por_material_ic):,} materiales')
     logger.info(f'Tiempo agrupación: {time.time() - t_group:.2f} s')
 
-    # ==================================================================
+    # ================================================================
     # 3. FUNCIÓN DE UNA FILA
-    # ==================================================================
+    # ================================================================
     #
     # Usa las funciones IC que ya tienes definidas arriba:
     #
+    #   ci_lineal()  # noqa: ERA001
+    #   ci_delta()  # noqa: ERA001
     #
-    # ===================================================================
-    def calcular_ic_fila_batched(material_ean, metodo):
+    # ================================================================
+    def calcular_ic_fila_batched(
+        material_ean: str, metodo: str
+    ) -> tuple[str, str, float, float]:
         obj = model_cache.get((material_ean, metodo))
         if obj is None:
             return (material_ean, metodo, np.nan, np.nan)
@@ -2136,27 +2212,26 @@ def main() -> None:
         except Exception:  # noqa: BLE001 -- fallo numerico esperado, se descarta el candidato
             return (material_ean, metodo, np.nan, np.nan)
 
-    # =================================================================
+    # ================================================================
     # 4. FUNCIÓN DE BATCH
-    # =================================================================
+    # ================================================================
     #
     # Cada worker recibe un batch completo.
     #
-    # Esto reduce muchísimo la cantidad de tareas que Joblib tiene
-    # =============================================================
-    BATCH_SIZE_IC = 100  # noqa: N806
-    N_JOBS_IC = -1  # noqa: N806
+    # Esto reduce muchísimo la cantidad de tareas que Joblib debe
+    # gestionar.
+    # ================================================================
 
-    def procesar_batch_ic(batch):
+    def procesar_batch_ic(batch: list[tuple]) -> list[tuple]:
         resultados_batch = []
         for material_ean, metodo in batch:
             resultado = calcular_ic_fila_batched(material_ean, metodo)
             resultados_batch.append(resultado)
         return resultados_batch
 
-    # ===================================================================
+    # ================================================================
     # 5. CREAR BATCHES
-    # ===================================================================
+    # ================================================================
     lista_tareas_ic = list(
         filas_pre_ic[['material_ean', 'metodo']].itertuples(index=False, name=None)
     )
@@ -2165,7 +2240,7 @@ def main() -> None:
         for i in range(0, len(lista_tareas_ic), BATCH_SIZE_IC)
     ]
     n_batches = len(batches_ic)
-    logger.info('\n' + '-' * 110)  # noqa: G003
+    logger.info(f"\n{'-' * 110}")
     logger.info('BATCHING')
     logger.info('-' * 110)
     logger.info(f'Candidatos IC : {n_tareas_ic:,}')
@@ -2173,17 +2248,19 @@ def main() -> None:
     logger.info(f'Batches       : {n_batches:,}')
     if n_batches > 0:
         logger.info(f'Promedio cand/batch : {n_tareas_ic / n_batches:.1f}')
-    # =================================================================
+    # ================================================================
     # 6. EJECUCIÓN PARALELA
-    # =================================================================
+    # ================================================================
     #
     # IMPORTANTE:
     #
+    # backend="threading"  # noqa: ERA001
     #
     # Evita el PicklingError de Windows porque los objetos de model_cache
     # permanecen en memoria compartida entre threads.
     #
-    logger.info('\n' + '=' * 110)  # noqa: G003
+    # ================================================================
+    logger.info(f"\n{'=' * 110}")
     logger.info('INICIANDO IC')
     logger.info('=' * 110)
     logger.info('Backend      : threading')
@@ -2205,17 +2282,18 @@ def main() -> None:
     else:
         t_parallel = time.time()
     tiempo_ic = time.time() - t_parallel
-    # =================================================================
+    # ================================================================
     # 7. PROGRESO FINAL
-    # =================================================================
+    # ================================================================
     #
     # Como cada batch se ejecuta internamente de forma paralela, Joblib
+    # no entrega
     # resultados batch por batch con esta modalidad.
     #
     # Por eso mostramos un resumen exacto al finalizar.
     #
-    # ==================================================================
-    logger.info('\n' + '=' * 110)  # noqa: G003
+    # ================================================================
+    logger.info(f"\n{'=' * 110}")
     logger.info('IC CALCULADO')
     logger.info('=' * 110)
     logger.info(f'Batches procesados      : {n_batches:,}')
@@ -2223,16 +2301,18 @@ def main() -> None:
     logger.info(f'Tiempo IC               : {tiempo_ic / 60:.2f} minutos')
     if tiempo_ic > 0:
         logger.info(f'Velocidad : {len(resultados_ic) / tiempo_ic * 60:.1f} cand/min')
-    # ===============================================================
+    # ================================================================
     # 8. CONSTRUIR DF_IC COMPLETO
-    # ===============================================================
+    # ================================================================
     #
     # Una fila por candidato original.
     #
     # Los candidatos que no llegaron al IC:
     #
+    #   ic_lower = NaN  # noqa: ERA001
+    #   ic_upper = NaN  # noqa: ERA001
     #
-    # ===============================================================
+    # ================================================================
     df_ic = dv[['material_ean', 'metodo']].drop_duplicates().reset_index(drop=True)
     df_ic['ic_lower'] = np.nan
     df_ic['ic_upper'] = np.nan
@@ -2243,9 +2323,9 @@ def main() -> None:
         df_ic = df_ic[['material_ean', 'metodo']].merge(
             df_ic_calculado, on=['material_ean', 'metodo'], how='left'
         )
-    # ===============================================================
+    # ================================================================
     # 9. MÉTRICAS DERIVADAS
-    # ===============================================================
+    # ================================================================
     df_ic['ic_width'] = df_ic['ic_upper'] - df_ic['ic_lower']
     df_ic['ic_crosses_zero'] = (
         df_ic['ic_lower'].notna()
@@ -2253,19 +2333,19 @@ def main() -> None:
         & (df_ic['ic_lower'] <= 0)
         & (df_ic['ic_upper'] >= 0)
     )
-    # =============================================================
+    # ================================================================
     # 10. ACTUALIZAR df_validacion
-    # =============================================================
+    # ================================================================
     columnas_ic = ['ic_lower', 'ic_upper', 'ic_width', 'ic_crosses_zero']
     df_validacion = df_validacion.drop(
         columns=[c for c in columnas_ic if c in df_validacion.columns], errors='ignore'
     ).merge(df_ic, on=['material_ean', 'metodo'], how='left')
-    # ==============================================================
+    # ================================================================
     # 11. CONTROL FINAL
-    # ==============================================================
+    # ================================================================
     n_ic_ok = int(df_validacion['ic_lower'].notna().sum())
     cobertura_ic = 100 * n_ic_ok / max(len(df_validacion), 1)
-    logger.info('\n' + '=' * 110)  # noqa: G003
+    logger.info(f"\n{'=' * 110}")
     logger.info('CONTROL FINAL — IC SELECTIVO')
     logger.info('=' * 110)
     logger.info(f'Candidatos totales       : {len(df_validacion):,}')
@@ -2296,8 +2376,8 @@ def main() -> None:
 
     cand = df_validacion.copy()
     cand['prediccion_valida'] = (
-        cand['pred_finita'].fillna(False)  # noqa: FBT003
-        & cand['pred_no_negativa'].fillna(False)  # noqa: FBT003
+        cand['pred_finita'].fillna(value=False)
+        & cand['pred_no_negativa'].fillna(value=False)
         & cand['wape'].notna()
         & (cand['wape'] < MAX_WAPE_GATE)
         & cand['mae_log'].notna()
@@ -2305,13 +2385,13 @@ def main() -> None:
         & (cand['bias'].abs() <= MAX_ABS_BIAS_GATE)
     )
     cand['respuesta_valida'] = (
-        cand['price_response_monotonic'].fillna(False)  # noqa: FBT003
+        cand['price_response_monotonic'].fillna(value=False)
         & cand['price_response_error_10pct'].notna()
         & (cand['price_response_error_10pct'] <= MAX_PRICE_RESPONSE_ERROR_GATE)
     )
     cand['elasticidad_valida'] = cand['elasticidad'].notna() & cand[
         'elasticidad_sana'
-    ].fillna(False)  # noqa: FBT003
+    ].fillna(value=False)
     cand['gate_pass'] = (
         cand['prediccion_valida']
         & cand['respuesta_valida']
@@ -2322,7 +2402,7 @@ def main() -> None:
         cand['elasticidad'].abs(), 0.10
     )
     provisionales = []
-    for m, g in cand.groupby('material_ean'):  # noqa: B007
+    for _m, g in cand.groupby('material_ean'):
         gg = g[g['gate_pass']].copy()
         if gg.empty:
             continue
@@ -2336,7 +2416,7 @@ def main() -> None:
         gg['r_ic'] = gg['rel_ic_width'].rank(
             method='average', pct=True, na_option='bottom'
         )
-        gg['penal_ic_zero'] = gg['ic_crosses_zero'].fillna(True).astype(float)  # noqa: FBT003
+        gg['penal_ic_zero'] = gg['ic_crosses_zero'].fillna(value=True).astype(float)
         gg['score_predictivo'] = (
             0.50 * gg['r_wape']
             + 0.25 * gg['r_mae']
@@ -2355,14 +2435,14 @@ def main() -> None:
     )
     gan = []
     if not df_prov.empty:
-        for m, g in df_prov.groupby('material_ean'):  # noqa: B007
+        for _m, g in df_prov.groupby('material_ean'):
             gan.append(g.sort_values(['score_total', 'wape', 'mae_log']).iloc[0].copy())
     df_ganadores = pd.DataFrame(gan)
     if not df_ganadores.empty:
         df_ganadores['evidencia_ic'] = np.select(
             [
                 df_ganadores['ic_lower'].isna(),
-                df_ganadores['ic_crosses_zero'] == True,  # noqa: E712
+                df_ganadores['ic_crosses_zero'],
                 (
                     df_ganadores['ic_width']
                     / np.maximum(df_ganadores['elasticidad'].abs(), 0.10)
@@ -2382,7 +2462,7 @@ def main() -> None:
     # ---- celda_19 ----
 
     # %% [reintento_precio_suavizado]
-    # ==================================================
+    # ================================================================
     # Solucion POSTERIOR, focalizada -- NO toca la competencia principal
     # ni el Quality Gate. Reintenta SOLO para materiales que:
     #   (a) tienen >= MIN_DIAS_PARA_CARACTERIZAR (60) dias reales de
@@ -2400,8 +2480,7 @@ def main() -> None:
     #
     # El resto de la logica (Quality Gate identico, sin relajar nada) se
     # mantiene exactamente igual que antes.
-    # ==============================================================
-    from joblib import Parallel, delayed
+    # ================================================================
 
     materiales_con_60_dias = set(df_features['material_ean'])
     materiales_ganaron_crudo = set(df_ganadores['material_ean'])
@@ -2411,24 +2490,24 @@ def main() -> None:
         f'con precio crudo: {len(materiales_a_reintentar):,}'
     )
     # --- diccionarios pre-armados, 1 sola pasada cada uno ---
-    diccionario_train_reintento = {  # noqa: C416
-        m: g
-        for m, g in df_train[
+    diccionario_train_reintento = dict(
+        df_train[
             df_train['material_ean'].isin(materiales_a_reintentar)
         ].groupby('material_ean')
-    }
-    diccionario_test_reintento = {  # noqa: C416
-        m: g
-        for m, g in df_test[
+    )
+    diccionario_test_reintento = dict(
+        df_test[
             df_test['material_ean'].isin(materiales_a_reintentar)
         ].groupby('material_ean')
-    }
+    )
     logger.info(
         f'Diccionarios armados: {len(diccionario_train_reintento):,} en train, '
         f'{len(diccionario_test_reintento):,} en test'
     )
 
-    def procesar_material_suavizado(material_ean, dm_train, dm_test):
+    def procesar_material_suavizado(
+        material_ean: str, dm_train: pd.DataFrame, dm_test: pd.DataFrame
+    ) -> tuple[dict, object] | None:
         if dm_train is None or dm_test is None or dm_train.empty or dm_test.empty:
             return None
         if (
@@ -2489,7 +2568,7 @@ def main() -> None:
         except Exception:  # noqa: BLE001 -- fallo numerico esperado, se descarta el candidato
             return None
 
-    def procesar_batch_reintento(lote_materiales):
+    def procesar_batch_reintento(lote_materiales: list) -> list:
         salidas = []
         for material_ean in lote_materiales:
             dm_train = diccionario_train_reintento.get(material_ean)
@@ -2544,7 +2623,7 @@ def main() -> None:
         df_reintento['evidencia_ic'] = np.select(
             [
                 df_reintento['ic_lower'].isna(),
-                df_reintento['ic_crosses_zero'] == True,  # noqa: E712
+                df_reintento['ic_crosses_zero'],
                 (
                     df_reintento['ic_width']
                     / np.maximum(df_reintento['elasticidad'].abs(), 0.10)
@@ -2588,10 +2667,9 @@ def main() -> None:
     # respuesta a precio), se acepta relajando SOLO esos 2 criterios --
     # nunca se relaja el rango de elasticidad en si.
     #
-    # que no califique para ninguna de las 2 sigue cayendo a la
+    # Lo que no califique para ninguna de las 2 sigue cayendo a la
     # cascada normal, sin cambios.
-    # =================================================================
-    UMBRAL_R2_CLIP = 0.70  # noqa: N806
+    # ================================================================
     materiales_sin_ganador = set(df_features['material_ean']) - set(
         df_ganadores['material_ean']
     )
@@ -2612,13 +2690,14 @@ def main() -> None:
         & (candidatos_pendientes['pred_no_negativa'])
         & (candidatos_pendientes['wape'] < MAX_WAPE_GATE)
         & (candidatos_pendientes['bias'].abs() <= MAX_ABS_BIAS_GATE)
-        & (candidatos_pendientes['price_response_monotonic'].fillna(False))  # noqa: FBT003
+        & (candidatos_pendientes['price_response_monotonic'].fillna(value=False))
         & (
             candidatos_pendientes['price_response_error_10pct']
             <= MAX_PRICE_RESPONSE_ERROR_GATE
         )
     ].copy()
     # Si un material tiene mas de 1 candidato elegible, quedarse con
+    # el de mejor r2
     elegibles_regla_a = elegibles_regla_a.sort_values(
         'r2', ascending=False
     ).drop_duplicates(subset='material_ean', keep='first')
@@ -2629,9 +2708,10 @@ def main() -> None:
         f'\nRegla A (clip a -5, r2>{UMBRAL_R2_CLIP}): '
         f'{len(elegibles_regla_a):,} materiales rescatados'
     )
-    # ==============================================================
-    # REGLA B -- aceptar elasticidad ya sana, relajando monotonicidad
-    # ============================================================
+    # ================================================================
+    # REGLA B -- aceptar elasticidad ya sana, relajando
+    # monotonicidad/respuesta
+    # ================================================================
     materiales_aun_pendientes = materiales_sin_ganador - set(
         elegibles_regla_a['material_ean']
     )
@@ -2639,7 +2719,7 @@ def main() -> None:
         candidatos_pendientes['material_ean'].isin(materiales_aun_pendientes)
     ].copy()
     elegibles_regla_b = candidatos_regla_b[
-        (candidatos_regla_b['elasticidad_sana'].fillna(False))  # noqa: FBT003
+        (candidatos_regla_b['elasticidad_sana'].fillna(value=False))
         & (candidatos_regla_b['pred_finita'])
         & (candidatos_regla_b['pred_no_negativa'])
         & (candidatos_regla_b['wape'] < MAX_WAPE_GATE)
@@ -2655,9 +2735,9 @@ def main() -> None:
         f'Regla B (elasticidad sana, relajando monotonic/respuesta): '
         f'{len(elegibles_regla_b):,} materiales rescatados'
     )
-    # ==================================================================
+    # ================================================================
     # Consolidar en df_ganadores -- mismas columnas, misma estructura
-    # ==================================================================
+    # ================================================================
     df_rescate = pd.concat([elegibles_regla_a, elegibles_regla_b], ignore_index=True)
     if not df_rescate.empty:
         columnas_comunes = [c for c in df_ganadores.columns if c in df_rescate.columns]
@@ -2687,10 +2767,7 @@ def main() -> None:
     # capturaba casi todo antes de que sustituto tuviera oportunidad,
     # dejando ese nivel practicamente vacio. Se reordena para que
     # sustituto compita primero, igual que el metodo original.
-    # ===================================================================
-    MIN_MATERIALES_SUBCATEGORIA = 5  # noqa: N806
-    MIN_MATERIALES_CATEGORIA = 5  # noqa: N806
-    MIN_DIAS_SUSTITUTO_CONFIABLE = 60  # noqa: N806
+    # ================================================================
     cols_categoria = [
         c
         for c in [
@@ -2816,9 +2893,9 @@ def main() -> None:
         roster.loc[idx_califican, 'metodo'] = 'heredado_sustituto'
     n_nivel_sustituto = int((roster['nivel_herencia'] == 'sustituto').sum())
     logger.info(f'Nivel 1 -- fallback_sustituto: {n_nivel_sustituto:,} materiales')
-    # ==================================================================
+    # ================================================================
     # NIVEL 2 -- SUBCATEGORIA
-    # ==================================================================
+    # ================================================================
     pendientes = roster['nivel_herencia'].isna()
     for idx in roster.loc[pendientes].index:
         subcat = roster.loc[idx, 'sub_category_description']
@@ -2832,9 +2909,9 @@ def main() -> None:
             roster.loc[idx, 'metodo'] = 'heredado_subcategoria'
     n_nivel_subcat = int((roster['nivel_herencia'] == 'subcategoria').sum())
     logger.info(f'Nivel 2 -- fallback_subcategoria: {n_nivel_subcat:,} materiales')
-    # ==================================================================
+    # ================================================================
     # NIVEL 3 -- CATEGORIA
-    # ==================================================================
+    # ================================================================
     pendientes = roster['nivel_herencia'].isna()
     for idx in roster.loc[pendientes].index:
         cat = roster.loc[idx, 'category_description']
@@ -2870,7 +2947,7 @@ def main() -> None:
     # ---- celda_22 ----
 
     # %% [nivel_4_cobertura_100pct]
-    # =================================================================
+    # ================================================================
     # Garantiza 100% de cobertura, sin perder toda la diferenciacion de
     # una mediana plana del banner. 2 sub-niveles, cada 1 mas generico
     # que el anterior:
@@ -2881,8 +2958,7 @@ def main() -> None:
     #   4b) mediana del banner completo -- SOLO como ultimo recurso
     #       absoluto, si ni siquiera el tipo_cluster tiene suficientes
     #       materiales con evidencia propia (deberia ser rarisimo).
-    # ===============================================================
-    MIN_MATERIALES_TIPO_CLUSTER = 20  # noqa: N806
+    # ================================================================
 
     propias_para_nivel4 = roster[roster['tipo_evidencia'] == 'propia']
     mediana_tipo_cluster = propias_para_nivel4.groupby('tipo_cluster').agg(
@@ -2942,16 +3018,18 @@ def main() -> None:
 
     # ---- celda_23 ----
 
-    # ====================================================================  # noqa: W505
+    # ================================================================
     # SHRINKAGE V7.1 — BASADO EN DÍAS DE EVIDENCIA
     #
     # El Quality Gate decide si una elasticidad puede considerarse PROPIA.
-    # El shrinkage, una vez pasada esa etapa, decide cuánto peso darle a
+    # El shrinkage, una vez pasada esa etapa, decide cuánto peso darle
+    # a esa
     # estimación según la cantidad de evidencia utilizada para estimarla.
     #
-    # Se usa n_train como proxy de días de evidencia efectiva del modelo
+    # Se usa n_train como proxy de días de evidencia efectiva del
+    # modelo ganador.
     #
-    #peso_propio = n_dias_evidencia / (n_dias_evidencia + K) # noqa: ERA001
+    #       peso_propio = n_dias / (n_dias + K)  # noqa: ERA001
     #
     # Con K=150:
     #   30 días  -> 16.7% propio / 83.3% prior
@@ -2963,13 +3041,14 @@ def main() -> None:
     # IMPORTANTE:
     # - El IC sigue siendo parte del Quality Gate.
     # - El shrinkage YA NO depende de ic_width.
-    # - Esto permite aplicar shrinkage a GAMM_like / Intermittent_GAMM
+    # - Esto permite aplicar shrinkage también a GAMM_like /
+    #   Intermittent_GAMM
     #   aunque esos métodos no tengan IC disponible.
-    # ==================================================================
-    K_SHRINKAGE_ELASTICIDAD = 150  # noqa: N806
+    # ================================================================
     roster['elasticidad_antes_shrinkage'] = roster['elasticidad_final'].copy()
     roster['n_dias_evidencia'] = pd.to_numeric(roster['n_train'], errors='coerce')
-    # Los fallback no tienen evidencia propia y por definición NO.
+    # Los fallback no tienen evidencia propia y por definición NO
+    # reciben shrinkage.
     # Su elasticidad ya proviene del prior heredado.
     roster['peso_propio_shrinkage'] = np.nan
     mascara_propia = (
@@ -3037,7 +3116,7 @@ def main() -> None:
         f'{len(roster_con_valor):,} '
         f'de {len(roster):,} ({len(roster_con_valor) / len(roster) * 100:.1f}%)'
     )
-    logger.info('\n' + '=' * 70)  # noqa: G003
+    logger.info(f"\n{'=' * 70}")
     logger.info('RESUMEN FINAL')
     logger.info('=' * 70)
     logger.info(f'Total materiales: {len(roster):,}')
@@ -3047,17 +3126,19 @@ def main() -> None:
 
     # ---- celda_25 ----
 
-    # ==============================================================  # noqa: W505
-    # SEICIDAD — GMM + UMBRAL DE PROBABILIDAD(FIJO EN 0.30)
-    # ===================================================================
+    # ================================================================
+    # SEGMENTACIÓN DE ELASTICIDAD — GMM + UMBRAL DE PROBABILIDAD
+    # (FIJO EN 0.30)
+    # ================================================================
     #
     # OBJETIVO
-    # --------
+    # ----------------------------------------------------------------
     # Identificar dos regímenes naturales de elasticidad mediante Gaussian
     # Mixture Model (GMM) y hacer la clasificación comercial más exigente:
     #
-    #   HIGH = SKU con alta probabilidad de pertenecer almás negativo
-    #   LOW = resto  # noqa: ERA001
+    #   HIGH = SKU con alta probabilidad de pertenecer al régimen
+    #   más negativo
+    #   LOW  = resto  # noqa: ERA001
     #
     # CAMBIO respecto a la version anterior: el umbral ya NO se busca
     # automaticamente (esa busqueda solo probaba 0.50-0.90, y el corte real
@@ -3066,61 +3147,59 @@ def main() -> None:
     # tabla de sensibilidad extendida abajo).
     #
     # IMPORTANTE
-    # ----------
+    # ----------------------------------------------------------------
     # - NO modifica elasticidad_final.
     # - NO modifica los modelos.
     # - NO consulta GCP.
     # - El GMM NO conoce ni utiliza un porcentaje objetivo.
     #
-    # ===============================================================
-    import numpy as np
-    import pandas as pd
+    # ================================================================
 
-    # ==================================================================
+    # ================================================================
     # 0. LIMPIAR SEGMENTACIÓN ANTERIOR
-    # =================================================================
+    # ================================================================
     if 'segmento_elasticidad' in roster.columns:
-        roster.drop(columns=['segmento_elasticidad'], inplace=True)  # noqa: PD002
-    # ===================================================================
+        roster = roster.drop(columns=['segmento_elasticidad'])
+    # ================================================================
     # 1. ROSTER VÁLIDO
-    # ==================================================================
+    # ================================================================
     roster_valido = roster[roster['elasticidad_final'].notna()].copy()
-    X_elasticidad = roster_valido[['elasticidad_final']].to_numpy()  # noqa: N806
+    x_elasticidad = roster_valido[['elasticidad_final']].to_numpy()
     logger.info('=' * 90)
     logger.info('SEGMENTACIÓN DE ELASTICIDAD — GMM (umbral fijo 0.30)')
     logger.info('=' * 90)
     logger.info(f'\nElasticidades válidas : {len(roster_valido):,}')
-    # ===================================================================
+    # ================================================================
     # 2. GMM — 2 COMPONENTES
-    # ===================================================================
+    # ================================================================
     gmm_segmento = GaussianMixture(
         n_components=2, covariance_type='full', n_init=10, random_state=RANDOM_STATE
     )
-    gmm_segmento.fit(X_elasticidad)
-    # ===================================================================
+    gmm_segmento.fit(x_elasticidad)
+    # ================================================================
     # 3. IDENTIFICAR LOS DOS REGÍMENES
-    # ===================================================================
+    # ================================================================
     medias_gmm = gmm_segmento.means_.flatten()
     pesos_gmm = gmm_segmento.weights_.flatten()
     desv_gmm = np.sqrt(gmm_segmento.covariances_.flatten())
     componente_high = int(np.argmin(medias_gmm))  # mas negativo = mayor sensibilidad
     componente_low = int(np.argmax(medias_gmm))  # mas cercano a 0 = menor sensibilidad
-    # ==================================================================
+    # ================================================================
     # 4. PROBABILIDAD DE PERTENENCIA A HIGH
-    # ==================================================================
-    probabilidades = gmm_segmento.predict_proba(X_elasticidad)
+    # ================================================================
+    probabilidades = gmm_segmento.predict_proba(x_elasticidad)
     prob_high = probabilidades[:, componente_high]
     df_sensibilidad_high = pd.DataFrame(
         {
-            'material_ean': roster_valido['material_ean'].values,  # noqa: PD011
-            'elasticidad_final': roster_valido['elasticidad_final'].values,  # noqa: PD011
+            'material_ean': roster_valido['material_ean'].to_numpy(),
+            'elasticidad_final': roster_valido['elasticidad_final'].to_numpy(),
             'prob_high': prob_high,
         }
     )
-    # ==================================================================
+    # ================================================================
     # 5. INFORMACIÓN DE LOS COMPONENTES
-    # ===============================================================
-    logger.info('\n' + '-' * 90)  # noqa: G003
+    # ================================================================
+    logger.info(f"\n{'-' * 90}")
     logger.info('REGÍMENES ESTIMADOS POR GMM')
     logger.info('-' * 90)
     logger.info('\nHIGH')
@@ -3131,10 +3210,10 @@ def main() -> None:
     logger.info(f'  Media elasticidad : {medias_gmm[componente_low]:.3f}')
     logger.info(f'  Desv. estándar    : {desv_gmm[componente_low]:.3f}')
     logger.info(f'  Peso GMM          : {pesos_gmm[componente_low] * 100:.2f}%')
-    # ====================================================================
+    # ================================================================
     # 6. DISTRIBUCIÓN DE PROBABILIDADES
-    # ====================================================================
-    logger.info('\n' + '-' * 90)  # noqa: G003
+    # ================================================================
+    logger.info(f"\n{'-' * 90}")
     logger.info('DISTRIBUCIÓN DE P(HIGH)')
     logger.info('-' * 90)
     logger.info(
@@ -3143,9 +3222,10 @@ def main() -> None:
         .round(3)
         .to_string()
     )
-    # ====================================================================
-    # 7. SENSIBILIDAD DEL UMBRAL -- rango extendido (incluye el 0.30 elegi
-    # ====================================================================
+    # ================================================================
+    # 7. SENSIBILIDAD DEL UMBRAL -- rango extendido (incluye el 0.30
+    #    elegido)
+    # ================================================================
     umbrales = [
         0.25,
         0.30,
@@ -3178,14 +3258,14 @@ def main() -> None:
             }
         )
     resultado_threshold = pd.DataFrame(resultados_threshold)
-    logger.info('\n' + '=' * 90)  # noqa: G003
+    logger.info(f"\n{'=' * 90}")
     logger.info('SENSIBILIDAD — EXIGENCIA PARA CLASIFICAR HIGH (rango completo)')
     logger.info('=' * 90)
     logger.info(resultado_threshold.round(2).to_string(index=False))
-    # =================================================================
+    # ================================================================
     # 8. SKU AMBIGUOS
     # ================================================================
-    logger.info('\n' + '-' * 90)  # noqa: G003
+    logger.info(f"\n{'-' * 90}")
     logger.info('SKU AMBIGUOS')
     logger.info('-' * 90)
     rangos_ambiguos = [(0.20, 0.40), (0.25, 0.35), (0.35, 0.65)]
@@ -3198,37 +3278,36 @@ def main() -> None:
             f'P(HIGH) entre {limite_inf:.2f} y {limite_sup:.2f}: {n_ambiguos:,} SKU '
             f'({n_ambiguos / len(df_sensibilidad_high) * 100:.2f}%)'
         )
-    # ===================================================================
+    # ================================================================
     # 9. APLICAR EL UMBRAL FIJO -- 0.30
-    # =================================================================
+    # ================================================================
     # Decidido con la evidencia real de este banner (tabla de sensibilidad
     # arriba): 0.30 da 36.01% HIGH, el mas cercano a la referencia de
     # negocio de 35% dentro del rango explorado. Para cambiarlo, editar
     # directo este valor.
     # ================================================================
-    UMBRAL_HIGH = 0.30  # noqa: N806
     df_sensibilidad_high['segmento_elasticidad'] = np.where(
         df_sensibilidad_high['prob_high'] >= UMBRAL_HIGH, 'high', 'low'
     )
-    # ====================================================================
+    # ================================================================
     # 10. MERGE FINAL
-    # ====================================================================
+    # ================================================================
     roster = roster.merge(
         df_sensibilidad_high[['material_ean', 'segmento_elasticidad']],
         on='material_ean',
         how='left',
     )
-    # ===================================================================
+    # ================================================================
     # 11. DISTRIBUCIÓN FINAL
-    # ==================================================================
+    # ================================================================
     dist_final = roster['segmento_elasticidad'].value_counts().reindex(['low', 'high'])
     dist_final_df = pd.DataFrame(
         {'n_sku': dist_final, 'pct': (dist_final / dist_final.sum() * 100)}
     )
-    # ===================================================================
+    # ================================================================
     # 12. RESUMEN EJECUTIVO
-    # =====================================================================
-    logger.info('\n' + '=' * 90)  # noqa: G003
+    # ================================================================
+    logger.info(f"\n{'=' * 90}")
     logger.info('SEGMENTACIÓN FINAL — GMM + PROBABILIDAD (umbral fijo)')
     logger.info('=' * 90)
     logger.info(f'\nUmbral utilizado P(HIGH) : {UMBRAL_HIGH:.2f}')
@@ -3247,7 +3326,7 @@ def main() -> None:
     # ---- celda_27 ----
 
     # %% [construir_tabla_slim]
-    # =============================================================
+    # ================================================================
     # Construye la tabla final "slim" que se usa TANTO para el CSV local
     # como para la carga a BigQuery -- 1 sola definicion, sin duplicar
     # logica entre los 2 destinos.
@@ -3256,8 +3335,8 @@ def main() -> None:
     # estadistica + 30 calidad predictiva + 30 volumen de evidencia +
     # 10 sentido economico = 100. Categorias: baja [0,40), media [40,70),
     # alta [70,100].
-    # ==================================================================
-    def calcular_score_confiabilidad(fila, gate_wape=5.0):
+    # ================================================================
+    def calcular_score_confiabilidad(fila: pd.Series, gate_wape: float = 5.0) -> float:
         ic_width = fila.get('ic_width', np.nan)
         ic_crosses_zero = fila.get('ic_crosses_zero', True)
         elasticidad_final = fila.get('elasticidad_final', np.nan)
@@ -3265,7 +3344,8 @@ def main() -> None:
         # SELECTIVO, la mayoria del catalogo nunca tiene IC calculado (no
         # por mala calidad, sino porque el pre-filtro de velocidad no lo
         # amerito) -- pesarlo igual que antes penalizaba de mas a la
-        # mayoria del catalogo por una razon que no refleja su calidad re
+        # mayoria del catalogo por una razon que no refleja su
+        # calidad real.
         if bool(ic_crosses_zero) or pd.isna(ic_width) or pd.isna(elasticidad_final):
             pts_precision = 0.0
         else:
@@ -3290,17 +3370,16 @@ def main() -> None:
         )  # 30 -> 35, absorbe parte de lo que bajo precision
         return round(pts_precision + pts_wape + pts_r2 + pts_monotonic + pts_n_dias, 1)
 
-    def categorizar_confiabilidad(score):
+    def categorizar_confiabilidad(score: float) -> str:
         # RECALIBRADO: umbrales bajados -- alta >=55 (antes 70),
         # media >=30 (antes 40). Punto de partida razonado, no definitivo
         # -- revisar la distribucion real despues de correr y ajustar si
         # sigue quedando desbalanceado.
         if score >= 55:
             return 'alta'
-        elif score >= 30:  # noqa: RET505
+        if score >= 30:
             return 'media'
-        else:
-            return 'baja'
+        return 'baja'
 
     roster['score_confiabilidad'] = roster.apply(calcular_score_confiabilidad, axis=1)
     roster['confiabilidad'] = roster['score_confiabilidad'].apply(
@@ -3310,47 +3389,16 @@ def main() -> None:
     logger.info(roster['confiabilidad'].value_counts())
     logger.info('\nScore de confiabilidad -- estadisticas:')
     logger.info(roster['score_confiabilidad'].describe().round(1))
-    # ==============================================================
+    # ================================================================
     # Esquema final -- SOLO estas columnas van al CSV y a BigQuery.
     #   - UMV: ahora viene de 'umv' (SALES_UOM de BASELINE_PANEL, traida en
     #     el PASO 1C y propagada via cols_categoria en la cascada) -- ya
     #     NO se deja en NaN a la fuerza.
     #   - CONFIABILIDAD: categorica (alta/media/baja) agregada de vuelta.
     #   - CLUSTER: tipo_cluster (limpio/ciclos_rapidos/etc) agregada.
-    # =============================================================
+    # ================================================================
     roster['STORE_BANNER'] = store_banner
     roster['N_Eventos'] = roster['n_dias_evidencia']
-    MAPEO_COLUMNAS_SLIM = {  # noqa: N806
-        'material': 'MATERIAL',
-        'ean': 'EAN',
-        'product_description': 'DESCRIPCION_MATERIAL',
-        'category_description': 'CATEGORIA',
-        'umv': 'UMV',
-        'tipo_cluster': 'CLUSTER',
-        'elasticidad_final': 'ELASTICIDAD',
-        'segmento_elasticidad': 'SEGMENTO_ELASTICIDAD',
-        'nivel_herencia': 'ORIGEN',
-        'metodo': 'METODO',
-        'N_Eventos': 'N_Eventos',
-        'score_confiabilidad': 'SCORE_CONFIABILIDAD',
-        'confiabilidad': 'CONFIABILIDAD',
-    }
-    COLUMNAS_FINALES_ORDENADAS = [  # noqa: N806
-        'STORE_BANNER',
-        'CATEGORIA',
-        'MATERIAL',
-        'DESCRIPCION_MATERIAL',
-        'EAN',
-        'UMV',
-        'CLUSTER',
-        'ORIGEN',
-        'ELASTICIDAD',
-        'SEGMENTO_ELASTICIDAD',
-        'N_Eventos',
-        'METODO',
-        'SCORE_CONFIABILIDAD',
-        'CONFIABILIDAD',
-    ]
     roster_slim = roster.rename(columns=MAPEO_COLUMNAS_SLIM)
     faltantes = [c for c in COLUMNAS_FINALES_ORDENADAS if c not in roster_slim.columns]
     if faltantes:
@@ -3370,14 +3418,14 @@ def main() -> None:
     # roster_slim (STORE_BANNER, CATEGORIA, MATERIAL, DESCRIPCION_MATERIAL,
     # EAN, UMV, CLUSTER, ORIGEN, ELASTICIDAD, SEGMENTO_ELASTICIDAD,
     # N_Eventos, METODO, SCORE_CONFIABILIDAD, CONFIABILIDAD)
-    # -------------------------------------------------------------------
+    # ----------------------------------------------------------------
     logger.info(f'Tabla final: {roster_slim.shape}')
     # ENDREGION
 
     # REGION: Carga a BigQuery -- incremental por banner (borra solo las
     # filas de este store_banner, despues agrega -- no pisa otros bancos
     # ya cargados en la misma tabla)
-    # -------------------------------------------------------------------
+    # ----------------------------------------------------------------
     where_clause = f"STORE_BANNER = '{store_banner}'"
 
     deleteFromTable(
