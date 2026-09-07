@@ -462,21 +462,21 @@ def main() -> None:  # noqa: D103
     # ---- celda_06 ----
 
     def agregar_features_calendario(df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
-        fechas = pd.to_datetime(df['p_date'])
+        d = df.copy()
+        fechas = pd.to_datetime(d['p_date'])
         dia_anio = fechas.dt.dayofyear
-        df['estacional_sin'] = np.sin(2 * np.pi * dia_anio / 365.25)
-        df['estacional_cos'] = np.cos(2 * np.pi * dia_anio / 365.25)
+        d['estacional_sin'] = np.sin(2 * np.pi * dia_anio / 365.25)
+        d['estacional_cos'] = np.cos(2 * np.pi * dia_anio / 365.25)
         arr_fer = FECHAS_FERIADO.to_numpy().astype('datetime64[D]')
         arr_fecha = fechas.to_numpy().astype('datetime64[D]')
-        dias_hasta = np.empty(len(df), dtype=float)
+        dias_hasta = np.empty(len(d), dtype=float)
         for i, fecha in enumerate(arr_fecha):
             diffs = (arr_fer - fecha).astype('timedelta64[D]').astype(int)
             dias_hasta[i] = diffs[np.argmin(np.abs(diffs))]
-        df['dias_hasta_feriado_acotado'] = np.clip(dias_hasta, -14, 14)
+        d['dias_hasta_feriado_acotado'] = np.clip(dias_hasta, -14, 14)
         dia_mes = fechas.dt.day
         ultimo_dia = fechas.dt.days_in_month
-        df['es_quincena'] = ((dia_mes <= 5) | (dia_mes >= ultimo_dia - 5)).astype(int)
+        d['es_quincena'] = ((dia_mes <= 5) | (dia_mes >= ultimo_dia - 5)).astype(int)
         dow = fechas.dt.dayofweek
         for num, nombre in {
             1: 'martes',
@@ -486,9 +486,9 @@ def main() -> None:  # noqa: D103
             5: 'sabado',
             6: 'domingo',
         }.items():
-            df[nombre] = (dow == num).astype(int)
-        df['dow'] = dow
-        return df
+            d[nombre] = (dow == num).astype(int)
+        d['dow'] = dow
+        return d
 
     df_panel = agregar_features_calendario(df_panel)
     logger.info('Features de calendario agregadas.')
