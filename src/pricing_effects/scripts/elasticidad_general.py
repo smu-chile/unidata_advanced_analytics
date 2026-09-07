@@ -25,26 +25,25 @@ if TYPE_CHECKING:
     from pygam.terms import TermList
 
 # Pip
-import numpy as np
+import numpy as np  # noqa: I001
 import pandas as pd
 import statsmodels.api as sm
-from pygam import LinearGAM, l, s
+from google.cloud.bigquery import Client, DatasetReference
 from joblib import Parallel, delayed, parallel_config
+from pygam import LinearGAM, l, s
 from scipy.stats import t as student_t
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
-from google.cloud.bigquery import Client, DatasetReference
 from sklearn.preprocessing import StandardScaler
 
 # Own
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
 from common.gcp_extended.bigquery import (
-    uploadFrame,
-    readBigQuery,
     deleteFromTable,
+    readBigQuery,
+    uploadFrame,
 )
-
 
 warnings.filterwarnings('ignore')
 
@@ -915,14 +914,10 @@ def main() -> None:  # noqa: D103
     )
     if not all_weights.empty:
         logger.info(f'Peso mediano: {round(float(all_weights.median()), 3)}')
-        logger.info(
-            '% observaciones con peso < 0.5:',
-            round(float((all_weights < 0.5).mean() * 100), 2),
-        )
-        logger.info(
-            '% observaciones con peso = mínimo:',
-            round(float((all_weights <= MIN_TAIL_WEIGHT + 1e-9).mean() * 100), 2),
-        )
+        pct_bajo_medio = round(float((all_weights < 0.5).mean() * 100), 2)
+        logger.info(f'% observaciones con peso < 0.5: {pct_bajo_medio}')
+        pct_minimo = round(float((all_weights <= MIN_TAIL_WEIGHT + 1e-9).mean() * 100), 2)
+        logger.info(f'% observaciones con peso = mínimo: {pct_minimo}')
 
     # ---- celda_12 ----
 
@@ -1625,9 +1620,9 @@ def main() -> None:  # noqa: D103
     # 5. AGRUPAR TEST UNA SOLA VEZ
     # ================================================================
     inicio = time.perf_counter()
-    diccionario_test_por_material = dict(
-        df_test.groupby('material_ean', sort=False)
-    )
+    diccionario_test_por_material = {  # noqa: C416 -- dict() choca con algo del entorno
+        m: g for m, g in df_test.groupby('material_ean', sort=False)
+    }
     logger.info(f'df_test agrupado: {len(diccionario_test_por_material):,} materiales')
     logger.info(f'Tiempo agrupación test: {time.perf_counter() - inicio:.2f} s')
     # ================================================================
@@ -1971,9 +1966,9 @@ def main() -> None:  # noqa: D103
     # 3. TRAIN AGRUPADO UNA SOLA VEZ
     # ================================================================
     t_group = time.time()
-    train_por_material_ic = dict(
-        df_train.groupby('material_ean', sort=False)
-    )
+    train_por_material_ic = {  # noqa: C416 -- dict() choca con algo del entorno
+        m: g for m, g in df_train.groupby('material_ean', sort=False)
+    }
     logger.info(f'\nTrain agrupado: {len(train_por_material_ic):,} materiales')
     logger.info(f'Tiempo agrupación: {time.time() - t_group:.2f} s')
 
@@ -2154,9 +2149,9 @@ def main() -> None:  # noqa: D103
     # 2. AGRUPAR TRAIN UNA SOLA VEZ
     # ================================================================
     t_group = time.time()
-    train_por_material_ic = dict(
-        df_train.groupby('material_ean', sort=False)
-    )
+    train_por_material_ic = {  # noqa: C416 -- dict() choca con algo del entorno
+        m: g for m, g in df_train.groupby('material_ean', sort=False)
+    }
     logger.info(f'\nTrain agrupado: {len(train_por_material_ic):,} materiales')
     logger.info(f'Tiempo agrupación: {time.time() - t_group:.2f} s')
 
@@ -2490,16 +2485,18 @@ def main() -> None:  # noqa: D103
         f'con precio crudo: {len(materiales_a_reintentar):,}'
     )
     # --- diccionarios pre-armados, 1 sola pasada cada uno ---
-    diccionario_train_reintento = dict(
-        df_train[
+    diccionario_train_reintento = {  # noqa: C416 -- dict() choca con algo del entorno
+        m: g
+        for m, g in df_train[
             df_train['material_ean'].isin(materiales_a_reintentar)
         ].groupby('material_ean')
-    )
-    diccionario_test_reintento = dict(
-        df_test[
+    }
+    diccionario_test_reintento = {  # noqa: C416 -- dict() choca con algo del entorno
+        m: g
+        for m, g in df_test[
             df_test['material_ean'].isin(materiales_a_reintentar)
         ].groupby('material_ean')
-    )
+    }
     logger.info(
         f'Diccionarios armados: {len(diccionario_train_reintento):,} en train, '
         f'{len(diccionario_test_reintento):,} en test'
