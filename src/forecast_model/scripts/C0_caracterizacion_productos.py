@@ -585,6 +585,225 @@ def procesar_feriados_chile(df_final: pd.DataFrame) -> pd.DataFrame:
 
     return df_final
 
+#####----- 2. Función Merge
+
+# FUNCIÓN DEL MERGE
+
+
+def merge_historial_ventas_con_promociones(
+    df_ventas: pd.DataFrame,
+    df_promos_query_basic: pd.DataFrame,
+    df_promos_query_tratada: pd.DataFrame,
+) -> pd.DataFrame:
+    """Adjunta información promocional básica y tratada al historial diario
+    de ventas.
+
+    El historial de ventas define completamente el universo del resultado:
+    se conservan todos sus EAN, fechas y filas. La información promocional
+    se incorpora únicamente cuando existe coincidencia exacta entre:
+
+    - `EAN` y `P_DATE` en el historial de ventas;
+    - `ean` y `p_date` en los historiales promocionales.
+
+    Cuando no existe información promocional para un producto o una fecha,
+    las columnas promocionales quedan nulas.
+
+    Las columnas provenientes del historial básico reciben el sufijo `_B`
+    y las provenientes del historial tratado reciben el sufijo `_T`.
+
+    Parameters
+    ----------
+    df_ventas : pd.DataFrame
+        Historial diario de ventas con las claves `EAN` y `P_DATE`.
+
+    df_promos_query_basic : pd.DataFrame
+        Historial promocional básico con las claves `ean` y `p_date`.
+
+    df_promos_query_tratada : pd.DataFrame
+        Historial promocional tratado con las claves `ean` y `p_date`.
+
+    Returns
+    -------
+    pd.DataFrame
+        Historial diario de ventas enriquecido. Conserva las claves finales
+        como `EAN` y `P_DATE`.
+    """
+    logging.info(
+        'Iniciando incorporación de promociones al historial de ventas.'
+    )
+
+    claves_ventas = ['EAN', 'P_DATE']
+    claves_promos = ['ean', 'p_date']
+
+    columnas_promocionales = [
+        'precio_modal',
+        'precio_promocional',
+        'precio_promocional_minimo',
+        'n_promocion',
+        'nombre_promocion',
+        'descripcion_evento_promocional',
+        'porcentaje_descuento',
+        'FLAG_PROMO'
+    ]
+
+    columnas_requeridas_promos = (
+        claves_promos + columnas_promocionales
+    )
+
+    # Validación de columnas.
+    columnas_faltantes_ventas = [
+        columna
+        for columna in claves_ventas
+        if columna not in df_ventas.columns
+    ]
+
+    if columnas_faltantes_ventas:
+        msg = (
+            '`df_ventas` no contiene las columnas requeridas: '
+            f'{columnas_faltantes_ventas}'
+        )
+        raise KeyError(
+            msg
+        )
+
+    for nombre_df, df_promos in [
+        ('df_promos_query_basic', df_promos_query_basic),
+        ('df_promos_query_tratada', df_promos_query_tratada),
+    ]:
+        columnas_faltantes = [
+            columna
+            for columna in columnas_requeridas_promos
+            if columna not in df_promos.columns
+        ]
+
+        if columnas_faltantes:
+            msg_0 = (
+                f'`{nombre_df}` no contiene las columnas requeridas: '
+                f'{columnas_faltantes}'
+            )
+            raise KeyError(
+                msg_0
+            )
+
+    # Copias para preservar los DataFrames originales.
+    df_resultado = df_ventas.copy()
+
+    df_basic = (
+        df_promos_query_basic[columnas_requeridas_promos]
+        .copy()
+        .rename(
+            columns={
+                'ean': 'EAN',
+                'p_date': 'P_DATE',
+            }
+        )
+    )
+
+    df_tratada = (
+        df_promos_query_tratada[columnas_requeridas_promos]
+        .copy()
+        .rename(
+            columns={
+                'ean': 'EAN',
+                'p_date': 'P_DATE',
+            }
+        )
+    )
+
+    # Homologación de fechas.
+    df_resultado['P_DATE'] = pd.to_datetime(
+        df_resultado['P_DATE'],
+        errors='raise',
+    ).dt.normalize()
+
+    df_basic['P_DATE'] = pd.to_datetime(
+        df_basic['P_DATE'],
+        errors='raise',
+    ).dt.normalize()
+
+    df_tratada['P_DATE'] = pd.to_datetime(
+        df_tratada['P_DATE'],
+        errors='raise',
+    ).dt.normalize()
+
+    # Homologación del EAN como texto.
+    for df_aux in [df_resultado, df_basic, df_tratada]:
+        df_aux['EAN'] = (
+            df_aux['EAN']
+            .astype('string')
+            .str.strip()
+            .str.replace(r'\.0$', '', regex=True)
+        )
+
+    # Las fuentes promocionales deben contener una única fila por EAN-día.
+    if df_basic.duplicated(['EAN', 'P_DATE']).any():
+        msg_1 = (
+            '`df_promos_query_basic` contiene más de una fila para alguna '
+            'combinación `ean`–`p_date`. El merge multiplicaría las filas '  # noqa: RUF001
+            'del historial de ventas.'
+        )
+        raise ValueError(
+            msg_1
+        )
+
+    if df_tratada.duplicated(['EAN', 'P_DATE']).any():
+        msg_2 = (
+            '`df_promos_query_tratada` contiene más de una fila para alguna '
+            'combinación `ean`–`p_date`. El merge multiplicaría las filas '  # noqa: RUF001
+            'del historial de ventas.'
+        )
+        raise ValueError(
+            msg_2
+        )
+
+    # Sufijos para distinguir ambos tratamientos promocionales.
+    df_basic = df_basic.rename(
+        columns={
+            columna: f'{columna}_B'
+            for columna in columnas_promocionales
+        }
+    )
+
+    df_tratada = df_tratada.rename(
+        columns={
+            columna: f'{columna}_T'
+            for columna in columnas_promocionales
+        }
+    )
+
+    n_filas_originales = len(df_resultado)
+
+    # El historial de ventas permanece a la izquierda en ambos cruces.
+    df_resultado = df_resultado.merge(
+        df_basic,
+        on=['EAN', 'P_DATE'],
+        how='left',
+        validate='many_to_one',
+    )
+
+    df_resultado = df_resultado.merge(
+        df_tratada,
+        on=['EAN', 'P_DATE'],
+        how='left',
+        validate='many_to_one',
+    )
+
+    if len(df_resultado) != n_filas_originales:
+        msg_3 = (
+            'El merge alteró la cantidad de filas del historial de ventas. '
+            f'Antes: {n_filas_originales:,}; '
+            f'después: {len(df_resultado):,}.'
+        )
+        raise ValueError(
+            msg_3
+        )
+
+    logging.info(
+            'Merge finalizado correctamente: %s filas de ventas conservadas.',
+            f'{n_filas_originales:,}',
+        )
+
+    return df_resultado
 
 def main():
 
@@ -657,6 +876,12 @@ def main():
 
     logging.info('[2.2] Agregando dummies de feriados y pre-feriados para Chile')
     df_hist_venta = procesar_feriados_chile(df_hist_venta)
+
+    logging.info('##### [P3] Merge de historial de ventas con promociones #####')
+    df_historial = merge_historial_ventas_con_promociones(  # noqa: F841
+    df_ventas=df_hist_venta,
+    df_promos_query_basic=df_promos_basic,
+    df_promos_query_tratada=df_promos_tratada)
 
 if __name__ == '__main__':
 
