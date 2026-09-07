@@ -1,5 +1,4 @@
-"""DAG Ecommerce LifeCycle Status."""
-# Default
+"""Defines the DAG that allocates lifecycle ecommerce."""
 import json
 import platform
 import importlib
@@ -34,15 +33,15 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'ecommerce_lifecycle_status'
+PROJECT_NAME = 'ecommerce'
 dag_args = {
     'dag_id': 'ecommerce_lifecycle_status',
-    'schedule_interval': '0 1 2 * *',
+    'schedule_interval': '0 0 2 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
     'concurrency': 4,
-    'tags': [PROJECT_NAME,'abravom'],
+    'tags': [PROJECT_NAME, 'abravom'],
     'default_args': {
         'project_id': dag_env_config['project_id'],
         'region': dag_env_config['region'],
@@ -73,7 +72,7 @@ with DAG(**dag_args) as dag:
                 'computing_ecommerce_lifecycle_status.py'
             ),
             dag_env_config=dag_env_config,
-            docker_image_name=f'{PROJECT_NAME}',
+            docker_image_name=PROJECT_NAME,
             pyspark_batch_args=[
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
@@ -86,7 +85,7 @@ with DAG(**dag_args) as dag:
         )
 
         for store_banner in [
-            'Unimarc',
+           'Unimarc',
             'Alvi'
         ]
     ]

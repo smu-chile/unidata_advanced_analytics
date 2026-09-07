@@ -31,6 +31,9 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
   && ${CONDA_HOME}/bin/conda config --system --set auto_update_conda False \
   && ${CONDA_HOME}/bin/conda config --system --prepend channels conda-forge \
   && ${CONDA_HOME}/bin/conda config --system --set channel_priority strict
+# Packages ipython and ipykernel are required if using custom conda and want to
+# use this container for running notebooks.
+#RUN ${CONDA_HOME}/bin/conda install ipython ipykernel
 
 # (Optional) Install Conda packages.
 #
@@ -66,6 +69,7 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       numpy \
       office365-rest-python-client \
       openblas \
+      openpyxl \
       orc \
       pandas \
       pyarrow \
@@ -79,15 +83,20 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       scipy \
       seaborn \
       sqlalchemy \
+      statsmodels \
       sympy \
       pendulum \
+      awswrangler \
+      gensim \
       pandas-gbq \
       virtualenv \
+      xlsxwriter \
     && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
 # (Optional) Install additional requirements
 # COPY requirements.txt .
-# RUN pip install --no-cache-dir --no-cache -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt
+RUN ${CONDA_HOME}/bin/python -m pip install gensim==4.4.0 --no-input
 
 # Set timezone
 ENV TZ="America/Santiago"

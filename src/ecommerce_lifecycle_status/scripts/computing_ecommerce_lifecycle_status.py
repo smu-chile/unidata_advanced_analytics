@@ -1,7 +1,6 @@
-"""Ecommerce LifeCycle Status."""
-# Default
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
+# Default
 import os
 import logging
 import argparse
