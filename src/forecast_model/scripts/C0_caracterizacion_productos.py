@@ -514,3 +514,10 @@ def main():
 
     print('Dimensiones df hist_venta: ', df_hist_venta.shape)
     print(f'{df_hist_venta.memory_usage(deep=True).sum() / 1024**2:.2f} MB')
+
+
+    logging.info('Final del código')
+
+if __name__ == '__main__':
+
+    main()
