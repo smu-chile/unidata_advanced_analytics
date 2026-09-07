@@ -202,33 +202,6 @@ def main() -> None:  # noqa: D103
             df_file = sharepoint.toFrame()
             df_file =cleaning_func(df_file,week, file)
 
-            if file == 'venta_negocio':
-                logging.info('========== DEBUG venta_negocio ==========')
-                logging.info('Columnas: %s', df_file.columns.tolist())
-                logging.info('Primeras filas:')
-                logging.info(
-                    '\n%s',
-                    df_file[
-                        [
-                            'negocio',
-                            'cl_total_store',
-                            'total_mercado_vtas_valor',
-                            'total_mercado_vtas_unit',
-                            'unimarc_vtas_valor',
-                            'unimarc_vtas_unit',
-                            'm10s10_vtas_valor',
-                            'm10s10_vtas_unit',
-                            'total_mercado_internet_vtas_valor',
-                            'total_mercado_internet_vtas_unit',
-                            'total_internet_vtas_valor',
-                            'total_internet_vtas_unit',
-                            'unimarc_internet_vtas_valor',
-                            'unimarc_internet_vtas_unit'
-                        ]
-                    ].head(5).to_string()
-                )
-                logging.info('========================================')
-
             # Upload data
             logging.info('Uploading data')
             gbq_extended.createTableFromJSON(
