@@ -1623,6 +1623,229 @@ def identificar_periodos_sin_venta_inusuales(  # noqa: D417
     return periodos_inusuales, resumen_productos, parametros
 
 
+#####----- 1.6 Detección de productos nuevos:
+
+def detectar_productos_nuevos(historial_ventas, dias_producto_nuevo=180):
+    """Marca como nuevo todo EAN cuya primera venta ocurrio dentro de los
+    ultimos `dias_producto_nuevo` dias respecto de la fecha maxima del
+    historial. Solo se consideran ventas efectivas (CANTIDAD_TOTAL > 0).
+
+    Retorna un DataFrame con una fila por EAN: fechas clave, antiguedad y
+    la bandera ES_PRODUCTO_NUEVO.
+    """
+    columnas = {'EAN', 'P_DATE', 'CANTIDAD_TOTAL'}
+    faltantes = columnas.difference(historial_ventas.columns)
+    if faltantes:
+        msg = f'Faltan columnas: {sorted(faltantes)}'
+        raise ValueError(msg)
+
+    if not isinstance(dias_producto_nuevo, int) or dias_producto_nuevo <= 0:
+        msg = '`dias_producto_nuevo` debe ser un entero > 0.'
+        raise ValueError(msg)
+
+    ventas = historial_ventas[['EAN', 'P_DATE', 'CANTIDAD_TOTAL']].copy()
+    ventas['P_DATE'] = pd.to_datetime(
+        ventas['P_DATE'], errors='coerce'
+    ).dt.normalize()
+    ventas['CANTIDAD_TOTAL'] = pd.to_numeric(
+        ventas['CANTIDAD_TOTAL'], errors='coerce'
+    )
+    ventas = ventas.dropna(subset=['EAN', 'P_DATE', 'CANTIDAD_TOTAL'])
+    ventas = ventas.loc[ventas['CANTIDAD_TOTAL'].gt(0)]
+
+    if ventas.empty:
+        msg = 'No hay registros con CANTIDAD_TOTAL > 0.'
+        raise ValueError(msg)
+
+    fecha_corte = ventas['P_DATE'].max()
+    inicio_ventana = fecha_corte - pd.Timedelta(days=dias_producto_nuevo - 1)
+
+    productos = ventas.groupby('EAN', as_index=False).agg(
+        FECHA_PRIMERA_VENTA=('P_DATE', 'min'),
+        FECHA_ULTIMA_VENTA=('P_DATE', 'max'),
+        DIAS_CON_VENTA=('P_DATE', 'nunique'),
+    )
+
+    productos['ANTIGUEDAD_DIAS'] = (
+        fecha_corte - productos['FECHA_PRIMERA_VENTA']
+    ).dt.days + 1
+
+    # Nuevo: la primera venta cae dentro de la ventana reciente.
+    productos['ES_PRODUCTO_NUEVO'] = (
+        productos['FECHA_PRIMERA_VENTA'] >= inicio_ventana
+    )
+
+    parametros = {
+        'DIAS_PRODUCTO_NUEVO': dias_producto_nuevo,
+        'FECHA_CORTE': fecha_corte,
+        'INICIO_VENTANA_NUEVO': inicio_ventana,
+    }
+
+    return productos, parametros
+
+
+#####----- 1.7 Variabilidad precio y ventas.
+
+def caracterizar_variabilidad(
+    historial_ventas,
+    umbral_cv_unidades_alto=1.0,
+    umbral_cv_robusto_precio_alto=0.15,
+    umbral_fano_sobredispersion=1.5,
+    umbral_correlacion_relevante=0.3,
+    minimo_dias_para_evaluar=5,
+):
+    """Caracteriza la variabilidad de precio y de unidades vendidas por
+    EAN, usando estadisticos robustos y comparables entre productos.
+
+    La variabilidad de unidades se calcula solo sobre dias con venta
+    positiva, para no confundir intermitencia con dispersion de demanda.
+
+    Parametros
+    ----------
+    umbral_cv_unidades_alto : float
+        CV de unidades desde el cual se marca demanda muy variable.
+    umbral_cv_robusto_precio_alto : float
+        CV robusto de precio (IQR/mediana) desde el cual el precio se
+        considera muy variable.
+    umbral_fano_sobredispersion : float
+        Ratio varianza/media desde el cual hay sobredispersion relevante.
+    umbral_correlacion_relevante : float
+        Correlacion (valor absoluto) desde la cual la relacion precio-
+        unidades se considera material.
+    minimo_dias_para_evaluar : int
+        Minimo de dias con venta para calcular estadisticos confiables.
+
+    Retorna
+    -------
+    tuple[pd.DataFrame, dict]
+        variabilidad_producto (una fila por EAN) y parametros.
+    """
+    columnas = {'EAN', 'P_DATE', 'CANTIDAD_TOTAL', 'PRECIO_PROMEDIO'}
+    faltantes = columnas.difference(historial_ventas.columns)
+    if faltantes:
+        msg = f'Faltan columnas: {sorted(faltantes)}'
+        raise ValueError(msg)
+
+    ventas = historial_ventas[
+        ['EAN', 'P_DATE', 'CANTIDAD_TOTAL', 'PRECIO_PROMEDIO']
+    ].copy()
+    ventas['P_DATE'] = pd.to_datetime(
+        ventas['P_DATE'], errors='coerce'
+    ).dt.normalize()
+    ventas['CANTIDAD_TOTAL'] = pd.to_numeric(
+        ventas['CANTIDAD_TOTAL'], errors='coerce'
+    )
+    ventas['PRECIO_PROMEDIO'] = pd.to_numeric(
+        ventas['PRECIO_PROMEDIO'], errors='coerce'
+    )
+    ventas = ventas.dropna(
+        subset=['EAN', 'P_DATE', 'CANTIDAD_TOTAL', 'PRECIO_PROMEDIO']
+    )
+    ventas = ventas.loc[ventas['CANTIDAD_TOTAL'].gt(0)]
+
+    if ventas.empty:
+        msg = 'No hay registros validos con venta positiva.'
+        raise ValueError(msg)
+
+    ventas = (
+        ventas
+        .groupby(['EAN', 'P_DATE'], as_index=False)
+        .agg(
+            CANTIDAD_TOTAL=('CANTIDAD_TOTAL', 'sum'),
+            PRECIO_PROMEDIO=('PRECIO_PROMEDIO', 'mean'),
+        )
+    )
+
+    def estadisticos_ean(grupo):
+        unidades = grupo['CANTIDAD_TOTAL']
+        precio = grupo['PRECIO_PROMEDIO']
+        n_dias = len(grupo)
+
+        media_u = unidades.mean()
+        std_u = unidades.std(ddof=1) if n_dias > 1 else 0.0
+        var_u = unidades.var(ddof=1) if n_dias > 1 else 0.0
+        cv_u = std_u / media_u if media_u > 0 else np.nan
+        fano_u = var_u / media_u if media_u > 0 else np.nan
+        p90_u = unidades.quantile(0.90)
+        mediana_u = unidades.median()
+        ratio_pico_u = p90_u / mediana_u if mediana_u > 0 else np.nan
+
+        mediana_p = precio.median()
+        iqr_p = precio.quantile(0.75) - precio.quantile(0.25)
+        cv_rob_p = iqr_p / mediana_p if mediana_p > 0 else np.nan
+        rango_rel_p = (
+            (precio.quantile(0.95) - precio.quantile(0.05)) / mediana_p
+            if mediana_p > 0 else np.nan
+        )
+        n_precios = int(precio.round(2).nunique())
+
+        if n_dias >= minimo_dias_para_evaluar and precio.nunique() > 1:  # noqa: PD101
+            corr_pu = precio.corr(unidades)
+        else:
+            corr_pu = np.nan
+
+        return pd.Series({
+            'DIAS_CON_VENTA_EVALUADOS': n_dias,
+            'CV_UNIDADES': cv_u,
+            'RATIO_DISPERSION_UNIDADES': fano_u,
+            'RATIO_PICO_MEDIANA_UNIDADES': ratio_pico_u,
+            'CV_ROBUSTO_PRECIO': cv_rob_p,
+            'RANGO_RELATIVO_PRECIO': rango_rel_p,
+            'N_PRECIOS_DISTINTOS': n_precios,
+            'CORRELACION_PRECIO_UNIDADES': corr_pu,
+        })
+
+    variabilidad_producto = (
+        ventas.groupby('EAN').apply(estadisticos_ean).reset_index()
+    )
+
+    evaluable = (
+        variabilidad_producto['DIAS_CON_VENTA_EVALUADOS']
+        >= minimo_dias_para_evaluar
+    )
+
+    variabilidad_producto['FLAG_DEMANDA_MUY_VARIABLE'] = (
+        evaluable
+        & (variabilidad_producto['CV_UNIDADES'] >= umbral_cv_unidades_alto)
+    )
+    variabilidad_producto['FLAG_SOBREDISPERSION_UNIDADES'] = (
+        evaluable
+        & (
+            variabilidad_producto['RATIO_DISPERSION_UNIDADES']
+            >= umbral_fano_sobredispersion
+        )
+    )
+    variabilidad_producto['FLAG_PRECIO_MUY_VARIABLE'] = (
+        evaluable
+        & (
+            variabilidad_producto['CV_ROBUSTO_PRECIO']
+            >= umbral_cv_robusto_precio_alto
+        )
+    )
+    variabilidad_producto['FLAG_RELACION_PRECIO_UNIDADES'] = (
+        variabilidad_producto['CORRELACION_PRECIO_UNIDADES'].abs()
+        >= umbral_correlacion_relevante
+    )
+    variabilidad_producto['FLAG_HISTORIAL_INSUFICIENTE_VARIABILIDAD'] = (
+        ~evaluable
+    )
+
+    variabilidad_producto = variabilidad_producto.sort_values(
+        ['CV_UNIDADES', 'CV_ROBUSTO_PRECIO'],
+        ascending=[False, False],
+    ).reset_index(drop=True)
+
+    parametros = {
+        'UMBRAL_CV_UNIDADES_ALTO': umbral_cv_unidades_alto,
+        'UMBRAL_CV_ROBUSTO_PRECIO_ALTO': umbral_cv_robusto_precio_alto,
+        'UMBRAL_FANO_SOBREDISPERSION': umbral_fano_sobredispersion,
+        'UMBRAL_CORRELACION_RELEVANTE': umbral_correlacion_relevante,
+        'MINIMO_DIAS_PARA_EVALUAR': minimo_dias_para_evaluar,
+    }
+
+    return variabilidad_producto, parametros
+
+
 def main():
 
     #------- Inputs ---------#
@@ -1767,6 +1990,7 @@ def main():
 
     #------------ 4.3 Intermitencias ----------#
 
+    logging.info('[4.3] Detección de intermitencias: ')
     periodos_inusuales, resumen_productos, _ = (  # noqa: RUF059
         identificar_periodos_sin_venta_inusuales(
             df_historial,
@@ -1778,8 +2002,9 @@ def main():
             incluir_gap_final=False,
             cobertura_maxima_fantasma=50.0,    # mas estricto para "fantasma"
             ratio_minimo_muerte_reciente=0.60, # mas estricto para "muerte reciente"
-        )
-    )
+        ))
+
+    logging.info('[4.3] Zona concentración pausas: ',resumen_productos['ZONA_CONCENTRACION_PAUSAS'].value_counts() )  # noqa: E501
 
     #Segundo Merge de Resultados Resumen
     resumen_global = pd.merge(  # noqa: PD015
@@ -1788,6 +2013,50 @@ def main():
     on='EAN',
     how='inner')
 
+    #-------------- 4.4 Productos Nuevos ----------#
+
+    logging.info('[4.4] Detección de productos nuevos: ')
+    productos_nuevos, _ = detectar_productos_nuevos(
+        df_historial, dias_producto_nuevo=180
+    )
+
+    resumen_global = pd.merge(  # noqa: PD015
+        left=resumen_global,
+        right=productos_nuevos[['EAN', 'ANTIGUEDAD_DIAS','ES_PRODUCTO_NUEVO']],
+        on='EAN',
+        how='inner'
+    )
+
+    nuevos_por_segmento = (
+        productos_nuevos
+        .merge(
+            ventas_por_producto[['EAN', 'SEGMENTO_ABCD']],
+            on='EAN',
+            how='left',
+        )
+        .groupby('SEGMENTO_ABCD', observed=True)['ES_PRODUCTO_NUEVO']
+        .sum()
+        .reset_index(name='N_PRODUCTOS_NUEVOS')
+    )
+
+    logging.info('[4.4] Productos nuevos por segmento: ', nuevos_por_segmento)
+
+    #----------------- 4.5 Variabilidad -------------#
+
+    logging.info('[4.5] Variabilidad Precio y Demanda')
+    variabilidad_producto, _ = caracterizar_variabilidad(df_historial)
+
+    logging.info('[4.5] Revisión demanda muy variable por segmento: ',variabilidad_producto.merge(
+        ventas_por_producto[['EAN', 'SEGMENTO_ABCD']],
+        on='EAN',
+        how='left').groupby('SEGMENTO_ABCD', observed=True)['FLAG_DEMANDA_MUY_VARIABLE'].sum().reset_index(name='N_DEMANDA_MUY_VARIABLE')) # noqa: E501
+
+    resumen_global = pd.merge(  # noqa: PD015
+        left=resumen_global,
+        right=variabilidad_producto.drop('DIAS_CON_VENTA_EVALUADOS', axis=1),
+        on='EAN',
+        how='inner'
+    )
 if __name__ == '__main__':
 
     main()
