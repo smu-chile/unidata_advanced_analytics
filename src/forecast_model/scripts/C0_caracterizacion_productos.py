@@ -1,4 +1,3 @@
-##### ----- IMPORTS ----- #####
 from __future__ import annotations
 
 import os
@@ -23,9 +22,8 @@ while directorio_actual != os.path.sep:
         directorio_actual = os.path.dirname(directorio_actual)  # Retrocede
 
 
-import common.gcp_extended.secretsmanager as secretmanager
-import common.office365_extended.sharepoint as sp
-from common.constants import LOGGING_CONFIG
+import common.gcp_extended.secretsmanager as secretmanager  # noqa: E402
+from common.constants import LOGGING_CONFIG  # noqa: E402
 from common.databases.queries import QueryDict  # noqa: E402
 from common.gcp_extended.bigquery import (  # noqa: E402
     uploadFrame,  # noqa: F401
