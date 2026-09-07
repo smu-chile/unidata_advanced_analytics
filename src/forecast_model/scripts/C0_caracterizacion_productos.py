@@ -1159,6 +1159,470 @@ def caracterizar_productos(
     return caracterizacion, parametros
 
 
+#####----- 1.5 Detección de intermitencias:
+
+def _distribuir_pausas_por_zona(intervalos, primera_venta, ultima_venta):
+    """Reparte los dias sin venta de cada pausa en tres tramos de la vida
+    activa del producto: INICIO [0,1/3), MEDIO [1/3,2/3), RECIENTE [2/3,1].
+
+    Cada pausa se ubica por su punto medio relativo. Devuelve el conteo de
+    dias perdidos por zona, la zona dominante y la posicion relativa
+    (0 = primera venta, 1 = ultima venta) de la mayor pausa.
+    """
+    span = (ultima_venta - primera_venta).days
+
+    if intervalos.empty or span <= 0:
+        return {
+            'DIAS_SIN_VENTA_INICIO': 0,
+            'DIAS_SIN_VENTA_MEDIO': 0,
+            'DIAS_SIN_VENTA_RECIENTE': 0,
+            'ZONA_CONCENTRACION_PAUSAS': 'SIN_PAUSAS',
+            'POSICION_RELATIVA_MAYOR_PAUSA': np.nan,
+        }
+
+    dias_por_zona = {'INICIO': 0, 'MEDIO': 0, 'RECIENTE': 0}
+    posicion_mayor = np.nan
+    mayor_dias = -1
+
+    for _, fila in intervalos.iterrows():
+        dias = int(fila['DIAS_SIN_VENTA'])
+        inicio_pausa = fila['FECHA_ULTIMA_VENTA_ANTERIOR']
+
+        # Punto medio de la pausa en dias desde la primera venta.
+        offset_medio = (inicio_pausa - primera_venta).days + (dias + 1) / 2
+        posicion = min(max(offset_medio / span, 0.0), 1.0)
+
+        if posicion < 1 / 3:
+            dias_por_zona['INICIO'] += dias
+        elif posicion < 2 / 3:
+            dias_por_zona['MEDIO'] += dias
+        else:
+            dias_por_zona['RECIENTE'] += dias
+
+        if dias > mayor_dias:
+            mayor_dias = dias
+            posicion_mayor = posicion
+
+    zona_dominante = max(dias_por_zona, key=dias_por_zona.get)
+
+    return {
+        'DIAS_SIN_VENTA_INICIO': dias_por_zona['INICIO'],
+        'DIAS_SIN_VENTA_MEDIO': dias_por_zona['MEDIO'],
+        'DIAS_SIN_VENTA_RECIENTE': dias_por_zona['RECIENTE'],
+        'ZONA_CONCENTRACION_PAUSAS': zona_dominante,
+        'POSICION_RELATIVA_MAYOR_PAUSA': round(posicion_mayor, 3),
+    }
+
+
+def identificar_periodos_sin_venta_inusuales(  # noqa: D417
+    historial_ventas,
+    ventas_por_producto,
+    segmentos=None,
+    minimo_dias_sin_venta=14,
+    multiplicador_p90=2.0,
+    minimo_intervalos_referencia=3,
+    incluir_gap_final=False,
+    cobertura_maxima_fantasma=60.0,
+    ratio_minimo_muerte_reciente=0.50):
+
+    """Identifica periodos inusualmente largos sin venta por EAN y
+    segmento, y caracteriza donde se concentran las pausas dentro de
+    la vida activa del producto.
+
+    Como los dias sin venta no existen como filas, se infieren mediante la
+    diferencia entre fechas consecutivas con venta positiva:
+
+        DIAS_SIN_VENTA =
+            (FECHA_SIGUIENTE_VENTA - FECHA_ULTIMA_VENTA_ANTERIOR).days - 1
+
+    Una pausa es inusual cuando cumple simultaneamente:
+
+    1. DIAS_SIN_VENTA >= minimo_dias_sin_venta.
+    2. DIAS_SIN_VENTA >= multiplicador_p90 * P90 de los intervalos
+       historicos entre ventas del propio EAN (excluyendo el intervalo
+       evaluado).
+
+    Banderas derivadas
+    ------------------
+    FLAG_LANZAMIENTO_FANTASMA:
+        Pausas concentradas al INICIO y cobertura temporal baja. Sugiere un
+        lanzamiento/testeo temprano seguido de un arranque real posterior.
+
+    FLAG_MUERTE_RECIENTE:
+        Pausas concentradas en el tramo RECIENTE con una proporcion alta de
+        los dias perdidos totales. Sugiere un producto deteriorandose.
+
+    Parameters
+    ----------
+    cobertura_maxima_fantasma : float, default=60.0
+        Cobertura (%) por debajo de la cual, con zona INICIO, se marca
+        FLAG_LANZAMIENTO_FANTASMA.
+
+    ratio_minimo_muerte_reciente : float, default=0.50
+        Proporcion minima de dias sin venta ubicados en el tramo RECIENTE
+        (sobre el total de dias perdidos) para marcar FLAG_MUERTE_RECIENTE.
+
+    Returns
+    -------
+    tuple[pd.DataFrame, pd.DataFrame, dict]
+        periodos_inusuales, resumen_productos, parametros.
+    """
+    columnas_ventas = {'EAN', 'P_DATE', 'CANTIDAD_TOTAL'}
+    columnas_segmentos = {'EAN', 'SEGMENTO_ABCD'}
+
+    faltantes_ventas = columnas_ventas.difference(historial_ventas.columns)
+    faltantes_segmentos = columnas_segmentos.difference(
+        ventas_por_producto.columns
+    )
+
+    if faltantes_ventas:
+        msg = f'Faltan columnas en historial_ventas: {sorted(faltantes_ventas)}'
+        raise ValueError(
+            msg
+        )
+    if faltantes_segmentos:
+        msg = (
+            'Faltan columnas en ventas_por_producto: '
+            f'{sorted(faltantes_segmentos)}'
+        )
+        raise ValueError(
+            msg
+        )
+
+    if minimo_dias_sin_venta <= 0:
+        msg = '`minimo_dias_sin_venta` debe ser mayor que cero.'
+        raise ValueError(msg)
+    if multiplicador_p90 <= 0:
+        msg = '`multiplicador_p90` debe ser mayor que cero.'
+        raise ValueError(msg)
+    if minimo_intervalos_referencia < 1:
+        msg = '`minimo_intervalos_referencia` debe ser al menos 1.'
+        raise ValueError(msg)
+    if not 0 <= cobertura_maxima_fantasma <= 100:
+        msg = '`cobertura_maxima_fantasma` debe estar en [0, 100].'
+        raise ValueError(msg)
+    if not 0 < ratio_minimo_muerte_reciente <= 1:
+        msg = '`ratio_minimo_muerte_reciente` debe estar en (0, 1].'
+        raise ValueError(
+            msg
+        )
+
+    if segmentos is None:
+        segmentos = ['A', 'B', 'C', 'D']
+
+    segmentos = [str(segmento).strip().upper() for segmento in segmentos]
+    segmentos_invalidos = set(segmentos).difference({'A', 'B', 'C', 'D'})
+    if segmentos_invalidos:
+        msg = f'Segmentos invalidos: {sorted(segmentos_invalidos)}.'
+        raise ValueError(
+            msg
+        )
+
+    def normalizar_ean(serie):
+        return (
+            serie.astype('string')
+            .str.strip()
+            .str.replace(r'\.0$', '', regex=True)
+        )
+
+    # ------------------------------------------------------------------
+    # 1. Universo de EAN y segmentos
+    # ------------------------------------------------------------------
+    segmentos_ref = ventas_por_producto[['EAN', 'SEGMENTO_ABCD']].copy()
+    segmentos_ref['EAN_KEY'] = normalizar_ean(segmentos_ref['EAN'])
+    segmentos_ref['SEGMENTO_ABCD'] = (
+        segmentos_ref['SEGMENTO_ABCD'].astype('string').str.strip().str.upper()
+    )
+    segmentos_ref = (
+        segmentos_ref
+        .dropna(subset=['EAN_KEY', 'SEGMENTO_ABCD'])
+        .loc[lambda tabla: tabla['SEGMENTO_ABCD'].isin(segmentos)]
+        .drop_duplicates(subset=['EAN_KEY'], keep='first')
+    )
+
+    if segmentos_ref.empty:
+        msg = 'No existen EAN para los segmentos solicitados.'
+        raise ValueError(msg)
+
+    # ------------------------------------------------------------------
+    # 2. Historial de ventas positivas
+    # ------------------------------------------------------------------
+    ventas = historial_ventas[['EAN', 'P_DATE', 'CANTIDAD_TOTAL']].copy()
+    ventas['EAN_KEY'] = normalizar_ean(ventas['EAN'])
+    ventas['P_DATE'] = pd.to_datetime(
+        ventas['P_DATE'], errors='coerce'
+    ).dt.normalize()
+    ventas['CANTIDAD_TOTAL'] = pd.to_numeric(
+        ventas['CANTIDAD_TOTAL'], errors='coerce'
+    )
+    ventas = (
+        ventas
+        .dropna(subset=['EAN_KEY', 'P_DATE', 'CANTIDAD_TOTAL'])
+        .loc[lambda tabla: tabla['CANTIDAD_TOTAL'].gt(0)]
+        .drop(columns=['EAN'])
+        .merge(
+            segmentos_ref[['EAN_KEY', 'EAN', 'SEGMENTO_ABCD']],
+            on='EAN_KEY',
+            how='inner',
+            validate='many_to_one',
+        )
+    )
+
+    if ventas.empty:
+        msg = 'No existen ventas positivas para los segmentos solicitados.'
+        raise ValueError(
+            msg
+        )
+
+    ventas_diarias = (
+        ventas
+        .groupby(
+            ['EAN_KEY', 'EAN', 'SEGMENTO_ABCD', 'P_DATE'],
+            as_index=False,
+        )
+        .agg(CANTIDAD_TOTAL=('CANTIDAD_TOTAL', 'sum'))
+        .sort_values(['EAN_KEY', 'P_DATE'])
+        .reset_index(drop=True)
+    )
+
+    fecha_corte = ventas_diarias['P_DATE'].max()
+
+    eventos = []
+    resumenes = []
+
+    # ------------------------------------------------------------------
+    # 3. Evaluacion de pausas por EAN
+    # ------------------------------------------------------------------
+    for (_ean_key, ean, segmento), producto in ventas_diarias.groupby(
+        ['EAN_KEY', 'EAN', 'SEGMENTO_ABCD'], dropna=False
+    ):
+        fechas_venta = (
+            producto['P_DATE'].drop_duplicates().sort_values().reset_index(
+                drop=True
+            )
+        )
+
+        primera_venta = fechas_venta.min()
+        ultima_venta = fechas_venta.max()
+        dias_con_venta = len(fechas_venta)
+        dias_calendario = int((ultima_venta - primera_venta).days + 1)
+        porcentaje_cobertura = dias_con_venta / dias_calendario * 100
+
+        # Intervalos internos entre ventas consecutivas.
+        if len(fechas_venta) >= 2:
+            intervalos = pd.DataFrame({
+                'FECHA_ULTIMA_VENTA_ANTERIOR': fechas_venta.iloc[:-1].to_numpy(),
+                'FECHA_SIGUIENTE_VENTA': fechas_venta.iloc[1:].to_numpy(),
+            })
+            intervalos['DIAS_SIN_VENTA'] = (
+                intervalos['FECHA_SIGUIENTE_VENTA']
+                - intervalos['FECHA_ULTIMA_VENTA_ANTERIOR']
+            ).dt.days - 1
+        else:
+            intervalos = pd.DataFrame(
+                columns=[
+                    'FECHA_ULTIMA_VENTA_ANTERIOR',
+                    'FECHA_SIGUIENTE_VENTA',
+                    'DIAS_SIN_VENTA',
+                ]
+            )
+
+        # Gap final opcional (censurado).
+        if incluir_gap_final:
+            dias_gap_final = int((fecha_corte - ultima_venta).days)
+            if dias_gap_final > 0:
+                intervalos = pd.concat(
+                    [
+                        intervalos,
+                        pd.DataFrame({
+                            'FECHA_ULTIMA_VENTA_ANTERIOR': [ultima_venta],
+                            'FECHA_SIGUIENTE_VENTA': [pd.NaT],
+                            'DIAS_SIN_VENTA': [dias_gap_final],
+                            'ES_GAP_FINAL_CENSURADO': [True],
+                        }),
+                    ],
+                    ignore_index=True,
+                )
+
+        if 'ES_GAP_FINAL_CENSURADO' not in intervalos.columns:
+            intervalos['ES_GAP_FINAL_CENSURADO'] = False
+        else:
+            intervalos['ES_GAP_FINAL_CENSURADO'] = (
+                intervalos['ES_GAP_FINAL_CENSURADO'].fillna(False).astype(bool)  # noqa: FBT003
+            )
+
+        intervalos['DIAS_SIN_VENTA'] = pd.to_numeric(
+            intervalos['DIAS_SIN_VENTA'], errors='coerce'
+        )
+        intervalos = intervalos.dropna(
+            subset=['DIAS_SIN_VENTA']
+        ).reset_index(drop=True)
+
+        n_intervalos_totales = len(intervalos)
+        intervalos_positivos = intervalos.loc[
+            intervalos['DIAS_SIN_VENTA'].gt(0)
+        ].copy()
+
+        mayor_pausa = (
+            int(intervalos_positivos['DIAS_SIN_VENTA'].max())
+            if not intervalos_positivos.empty
+            else 0
+        )
+
+        n_pausas_inusuales = 0
+        umbrales_evaluados = []
+
+        for indice, fila in intervalos_positivos.iterrows():
+            # El intervalo actual no participa en su propio P90.
+            intervalos_referencia = intervalos.drop(index=indice)[
+                'DIAS_SIN_VENTA'
+            ]
+
+            if len(intervalos_referencia) < minimo_intervalos_referencia:
+                continue
+
+            p90_referencia = float(intervalos_referencia.quantile(0.90))
+            umbral_p90 = int(np.ceil(p90_referencia * multiplicador_p90))
+            umbral_pausa = max(minimo_dias_sin_venta, umbral_p90)
+            umbrales_evaluados.append(umbral_pausa)
+
+            if fila['DIAS_SIN_VENTA'] < umbral_pausa:
+                continue
+
+            n_pausas_inusuales += 1
+
+            eventos.append({
+                'EAN': ean,
+                'SEGMENTO_ABCD': segmento,
+                'FECHA_ULTIMA_VENTA_ANTERIOR': (
+                    fila['FECHA_ULTIMA_VENTA_ANTERIOR']
+                ),
+                'FECHA_SIGUIENTE_VENTA': fila['FECHA_SIGUIENTE_VENTA'],
+                'DIAS_SIN_VENTA': int(fila['DIAS_SIN_VENTA']),
+                'P90_INTERVALOS_REFERENCIA': p90_referencia,
+                'UMBRAL_PAUSA_INUSUAL_DIAS': umbral_pausa,
+                'MULTIPLICADOR_P90': multiplicador_p90,
+                'ES_GAP_FINAL_CENSURADO': bool(fila['ES_GAP_FINAL_CENSURADO']),
+            })
+
+        umbral_representativo = (
+            float(np.median(umbrales_evaluados))
+            if umbrales_evaluados
+            else np.nan
+        )
+
+        # Concentracion de pausas por zona de la vida activa.
+        zona_pausas = _distribuir_pausas_por_zona(
+            intervalos_positivos, primera_venta, ultima_venta
+        )
+
+        total_dias_perdidos = (
+            zona_pausas['DIAS_SIN_VENTA_INICIO']
+            + zona_pausas['DIAS_SIN_VENTA_MEDIO']
+            + zona_pausas['DIAS_SIN_VENTA_RECIENTE']
+        )
+        ratio_reciente = (
+            zona_pausas['DIAS_SIN_VENTA_RECIENTE'] / total_dias_perdidos
+            if total_dias_perdidos > 0
+            else 0.0
+        )
+
+        flag_fantasma = (
+            zona_pausas['ZONA_CONCENTRACION_PAUSAS'] == 'INICIO'
+            and porcentaje_cobertura < cobertura_maxima_fantasma
+        )
+        flag_muerte_reciente = (
+            zona_pausas['ZONA_CONCENTRACION_PAUSAS'] == 'RECIENTE'
+            and ratio_reciente >= ratio_minimo_muerte_reciente
+        )
+
+        resumenes.append({
+            'EAN': ean,
+            'SEGMENTO_ABCD': segmento,
+            'PRIMERA_VENTA': primera_venta,
+            'ULTIMA_VENTA': ultima_venta,
+            'DIAS_CON_VENTA': dias_con_venta,
+            'DIAS_CALENDARIO_ENTRE_PRIMERA_ULTIMA_VENTA': dias_calendario,
+            'PORCENTAJE_COBERTURA': porcentaje_cobertura,
+            'N_INTERVALOS_TOTALES': n_intervalos_totales,
+            'N_PAUSAS_CON_AL_MENOS_1_DIA': len(intervalos_positivos),
+            'MAYOR_PAUSA_SIN_VENTA_DIAS': mayor_pausa,
+            'UMBRAL_PAUSA_INUSUAL_REPRESENTATIVO': umbral_representativo,
+            'N_PAUSAS_INUSUALES': n_pausas_inusuales,
+            'TIENE_PAUSA_INUSUAL': n_pausas_inusuales > 0,
+            'ELEGIBLE_PARA_EVALUACION_PAUSAS': (
+                n_intervalos_totales >= minimo_intervalos_referencia + 1
+            ),
+            'RATIO_DIAS_PERDIDOS_RECIENTE': round(ratio_reciente, 3),
+            'FLAG_LANZAMIENTO_FANTASMA': flag_fantasma,
+            'FLAG_MUERTE_RECIENTE': flag_muerte_reciente,
+            **zona_pausas,
+        })
+
+    # ------------------------------------------------------------------
+    # 4. Outputs
+    # ------------------------------------------------------------------
+    columnas_eventos = [
+        'EAN',
+        'SEGMENTO_ABCD',
+        'FECHA_ULTIMA_VENTA_ANTERIOR',
+        'FECHA_SIGUIENTE_VENTA',
+        'DIAS_SIN_VENTA',
+        'P90_INTERVALOS_REFERENCIA',
+        'UMBRAL_PAUSA_INUSUAL_DIAS',
+        'MULTIPLICADOR_P90',
+        'ES_GAP_FINAL_CENSURADO',
+    ]
+
+    periodos_inusuales = pd.DataFrame(eventos, columns=columnas_eventos)
+
+    if not periodos_inusuales.empty:
+        periodos_inusuales = (
+            periodos_inusuales
+            .sort_values(
+                ['SEGMENTO_ABCD', 'DIAS_SIN_VENTA', 'EAN'],
+                ascending=[True, False, True],
+            )
+            .reset_index(drop=True)
+        )
+
+    resumen_productos = pd.DataFrame(resumenes)
+    resumen_productos['PORCENTAJE_COBERTURA'] = (
+        resumen_productos['PORCENTAJE_COBERTURA'].round(2)
+    )
+    resumen_productos = (
+        resumen_productos
+        .sort_values(
+            [
+                'SEGMENTO_ABCD',
+                'TIENE_PAUSA_INUSUAL',
+                'PORCENTAJE_COBERTURA',
+                'MAYOR_PAUSA_SIN_VENTA_DIAS',
+                'EAN',
+            ],
+            ascending=[True, False, True, False, True],
+        )
+        .reset_index(drop=True)
+    )
+
+    parametros = {
+        'SEGMENTOS_ANALIZADOS': segmentos,
+        'FECHA_CORTE': fecha_corte,
+        'MINIMO_DIAS_SIN_VENTA': minimo_dias_sin_venta,
+        'MULTIPLICADOR_P90': multiplicador_p90,
+        'MINIMO_INTERVALOS_REFERENCIA': minimo_intervalos_referencia,
+        'INCLUIR_GAP_FINAL': incluir_gap_final,
+        'COBERTURA_MAXIMA_FANTASMA': cobertura_maxima_fantasma,
+        'RATIO_MINIMO_MUERTE_RECIENTE': ratio_minimo_muerte_reciente,
+        'FORMULA_PORCENTAJE_COBERTURA': (
+            'DIAS_CON_VENTA / '
+            'DIAS_CALENDARIO_ENTRE_PRIMERA_ULTIMA_VENTA * 100'
+        ),
+    }
+
+    return periodos_inusuales, resumen_productos, parametros
+
+
 def main():
 
     #------- Inputs ---------#
@@ -1293,6 +1757,36 @@ def main():
         margins_name='TOTAL')
 
     logging.info(frecuencia_estados)
+
+    #Primer Merge de Resultados Resumen
+    resumen_global = pd.merge(  # noqa: PD015
+        left=ventas_por_producto,
+        right=caracterizacion_caidas,
+        on='EAN',
+        how='inner')
+
+    #------------ 4.3 Intermitencias ----------#
+
+    periodos_inusuales, resumen_productos, _ = (  # noqa: RUF059
+        identificar_periodos_sin_venta_inusuales(
+            df_historial,
+            ventas_por_producto,
+            segmentos=['A', 'B', 'C', 'D'],              # solo A y B
+            minimo_dias_sin_venta=28,          # piso de 3 semanas
+            multiplicador_p90=2.5,
+            minimo_intervalos_referencia=3,
+            incluir_gap_final=False,
+            cobertura_maxima_fantasma=50.0,    # mas estricto para "fantasma"
+            ratio_minimo_muerte_reciente=0.60, # mas estricto para "muerte reciente"
+        )
+    )
+
+    #Segundo Merge de Resultados Resumen
+    resumen_global = pd.merge(  # noqa: PD015
+    left=resumen_global,
+    right=resumen_productos.drop(['SEGMENTO_ABCD', 'DIAS_CON_VENTA'], axis=1),
+    on='EAN',
+    how='inner')
 
 if __name__ == '__main__':
 
