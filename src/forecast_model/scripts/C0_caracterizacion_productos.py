@@ -488,7 +488,7 @@ def main():
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
     file_site += 'Pricing/Forecast Promociones'
     secret_name = 'bdaa_sharepoint_credentials'  # noqa: S105#HC
-    sp_cred = secretmanager.getSecret(secret_name, project=proyecto)
+    sp_cred = secretmanager.getSecret(secret_name, project=proyecto)  # noqa: F841
 
     esquema = 'TMP'
     tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
