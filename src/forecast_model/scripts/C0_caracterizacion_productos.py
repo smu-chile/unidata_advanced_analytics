@@ -585,9 +585,7 @@ def procesar_feriados_chile(df_final: pd.DataFrame) -> pd.DataFrame:
 
     return df_final
 
-#####----- 2. Función Merge
-
-# FUNCIÓN DEL MERGE
+#####----- 1.2. Función Merge
 
 
 def merge_historial_ventas_con_promociones(
@@ -805,6 +803,85 @@ def merge_historial_ventas_con_promociones(
 
     return df_resultado
 
+
+#####----- 1.3 Segmentación por ventas:
+
+
+def segmentar_por_ventas(historial, cortes_abcd=(0.80, 0.90, 0.95)):
+    corte_a, corte_b, corte_c = cortes_abcd
+
+    if not 0 < corte_a < corte_b < corte_c < 1:
+        msg = 'cortes_abcd debe cumplir 0 < A < B < C < 1.'
+        raise ValueError(
+            msg
+        )
+
+    # Un solo acumulador por producto; sin DataFrames auxiliares.
+    segmentacion = (
+        historial
+        .assign(
+            CANTIDAD_TOTAL=pd.to_numeric(
+                historial['CANTIDAD_TOTAL'],
+                errors='coerce',
+            )
+        )
+        .groupby('EAN', as_index=False)
+        .agg(
+            UNIDADES_VENDIDAS=('CANTIDAD_TOTAL', 'sum'),
+            DIAS_CON_VENTA=('P_DATE', 'nunique'),
+        )
+    )
+
+    # Devoluciones/ajustes negativos no deben distorsionar la contribución.
+    segmentacion['UNIDADES_VENDIDAS'] = (
+        segmentacion['UNIDADES_VENDIDAS'].fillna(0).clip(lower=0)
+    )
+
+    total_unidades = segmentacion['UNIDADES_VENDIDAS'].sum()
+
+    if total_unidades <= 0:
+        msg = 'La suma de CANTIDAD_TOTAL debe ser mayor que cero.'
+        raise ValueError(
+            msg
+        )
+
+    segmentacion = (
+        segmentacion
+        .sort_values('UNIDADES_VENDIDAS', ascending=False)
+        .reset_index(drop=True)
+    )
+
+    # Participación individual y acumulada.
+    segmentacion['PARTICIPACION_VENTAS'] = (
+        segmentacion['UNIDADES_VENDIDAS'] / total_unidades
+    )
+    segmentacion['PARTICIPACION_ACUMULADA'] = (
+        segmentacion['PARTICIPACION_VENTAS'].cumsum()
+    )
+
+    # Acumulado previo: el producto que cruza un umbral pertenece
+    # al segmento que completa ese tramo de cobertura.
+    acumulado_anterior = (
+        segmentacion['PARTICIPACION_ACUMULADA']
+        - segmentacion['PARTICIPACION_VENTAS']
+    )
+
+    # A: <=corte_a | B: corte_a-corte_b | C: corte_b-corte_c | D: resto.
+    segmentacion['SEGMENTO_ABCD'] = np.select(
+        [
+            acumulado_anterior < corte_a,
+            acumulado_anterior < corte_b,
+            acumulado_anterior < corte_c,
+        ],
+        ['A', 'B', 'C'],
+        default='D',
+    )
+
+    return segmentacion
+
+
+
+#####----- 1.4 Función principal
 def main():
 
     #------- Inputs ---------#
@@ -882,6 +959,26 @@ def main():
     df_ventas=df_hist_venta,
     df_promos_query_basic=df_promos_basic,
     df_promos_query_tratada=df_promos_tratada)
+
+    # Parche: Asegurar que las columnas FLAG_PROMO_B y FLAG_PROMO_T sean
+    # de tipo int8 y no contengan valores nulos.
+    columnas_flag_promo = [
+        'FLAG_PROMO_B',
+        'FLAG_PROMO_T',
+    ]
+
+    df_historial[columnas_flag_promo] = (
+        df_historial[columnas_flag_promo]
+        .fillna(0)
+        .astype('int8'))
+
+    logging.info('##### [P4] Segmentación de productos por ventas #####')
+    ventas_por_producto = segmentar_por_ventas(
+        df_historial,
+        cortes_abcd=(0.70, 0.85, 0.95),
+    )
+
+    logging.info('[4.1] Frecuencias Segmentación: %s', ventas_por_producto['SEGMENTO_ABCD'].value_counts())  # noqa: E501
 
 if __name__ == '__main__':
 
