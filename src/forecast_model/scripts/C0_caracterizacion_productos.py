@@ -1846,6 +1846,433 @@ def caracterizar_variabilidad(
     return variabilidad_producto, parametros
 
 
+#####----- 1.8 Caracterización Promocional.
+
+def caracterizar_promociones_producto(
+    historial_ventas,
+    sufijo_promo='B',
+    umbral_uplift=0.40,
+    umbral_regularizacion=0.80,
+    incluir_mecanica=True,
+    minimo_participacion_mecanica=0.10,
+    minimo_mecanicas_distintas=2,
+):
+    """Caracteriza el comportamiento promocional de cada EAN y define, ya
+    en Capa 0, que modelo se usara y como se tratara la mecanica
+    promocional. Procesa todo el catalogo en un solo pase
+    (sin loop por EAN)
+
+    Casos de modelo segun intensidad promocional
+    (i = dias_promo / dias_venta)
+    -------------------------------------------------------------------------
+    - BASELINE            : i = 0.
+    - BASE_UPLIFT         : 0 < i <= umbral_uplift.
+    - BASE_UPLIFT_REGULAR : umbral_uplift < i <= umbral_regularizacion.
+    - BASELINE_SATURADO   : i > umbral_regularizacion (promo = normalidad).
+
+    Estadisticos descriptivos entregados por EAN
+    --------------------------------------------
+    - N_DIAS_OBSERVADOS, N_DIAS_PROMOCIONALES, INTENSIDAD_PROMOCIONAL
+    - PRECIO_MIN_PROMO / PRECIO_MAX_PROMO y la mecanica asociada a cada uno
+    - PRECIO_MEDIO_PROMO, CV_PRECIO_PROMO (variabilidad relativa)
+    - DESCUENTO_MIN_PROMO / DESCUENTO_MAX_PROMO / DESCUENTO_MEDIO_PROMO
+    - DESCUENTO_STD_PROMO, CV_DESCUENTO_PROMO (variabilidad de profundidad)
+    - N_MECANICAS_OBSERVADAS, N_MECANICAS_VALIDAS
+    - RACHA_MAX_MISMA_MECANICA (dias de venta consecutivos, misma mecanica)
+    """
+    sufijo_promo = str(sufijo_promo).strip().upper()
+    if sufijo_promo not in {'B', 'T'}:
+        msg = "`sufijo_promo` debe ser 'B' o 'T'."
+        raise ValueError(msg)
+    if not 0 < umbral_uplift < umbral_regularizacion <= 1:
+        msg_0 = 'Se requiere 0 < umbral_uplift < umbral_regularizacion <= 1.'
+        raise ValueError(
+            msg_0
+        )
+    if not 0 <= minimo_participacion_mecanica <= 1:
+        msg_1 = '`minimo_participacion_mecanica` debe estar en [0, 1].'
+        raise ValueError(
+            msg_1
+        )
+
+    columna_flag = f'FLAG_PROMO_{sufijo_promo}'
+    columna_descuento = f'porcentaje_descuento_{sufijo_promo}'
+    columna_mecanica = f'descripcion_evento_promocional_{sufijo_promo}'
+
+    columnas = {
+        'EAN', 'P_DATE', 'CANTIDAD_TOTAL', 'PRECIO_PROMEDIO',
+        columna_flag, columna_descuento, columna_mecanica,
+    }
+    faltantes = columnas.difference(historial_ventas.columns)
+    if faltantes:
+        msg_2 = f'Faltan columnas: {sorted(faltantes)}'
+        raise ValueError(msg_2)
+
+    trabajo = historial_ventas[list(columnas)].copy()
+
+    trabajo['EAN_KEY'] = (
+        trabajo['EAN'].astype('string').str.strip()
+        .str.replace(r'\.0$', '', regex=True)
+    )
+    trabajo['P_DATE'] = pd.to_datetime(
+        trabajo['P_DATE'], errors='coerce'
+    ).dt.normalize()
+    trabajo['CANTIDAD_TOTAL'] = pd.to_numeric(
+        trabajo['CANTIDAD_TOTAL'], errors='coerce'
+    )
+    trabajo['PRECIO_PROMEDIO'] = pd.to_numeric(
+        trabajo['PRECIO_PROMEDIO'], errors='coerce'
+    )
+    # Imputacion de descuento: NaN/negativo -> 0 (integridad de datos).
+    trabajo[columna_descuento] = (
+        pd.to_numeric(trabajo[columna_descuento], errors='coerce')
+        .fillna(0).clip(lower=0)
+    )
+
+    trabajo = trabajo.dropna(
+        subset=['EAN_KEY', 'P_DATE', 'CANTIDAD_TOTAL', 'PRECIO_PROMEDIO']
+    )
+    trabajo = trabajo.loc[
+        trabajo['CANTIDAD_TOTAL'].gt(0) & trabajo['PRECIO_PROMEDIO'].gt(0)
+    ]
+    if trabajo.empty:
+        msg_3 = 'No hay registros con venta y precio positivos.'
+        raise ValueError(msg_3)
+
+    trabajo[columna_flag] = (
+        pd.to_numeric(trabajo[columna_flag], errors='coerce')
+        .fillna(0).clip(lower=0).gt(0).astype(int)
+    )
+    trabajo[columna_mecanica] = (
+        trabajo[columna_mecanica].astype('string').str.strip()
+        .replace({'': pd.NA, 'nan': pd.NA, 'None': pd.NA, '<NA>': pd.NA})
+    )
+
+    # Consolidacion EAN-dia: flag=max, mecanica=first,
+    # precio/descuento=medio
+    consolidado = (
+        trabajo
+        .groupby(['EAN_KEY', 'P_DATE'], as_index=False)
+        .agg(
+            FLAG=(columna_flag, 'max'),
+            MECANICA=(columna_mecanica, 'first'),
+            PRECIO=('PRECIO_PROMEDIO', 'mean'),
+            DESCUENTO=(columna_descuento, 'mean'),
+        )
+        .sort_values(['EAN_KEY', 'P_DATE'])
+        .reset_index(drop=True)
+    )
+    # Ordinal de dia de venta por EAN (para rachas sobre dias de venta).
+    consolidado['ORD_VENTA'] = (
+        consolidado.groupby('EAN_KEY').cumcount()
+    )
+
+    # ---------------- Base de intensidad ----------------
+    base = (
+        consolidado
+        .groupby('EAN_KEY', as_index=False)
+        .agg(
+            N_DIAS_OBSERVADOS=('P_DATE', 'nunique'),
+            N_DIAS_PROMOCIONALES=('FLAG', 'sum'),
+        )
+    )
+    base['INTENSIDAD_PROMOCIONAL'] = (
+        base['N_DIAS_PROMOCIONALES'] / base['N_DIAS_OBSERVADOS']
+    )
+
+    # ---------------- Precio y descuento promocional ----------------
+    promo = consolidado.loc[consolidado['FLAG'].eq(1)].copy()
+
+    precio_stats = (
+        promo.groupby('EAN_KEY')
+        .agg(
+            PRECIO_MIN_PROMO=('PRECIO', 'min'),
+            PRECIO_MAX_PROMO=('PRECIO', 'max'),
+            PRECIO_MEDIO_PROMO=('PRECIO', 'mean'),
+            PRECIO_STD_PROMO=('PRECIO', 'std'),
+            DESCUENTO_MIN_PROMO=('DESCUENTO', 'min'),
+            DESCUENTO_MAX_PROMO=('DESCUENTO', 'max'),
+            DESCUENTO_MEDIO_PROMO=('DESCUENTO', 'mean'),
+            DESCUENTO_STD_PROMO=('DESCUENTO', 'std'),
+        )
+    )
+    precio_stats['CV_PRECIO_PROMO'] = (
+        precio_stats['PRECIO_STD_PROMO']
+        / precio_stats['PRECIO_MEDIO_PROMO']
+    ).replace([np.inf, -np.inf], np.nan)
+    precio_stats['CV_DESCUENTO_PROMO'] = (
+        precio_stats['DESCUENTO_STD_PROMO']
+        / precio_stats['DESCUENTO_MEDIO_PROMO']
+    ).replace([np.inf, -np.inf], np.nan)
+
+    # Mecanica asociada al precio min/max (idxmin/idxmax sobre filas promo)
+    idx_min = promo.groupby('EAN_KEY')['PRECIO'].idxmin()
+    idx_max = promo.groupby('EAN_KEY')['PRECIO'].idxmax()
+    mecanica_precio = pd.DataFrame({
+        'MECANICA_PRECIO_MIN': promo.loc[idx_min, 'MECANICA'].values,  # noqa: PD011
+        'MECANICA_PRECIO_MAX': promo.loc[idx_max, 'MECANICA'].values,  # noqa: PD011
+    })
+    mecanica_precio['EAN_KEY'] = promo.loc[idx_min, 'EAN_KEY'].values  # noqa: PD011
+
+    # ---------------- Mecanica: participacion y variabilidad ------------
+    promo_mec = promo.loc[promo['MECANICA'].notna()]
+    conteo = (
+        promo_mec.groupby(['EAN_KEY', 'MECANICA']).size()
+        .reset_index(name='N')
+    )
+    conteo['PARTICIPACION'] = (
+        conteo['N'] / conteo.groupby('EAN_KEY')['N'].transform('sum')
+    )
+    n_observadas = (
+        conteo.groupby('EAN_KEY')['MECANICA'].nunique()
+        .rename('N_MECANICAS_OBSERVADAS')
+    )
+    validas = (
+        conteo.loc[conteo['PARTICIPACION'].ge(minimo_participacion_mecanica)]
+        .sort_values(['EAN_KEY', 'N'], ascending=[True, False])
+    )
+    mecanicas_validas = (
+        validas.groupby('EAN_KEY')['MECANICA'].agg(list)
+        .rename('MECANICAS_VALIDAS')
+    )
+
+    # ---------------- Racha maxima (dias de venta consecutivos) ---------
+    # Nueva racha cuando cambia el EAN, la mecanica, o los dias de venta no
+    # son consecutivos en la secuencia de ventas del EAN (ORD_VENTA no
+    # contiguo). Se ignoran los huecos de calendario: dos ventas seguidas
+    # cuentan como continuas aunque medien semanas sin venta.
+
+    cambio_ean = promo['EAN_KEY'].ne(promo['EAN_KEY'].shift())
+    cambio_mec = promo['MECANICA'].ne(promo['MECANICA'].shift())
+    gap_venta = promo['ORD_VENTA'].diff().ne(1)
+    promo['ID_RACHA'] = (cambio_ean | cambio_mec | gap_venta).cumsum()
+    largo_rachas = (
+        promo.groupby(['EAN_KEY', 'ID_RACHA']).size()
+        .groupby('EAN_KEY').max()
+        .rename('RACHA_MAX_MISMA_MECANICA')
+    )
+
+    # ---------------- Ensamble ----------------
+    caracterizacion = (
+        base
+        .merge(precio_stats, on='EAN_KEY', how='left')
+        .merge(mecanica_precio, on='EAN_KEY', how='left')
+        .merge(n_observadas, on='EAN_KEY', how='left')
+        .merge(mecanicas_validas, on='EAN_KEY', how='left')
+        .merge(largo_rachas, on='EAN_KEY', how='left')
+    )
+    caracterizacion['N_MECANICAS_OBSERVADAS'] = (
+        caracterizacion['N_MECANICAS_OBSERVADAS'].fillna(0).astype(int)
+    )
+    caracterizacion['RACHA_MAX_MISMA_MECANICA'] = (
+        caracterizacion['RACHA_MAX_MISMA_MECANICA'].fillna(0).astype(int)
+    )
+    caracterizacion['MECANICAS_VALIDAS'] = caracterizacion[
+        'MECANICAS_VALIDAS'
+    ].apply(lambda valor: valor if isinstance(valor, list) else [])
+    caracterizacion['N_MECANICAS_VALIDAS'] = (
+        caracterizacion['MECANICAS_VALIDAS'].str.len()
+    )
+
+    # ---------------- Asignacion de caso de modelo (4 casos) ------------
+    intensidad = caracterizacion['INTENSIDAD_PROMOCIONAL']
+    caracterizacion['CASO_MODELO'] = np.select(
+        [
+            intensidad.eq(0),
+            intensidad.le(umbral_uplift),
+            intensidad.le(umbral_regularizacion),
+        ],
+        ['BASELINE', 'BASE_UPLIFT', 'BASE_UPLIFT_REGULAR'],
+        default='BASELINE_SATURADO',
+    )
+    admite_uplift = caracterizacion['CASO_MODELO'].isin(
+        ['BASE_UPLIFT', 'BASE_UPLIFT_REGULAR']
+    )
+    caracterizacion['INCLUIR_MECANICA'] = (
+        bool(incluir_mecanica)
+        & admite_uplift
+        & caracterizacion['N_MECANICAS_VALIDAS'].ge(minimo_mecanicas_distintas)
+    )
+    caracterizacion['MECANICA_REFERENCIA'] = caracterizacion.apply(
+        lambda fila: (
+            fila['MECANICAS_VALIDAS'][0]
+            if fila['INCLUIR_MECANICA'] and fila['MECANICAS_VALIDAS']
+            else None
+        ),
+        axis=1,
+    )
+    caracterizacion['ES_REGULARIZADO'] = caracterizacion['CASO_MODELO'].eq(
+        'BASE_UPLIFT_REGULAR'
+    )
+    caracterizacion['MODELO_SUGERIDO'] = np.select(
+        [
+            caracterizacion['CASO_MODELO'].isin(
+                ['BASELINE', 'BASELINE_SATURADO']
+            ),
+            caracterizacion['CASO_MODELO'].eq('BASE_UPLIFT'),
+        ],
+        ['GLM-NB (baseline)', 'GLM-NB'],
+        default='GLM-NB (Ridge)',
+    )
+    caracterizacion['ESTRATEGIA_MECANICA'] = np.where(
+        caracterizacion['INCLUIR_MECANICA'],
+        'DUMMIES_M_MENOS_1_CON_REFERENCIA', 'SIN_MECANICA',
+    )
+
+    caracterizacion = (
+        caracterizacion
+        .rename(columns={'EAN_KEY': 'EAN'})
+        .sort_values(
+            ['CASO_MODELO', 'INTENSIDAD_PROMOCIONAL'],
+            ascending=[True, False],
+        )
+        .reset_index(drop=True)
+    )
+
+    parametros = {
+        'SUFIJO_PROMO': sufijo_promo,
+        'COLUMNA_FLAG': columna_flag,
+        'COLUMNA_DESCUENTO': columna_descuento,
+        'COLUMNA_MECANICA': columna_mecanica,
+        'UMBRAL_UPLIFT': umbral_uplift,
+        'UMBRAL_REGULARIZACION': umbral_regularizacion,
+        'INCLUIR_MECANICA': incluir_mecanica,
+        'MINIMO_PARTICIPACION_MECANICA': minimo_participacion_mecanica,
+        'MINIMO_MECANICAS_DISTINTAS': minimo_mecanicas_distintas,
+    }
+    return caracterizacion, parametros
+
+
+#####----- 1.9 Segmentación ADI-CV
+
+def clasificar_tipologia_demanda(
+    historial_ventas,
+    umbral_adi=1.32,
+    umbral_cv2=0.49,
+):
+    """Clasifica cada EAN en una tipologia de demanda (Syntetos-Boylan) a
+    partir de la regularidad (ADI) y la variabilidad del tamano (CV2).
+
+    Se procesa todo el catalogo en un solo pase, usando solo dias con
+    venta positiva.
+
+    Indicadores
+    -----------
+    ADI = N_DIAS_OBSERVADOS / N_DIAS_CON_VENTA
+        Intervalo medio entre ventas. Alto => demanda con muchas pausas.
+    CV2 = (std(cantidad) / mean(cantidad)) ** 2
+        Variabilidad relativa del tamano de venta (solo dias con venta).
+
+    Tipologias (umbrales parametrizables)
+    -------------------------------------
+    - SUAVE        : ADI <  umbral_adi y CV2 <  umbral_cv2.
+    - ERRATICA     : ADI <  umbral_adi y CV2 >= umbral_cv2.
+    - INTERMITENTE : ADI >= umbral_adi y CV2 <  umbral_cv2.
+    - GRUMOSA      : ADI >= umbral_adi y CV2 >= umbral_cv2.
+
+    Parametros
+    ----------
+    historial_ventas : pd.DataFrame
+        Debe contener EAN, P_DATE y CANTIDAD_TOTAL.
+    umbral_adi : float, default=1.32
+        Corte de ADI que separa demanda regular de intermitente.
+    umbral_cv2 : float, default=0.49
+        Corte de CV2 que separa volumen estable de disperso.
+
+    Retorna
+    -------
+    tuple[pd.DataFrame, dict]
+        tipologia (una fila por EAN) y parametros usados.
+    """
+    columnas = {'EAN', 'P_DATE', 'CANTIDAD_TOTAL'}
+    faltantes = columnas.difference(historial_ventas.columns)
+    if faltantes:
+        msg = f'Faltan columnas: {sorted(faltantes)}'
+        raise ValueError(msg)
+    if umbral_adi <= 0 or umbral_cv2 < 0:
+        msg = 'umbral_adi debe ser > 0 y umbral_cv2 debe ser >= 0.'
+        raise ValueError(
+            msg
+        )
+
+    trabajo = historial_ventas[list(columnas)].copy()
+    trabajo['EAN_KEY'] = (
+        trabajo['EAN'].astype('string').str.strip()
+        .str.replace(r'\.0$', '', regex=True)
+    )
+    trabajo['P_DATE'] = pd.to_datetime(
+        trabajo['P_DATE'], errors='coerce'
+    ).dt.normalize()
+    trabajo['CANTIDAD_TOTAL'] = pd.to_numeric(
+        trabajo['CANTIDAD_TOTAL'], errors='coerce'
+    )
+    trabajo = trabajo.dropna(
+        subset=['EAN_KEY', 'P_DATE', 'CANTIDAD_TOTAL']
+    )
+    trabajo = trabajo.loc[trabajo['CANTIDAD_TOTAL'].gt(0)]
+    if trabajo.empty:
+        msg = 'No hay registros con venta positiva.'
+        raise ValueError(msg)
+
+    # Consolidacion EAN-dia (una venta por dia calendario).
+    consolidado = (
+        trabajo
+        .groupby(['EAN_KEY', 'P_DATE'], as_index=False)
+        .agg(CANTIDAD=('CANTIDAD_TOTAL', 'sum'))
+    )
+
+    tipologia = (
+        consolidado
+        .groupby('EAN_KEY', as_index=False)
+        .agg(
+            N_DIAS_CON_VENTA=('P_DATE', 'nunique'),
+            CANTIDAD_MEDIA=('CANTIDAD', 'mean'),
+            CANTIDAD_STD=('CANTIDAD', 'std'),
+            FECHA_PRIMERA_VENTA=('P_DATE', 'min'),
+            FECHA_ULTIMA_VENTA=('P_DATE', 'max'),
+        )
+    )
+
+    # Dias observados = ventana calendario entre primera y ultima venta.
+    tipologia['N_DIAS_OBSERVADOS'] = (
+        (tipologia['FECHA_ULTIMA_VENTA']
+         - tipologia['FECHA_PRIMERA_VENTA']).dt.days + 1
+    )
+    tipologia['ADI'] = (
+        tipologia['N_DIAS_OBSERVADOS'] / tipologia['N_DIAS_CON_VENTA']
+    )
+    tipologia['CV2'] = (
+        tipologia['CANTIDAD_STD'] / tipologia['CANTIDAD_MEDIA']
+    ).pow(2)
+    # Un solo dia de venta => std NaN; CV2 no definido, se asume 0.
+    tipologia['CV2'] = tipologia['CV2'].fillna(0.0)
+
+    adi_alta = tipologia['ADI'].ge(umbral_adi)
+    cv2_alto = tipologia['CV2'].ge(umbral_cv2)
+    tipologia['TIPOLOGIA_DEMANDA'] = np.select(
+        [
+            ~adi_alta & ~cv2_alto,
+            ~adi_alta & cv2_alto,
+            adi_alta & ~cv2_alto,
+        ],
+        ['SUAVE', 'ERRATICA', 'INTERMITENTE'],
+        default='GRUMOSA',
+    )
+
+    tipologia = (
+        tipologia
+        .rename(columns={'EAN_KEY': 'EAN'})
+        .sort_values(['TIPOLOGIA_DEMANDA', 'ADI'], ascending=[True, False])
+        .reset_index(drop=True)
+    )
+
+    parametros = {
+        'UMBRAL_ADI': umbral_adi,
+        'UMBRAL_CV2': umbral_cv2,
+    }
+    return tipologia, parametros
+
+
 def main():
 
     #------- Inputs ---------#
@@ -2055,8 +2482,40 @@ def main():
         left=resumen_global,
         right=variabilidad_producto.drop('DIAS_CON_VENTA_EVALUADOS', axis=1),
         on='EAN',
+        how='inner')
+
+    #------------------ 4.6 Caracterización Promocional ------------ #
+    logging.info('[4.6] Caracterización Promocional')
+
+    df_caracterizacion_promos, _ = caracterizar_promociones_producto(
+        df_historial,
+        sufijo_promo='B',
+        umbral_uplift=0.40,
+        umbral_regularizacion=0.80,
+        incluir_mecanica=True,
+        minimo_participacion_mecanica=0.10,
+        minimo_mecanicas_distintas=2)
+
+    resumen_global = pd.merge(  # noqa: PD015
+        left=resumen_global,
+        right=df_caracterizacion_promos.drop('N_DIAS_OBSERVADOS', axis=1),
+        on='EAN',
+        how='inner')
+
+    #------------- 4.7 Segmentación Variabilidad: ADI /CV^2 -------------#
+    logging.info('[4.7] Segmentación ADI/CV^2')
+    df_tipologia_demanda, _ = clasificar_tipologia_demanda(df_historial)
+
+    resumen_global = pd.merge(  # noqa: PD015
+        left=resumen_global,
+        right=df_tipologia_demanda.drop('N_DIAS_CON_VENTA', axis=1),
+        on='EAN',
         how='inner'
     )
+
+    logging.info('[4.7] Frecuencia Segmentación ADI/CV^2 :',df_tipologia_demanda['TIPOLOGIA_DEMANDA'].value_counts())  # noqa: E501
+
+
 if __name__ == '__main__':
 
     main()
