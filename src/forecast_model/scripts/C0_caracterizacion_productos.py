@@ -5,16 +5,10 @@ import os
 import sys
 import logging
 import argparse
-from string import Template
 from logging import config
-from pathlib import Path
 
 # Pip
-import numpy as np
-import pandas as pd
-from boto3 import Session
 from google.cloud.bigquery import Client
-from dateutil.relativedelta import relativedelta
 
 
 directorio_actual = os.path.abspath(os.curdir)
@@ -28,8 +22,6 @@ while directorio_actual != os.path.sep:
         sys.path.pop()  # Remueve el directorio que no contenía el módulo
         directorio_actual = os.path.dirname(directorio_actual)  # Retrocede
 
-
-import statsmodels.api as sm
 
 import common.gcp_extended.secretsmanager as secretmanager
 import common.office365_extended.sharepoint as sp
