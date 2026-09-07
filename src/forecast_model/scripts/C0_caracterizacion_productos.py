@@ -501,22 +501,41 @@ def main():
     logging.info(f'store_banner: {store_banner}')
 
 
+    logging.info('##### [P1] Datasets queries #####')
 
     query_forecast = QUERY_FORECAST['query_data_procesada'].substitute(
         path_table=path_table)
-
-
     df_hist_venta = readBigQuery(
                     query=query_forecast,
                     user=usuario,
-                    gbq_client=gbq_client
-                    )
+                    gbq_client=gbq_client)
 
-    print('Dimensiones df hist_venta: ', df_hist_venta.shape)
-    print(f'{df_hist_venta.memory_usage(deep=True).sum() / 1024**2:.2f} MB')
+    logging.info('[1.1] Dimensiones df hist_venta: %s', df_hist_venta.shape)
+    logging.info(f'[1.1] Memoria utilizada: {df_hist_venta.memory_usage(deep=True).sum() / 1024**2:.2f} MB')  # noqa: E501
 
 
-    logging.info('Final del código')
+
+    query_promos_basic = SQL_QUERIES_ALL_PROMOS['query_promos_forecasting'].substitute(
+            path_table=path_table)
+    df_promos_basic = readBigQuery(
+        query=query_promos_basic,
+        user=usuario,
+        gbq_client=gbq_client)
+
+    logging.info('[1.2] Dimensiones df promos basic: %s', df_promos_basic.shape)
+    logging.info(f'[1.2] Memoria utilizada: {df_promos_basic.memory_usage(deep=True).sum() / 1024**2:.2f} MB')  # noqa: E501
+
+
+    query_promos_tratada = SQL_QUERIES_ALL_PROMOS_COMBINACION['query_promos_forecasting_combinacion'].substitute(  # noqa: E501
+            path_table=path_table)
+
+    df_promos_tratada = readBigQuery(
+        query=query_promos_tratada,
+        user=usuario,
+        gbq_client=gbq_client)
+
+    logging.info('[1.3] Dimensiones df promos tratada: %s', df_promos_tratada.shape)
+    logging.info(f'[1.3] Memoria utilizada: {df_promos_tratada.memory_usage(deep=True).sum() / 1024**2:.2f} MB')  # noqa: E501
 
 if __name__ == '__main__':
 
