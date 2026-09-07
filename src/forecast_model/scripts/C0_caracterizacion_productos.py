@@ -511,6 +511,7 @@ def main():
                     gbq_client=gbq_client)
 
     logging.info('[1.1] Dimensiones df hist_venta: %s', df_hist_venta.shape)
+    logging.info('[1.1] Eans únicos: %s', df_hist_venta['ean'].nunique())
     logging.info(f'[1.1] Memoria utilizada: {df_hist_venta.memory_usage(deep=True).sum() / 1024**2:.2f} MB')  # noqa: E501
 
 
@@ -523,6 +524,7 @@ def main():
         gbq_client=gbq_client)
 
     logging.info('[1.2] Dimensiones df promos basic: %s', df_promos_basic.shape)
+    logging.info('[1.2] Eans únicos: %s', df_promos_basic['ean'].nunique())
     logging.info(f'[1.2] Memoria utilizada: {df_promos_basic.memory_usage(deep=True).sum() / 1024**2:.2f} MB')  # noqa: E501
 
 
@@ -535,6 +537,7 @@ def main():
         gbq_client=gbq_client)
 
     logging.info('[1.3] Dimensiones df promos tratada: %s', df_promos_tratada.shape)
+    logging.info('[1.3] Eans únicos: %s', df_promos_tratada['ean'].nunique())
     logging.info(f'[1.3] Memoria utilizada: {df_promos_tratada.memory_usage(deep=True).sum() / 1024**2:.2f} MB')  # noqa: E501
 
 if __name__ == '__main__':
