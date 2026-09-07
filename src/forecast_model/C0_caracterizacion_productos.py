@@ -20,7 +20,7 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'pricing'
+PROJECT_NAME = 'forecast_model'
 dag_id = 'forecast_capa0_caracterizacion_productos'  #<----------- CAMBIAR ACA TAMBIEN
 schedule_interval = None
 catchup = False
