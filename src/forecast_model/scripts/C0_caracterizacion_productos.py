@@ -478,6 +478,7 @@ parser.add_argument(
 )
 
 usuario = 'pricing'
+MIN_DIAS = 150
 
 
 ##########---------- 1. Funciones principales ----------##########
@@ -881,7 +882,283 @@ def segmentar_por_ventas(historial, cortes_abcd=(0.80, 0.90, 0.95)):
 
 
 
-#####----- 1.4 Función principal
+#####----- 1.4 Detección productos muertos
+
+def caracterizar_productos(
+    historial_ventas,
+    ventas_por_producto,
+    dias_recientes=28,
+    dias_base=90,
+    minimo_dias_historial=90,
+    multiplicador_inactividad=3.0,
+    umbrales_ratio=(0.25, 0.60, 1.50),
+):
+    """Caracteriza todos los productos (todos los segmentos ABCD) segun su
+    actividad reciente vs. su ventana historica base, acumulando el
+    diagnostico en un unico DataFrame por EAN.
+
+    Estados: MUERTO PROBABLE, CAIDA SEVERA, CAIDA MODERADA, NORMAL,
+    EN CRECIMIENTO, HISTORIAL INSUFICIENTE.
+
+    umbrales_ratio : tuple(float, float, float)
+        (severa, moderada, crecimiento) sobre el ratio de venta diaria
+        promedio reciente / base:
+        - ratio < severa      -> CAIDA SEVERA
+        - ratio < moderada    -> CAIDA MODERADA
+        - ratio > crecimiento -> EN CRECIMIENTO
+        - resto               -> NORMAL
+    """
+    corte_severa, corte_moderada, corte_crecimiento = umbrales_ratio
+
+    columnas_ventas = {'EAN', 'P_DATE', 'CANTIDAD_TOTAL'}
+    columnas_segmentos = {'EAN', 'SEGMENTO_ABCD'}
+
+    faltantes_ventas = columnas_ventas.difference(historial_ventas.columns)
+    faltantes_segmentos = columnas_segmentos.difference(
+        ventas_por_producto.columns
+    )
+
+    if faltantes_ventas:
+        msg = f'Faltan columnas en historial_ventas: {sorted(faltantes_ventas)}'
+        raise ValueError(
+            msg
+        )
+    if faltantes_segmentos:
+        msg = (
+            'Faltan columnas en ventas_por_producto: '
+            f'{sorted(faltantes_segmentos)}'
+        )
+        raise ValueError(
+            msg
+        )
+
+    for nombre, valor in [
+        ('dias_recientes', dias_recientes),
+        ('dias_base', dias_base),
+        ('minimo_dias_historial', minimo_dias_historial),
+        ('multiplicador_inactividad', multiplicador_inactividad),
+    ]:
+        if valor <= 0:
+            msg_0 = f'`{nombre}` debe ser mayor que cero.'
+            raise ValueError(msg_0)
+
+    if not 0 < corte_severa < corte_moderada < 1 <= corte_crecimiento:
+        msg = (
+            'umbrales_ratio debe cumplir 0 < severa < moderada < 1 <= '
+            'crecimiento.'
+        )
+        raise ValueError(
+            msg
+        )
+
+    def normalizar_ean(serie):
+        return (
+            serie.astype('string')
+            .str.strip()
+            .str.replace(r'\.0$', '', regex=True)
+        )
+
+    # ------------------------------------------------------------------
+    # 1. Mapa EAN -> segmento
+    # ------------------------------------------------------------------
+    segmentos = ventas_por_producto[['EAN', 'SEGMENTO_ABCD']].copy()
+    segmentos['EAN'] = normalizar_ean(segmentos['EAN'])
+    segmentos['SEGMENTO_ABCD'] = (
+        segmentos['SEGMENTO_ABCD'].astype('string').str.strip().str.upper()
+    )
+    segmentos = segmentos.dropna(
+        subset=['EAN', 'SEGMENTO_ABCD']
+    ).drop_duplicates(subset=['EAN'])
+
+    mapa_segmento = segmentos.set_index('EAN')['SEGMENTO_ABCD']
+
+    # ------------------------------------------------------------------
+    # 2. Historial: solo columnas usadas, ventas efectivas
+    # ------------------------------------------------------------------
+    ventas = historial_ventas[['EAN', 'P_DATE', 'CANTIDAD_TOTAL']].copy()
+    ventas['EAN'] = normalizar_ean(ventas['EAN'])
+    ventas = ventas.loc[ventas['EAN'].isin(mapa_segmento.index)]
+    ventas['P_DATE'] = pd.to_datetime(
+        ventas['P_DATE'], errors='coerce'
+    ).dt.normalize()
+    ventas['CANTIDAD_TOTAL'] = pd.to_numeric(
+        ventas['CANTIDAD_TOTAL'], errors='coerce'
+    )
+    ventas = ventas.dropna(subset=['EAN', 'P_DATE', 'CANTIDAD_TOTAL'])
+    ventas = ventas.loc[ventas['CANTIDAD_TOTAL'].gt(0)]
+
+    if ventas.empty:
+        msg = 'No hay registros con CANTIDAD_TOTAL > 0.'
+        raise ValueError(msg)
+
+    ventas_diarias = ventas.groupby(
+        ['EAN', 'P_DATE'], as_index=False
+    ).agg(CANTIDAD_TOTAL=('CANTIDAD_TOTAL', 'sum'))
+
+    fecha_corte = ventas_diarias['P_DATE'].max()
+    inicio_reciente = fecha_corte - pd.Timedelta(days=dias_recientes - 1)
+    fin_base = inicio_reciente - pd.Timedelta(days=1)
+    inicio_base = fin_base - pd.Timedelta(days=dias_base - 1)
+
+    resultados = []
+
+    # ------------------------------------------------------------------
+    # 3. Diagnostico por EAN (todos los segmentos)
+    # ------------------------------------------------------------------
+    for ean, producto in ventas_diarias.groupby('EAN'):
+        producto = producto.sort_values('P_DATE')
+        fechas = producto['P_DATE']
+
+        primera_venta = fechas.min()
+        ultima_venta = fechas.max()
+        dias_desde_ultima_venta = int((fecha_corte - ultima_venta).days)
+        antiguedad_dias = int((fecha_corte - primera_venta).days + 1)
+
+        intervalos = fechas.diff().dt.days.dropna()
+        intervalo_mediano = (
+            float(intervalos.median()) if not intervalos.empty else np.nan
+        )
+        intervalo_p90 = (
+            float(intervalos.quantile(0.90))
+            if not intervalos.empty
+            else np.nan
+        )
+
+        mask_base = fechas.between(inicio_base, fin_base)
+        mask_reciente = fechas.between(inicio_reciente, fecha_corte)
+
+        cantidad_base = float(producto.loc[mask_base, 'CANTIDAD_TOTAL'].sum())
+        cantidad_reciente = float(
+            producto.loc[mask_reciente, 'CANTIDAD_TOTAL'].sum()
+        )
+        dias_venta_base = int(mask_base.sum())
+        dias_venta_reciente = int(mask_reciente.sum())
+
+        promedio_diario_base = cantidad_base / dias_base
+        promedio_diario_reciente = cantidad_reciente / dias_recientes
+        frecuencia_semanal_base = dias_venta_base / dias_base * 7
+        frecuencia_semanal_reciente = dias_venta_reciente / dias_recientes * 7
+
+        if promedio_diario_base > 0:
+            ratio_cantidad = promedio_diario_reciente / promedio_diario_base
+            variacion_cantidad_pct = (ratio_cantidad - 1) * 100
+        else:
+            ratio_cantidad = np.nan
+            variacion_cantidad_pct = np.nan
+
+        ratio_frecuencia = (
+            frecuencia_semanal_reciente / frecuencia_semanal_base
+            if frecuencia_semanal_base > 0
+            else np.nan
+        )
+
+        if pd.notna(intervalo_p90):
+            umbral_inactividad = max(
+                dias_recientes,
+                int(np.ceil(intervalo_p90 * multiplicador_inactividad)),
+            )
+        else:
+            umbral_inactividad = dias_recientes
+
+        historial_suficiente = (
+            antiguedad_dias >= minimo_dias_historial
+            and dias_venta_base >= 2
+            and cantidad_base > 0
+        )
+
+        if not historial_suficiente:
+            estado = 'HISTORIAL INSUFICIENTE'
+        elif (
+            cantidad_reciente == 0
+            and dias_desde_ultima_venta >= umbral_inactividad
+        ):
+            estado = 'MUERTO PROBABLE'
+        elif ratio_cantidad < corte_severa:
+            estado = 'CAIDA SEVERA'
+        elif ratio_cantidad < corte_moderada:
+            estado = 'CAIDA MODERADA'
+        elif ratio_cantidad > corte_crecimiento:
+            estado = 'EN CRECIMIENTO'
+        else:
+            estado = 'NORMAL'
+
+        resultados.append({
+            'EAN': ean,
+            'SEGMENTO_ABCD': mapa_segmento.get(ean),
+            'ESTADO': estado,
+            'PRIMERA_VENTA': primera_venta,
+            'ULTIMA_VENTA': ultima_venta,
+            'DIAS_DESDE_ULTIMA_VENTA': dias_desde_ultima_venta,
+            'ANTIGUEDAD_DIAS': antiguedad_dias,
+            'DIAS_CON_VENTA_TOTAL': int(fechas.nunique()),
+            'CANTIDAD_HISTORICA_TOTAL': float(
+                producto['CANTIDAD_TOTAL'].sum()
+            ),
+            'INTERVALO_MEDIANO_VENTAS': intervalo_mediano,
+            'INTERVALO_P90_VENTAS': intervalo_p90,
+            'UMBRAL_INACTIVIDAD_DIAS': umbral_inactividad,
+            'CANTIDAD_PERIODO_BASE': cantidad_base,
+            'CANTIDAD_PERIODO_RECIENTE': cantidad_reciente,
+            'PROMEDIO_DIARIO_BASE': promedio_diario_base,
+            'PROMEDIO_DIARIO_RECIENTE': promedio_diario_reciente,
+            'DIAS_VENTA_BASE': dias_venta_base,
+            'DIAS_VENTA_RECIENTE': dias_venta_reciente,
+            'FRECUENCIA_SEMANAL_BASE': frecuencia_semanal_base,
+            'FRECUENCIA_SEMANAL_RECIENTE': frecuencia_semanal_reciente,
+            'RATIO_CANTIDAD_RECIENTE_BASE': ratio_cantidad,
+            'VARIACION_CANTIDAD_PCT': variacion_cantidad_pct,
+            'RATIO_FRECUENCIA_RECIENTE_BASE': ratio_frecuencia,
+        })
+
+    caracterizacion = pd.DataFrame(resultados)
+
+    # ------------------------------------------------------------------
+    # 4. Orden de salida (por segmento, luego por severidad)
+    # ------------------------------------------------------------------
+    orden_estados = {
+        'MUERTO PROBABLE': 1,
+        'CAIDA SEVERA': 2,
+        'CAIDA MODERADA': 3,
+        'NORMAL': 4,
+        'EN CRECIMIENTO': 5,
+        'HISTORIAL INSUFICIENTE': 6,
+    }
+    orden_segmentos = {'A': 1, 'B': 2, 'C': 3, 'D': 4}
+
+    caracterizacion = (
+        caracterizacion
+        .assign(
+            ORDEN_SEGMENTO=caracterizacion['SEGMENTO_ABCD'].map(
+                orden_segmentos
+            ),
+            ORDEN_ESTADO=caracterizacion['ESTADO'].map(orden_estados),
+        )
+        .sort_values(
+            ['ORDEN_SEGMENTO', 'ORDEN_ESTADO', 'DIAS_DESDE_ULTIMA_VENTA',
+             'RATIO_CANTIDAD_RECIENTE_BASE'],
+            ascending=[True, True, False, True],
+            na_position='last',
+        )
+        .drop(columns=['ORDEN_SEGMENTO', 'ORDEN_ESTADO'])
+        .reset_index(drop=True)
+    )
+
+    parametros = {
+        'FECHA_CORTE': fecha_corte,
+        'INICIO_PERIODO_BASE': inicio_base,
+        'FIN_PERIODO_BASE': fin_base,
+        'INICIO_PERIODO_RECIENTE': inicio_reciente,
+        'FIN_PERIODO_RECIENTE': fecha_corte,
+        'DIAS_BASE': dias_base,
+        'DIAS_RECIENTES': dias_recientes,
+        'MINIMO_DIAS_HISTORIAL': minimo_dias_historial,
+        'MULTIPLICADOR_INACTIVIDAD': multiplicador_inactividad,
+        'UMBRALES_RATIO': umbrales_ratio,
+    }
+
+    return caracterizacion, parametros
+
+
 def main():
 
     #------- Inputs ---------#
@@ -972,13 +1249,50 @@ def main():
         .fillna(0)
         .astype('int8'))
 
-    logging.info('##### [P4] Segmentación de productos por ventas #####')
+    ##-------------------------------------------------------------------##
+    ########---------- [P4] Caracterización de productos ----------########
+    ##-------------------------------------------------------------------##
+
+
+    #---------- 4.1 Segmentación de productos por ventas --------#
+    logging.info('##### [4.1] Segmentación de productos por ventas #####')
     ventas_por_producto = segmentar_por_ventas(
         df_historial,
-        cortes_abcd=(0.70, 0.85, 0.95),
+        cortes_abcd=(0.80, 0.90, 0.95),
     )
 
     logging.info('[4.1] Frecuencias Segmentación: %s', ventas_por_producto['SEGMENTO_ABCD'].value_counts())  # noqa: E501
+
+    # Printeo informativo (omitible)
+    segmentos = ['A','B','C','D']
+    logging.info('[4.1] Cantidad de productos bajo %d días por Segmento: ', MIN_DIAS)
+    for seg in segmentos:
+        mascara = (
+            ventas_por_producto['SEGMENTO_ABCD'].eq(seg)
+            & ventas_por_producto['DIAS_CON_VENTA'].le(MIN_DIAS))
+
+        logging.info(f'[4.1] #-{seg}: {ventas_por_producto.loc[mascara].shape[0]}')
+
+
+    #----------- 4.2 Detección de productos muertos ----------- #
+    logging.info('[4.2] Detección de productos muertos: ')
+    caracterizacion_caidas, _ = caracterizar_productos(
+    df_historial,
+    ventas_por_producto,
+    dias_recientes=28,
+    dias_base=90,
+    minimo_dias_historial=90,
+    multiplicador_inactividad=3.0,
+    umbrales_ratio=(0.25, 0.60, 1.50))
+
+    logging.info('[4.2] Resumen Detección de caídas por segmento')
+    frecuencia_estados = pd.crosstab(
+        caracterizacion_caidas['SEGMENTO_ABCD'],
+        caracterizacion_caidas['ESTADO'],
+        margins=True,
+        margins_name='TOTAL')
+
+    logging.info(frecuencia_estados)
 
 if __name__ == '__main__':
 
