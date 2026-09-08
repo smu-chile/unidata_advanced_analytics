@@ -812,7 +812,10 @@ def main() -> None:  # noqa: D103
     esquema = 'PRECIO_PROMOCIONES'
     tabla = 'BASELINE_PANEL'
 
-    dataset_regression = 'TMP'
+    # Las 2 tablas de regresion (fisica y ecommerce) migraron de TMP a
+    # PRECIO_PROMOCIONES -- ver processed_regression_data.py y
+    # ecommerce_processed_regression_data.py.
+    dataset_regression = 'PRECIO_PROMOCIONES'
 
     # Ecommerce tiene su PROPIA tabla productiva de regresion.
     if store_banner in MAPA_BANNER_REGRESSION_ECOMMERCE:
