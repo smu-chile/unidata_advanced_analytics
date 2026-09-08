@@ -38,7 +38,7 @@ with open(
 # Confirmar que coincide con la carpeta real del repositorio antes
 # de subir -- si el proyecto vive en otra ruta, solo hay que ajustar
 # esta constante, nada mas.
-PROJECT_NAME = 'ecommerce_regression_data'
+PROJECT_NAME = 'pricing_effects'
 
 STORE_BANNER_LIST = [
     'Unimarc',
