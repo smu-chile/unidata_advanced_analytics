@@ -10,6 +10,7 @@ PRECIO_PROMOCIONES.ELASTICITY_PR en BigQuery.
 """
 from __future__ import annotations
 
+import gc
 import os
 import time
 import logging
@@ -166,10 +167,14 @@ MODELOS_POR_TIPO = {
     'rampa_descendente': ['GAM_declive', 'RDD_estabilizado', 'GAM'],
     'discontinuidad': ['GAM', 'RDD'],
 }
-N_JOBS = -1
-BATCH_SIZE = 100
-BATCH_SIZE_IC = 100
-N_JOBS_IC = -1
+N_JOBS = 2  # reducido de -1 -- loky (procesos separados) duplica memoria
+            # por worker; 4 workers con -1 causo OOM/SIGKILL en Dataproc
+BATCH_SIZE = 25  # reducido de 100 -- cada tarea en vuelo carga menos
+                 # datos a la vez, baja la memoria pico por worker
+BATCH_SIZE_IC = 25  # mismo motivo que BATCH_SIZE
+N_JOBS_IC = 2  # reducido de -1 -- backend='threading' comparte memoria
+               # (no la duplica como loky), pero se baja igual como
+               # margen de seguridad extra ante el limite de recursos
 UMBRAL_R2_CLIP = 0.70
 UMBRAL_HIGH = 0.30
 MAPEO_COLUMNAS_SLIM = {
@@ -1866,6 +1871,13 @@ def main() -> None:  # noqa: D103
         resultados.extend(filas)
         model_cache.update(objetos)
         predicciones.extend(preds)
+    # Liberar memoria -- ninguna de estas se vuelve a usar en lo que
+    # resta de main(), y son estructuras grandes (miles de DataFrames
+    # por material). Ayuda a que la siguiente etapa tenga mas margen
+    # de memoria disponible, sobre todo bajo el limite ajustado de
+    # recursos en Dataproc.
+    del tareas, batches, resultados_paralelo, diccionario_test_por_material
+    gc.collect()
     # ================================================================
     # 12. DATAFRAME FINAL
     # ================================================================
@@ -1971,6 +1983,11 @@ def main() -> None:  # noqa: D103
     }
     logger.info(f'\nTrain agrupado: {len(train_por_material_ic):,} materiales')
     logger.info(f'Tiempo agrupación: {time.time() - t_group:.2f} s')
+    # Esta version se usa solo hasta aca -- se reconstruye mas abajo
+    # para la seccion de IC. Se libera antes para no tener las 2
+    # copias (miles de DataFrames cada una) vivas al mismo tiempo.
+    del train_por_material_ic
+    gc.collect()
 
     # ================================================================
     # 4. FUNCIONES AUXILIARES
@@ -2274,9 +2291,18 @@ def main() -> None:  # noqa: D103
         # -------------------------------------------------------------
         for batch_result in resultados_batches:
             resultados_ic.extend(batch_result)
+        del resultados_batches  # solo existe en esta rama
     else:
         t_parallel = time.time()
     tiempo_ic = time.time() - t_parallel
+    # NOTA: train_por_material_ic NO se libera aca --
+    # calcular_ic_fila_batched la captura por closure, y aunque el
+    # orden de ejecucion real es seguro, ruff (F821) no puede
+    # verificarlo estaticamente y lo marca
+    # como error de lint. Se prioriza pasar el lint sobre esta
+    # optimizacion puntual de memoria.
+    del batches_ic, lista_tareas_ic
+    gc.collect()
     # ================================================================
     # 7. PROGRESO FINAL
     # ================================================================
@@ -2591,6 +2617,20 @@ def main() -> None:  # noqa: D103
         for fila, obj in lote_resultado:
             resultados_reintento.append(fila)
             model_cache_reintento[(fila['material_ean'], 'Log_log_suavizado')] = obj
+    # Liberar memoria -- ninguna se vuelve a usar en lo que resta de
+    # main(). Los diccionarios de train y test para reintento NO se
+    # liberan aca -- procesar_batch_reintento las captura por
+    # closure, y ruff (F821) no puede verificar estaticamente que el
+    # orden de ejecucion es seguro. df_train/df_test si son seguras --
+    # nada las captura por closure despues de este punto.
+    del (
+        lista_materiales,
+        lotes_reintento,
+        resultados_por_lote,
+        df_train,
+        df_test,
+    )
+    gc.collect()
     df_reintento = pd.DataFrame(resultados_reintento)
     logger.info(
         f'\nRescatados con precio suavizado '
