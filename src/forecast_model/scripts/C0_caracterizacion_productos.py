@@ -2411,7 +2411,7 @@ def main():
     #Primer Merge de Resultados Resumen
     resumen_global = pd.merge(  # noqa: PD015
         left=ventas_por_producto,
-        right=caracterizacion_caidas,
+        right=caracterizacion_caidas.drop('SEGMENTO_ABCD', axis=1),
         on='EAN',
         how='inner')
 
@@ -2436,7 +2436,7 @@ def main():
     #Segundo Merge de Resultados Resumen
     resumen_global = pd.merge(  # noqa: PD015
     left=resumen_global,
-    right=resumen_productos.drop(['SEGMENTO_ABCD', 'DIAS_CON_VENTA'], axis=1),
+    right=resumen_productos.drop(['SEGMENTO_ABCD', 'DIAS_CON_VENTA', 'PRIMERA_VENTA', 'ULTIMA_VENTA'], axis=1),  # noqa: E501
     on='EAN',
     how='inner')
 
@@ -2447,9 +2447,10 @@ def main():
         df_historial, dias_producto_nuevo=180
     )
 
+    #Terce Merge de Resultados Resumen
     resumen_global = pd.merge(  # noqa: PD015
         left=resumen_global,
-        right=productos_nuevos[['EAN', 'ANTIGUEDAD_DIAS','ES_PRODUCTO_NUEVO']],
+        right=productos_nuevos[['EAN','ES_PRODUCTO_NUEVO']],
         on='EAN',
         how='inner'
     )
@@ -2478,6 +2479,7 @@ def main():
         on='EAN',
         how='left').groupby('SEGMENTO_ABCD', observed=True)['FLAG_DEMANDA_MUY_VARIABLE'].sum().reset_index(name='N_DEMANDA_MUY_VARIABLE')) # noqa: E501
 
+    #Cuarto Merge de Resultados Resumen
     resumen_global = pd.merge(  # noqa: PD015
         left=resumen_global,
         right=variabilidad_producto.drop('DIAS_CON_VENTA_EVALUADOS', axis=1),
@@ -2496,6 +2498,7 @@ def main():
         minimo_participacion_mecanica=0.10,
         minimo_mecanicas_distintas=2)
 
+    #Quinto Merge de Resultados Resumen
     resumen_global = pd.merge(  # noqa: PD015
         left=resumen_global,
         right=df_caracterizacion_promos.drop('N_DIAS_OBSERVADOS', axis=1),
@@ -2510,12 +2513,12 @@ def main():
         left=resumen_global,
         right=df_tipologia_demanda.drop('N_DIAS_CON_VENTA', axis=1),
         on='EAN',
-        how='inner'
-    )
+        how='inner')
 
     logging.info('[4.7] Frecuencia Segmentación ADI/CV^2 :',df_tipologia_demanda['TIPOLOGIA_DEMANDA'].value_counts())  # noqa: E501
 
 
+    logging.info('[5] Columnas Resumen Global: ', resumen_global.columns)
 if __name__ == '__main__':
 
     main()
