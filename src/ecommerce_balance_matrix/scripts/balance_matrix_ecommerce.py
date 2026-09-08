@@ -51,13 +51,13 @@ SQL_QUERIES = QueryDict({    # Region: Explicación de query
 
  'query_sensibilidad':
 """
-SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY`
+SELECT * FROM `${proyecto}.ECOMMERCE.ECOMMERCE_PRODUCT_SENSIBILITY`
 where STORE_BANNER = '${store_banner}'
 """,
 
 'query_elasticidad':
 """
-SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.ELASTICITY`
+SELECT * FROM `${proyecto}.ECOMMERCE.ECOMMERCE_PRODUCT_ELASTICITY`
 where STORE_BANNER = 'Ecommerce ${store_banner}'
 """,
 
