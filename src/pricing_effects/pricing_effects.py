@@ -36,8 +36,9 @@ with open(
 PROJECT_NAME = 'pricing_effects'
 
 STORE_BANNER_LIST = [
-    #'Super 10','Unimarc', 'Alvi'
+    'Super 10',
     'Ecommerce Alvi','Ecommerce Unimarc'
+    #,'Unimarc', 'Alvi'
 ]
 
 # ========================================================================

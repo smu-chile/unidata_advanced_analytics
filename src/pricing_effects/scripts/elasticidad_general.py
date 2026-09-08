@@ -48,7 +48,7 @@ from common.gcp_extended.bigquery import (
 
 warnings.filterwarnings('ignore')
 
-## ------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 #  Config
 # -------------------------------------------------------------------------
 config.dictConfig(LOGGING_CONFIG)
@@ -345,10 +345,15 @@ def main() -> None:  # noqa: D103
     esquema = 'PRECIO_PROMOCIONES'
     tabla = 'ELASTICITY_PR'
     dataset_regression = 'TMP'
+    # La tabla de regresion de ecommerce se movio de TMP a
+    # PRECIO_PROMOCIONES (ver ecommerce_processed_regression_data.py) --
+    # el caso general (Unimarc/Super 10/Alvi) sigue viviendo en TMP,
+    # sin cambios.
+    dataset_regression_ecommerce = 'PRECIO_PROMOCIONES'
 
     if store_banner in MAPA_BANNER_REGRESSION_ECOMMERCE:
         table_regression = (
-            f'{proyecto}.{dataset_regression}.'
+            f'{proyecto}.{dataset_regression_ecommerce}.'
             f'TMP_ECOMMERCE_REGRESSION_PROCESSED_DATA_ELASTICITY'
         )
         store_banner_regression = MAPA_BANNER_REGRESSION_ECOMMERCE[store_banner]
