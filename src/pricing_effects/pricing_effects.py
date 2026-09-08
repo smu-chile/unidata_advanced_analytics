@@ -36,10 +36,8 @@ with open(
 PROJECT_NAME = 'pricing_effects'
 
 STORE_BANNER_LIST = [
-    'Super 10'
-    #, 'Ecommerce Alvi'
-    #'Unimarc',
-    #'Super 10', 'Alvi','Ecommerce Unimarc', 'Ecommerce Alvi',
+    #'Super 10','Unimarc', 'Alvi'
+    'Ecommerce Alvi','Ecommerce Unimarc'
 ]
 
 # ========================================================================
@@ -60,6 +58,10 @@ RECURSOS_EXTRA_POR_BANNER = {
         'spark_driver_cores': 8,
         'spark_driver_memory': 40,
     },
+    'Alvi': {
+            'spark_driver_cores': 8,
+            'spark_driver_memory': 40,
+        },
 }
 
 dag_args = {
