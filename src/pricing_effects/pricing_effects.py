@@ -42,17 +42,12 @@ STORE_BANNER_LIST = [
     #'Super 10', 'Alvi','Ecommerce Unimarc', 'Ecommerce Alvi',
 ]
 
-# ========================================================================
-# INTERRUPTOR TEMPORAL -- baseline_panel ya esta validado, y mientras se
-# ajusta elasticidad_general (varias iteraciones de prueba esperadas), no
-# hace falta volver a correrlo cada vez. Poner en True para reactivarlo
-# una vez que elasticidad_general quede validado -- NO borrar baseline_task
-# solo se deja de encadenar/crear mientras este flag este en False.
-# =========================================================================
-EJECUTAR_BASELINE_PANEL = False
-
 RECURSOS_EXTRA_POR_BANNER = {
     'Unimarc': {
+        'spark_driver_cores': 8,
+        'spark_driver_memory': 40,
+    },
+    'Super 10': {
         'spark_driver_cores': 8,
         'spark_driver_memory': 40,
     },
@@ -111,35 +106,32 @@ with DAG(**dag_args) as dag:
         banner_suffix = store_banner.replace(' ', '_').lower()
         kwargs_recursos = RECURSOS_EXTRA_POR_BANNER.get(store_banner, {})
 
-        # ---------- Task baseline (condicional al interruptor) ----------
-        baseline_task = None
-        if EJECUTAR_BASELINE_PANEL:
-            baseline_task = (
-                ExtendedDataprocCreateBatchOperator(
-                    task_id=f'baseline_{banner_suffix}',
-                    python_script_path=(
-                        f'{PROJECT_NAME}/'
-                        'scripts/'
-                        'baseline.py'
-                    ),
-                    dag_env_config=dag_env_config,
-                    docker_image_name=PROJECT_NAME,
-                    pyspark_batch_args=[
-                        '--project_id',
-                        dag_env_config['project_id'],
-                        '--execution_date',
-                        EXECUTION_DATE,
-                        '--store_banner',
-                        store_banner,
-                    ],
-                    include_paths=[
-                        'common/',
-                        f'{PROJECT_NAME}/gbq_objects/'
-                    ],
-                    **kwargs_recursos,
-                )
+        # ---------- Task baseline ----------
+        baseline_task = (
+            ExtendedDataprocCreateBatchOperator(
+                task_id=f'baseline_{banner_suffix}',
+                python_script_path=(
+                    f'{PROJECT_NAME}/'
+                    'scripts/'
+                    'baseline.py'
+                ),
+                dag_env_config=dag_env_config,
+                docker_image_name=PROJECT_NAME,
+                pyspark_batch_args=[
+                    '--project_id',
+                    dag_env_config['project_id'],
+                    '--execution_date',
+                    EXECUTION_DATE,
+                    '--store_banner',
+                    store_banner,
+                ],
+                include_paths=[
+                    'common/',
+                    f'{PROJECT_NAME}/gbq_objects/'
+                ],
+                **kwargs_recursos,
             )
-            baseline_tasks.append(baseline_task)
+        )
 
         # ---------- Task elasticidad_general ----------
         elasticidad_general_task = (
@@ -168,11 +160,15 @@ with DAG(**dag_args) as dag:
             )
         )
 
-        # Dependencia por banner: baseline -> elasticidad_general, SOLO
-        # si baseline esta activo -- si esta desactivado,
-        # elasticidad_general
-        # corre directo, sin esperar nada.
-        if baseline_task is not None:
-            baseline_task >> elasticidad_general_task
+        # Dependencia por banner: baseline -> elasticidad_general.
+        # elasticidad_transiciones.py se saco del DAG -- V7.x (el metodo
+        # nuevo) ya no lo necesita como parche (tiene su propio
+        # mecanismo completo: Regla A/B de rescate + cascada de 5
+        # niveles + Nivel 4 -- 100% de cobertura sin depender de esa
+        # tabla). Decision confirmada -- ya no se ocupa.
+        # TMP_PROMOTION_DAILY se mantiene manualmente en GCP, no se
+        # construye en este DAG.
+        baseline_task >> elasticidad_general_task
 
+        baseline_tasks.append(baseline_task)
         elasticidad_general_tasks.append(elasticidad_general_task)
