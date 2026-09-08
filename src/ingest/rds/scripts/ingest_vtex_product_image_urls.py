@@ -1,0 +1,88 @@
+"""vtex image urls."""
+
+import os
+import logging
+import argparse
+from logging import config
+
+import pendulum
+from tqdm import tqdm  # noqa: F401
+from google.cloud.bigquery import Client
+
+# Own
+from common.constants import LOGGING_CONFIG
+from common.databases.queries import QueryDict
+from common.databases.postgresql import readPostgresQuery
+from common.gcp_extended.bigquery import uploadFrame
+from common.gcp_extended.secretsmanager import getSecret
+
+
+config.dictConfig(LOGGING_CONFIG)
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--project_id', type=str, help='GCP project')
+parser.add_argument('--execution_date', type=str, help='DAG date')
+
+SQL_QUERIES = QueryDict({
+    'get_image_data': """
+    SELECT
+        CAST(regexp_replace(ref_id, '-.*', '', 'gi') AS BIGINT) AS sku,
+        CAST(ean_primario AS BIGINT) AS ean,
+        nombre_producto AS name,
+        'https://unimarc.vtexassets.com' || imagen AS url,
+        LOWER(etiqueta) AS etiqueta,
+        orden
+    FROM ecommdata.imagenes_sku
+    INNER JOIN ecommdata.skus USING (ref_id)
+    WHERE LENGTH(ean_primario) < LENGTH('9223372036854775807')
+    GROUP BY 1,2,3,4,5,6
+    """,
+})
+
+
+# -------------------------------------------------------------------------
+# Main
+# -------------------------------------------------------------------------
+def main() -> None:  # noqa: D103
+    args = vars(parser.parse_args())
+    gcp_project_id = args['project_id']
+    execution_date: pendulum.Date = pendulum.date(
+        *list(map(int, args['execution_date'].split('-')))
+    )
+    logging.info(f'execution_date: {execution_date}')
+
+    gbq_client = Client()
+
+    logging.info('Extrayendo datos de Postgres...')
+    image_urls = readPostgresQuery(
+        query=SQL_QUERIES['get_image_data'].substitute(),
+        credentials_dict=getSecret(
+            secret_name='ecommerce_postgres_credentials',  # noqa: S106
+            project=gcp_project_id,
+        )
+    )
+
+    total_urls = len(image_urls)
+    logging.info(f'Total de URLs a procesar: {total_urls:,}')
+
+    urls_out = 'foto-en-preparacion'
+    image_urls_final = image_urls[~image_urls['url'].str.contains(urls_out,case=False,na=False)]
+
+    image_urls_final.dropna(subset=['url'], inplace=True)
+
+    total_urls_final = len(image_urls_final)
+
+    logging.info(f'Total de URLs a cargar: {total_urls_final:,}')
+    logging.info('Subiendo resultados a BigQuery...')
+
+    uploadFrame(
+        image_urls_final,
+        table_ddl_json_path=os.path.join('gbq_objects', 'dim_vtex_product_image_urls.json'),
+        project=gcp_project_id,
+        gbq_client=gbq_client,
+        if_exists='replace'
+    )
+    logging.info('Done!')
+
+if __name__ == '__main__':
+    main()
