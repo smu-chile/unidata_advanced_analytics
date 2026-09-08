@@ -33,11 +33,11 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-# NOTA: asumo este nombre de carpeta/proyecto (coincide con el
-# 'usuario' interno del propio script: 'ecommerce_regression_data').
-# Confirmar que coincide con la carpeta real del repositorio antes
-# de subir -- si el proyecto vive en otra ruta, solo hay que ajustar
-# esta constante, nada mas.
+# Mismo proyecto/carpeta que elasticidad_general.py (ELASTICITY_PR) --
+# los archivos de este DAG viven en pricing_effects/, no en una
+# carpeta propia. Esto tambien significa que reutiliza la MISMA imagen
+# Docker que pricing_effects (ya tiene pygam/joblib instalados, sin
+# necesitar su propio Dockerfile/requirements.txt).
 PROJECT_NAME = 'pricing_effects'
 
 STORE_BANNER_LIST = [
