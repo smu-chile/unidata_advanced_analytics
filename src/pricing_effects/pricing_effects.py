@@ -42,13 +42,13 @@ STORE_BANNER_LIST = [
     #'Super 10', 'Alvi','Ecommerce Unimarc', 'Ecommerce Alvi',
 ]
 
-# =============================================================================
+# ========================================================================
 # INTERRUPTOR TEMPORAL -- baseline_panel ya esta validado, y mientras se
 # ajusta elasticidad_general (varias iteraciones de prueba esperadas), no
 # hace falta volver a correrlo cada vez. Poner en True para reactivarlo
-# una vez que elasticidad_general quede validado -- NO borrar baseline_task,
+# una vez que elasticidad_general quede validado -- NO borrar baseline_tas
 # solo se deja de encadenar/crear mientras este flag este en False.
-# =============================================================================
+# ========================================================================
 EJECUTAR_BASELINE_PANEL = False
 
 RECURSOS_EXTRA_POR_BANNER = {
@@ -173,7 +173,7 @@ with DAG(**dag_args) as dag:
         )
 
         # Dependencia por banner: baseline -> elasticidad_general, SOLO
-        # si baseline esta activo -- si esta desactivado, elasticidad_general
+        # si baseline esta activo -- si esta desactivado, elasticidad_gene
         # corre directo, sin esperar nada.
         if baseline_task is not None:
             baseline_task >> elasticidad_general_task
