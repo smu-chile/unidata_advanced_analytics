@@ -2698,7 +2698,7 @@ def generar_excel_buffer_segmentado(df: pd.DataFrame) -> io.BytesIO:
     wb.save(buffer)
     buffer.seek(0)
 
-    return buffer
+    return df_final,buffer
 
 
 def listar_archivos_sharepoint(outputs_dir: str, sp_cred: dict) -> list:
@@ -2775,7 +2775,7 @@ def exportar_y_subir_excel_segmentado(
     outputs_dir: str,
     sp_cred: dict,
     nombre_base_prefijo: str = 'reporte_segmentado',
-) -> None:
+) -> pd.DataFrame:
     """Genera el Excel segmentado, versiona el nombre y lo sube."""
     nombre_base = f'{nombre_base_prefijo}_{execution_date}'
 
@@ -2786,7 +2786,7 @@ def exportar_y_subir_excel_segmentado(
         sp_cred=sp_cred,
     )
 
-    buffer = generar_excel_buffer_segmentado(df)
+    df_final,buffer = generar_excel_buffer_segmentado(df)
 
     subir_archivo_sharepoint(
         contenido=buffer,
@@ -2798,6 +2798,8 @@ def exportar_y_subir_excel_segmentado(
     logging.info(
         f'Proceso finalizado. Archivo final: {nombre_final}'
     )
+
+    return df_final
 
 
 def main():
@@ -3061,7 +3063,7 @@ def main():
     logging.info('[5] Columnas Resumen Global: ', resumen_global.columns)
     logging.info('[6] Subida a SP...')
 
-    exportar_y_subir_excel_segmentado(
+    df_caracterizacion = exportar_y_subir_excel_segmentado(
         df=resumen_global,
         execution_date=execution_date,
         outputs_dir=outputs_dir,
@@ -3069,13 +3071,25 @@ def main():
     )
 
     logging.info('[8] Subida a GCP: ')
-    logging.info('[8.1] Subida Caracterización a tabla...')
-    logging.info('[8.2] Subida Historiales a GCP...')
 
+    logging.info('[8.1] Subida Caracterización a tabla...')
+    print('Justo antes de subir a GCP: ', df_caracterizacion.info())
+
+    uploadFrame(
+        df_caracterizacion,
+        table_ddl_json_path=os.path.join('gbq_objects',
+                                         'processed_data_caracterizacion.json'),
+        project=proyecto,
+        gbq_client=gbq_client,
+        if_exists='replace')
+
+
+    logging.info('[8.2] Subida Historiales a GCP...')
     print('Justo antes de subir a GCP: ', df_historial.info())
+
     where_clause = f"store_banner = '{store_banner}'"
 
-    # Se elimina los datos para cierto store_banner y rango (si existen)
+    # Se elimina los datos para cierto store_banner
     deleteFromTable(table_ref=f'{proyecto}.{esquema_subida}.{tabla_historial}',
                     where_clause=where_clause,
                     gbq_client=gbq_client)
