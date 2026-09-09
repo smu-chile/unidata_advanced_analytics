@@ -119,7 +119,7 @@
         {
             "name": "PROPORCION_CATEGORIA",
             "field_type": "FLOAT64",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Proporcion de ventas que representa la categoria respecto a su promedio"
         },
         {
