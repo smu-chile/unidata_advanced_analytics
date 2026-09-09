@@ -25,7 +25,19 @@ while directorio_actual != os.path.sep:
         directorio_actual = os.path.dirname(directorio_actual)  # Retrocede
 
 
+import io
+import logging  # noqa: E402
+import datetime  # noqa: E402
+import posixpath
+
+import numpy as np
+import pandas as pd  # noqa: E402
+from openpyxl import Workbook  # noqa: E402
+from openpyxl.utils import get_column_letter  # noqa: E402
+from openpyxl.styles import Font, Side, Border, Alignment, PatternFill  # noqa: E402
+
 import common.gcp_extended.secretsmanager as secretmanager  # noqa: E402
+import common.office365_extended.sharepoint as sp  # noqa: E402
 from common.constants import LOGGING_CONFIG  # noqa: E402
 from common.databases.queries import QueryDict  # noqa: E402
 from common.gcp_extended.bigquery import (  # noqa: E402
@@ -481,6 +493,80 @@ usuario = 'pricing'
 MIN_DIAS = 150
 
 
+segmentos_config = {
+
+    'Descripcion Producto': {
+        'color': 'F8CBAD',
+        'color_header': 'C00000',
+        'columnas': ['EAN','PRODUCT_DESCRIPTION','CATEGORY_DESCRIPTION','SUB_CATEGORY_DESCRIPTION',
+                     'MATERIAL', 'SALES_UOM', 'SALES_UNIT']
+    },
+    'Ventas': {
+        'color': 'C6E0B4',
+        'color_header': '548235',
+        'columnas': ['UNIDADES_VENDIDAS', 'DIAS_CON_VENTA', 'PARTICIPACION_VENTAS',
+                     'PARTICIPACION_ACUMULADA', 'SEGMENTO_ABCD']
+    },
+    'Productos Muertos': {
+        'color': 'FCE4D6',
+        'color_header': 'C55A11',
+        'columnas': ['ESTADO', 'PRIMERA_VENTA', 'ULTIMA_VENTA',
+                     'DIAS_DESDE_ULTIMA_VENTA',
+                     'INTERVALO_P90_VENTAS',
+                     'DIAS_VENTA_BASE',
+                     'DIAS_VENTA_RECIENTE',
+                     'RATIO_CANTIDAD_RECIENTE_BASE',
+                     'RATIO_FRECUENCIA_RECIENTE_BASE']
+    },
+    'Intermitencias': {
+        'color': 'DDEBF7',
+        'color_header': '2E74B5',
+        'columnas': ['PORCENTAJE_COBERTURA', 'MAYOR_PAUSA_SIN_VENTA_DIAS',
+                     'N_PAUSAS_INUSUALES', 'ELEGIBLE_PARA_EVALUACION_PAUSAS',
+                     'RATIO_DIAS_PERDIDOS_RECIENTE', 'FLAG_LANZAMIENTO_FANTASMA',
+                     'FLAG_MUERTE_RECIENTE', 'DIAS_SIN_VENTA_INICIO', 'DIAS_SIN_VENTA_MEDIO',
+                     'DIAS_SIN_VENTA_RECIENTE', 'ZONA_CONCENTRACION_PAUSAS']
+    },
+    'Producto Nuevo': {
+        'color': 'FFF2CC',
+        'color_header': 'BF8F00',
+        'columnas': ['ES_PRODUCTO_NUEVO']
+    },
+    'Caracterizacion Variabilidad': {
+        'color': 'E2D9F3',
+        'color_header': '7030A0',
+        'columnas': ['CV_UNIDADES', 'RATIO_DISPERSION_UNIDADES',
+                     'CV_ROBUSTO_PRECIO',
+                     'CORRELACION_PRECIO_UNIDADES', 'FLAG_DEMANDA_MUY_VARIABLE',
+                     'FLAG_SOBREDISPERSION_UNIDADES', 'FLAG_PRECIO_MUY_VARIABLE',
+                     'FLAG_RELACION_PRECIO_UNIDADES']
+    },
+    'Informacion Promocional': {
+        'color': 'FFE5F0',
+        'color_header': 'C00060',
+        'columnas': ['N_DIAS_PROMOCIONALES', 'INTENSIDAD_PROMOCIONAL', 'PRECIO_MIN_PROMO',
+                     'PRECIO_MAX_PROMO',
+                     'DESCUENTO_MIN_PROMO', 'DESCUENTO_MAX_PROMO', 'CV_PRECIO_PROMO',
+                     'MECANICA_PRECIO_MIN', 'MECANICA_PRECIO_MAX', 'N_MECANICAS_OBSERVADAS',
+                     'RACHA_MAX_MISMA_MECANICA', 'N_MECANICAS_VALIDAS',
+                     'CASO_MODELO', 'INCLUIR_MECANICA', 'MECANICA_REFERENCIA']
+    },
+    'ADI/CV2': {
+        'color': 'D9E1F2',
+        'color_header': '203864',
+        'columnas': ['ADI', 'CV2', 'TIPOLOGIA_DEMANDA']
+    },
+}
+
+# Columnas que deben mostrarse solo con fecha (sin hora)
+COLUMNAS_SOLO_FECHA = ['PRIMERA_VENTA', 'ULTIMA_VENTA']
+
+# Anchos personalizados (columna: ancho en caracteres)
+ANCHOS_PERSONALIZADOS = {
+    'PRODUCT_DESCRIPTION': 45,
+}
+
+
 ##########---------- 1. Funciones principales ----------##########
 
 #####----- 1.1 Creación de variables temporales frugales
@@ -509,6 +595,7 @@ def agregar_features_frugales(df_final: pd.DataFrame) -> pd.DataFrame:
     df_final['cos_anual'] = np.cos(angulos).astype(np.float32)
 
     return df_final
+
 
 def procesar_feriados_chile(df_final: pd.DataFrame) -> pd.DataFrame:
     """Reconstruye de forma determinista y frugal las dummies agregadas de
@@ -879,7 +966,6 @@ def segmentar_por_ventas(historial, cortes_abcd=(0.80, 0.90, 0.95)):
     )
 
     return segmentacion
-
 
 
 #####----- 1.4 Detección productos muertos
@@ -2273,6 +2359,220 @@ def clasificar_tipologia_demanda(
     return tipologia, parametros
 
 
+#####-----1.10 Creación de Excel y Subida a SP
+
+def _sanitize_value(value, col_name=None):
+    """Convierte valores no soportados por Excel (listas, dicts,
+    numpy types, NaN) a algo compatible."""
+    if isinstance(value, (list, tuple, set, dict)):
+        return str(value)
+    if isinstance(value, (np.generic,)):
+        value = value.item()
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+
+    # Truncar valores de fecha/hora a solo la fecha para cols especificas
+    if col_name in COLUMNAS_SOLO_FECHA:
+        if isinstance(value, pd.Timestamp):
+            return value.date()
+        if hasattr(value, 'date') and callable(getattr(value, 'date')):  # noqa: B009
+            return value.date()
+        if isinstance(value, str):
+            return value.split(' ')[0]
+
+    return value
+
+
+def generar_excel_buffer_segmentado(df: pd.DataFrame) -> io.BytesIO:
+    """Genera el Excel segmentado y formateado, devolviendo un buffer en memoria."""  # noqa: W505
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Reporte'
+
+    columnas_finales = []
+    info_columnas = []  # (nombre_col, nombre_segmento, color, color_header)
+
+    for seg_nombre, seg_info in segmentos_config.items():
+        for col in seg_info['columnas']:
+            if col in df.columns:
+                columnas_finales.append(col)
+                info_columnas.append((col, seg_nombre, seg_info['color'], seg_info['color_header']))  # noqa: E501
+
+    df_final = df[columnas_finales]
+
+    logging.info(f'Dimensiones finales df: {df_final.shape}')
+
+    thin_border = Border(
+        left=Side(style='thin', color='B7B7B7'),
+        right=Side(style='thin', color='B7B7B7'),
+        top=Side(style='thin', color='B7B7B7'),
+        bottom=Side(style='thin', color='B7B7B7'),
+    )
+    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+
+    #Fila1: nombre del segmento (merge celdas contiguas del mismo segmento)
+    col_idx = 1
+    i = 0
+    while i < len(info_columnas):
+        seg_actual = info_columnas[i][1]
+        color_header = info_columnas[i][3]
+        j = i
+        while j < len(info_columnas) and info_columnas[j][1] == seg_actual:
+            j += 1
+        start_col = col_idx
+        end_col = col_idx + (j - i) - 1
+
+        if end_col > start_col:
+            ws.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=end_col)
+        cell = ws.cell(row=1, column=start_col, value=seg_actual)
+        cell.font = Font(bold=True, color='FFFFFF', size=12)
+        cell.fill = PatternFill(start_color=color_header, end_color=color_header, fill_type='solid')  # noqa: E501
+        cell.alignment = center_align
+
+        for c in range(start_col, end_col + 1):
+            cc = ws.cell(row=1, column=c)
+            cc.fill = PatternFill(start_color=color_header, end_color=color_header, fill_type='solid')  # noqa: E501
+            cc.border = thin_border
+
+        col_idx = end_col + 1
+        i = j
+
+    # Fila 2: nombres de columnas
+    for idx, (col_name, seg_nombre, color, color_header) in enumerate(info_columnas, start=1):  # noqa: B007
+        cell = ws.cell(row=2, column=idx, value=col_name)
+        cell.font = Font(bold=True, size=10)
+        cell.fill = PatternFill(start_color=color, end_color=color, fill_type='solid')
+        cell.alignment = center_align
+        cell.border = thin_border
+
+    # Filas de datos
+    for r, (_, row) in enumerate(df_final.iterrows(), start=3):
+        for c, (col_name, seg_nombre, color, color_header) in enumerate(info_columnas, start=1):  # noqa: B007
+            value = _sanitize_value(row[col_name], col_name=col_name)
+            cell = ws.cell(row=r, column=c, value=value)
+            cell.alignment = center_align
+            cell.border = thin_border
+            cell.fill = PatternFill(start_color=color, end_color=color, fill_type='solid')
+            if col_name in COLUMNAS_SOLO_FECHA and value is not None:
+                cell.number_format = 'YYYY-MM-DD'
+
+    # Ajustar ancho de columnas automaticamente
+    for idx, (col_name, seg_nombre, color, color_header) in enumerate(info_columnas, start=1):  # noqa: B007
+        col_letter = get_column_letter(idx)
+
+        if col_name in ANCHOS_PERSONALIZADOS:
+            ws.column_dimensions[col_letter].width = ANCHOS_PERSONALIZADOS[col_name]
+            continue
+
+        try:
+            max_len_datos = df_final[col_name].astype(str).map(len).max() if len(df_final) > 0 else 0  # noqa: E501
+        except Exception:  # noqa: BLE001
+            max_len_datos = 0
+        max_len = max(len(str(col_name)), max_len_datos)
+        ws.column_dimensions[col_letter].width = min(max(max_len + 4, 12), 35)
+
+    # Alturas de fila para encabezados
+    ws.row_dimensions[1].height = 24
+    ws.row_dimensions[2].height = 30
+
+    # Congelar paneles: fija las 2 primeras columnas y las 2 filas de
+    # encabezado
+    ws.freeze_panes = 'C3'
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+# ----------------------------------------------------------------
+# 2. Funciones de gestion e integracion con SharePoint
+# ----------------------------------------------------------------
+def listar_archivos_sharepoint(outputs_dir: str, sp_cred: dict) -> list:
+    """Devuelve la lista de nombres de archivo existentes en la carpeta
+    de SharePoint."""
+    carpeta = sp.SharePointFolder(**sp_cred, server_relative_folder=outputs_dir)
+    return carpeta.fileList()
+
+
+def generar_nombre_no_duplicado(
+    nombre_base: str,
+    extension: str,
+    outputs_dir: str,
+    sp_cred: dict
+) -> str:
+    """Verifica si nombre_base.extension ya existe en SharePoint.
+    Si existe, agrega sufijo _v{i} incremental hasta encontrar uno libre.
+    """
+    archivos_existentes = listar_archivos_sharepoint(outputs_dir, sp_cred)
+
+    nombre_candidato = f'{nombre_base}.{extension}'
+    if nombre_candidato not in archivos_existentes:
+        return nombre_candidato
+
+    i = 1
+    while True:
+        nombre_candidato = f'{nombre_base}_v{i}.{extension}'
+        if nombre_candidato not in archivos_existentes:
+            return nombre_candidato
+        i += 1
+
+
+def subir_archivo_sharepoint(
+    contenido: io.BytesIO,
+    nombre_archivo: str,
+    outputs_dir: str,
+    sp_cred: dict
+) -> None:
+    """Sube un archivo a SharePoint usando un buffer en memoria."""
+    contenido.seek(0)
+
+    output_remote_path = posixpath.join(outputs_dir, nombre_archivo)
+
+    logging.info(f'Subiendo archivo a SharePoint: {output_remote_path}')
+
+    sp_output = sp.SharePointFile(
+        **sp_cred,
+        server_relative_path=output_remote_path
+    )
+
+    sp_output.upload(content=contenido)
+
+    logging.info('Archivo subido correctamente a SharePoint')
+
+
+def exportar_y_subir_excel_segmentado(
+    df: pd.DataFrame,
+    execution_date: str,
+    outputs_dir: str,
+    sp_cred: dict,
+    nombre_base_prefijo: str = 'reporte_segmentado'
+) -> None:
+    """Flujo completo: genera el excel segmentado en memoria,
+    calcula un nombre no duplicado en SharePoint, y lo sube.
+    """
+    nombre_base = f'{nombre_base_prefijo}_{execution_date}'
+    nombre_final = generar_nombre_no_duplicado(
+        nombre_base=nombre_base,
+        extension='xlsx',
+        outputs_dir=outputs_dir,
+        sp_cred=sp_cred
+    )
+
+    buffer = generar_excel_buffer_segmentado(df)
+
+    subir_archivo_sharepoint(
+        contenido=buffer,
+        nombre_archivo=nombre_final,
+        outputs_dir=outputs_dir,
+        sp_cred=sp_cred
+    )
+
+    logging.info(f'Proceso finalizado. Archivo final: {nombre_final}')
+
+
 def main():
 
     #------- Inputs ---------#
@@ -2285,6 +2585,7 @@ def main():
     file_site += 'Pricing/Forecast Promociones'
     secret_name = 'bdaa_sharepoint_credentials'  # noqa: S105#HC
     sp_cred = secretmanager.getSecret(secret_name, project=proyecto)  # noqa: F841
+    outputs_dir = posixpath.join(file_site, 'Caracterización_productos')
 
     esquema = 'TMP'
     tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
@@ -2519,6 +2820,15 @@ def main():
 
 
     logging.info('[5] Columnas Resumen Global: ', resumen_global.columns)
+
+    logging.info('[6] Subida a SP...')
+    print('shape: ', resumen_global.shape)
+    exportar_y_subir_excel_segmentado(
+        df=resumen_global,
+        execution_date=execution_date,
+        outputs_dir=outputs_dir,
+        sp_cred=sp_cred
+    )
 if __name__ == '__main__':
 
     main()
