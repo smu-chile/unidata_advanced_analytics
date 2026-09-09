@@ -2360,9 +2360,9 @@ def clasificar_tipologia_demanda(
 def _sanitize_value(value, col_name=None):
     """Convierte valores no soportados por Excel (listas, dicts,
     numpy types, NaN) a algo compatible."""
-    if isinstance(value, (list, tuple, set, dict)):
+    if isinstance(value, list | tuple | set | dict):
         return str(value)
-    if isinstance(value, (np.generic,)):
+    if isinstance(value, np.generic):
         value = value.item()
     try:
         if pd.isna(value):
