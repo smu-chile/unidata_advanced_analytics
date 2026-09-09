@@ -1,0 +1,99 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "ELASTICITY_ZONA",
+
+    "columns": [
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la informacion -- exclusivamente 'Unimarc' en esta segmentacion (SEGMENTACION_ZONAS_BM_PRICING es propia de ese banner)"
+        },
+        {
+            "name": "ZONA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Zona comercial (Austral, Baja Competencia, Competencia Media, Competencia Regional, Hipercompetitiva, Norte, Premium), segun SEGMENTACION_ZONAS_BM_PRICING"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria a la que pertenece el producto"
+        },
+        {
+            "name": "MATERIAL",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Codigo del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "DESCRIPCION_MATERIAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre o descripcion del producto"
+        },
+        {
+            "name": "EAN",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del producto"
+        },
+        {
+            "name": "UMV",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Unidad de medida de venta (SALES_UOM, de BASELINE_PANEL -- a nivel de banner completo, no varia por zona)"
+        },
+        {
+            "name": "CLUSTER",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Tipo de comportamiento detectado para el material DENTRO de esta zona (limpio, ciclos_rapidos, intermitente, picos_extremos, precio_no_relevante, tendencia_fuerte, lanzamiento, rampa_ascendente, rampa_descendente, discontinuidad, o no_modelable si no alcanzo el minimo de dias para caracterizarse)"
+        },
+        {
+            "name": "ORIGEN",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Origen del valor de ELASTICIDAD, con cascada de fallback COMPLETA DENTRO DE LA ZONA (nunca cruza a otra zona ni al banner completo): 'propia' (estimada directamente para este material dentro de esta zona, ya con shrinkage aplicado hacia el prior de su subcategoria), 'sustituto' (heredada del sustituto mas cercano dentro de la misma zona), 'subcategoria' (mediana de los materiales propios de la misma subcategoria, dentro de la zona), 'categoria' (mediana de los materiales propios de la misma categoria, dentro de la zona), 'tipo_cluster' (mediana de materiales propios del mismo tipo de comportamiento, dentro de la zona), 'zona_completa' (mediana de todos los materiales propios de la zona -- ultimo recurso, garantiza 100% de cobertura dentro de la zona), o 'sin_evidencia' (no calificable, no aparece en esta tabla)"
+        },
+        {
+            "name": "ELASTICIDAD",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Valor final de elasticidad, ya acotado al rango [-5, 0]"
+        },
+        {
+            "name": "SEGMENTO_ELASTICIDAD",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Segmento (high/low) al que pertenece el producto segun su elasticidad DENTRO de esta zona, via Gaussian Mixture Model ajustado por zona"
+        },
+        {
+            "name": "N_Eventos",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Dias de evidencia (n_dias_evidencia) detras de la estimacion propia -- NULL para materiales con ORIGEN heredado (no aplica, no tienen evidencia propia)"
+        },
+        {
+            "name": "METODO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Metodo especifico que gano la competencia para materiales con ORIGEN='propia' (Log_log, GAM, GAM_lanzamiento, GAM_declive, RDD, RDD_estabilizado, RLM_robusto, GAMM_like, Intermittent_GAMM). Para materiales heredados, indica el nivel de herencia con prefijo 'heredado_' (ej. 'heredado_sustituto', 'heredado_zona_completa')"
+        },
+        {
+            "name": "SCORE_CONFIABILIDAD",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Score compuesto 0-100: 15 puntos precision estadistica (IC, solo si fue calculado) + 40 calidad predictiva (wape+r2+monotonicidad) + 35 volumen de evidencia (dias de historia, hasta 200 dias)"
+        },
+        {
+            "name": "CONFIABILIDAD",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria de SCORE_CONFIABILIDAD: 'alta' (>=55), 'media' (>=30), 'baja' (<30)"
+        }
+    ],
+
+    "clustering_fields": ["STORE_BANNER", "ZONA"]
+}
