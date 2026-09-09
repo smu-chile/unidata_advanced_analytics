@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import io
 import os
 import sys
 import logging
 import argparse
+import posixpath
 from logging import config
 
 import numpy as np
@@ -24,9 +26,6 @@ while directorio_actual != os.path.sep:
         sys.path.pop()  # Remueve el directorio que no contenía el módulo
         directorio_actual = os.path.dirname(directorio_actual)  # Retrocede
 
-
-import io
-import posixpath
 
 from openpyxl import Workbook  # noqa: E402
 from openpyxl.utils import get_column_letter  # noqa: E402
