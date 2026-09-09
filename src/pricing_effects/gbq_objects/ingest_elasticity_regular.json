@@ -1,0 +1,93 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "ELASTICITY_REGULAR",
+
+    "columns": [
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la informacion"
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria a la que pertenece el producto"
+        },
+        {
+            "name": "MATERIAL",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Codigo del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "DESCRIPCION_MATERIAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre o descripcion del producto"
+        },
+        {
+            "name": "EAN",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del producto"
+        },
+        {
+            "name": "UMV",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Unidad de medida de venta (SALES_UOM, de BASELINE_PANEL)"
+        },
+        {
+            "name": "CLUSTER",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Tipo de comportamiento detectado para el material, medido SOLO sobre periodos con estado='Regular' (limpio, ciclos_rapidos, intermitente, picos_extremos, precio_no_relevante, tendencia_fuerte, lanzamiento, rampa_ascendente, rampa_descendente, discontinuidad, o no_modelable si no alcanzo el minimo de dias con estado Regular para caracterizarse)"
+        },
+        {
+            "name": "ORIGEN",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Origen del valor de ELASTICIDAD. Esta tabla NO tiene cascada de fallback (a diferencia de ELASTICITY_PR) -- solo 2 valores posibles: 'propia' (estimada directamente para este material con evidencia propia dentro del regimen Regular, ya con shrinkage aplicado hacia el prior de su subcategoria) o 'sin_evidencia' (no calificable, no aparece en esta tabla)"
+        },
+        {
+            "name": "ELASTICIDAD",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Valor final de elasticidad medido SOLO en periodos Regular (sin mezclar con promocionales), ya acotado al rango [-5, 0]"
+        },
+        {
+            "name": "SEGMENTO_ELASTICIDAD",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Segmento (high/low) al que pertenece el producto segun su elasticidad, via Gaussian Mixture Model"
+        },
+        {
+            "name": "N_Eventos",
+            "field_type": "INTEGER",
+            "mode": "NULLABLE",
+            "description": "Dias de evidencia (n_dias_evidencia, dentro del regimen Regular) detras de la estimacion propia"
+        },
+        {
+            "name": "METODO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Metodo especifico que gano la competencia (Log_log, GAM, GAM_lanzamiento, GAM_declive, RDD, RDD_estabilizado, RLM_robusto, GAMM_like -- NO incluye Intermittent_GAMM, excluido deliberadamente en esta variante). Sin prefijo 'heredado_', ya que esta tabla no tiene cascada"
+        },
+        {
+            "name": "SCORE_CONFIABILIDAD",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Score compuesto 0-100: 15 puntos precision estadistica (IC, solo si fue calculado) + 40 calidad predictiva (wape+r2+monotonicidad) + 35 volumen de evidencia (dias de historia, hasta 200 dias)"
+        },
+        {
+            "name": "CONFIABILIDAD",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria de SCORE_CONFIABILIDAD: 'alta' (>=55), 'media' (>=30), 'baja' (<30)"
+        }
+    ],
+
+    "clustering_fields": ["STORE_BANNER"]
+}
