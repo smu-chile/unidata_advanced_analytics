@@ -26,12 +26,8 @@ while directorio_actual != os.path.sep:
 
 
 import io
-import logging  # noqa: E402
-import datetime  # noqa: E402
 import posixpath
 
-import numpy as np
-import pandas as pd  # noqa: E402
 from openpyxl import Workbook  # noqa: E402
 from openpyxl.utils import get_column_letter  # noqa: E402
 from openpyxl.styles import Font, Side, Border, Alignment, PatternFill  # noqa: E402
