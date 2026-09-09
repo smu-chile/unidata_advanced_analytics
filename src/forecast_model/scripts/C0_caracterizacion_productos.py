@@ -2818,6 +2818,10 @@ def main():
     tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
     path_table = f'{proyecto}.{esquema}.{tabla}'
 
+    esquema_subida  = 'PRECIO_PROMOCIONES'
+    tabla_historial = 'FORECAST_HISTORIALES_PROCESSED_DATA'
+    tabla_caracterizacion = 'FORECAST_CARACTERIZACION_PRODUCTOS'  # noqa: F841
+
     # Nota: local queda definido, en producción se inyecta desde Airflow
     gbq_client = Client()
     logging.info(f'execution_date: {execution_date}')
@@ -3063,6 +3067,27 @@ def main():
         outputs_dir=outputs_dir,
         sp_cred=sp_cred
     )
+
+    logging.info('[8] Subida a GCP: ')
+    logging.info('[8.1] Subida Caracterización a tabla...')
+    logging.info('[8.2] Subida Historiales a GCP...')
+
+    print('Justo antes de subir a GCP: ', df_historial.info())
+    where_clause = f"store_banner = '{store_banner}'"
+
+    # Se elimina los datos para cierto store_banner y rango (si existen)
+    deleteFromTable(table_ref=f'{proyecto}.{esquema_subida}.{tabla_historial}',
+                    where_clause=where_clause,
+                    gbq_client=gbq_client)
+
+    uploadFrame(
+        df_historial,
+        table_ddl_json_path=os.path.join('gbq_objects',
+                                         'processed_data_forecast.json'),
+        project=proyecto,
+        gbq_client=gbq_client,
+        if_exists='append')
+
 if __name__ == '__main__':
 
     main()

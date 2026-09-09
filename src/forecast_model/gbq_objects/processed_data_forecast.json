@@ -1,0 +1,267 @@
+{
+    "schema": "TMP",
+    "table": "TMP_REGRESSION_PROCESSED_DATA_FORECAST_V2",
+
+    "columns": [
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece el producto"
+        },
+        {
+            "name": "CATEGORY_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoria a la que pertenece el producto"
+        },
+        {
+            "name": "SUB_CATEGORY_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Subcategoria a la que pertenece el producto"
+        },
+        {
+            "name": "MATERIAL",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Codigo del producto (product_id sin ceros a la izquierda)"
+        },
+        {
+            "name": "PRODUCT_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre o descripcion del producto"
+        },
+        {
+            "name": "EAN",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Codigo EAN del producto"
+        },
+        {
+            "name": "SALES_UOM",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Unidad de medida de ventas (ej. KG, LT, UN)"
+        },
+        {
+            "name": "SALES_UNIT",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Unidades de venta base del producto"
+        },
+        {
+            "name": "P_DATE",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha del registro en formato YYYY-MM-DD"
+        },
+        {
+            "name": "VENTAS_TOTALES_PRODUCTO",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Ventas totales del producto en el periodo"
+        },
+        {
+            "name": "CANTIDAD_TOTAL",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Cantidad total vendida del producto"
+        },
+        {
+            "name": "PRECIO_PROMEDIO",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Precio promedio del producto en el periodo"
+        },
+        {
+            "name": "MULTIPLICADOR_X05",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Factor de multiplicacion usado en calculos (ej. x0.5)"
+        },
+        {
+            "name": "APO",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Indica si el producto esta en una accion promocional (1) o no (0)"
+        },
+        {
+            "name": "PROPORCION_CATEGORIA",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Proporcion de ventas que representa la categoria respecto a su promedio"
+        },
+        {
+            "name": "EAN_SUSTITUTO_1",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 1"
+        },
+        {
+            "name": "EAN_SUSTITUTO_2",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 2"
+        },
+        {
+            "name": "EAN_SUSTITUTO_3",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 3"
+        },
+        {
+            "name": "EAN_SUSTITUTO_4",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 4"
+        },
+        {
+            "name": "EAN_SUSTITUTO_5",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 5"
+        },
+        {
+            "name": "VARIACION_PORCENTUAL_SUBCATEGORIA",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Variacion porcentual de ventas respecto a la subcategoria"
+        },
+        {
+            "name": "TENDENCIA_LINEAL",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Contador días de registro venta diario"
+        },
+        {
+            "name": "SIN_ANUAL",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Seno (Fourier) de la variable calendario"
+        },
+        {
+            "name": "COS_ANUAL",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Coseno (Fourier) de la variable calendario"
+        },
+        {
+            "name": "FLAG_FERIADO",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Flag para día feriado"
+        },
+        {
+            "name": "FLAG_PRE_FERIADO",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Flag para día pre-feriado"
+        },
+        {
+            "name": "PRECIO_MODAL_B",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio modal diario para la promo con precio mínimo sin casos especiales"
+        },
+        {
+            "name": "PRECIO_PROMOCIONAL_B",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio promocional diario para la promo con precio mínimo sin casos especiales"
+        },
+        {
+            "name": "PRECIO_PROMOCIONAL_MINIMO_B",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio promocional mínimo diario para la promo con precio mínimo sin casos especiales"
+        },
+        {
+            "name": "N_PROMOCION_B",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Número de la promoción con el precio promocional mínimo para ese día"
+        },
+        {
+            "name": "NOMBRE_PROMOCION_B",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre de la promoción con el precio promocional mínimo para ese día"
+        },
+        {
+            "name": "DESCRIPCION_EVENTO_PROMOCIONAL_B",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Descripción evento promocional para la promoción con el precio promocional mínimo para ese día"
+        },
+        {
+            "name": "PORCENTAJE_DESCUENTO_B",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Porcentaje de descuento asociado al precio promocional mínimo para ese día"
+        },
+        {
+            "name": "FLAG_PROMO_B",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Flag que indica si el producto está en promoción ese día"
+        },
+        {
+            "name": "PRECIO_MODAL_T",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio modal diario para la promo con precio mínimo sin casos especiales (regla combinación)"
+        },
+        {
+            "name": "PRECIO_PROMOCIONAL_T",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio promocional diario para la promo con precio mínimo sin casos especiales (regla combinación)"
+        },
+        {
+            "name": "PRECIO_PROMOCIONAL_MINIMO_T",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio promocional mínimo diario para la promo con precio mínimo sin casos especiales (regla combinación)"
+        },
+        {
+            "name": "N_PROMOCION_T",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Número de la promoción con el precio promocional mínimo para ese día (regla combinación)"
+        },
+        {
+            "name": "NOMBRE_PROMOCION_T",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre de la promoción con el precio promocional mínimo para ese día (regla combinación)"
+        },
+        {
+            "name": "DESCRIPCION_EVENTO_PROMOCIONAL_T",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Descripción evento promocional para la promoción con el precio promocional mínimo para ese día (regla combinación)"
+        },
+        {
+            "name": "PORCENTAJE_DESCUENTO_T",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Porcentaje de descuento asociado al precio promocional mínimo para ese día (regla combinacion)"
+        },
+        {
+            "name": "FLAG_PROMO_T",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Flag que indica si el producto está en promoción ese día (regla combinacion)"
+        }
+
+    ],
+
+    "time_partitioning": {
+        "field": "P_DATE",
+        "type_": "DAY"
+    },
+
+    "clustering_fields": ["STORE_BANNER", "CATEGORY_DESCRIPTION", "EAN", "MATERIAL"]
+}
