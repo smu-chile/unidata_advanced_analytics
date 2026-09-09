@@ -3045,11 +3045,18 @@ def main():
 
     logging.info('[4.7] Frecuencia Segmentación ADI/CV^2 :',df_tipologia_demanda['TIPOLOGIA_DEMANDA'].value_counts())  # noqa: E501
 
+    # ------ Parche: Se incluye información descriptiva del EAN -----------
+    cols_descriptivas = ['CATEGORY_DESCRIPTION', 'SUB_CATEGORY_DESCRIPTION',
+                        'MATERIAL', 'PRODUCT_DESCRIPTION', 'EAN',
+                        'SALES_UOM', 'SALES_UNIT']
+
+    df_temp = df_historial[cols_descriptivas].drop_duplicates(subset='EAN', keep='first')
+    resumen_global = resumen_global.merge(df_temp, how='left', on='EAN')
+    #----------------------------------------------------------------------
 
     logging.info('[5] Columnas Resumen Global: ', resumen_global.columns)
-
     logging.info('[6] Subida a SP...')
-    print('shape: ', resumen_global.shape)
+
     exportar_y_subir_excel_segmentado(
         df=resumen_global,
         execution_date=execution_date,
