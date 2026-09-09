@@ -52,9 +52,9 @@ PROJECT_NAME = 'pricing_effects'
 # codigo fuente). Ajustar esta lista si se necesita un subconjunto
 # distinto.
 STORE_BANNER_LIST = [
-    #'Unimarc',
-    'Super 10'
-    ##,'Alvi',
+    'Unimarc',
+    'Super 10',
+    'Alvi'
 ]
 
 # ====================================================================
