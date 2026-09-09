@@ -1,0 +1,28 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "TMP_TIENDAS_ACTIVAS_POR_ZONA",
+    "columns": [
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la tienda -- exclusivamente 'Unimarc' en esta segmentacion"
+        },
+        {
+            "name": "ZONA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Zona comercial de la tienda, segun SEGMENTACION_ZONAS_BM_PRICING (Austral, Baja Competencia, Competencia Media, Competencia Regional, Hipercompetitiva, Norte, Premium)"
+        },
+        {
+            "name": "STORE_ID",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Codigo de tienda (sin ceros a la izquierda), en el mismo formato que usa el resto del pipeline de regresion"
+        }
+    ],
+    "clustering_fields": [
+        "STORE_BANNER",
+        "ZONA"
+    ]
+}
