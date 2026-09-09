@@ -493,73 +493,124 @@ segmentos_config = {
     'Descripcion Producto': {
         'color': 'F8CBAD',
         'color_header': 'C00000',
-        'columnas': ['EAN','PRODUCT_DESCRIPTION','CATEGORY_DESCRIPTION','SUB_CATEGORY_DESCRIPTION',
-                     'MATERIAL', 'SALES_UOM', 'SALES_UNIT']
+        'columnas': [
+            'EAN',
+            'PRODUCT_DESCRIPTION',
+            'CATEGORY_DESCRIPTION',
+            'SUB_CATEGORY_DESCRIPTION',
+            'MATERIAL',
+            'SALES_UOM',
+            'SALES_UNIT',
+        ],
     },
     'Ventas': {
         'color': 'C6E0B4',
         'color_header': '548235',
-        'columnas': ['UNIDADES_VENDIDAS', 'DIAS_CON_VENTA', 'PARTICIPACION_VENTAS',
-                     'PARTICIPACION_ACUMULADA', 'SEGMENTO_ABCD']
+        'columnas': [
+            'UNIDADES_VENDIDAS',
+            'DIAS_CON_VENTA',
+            'PARTICIPACION_VENTAS',
+            'PARTICIPACION_ACUMULADA',
+            'SEGMENTO_ABCD',
+        ],
     },
     'Productos Muertos': {
         'color': 'FCE4D6',
         'color_header': 'C55A11',
-        'columnas': ['ESTADO', 'PRIMERA_VENTA', 'ULTIMA_VENTA',
-                     'DIAS_DESDE_ULTIMA_VENTA',
-                     'INTERVALO_P90_VENTAS',
-                     'DIAS_VENTA_BASE',
-                     'DIAS_VENTA_RECIENTE',
-                     'RATIO_CANTIDAD_RECIENTE_BASE',
-                     'RATIO_FRECUENCIA_RECIENTE_BASE']
+        'columnas': [
+            'ESTADO',
+            'PRIMERA_VENTA',
+            'ULTIMA_VENTA',
+            'DIAS_DESDE_ULTIMA_VENTA',
+            'INTERVALO_P90_VENTAS',
+            'DIAS_VENTA_BASE',
+            'DIAS_VENTA_RECIENTE',
+            'RATIO_CANTIDAD_RECIENTE_BASE',
+            'RATIO_FRECUENCIA_RECIENTE_BASE',
+        ],
     },
     'Intermitencias': {
         'color': 'DDEBF7',
         'color_header': '2E74B5',
-        'columnas': ['PORCENTAJE_COBERTURA', 'MAYOR_PAUSA_SIN_VENTA_DIAS',
-                     'N_PAUSAS_INUSUALES', 'ELEGIBLE_PARA_EVALUACION_PAUSAS',
-                     'RATIO_DIAS_PERDIDOS_RECIENTE', 'FLAG_LANZAMIENTO_FANTASMA',
-                     'FLAG_MUERTE_RECIENTE', 'DIAS_SIN_VENTA_INICIO', 'DIAS_SIN_VENTA_MEDIO',
-                     'DIAS_SIN_VENTA_RECIENTE', 'ZONA_CONCENTRACION_PAUSAS']
+        'columnas': [
+            'PORCENTAJE_COBERTURA',
+            'MAYOR_PAUSA_SIN_VENTA_DIAS',
+            'N_PAUSAS_INUSUALES',
+            'ELEGIBLE_PARA_EVALUACION_PAUSAS',
+            'RATIO_DIAS_PERDIDOS_RECIENTE',
+            'FLAG_LANZAMIENTO_FANTASMA',
+            'FLAG_MUERTE_RECIENTE',
+            'DIAS_SIN_VENTA_INICIO',
+            'DIAS_SIN_VENTA_MEDIO',
+            'DIAS_SIN_VENTA_RECIENTE',
+            'ZONA_CONCENTRACION_PAUSAS',
+        ],
     },
     'Producto Nuevo': {
         'color': 'FFF2CC',
         'color_header': 'BF8F00',
-        'columnas': ['ES_PRODUCTO_NUEVO']
+        'columnas': ['ES_PRODUCTO_NUEVO'],
     },
     'Caracterizacion Variabilidad': {
         'color': 'E2D9F3',
         'color_header': '7030A0',
-        'columnas': ['CV_UNIDADES', 'RATIO_DISPERSION_UNIDADES',
-                     'CV_ROBUSTO_PRECIO',
-                     'CORRELACION_PRECIO_UNIDADES', 'FLAG_DEMANDA_MUY_VARIABLE',
-                     'FLAG_SOBREDISPERSION_UNIDADES', 'FLAG_PRECIO_MUY_VARIABLE',
-                     'FLAG_RELACION_PRECIO_UNIDADES']
+        'columnas': [
+            'CV_UNIDADES',
+            'RATIO_DISPERSION_UNIDADES',
+            'CV_ROBUSTO_PRECIO',
+            'CORRELACION_PRECIO_UNIDADES',
+            'FLAG_DEMANDA_MUY_VARIABLE',
+            'FLAG_SOBREDISPERSION_UNIDADES',
+            'FLAG_PRECIO_MUY_VARIABLE',
+            'FLAG_RELACION_PRECIO_UNIDADES',
+        ],
     },
     'Informacion Promocional': {
         'color': 'FFE5F0',
         'color_header': 'C00060',
-        'columnas': ['N_DIAS_PROMOCIONALES', 'INTENSIDAD_PROMOCIONAL', 'PRECIO_MIN_PROMO',
-                     'PRECIO_MAX_PROMO',
-                     'DESCUENTO_MIN_PROMO', 'DESCUENTO_MAX_PROMO', 'CV_PRECIO_PROMO',
-                     'MECANICA_PRECIO_MIN', 'MECANICA_PRECIO_MAX', 'N_MECANICAS_OBSERVADAS',
-                     'RACHA_MAX_MISMA_MECANICA', 'N_MECANICAS_VALIDAS',
-                     'CASO_MODELO', 'INCLUIR_MECANICA', 'MECANICA_REFERENCIA']
+        'columnas': [
+            'N_DIAS_PROMOCIONALES',
+            'INTENSIDAD_PROMOCIONAL',
+            'PRECIO_MIN_PROMO',
+            'PRECIO_MAX_PROMO',
+            'DESCUENTO_MIN_PROMO',
+            'DESCUENTO_MAX_PROMO',
+            'CV_PRECIO_PROMO',
+            'MECANICA_PRECIO_MIN',
+            'MECANICA_PRECIO_MAX',
+            'N_MECANICAS_OBSERVADAS',
+            'RACHA_MAX_MISMA_MECANICA',
+            'N_MECANICAS_VALIDAS',
+            'CASO_MODELO',
+            'INCLUIR_MECANICA',
+            'MECANICA_REFERENCIA',
+        ],
     },
     'ADI/CV2': {
         'color': 'D9E1F2',
         'color_header': '203864',
-        'columnas': ['ADI', 'CV2', 'TIPOLOGIA_DEMANDA']
+        'columnas': [
+            'ADI',
+            'CV2',
+            'TIPOLOGIA_DEMANDA',
+        ],
     },
 }
 
-# Columnas que deben mostrarse solo con fecha (sin hora)
-COLUMNAS_SOLO_FECHA = ['PRIMERA_VENTA', 'ULTIMA_VENTA']
 
-# Anchos personalizados (columna: ancho en caracteres)
+COLUMNAS_SOLO_FECHA = [
+    'PRIMERA_VENTA',
+    'ULTIMA_VENTA',
+]
+
 ANCHOS_PERSONALIZADOS = {
     'PRODUCT_DESCRIPTION': 45,
 }
+
+COLUMNAS_FIJAS = [
+    'EAN',
+    'PRODUCT_DESCRIPTION',
+]
 
 
 ##########---------- 1. Funciones principales ----------##########
@@ -2357,59 +2408,137 @@ def clasificar_tipologia_demanda(
 #####-----1.10 Creación de Excel y Subida a SP
 
 def _sanitize_value(value, col_name=None):
-    """Convierte valores no soportados por Excel (listas, dicts,
-    numpy types, NaN) a algo compatible."""
+    """Convierte valores no soportados por Excel a valores compatibles."""
     if isinstance(value, list | tuple | set | dict):
         return str(value)
+
     if isinstance(value, np.generic):
         value = value.item()
+
     try:
         if pd.isna(value):
             return None
     except (TypeError, ValueError):
         pass
 
-    # Truncar valores de fecha/hora a solo la fecha para cols especificas
     if col_name in COLUMNAS_SOLO_FECHA:
         if isinstance(value, pd.Timestamp):
             return value.date()
+
         if hasattr(value, 'date') and callable(getattr(value, 'date')):  # noqa: B009
             return value.date()
+
         if isinstance(value, str):
             return value.split(' ')[0]
 
     return value
 
 
+def _aplicar_estilo_encabezado_segmento(
+    ws,
+    start_col,
+    end_col,
+    seg_nombre,
+    color_header,
+    center_align,
+    thin_border,
+):
+    """Aplica estilo y merge a un tramo de encabezado de segmento."""
+    if end_col > start_col:
+        ws.merge_cells(
+            start_row=1,
+            start_column=start_col,
+            end_row=1,
+            end_column=end_col,
+        )
+
+    cell = ws.cell(row=1, column=start_col, value=seg_nombre)
+    cell.font = Font(bold=True, color='FFFFFF', size=12)
+    cell.fill = PatternFill(
+        start_color=color_header,
+        end_color=color_header,
+        fill_type='solid',
+    )
+    cell.alignment = center_align
+    cell.border = thin_border
+
+    for col_idx in range(start_col, end_col + 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.fill = PatternFill(
+            start_color=color_header,
+            end_color=color_header,
+            fill_type='solid',
+        )
+        cell.border = thin_border
+        cell.alignment = center_align
+
+
 def generar_excel_buffer_segmentado(df: pd.DataFrame) -> io.BytesIO:
-    """Genera el Excel segmentado y formateado, devolviendo un buffer
-    en memoria."""
+    """Genera el Excel segmentado y devuelve un buffer en memoria."""
+    columnas_fijas_faltantes = [
+        col for col in COLUMNAS_FIJAS
+        if col not in df.columns
+    ]
+
+    if columnas_fijas_faltantes:
+        msg = (
+            'No se pueden fijar las columnas esperadas porque no existen '
+            f'en el dataframe: {columnas_fijas_faltantes}'
+        )
+        raise ValueError(
+            msg
+        )
+
     wb = Workbook()
     ws = wb.active
     ws.title = 'Reporte'
 
     columnas_finales = []
-    info_columnas = []  # (nombre_col, nombre_segmento, color, color_header)
+    info_columnas = []
 
     for seg_nombre, seg_info in segmentos_config.items():
         for col in seg_info['columnas']:
             if col in df.columns:
                 columnas_finales.append(col)
-                info_columnas.append((col, seg_nombre, seg_info['color'], seg_info['color_header']))  # noqa: E501
+                info_columnas.append(
+                    (
+                        col,
+                        seg_nombre,
+                        seg_info['color'],
+                        seg_info['color_header'],
+                    )
+                )
 
-    # Forzar EAN como 1a columna y PRODUCT_DESCRIPTION como 2a;
-    # el resto sigue igual.
-    columnas_prioritarias = ['EAN', 'PRODUCT_DESCRIPTION']
-    presentes = [col for col in columnas_prioritarias if col in columnas_finales]
-    resto = [col for col in columnas_finales if col not in presentes]
-    columnas_finales = presentes + resto
+    columnas_fijas_sin_configurar = [
+        col for col in COLUMNAS_FIJAS
+        if col not in columnas_finales
+    ]
 
-    # Reordenar tambien la metadata para que colores/segmentos
-    # sigan a su columna
-    orden = {col: pos for pos, col in enumerate(columnas_finales)}
-    info_columnas = sorted(info_columnas, key=lambda item: orden[item[0]])
+    if columnas_fijas_sin_configurar:
+        msg = (
+            'Las siguientes columnas fijas existen en el dataframe, '
+            'pero no fueron encontradas en segmentos_config: '
+            f'{columnas_fijas_sin_configurar}'
+        )
+        raise ValueError(
+            msg
+        )
 
-    df_final = df[columnas_finales]
+    resto_columnas = [
+        col for col in columnas_finales
+        if col not in COLUMNAS_FIJAS
+    ]
+    columnas_finales = COLUMNAS_FIJAS + resto_columnas
+
+    orden_columnas = {
+        col: pos for pos, col in enumerate(columnas_finales)
+    }
+    info_columnas = sorted(
+        info_columnas,
+        key=lambda item: orden_columnas[item[0]],
+    )
+
+    df_final = df[columnas_finales].copy()
 
     logging.info(f'Dimensiones finales df: {df_final.shape}')
 
@@ -2419,90 +2548,166 @@ def generar_excel_buffer_segmentado(df: pd.DataFrame) -> io.BytesIO:
         top=Side(style='thin', color='B7B7B7'),
         bottom=Side(style='thin', color='B7B7B7'),
     )
-    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
-    # Fila 1: nombre del segmento (merge de celdas contiguas
-    # del mismo segmento)
+    center_align = Alignment(
+        horizontal='center',
+        vertical='center',
+        wrap_text=True,
+    )
+
+    # El panel congelado queda antes de la columna C.
+    # Los merges se dividen si un segmento cruza entre B y C,
+    # evitando problemas de renderizado en el visor de SharePoint.
+    limite_columnas_fijas = len(COLUMNAS_FIJAS)
+
     col_idx = 1
     i = 0
+
     while i < len(info_columnas):
         seg_actual = info_columnas[i][1]
         color_header = info_columnas[i][3]
         j = i
-        while j < len(info_columnas) and info_columnas[j][1] == seg_actual:
+
+        while (
+            j < len(info_columnas)
+            and info_columnas[j][1] == seg_actual
+        ):
             j += 1
+
         start_col = col_idx
         end_col = col_idx + (j - i) - 1
 
-        if end_col > start_col:
-            ws.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=end_col)
-        cell = ws.cell(row=1, column=start_col, value=seg_actual)
-        cell.font = Font(bold=True, color='FFFFFF', size=12)
-        cell.fill = PatternFill(start_color=color_header, end_color=color_header, fill_type='solid')  # noqa: E501
-        cell.alignment = center_align
+        cruza_limite_congelado = (
+            start_col <= limite_columnas_fijas < end_col
+        )
 
-        for c in range(start_col, end_col + 1):
-            cc = ws.cell(row=1, column=c)
-            cc.fill = PatternFill(start_color=color_header, end_color=color_header, fill_type='solid')  # noqa: E501
-            cc.border = thin_border
+        if cruza_limite_congelado:
+            _aplicar_estilo_encabezado_segmento(
+                ws=ws,
+                start_col=start_col,
+                end_col=limite_columnas_fijas,
+                seg_nombre=seg_actual,
+                color_header=color_header,
+                center_align=center_align,
+                thin_border=thin_border,
+            )
+
+            _aplicar_estilo_encabezado_segmento(
+                ws=ws,
+                start_col=limite_columnas_fijas + 1,
+                end_col=end_col,
+                seg_nombre=seg_actual,
+                color_header=color_header,
+                center_align=center_align,
+                thin_border=thin_border,
+            )
+        else:
+            _aplicar_estilo_encabezado_segmento(
+                ws=ws,
+                start_col=start_col,
+                end_col=end_col,
+                seg_nombre=seg_actual,
+                color_header=color_header,
+                center_align=center_align,
+                thin_border=thin_border,
+            )
 
         col_idx = end_col + 1
         i = j
 
     # Fila 2: nombres de columnas
-    for idx, (col_name, seg_nombre, color, color_header) in enumerate(info_columnas, start=1):  # noqa: B007
+    for idx, item in enumerate(info_columnas, start=1):
+        col_name, _, color, _ = item
+
         cell = ws.cell(row=2, column=idx, value=col_name)
         cell.font = Font(bold=True, size=10)
-        cell.fill = PatternFill(start_color=color, end_color=color, fill_type='solid')
+        cell.fill = PatternFill(
+            start_color=color,
+            end_color=color,
+            fill_type='solid',
+        )
         cell.alignment = center_align
         cell.border = thin_border
 
     # Filas de datos
-    for r, (_, row) in enumerate(df_final.iterrows(), start=3):
-        for c, (col_name, seg_nombre, color, color_header) in enumerate(info_columnas, start=1):  # noqa: B007
-            value = _sanitize_value(row[col_name], col_name=col_name)
-            cell = ws.cell(row=r, column=c, value=value)
+    for row_idx, (_, row) in enumerate(df_final.iterrows(), start=3):
+        for col_idx, item in enumerate(info_columnas, start=1):
+            col_name, _, color, _ = item
+            value = _sanitize_value(
+                row[col_name],
+                col_name=col_name,
+            )
+
+            cell = ws.cell(
+                row=row_idx,
+                column=col_idx,
+                value=value,
+            )
             cell.alignment = center_align
             cell.border = thin_border
-            cell.fill = PatternFill(start_color=color, end_color=color, fill_type='solid')
+            cell.fill = PatternFill(
+                start_color=color,
+                end_color=color,
+                fill_type='solid',
+            )
+
             if col_name in COLUMNAS_SOLO_FECHA and value is not None:
                 cell.number_format = 'YYYY-MM-DD'
 
-    # Ajustar ancho de columnas automaticamente
-    for idx, (col_name, seg_nombre, color, color_header) in enumerate(info_columnas, start=1):  # noqa: B007
+    # Ajustar anchos de columnas
+    for idx, item in enumerate(info_columnas, start=1):
+        col_name = item[0]
         col_letter = get_column_letter(idx)
 
         if col_name in ANCHOS_PERSONALIZADOS:
-            ws.column_dimensions[col_letter].width = ANCHOS_PERSONALIZADOS[col_name]
+            ws.column_dimensions[col_letter].width = (
+                ANCHOS_PERSONALIZADOS[col_name]
+            )
             continue
 
         try:
-            max_len_datos = df_final[col_name].astype(str).map(len).max() if len(df_final) > 0 else 0  # noqa: E501
+            max_len_datos = (
+                df_final[col_name]
+                .astype(str)
+                .map(len)
+                .max()
+                if len(df_final) > 0
+                else 0
+            )
         except Exception:  # noqa: BLE001
             max_len_datos = 0
-        max_len = max(len(str(col_name)), max_len_datos)
-        ws.column_dimensions[col_letter].width = min(max(max_len + 4, 12), 35)
 
-    # Alturas de fila para encabezados
+        max_len = max(
+            len(str(col_name)),
+            max_len_datos,
+        )
+
+        ws.column_dimensions[col_letter].width = min(
+            max(max_len + 4, 12),
+            35,
+        )
+
     ws.row_dimensions[1].height = 24
     ws.row_dimensions[2].height = 30
 
-    # Congelar paneles: fija (EAN, PRODUCT_DESCRIPTION)
-    # y las 2 filas de encabezado. El orden ya se garantiza arriba.
+    # Fija A y B: EAN y PRODUCT_DESCRIPTION.
+    # También fija las filas 1 y 2.
     ws.freeze_panes = 'C3'
 
     buffer = io.BytesIO()
     wb.save(buffer)
     buffer.seek(0)
+
     return buffer
 
-# ----------------------------------------------------------------
-# 2. Funciones de gestion e integracion con SharePoint
-# ----------------------------------------------------------------
+
 def listar_archivos_sharepoint(outputs_dir: str, sp_cred: dict) -> list:
-    """Devuelve la lista de nombres de archivo existentes en la
-      carpeta de SharePoint."""
-    carpeta = sp.SharePointFolder(**sp_cred, server_relative_folder=outputs_dir)
+    """Devuelve los archivos existentes en la carpeta de SharePoint."""
+    carpeta = sp.SharePointFolder(
+        **sp_cred,
+        server_relative_folder=outputs_dir,
+    )
+
     return carpeta.fileList()
 
 
@@ -2510,41 +2715,53 @@ def generar_nombre_no_duplicado(
     nombre_base: str,
     extension: str,
     outputs_dir: str,
-    sp_cred: dict
+    sp_cred: dict,
 ) -> str:
-    """Verifica si nombre_base.extension ya existe en SharePoint.
-    Si existe, agrega sufijo _v{i} incremental hasta encontrar uno libre.
-    """
-    archivos_existentes = listar_archivos_sharepoint(outputs_dir, sp_cred)
+    """Genera un nombre que no sobrescriba un archivo existente."""
+    archivos_existentes = listar_archivos_sharepoint(
+        outputs_dir=outputs_dir,
+        sp_cred=sp_cred,
+    )
 
     nombre_candidato = f'{nombre_base}.{extension}'
+
     if nombre_candidato not in archivos_existentes:
         return nombre_candidato
 
-    i = 1
+    version = 1
+
     while True:
-        nombre_candidato = f'{nombre_base}_v{i}.{extension}'
+        nombre_candidato = (
+            f'{nombre_base}_v{version}.{extension}'
+        )
+
         if nombre_candidato not in archivos_existentes:
             return nombre_candidato
-        i += 1
+
+        version += 1
 
 
 def subir_archivo_sharepoint(
     contenido: io.BytesIO,
     nombre_archivo: str,
     outputs_dir: str,
-    sp_cred: dict
+    sp_cred: dict,
 ) -> None:
-    """Sube un archivo a SharePoint usando un buffer en memoria."""
+    """Sube un buffer Excel a SharePoint."""
     contenido.seek(0)
 
-    output_remote_path = posixpath.join(outputs_dir, nombre_archivo)
+    output_remote_path = posixpath.join(
+        outputs_dir,
+        nombre_archivo,
+    )
 
-    logging.info(f'Subiendo archivo a SharePoint: {output_remote_path}')
+    logging.info(
+        f'Subiendo archivo a SharePoint: {output_remote_path}'
+    )
 
     sp_output = sp.SharePointFile(
         **sp_cred,
-        server_relative_path=output_remote_path
+        server_relative_path=output_remote_path,
     )
 
     sp_output.upload(content=contenido)
@@ -2557,17 +2774,16 @@ def exportar_y_subir_excel_segmentado(
     execution_date: str,
     outputs_dir: str,
     sp_cred: dict,
-    nombre_base_prefijo: str = 'reporte_segmentado'
+    nombre_base_prefijo: str = 'reporte_segmentado',
 ) -> None:
-    """Flujo completo: genera el excel segmentado en memoria,
-    calcula un nombre no duplicado en SharePoint, y lo sube.
-    """
+    """Genera el Excel segmentado, versiona el nombre y lo sube."""
     nombre_base = f'{nombre_base_prefijo}_{execution_date}'
+
     nombre_final = generar_nombre_no_duplicado(
         nombre_base=nombre_base,
         extension='xlsx',
         outputs_dir=outputs_dir,
-        sp_cred=sp_cred
+        sp_cred=sp_cred,
     )
 
     buffer = generar_excel_buffer_segmentado(df)
@@ -2576,11 +2792,12 @@ def exportar_y_subir_excel_segmentado(
         contenido=buffer,
         nombre_archivo=nombre_final,
         outputs_dir=outputs_dir,
-        sp_cred=sp_cred
+        sp_cred=sp_cred,
     )
 
-    logging.info(f'Proceso finalizado. Archivo final: {nombre_final}')
-
+    logging.info(
+        f'Proceso finalizado. Archivo final: {nombre_final}'
+    )
 
 
 def main():
