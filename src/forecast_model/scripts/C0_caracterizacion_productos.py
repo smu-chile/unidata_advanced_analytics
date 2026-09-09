@@ -2382,7 +2382,8 @@ def _sanitize_value(value, col_name=None):
 
 
 def generar_excel_buffer_segmentado(df: pd.DataFrame) -> io.BytesIO:
-    """Genera el Excel segmentado y formateado, devolviendo un buffer en memoria."""  # noqa: W505
+    """Genera el Excel segmentado y formateado, devolviendo un buffer
+    en memoria."""
     wb = Workbook()
     ws = wb.active
     ws.title = 'Reporte'
@@ -2396,6 +2397,18 @@ def generar_excel_buffer_segmentado(df: pd.DataFrame) -> io.BytesIO:
                 columnas_finales.append(col)
                 info_columnas.append((col, seg_nombre, seg_info['color'], seg_info['color_header']))  # noqa: E501
 
+    # Forzar EAN como 1a columna y PRODUCT_DESCRIPTION como 2a;
+    # el resto sigue igual.
+    columnas_prioritarias = ['EAN', 'PRODUCT_DESCRIPTION']
+    presentes = [col for col in columnas_prioritarias if col in columnas_finales]
+    resto = [col for col in columnas_finales if col not in presentes]
+    columnas_finales = presentes + resto
+
+    # Reordenar tambien la metadata para que colores/segmentos
+    # sigan a su columna
+    orden = {col: pos for pos, col in enumerate(columnas_finales)}
+    info_columnas = sorted(info_columnas, key=lambda item: orden[item[0]])
+
     df_final = df[columnas_finales]
 
     logging.info(f'Dimensiones finales df: {df_final.shape}')
@@ -2408,7 +2421,8 @@ def generar_excel_buffer_segmentado(df: pd.DataFrame) -> io.BytesIO:
     )
     center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
-    #Fila1: nombre del segmento (merge celdas contiguas del mismo segmento)
+    # Fila 1: nombre del segmento (merge de celdas contiguas
+    # del mismo segmento)
     col_idx = 1
     i = 0
     while i < len(info_columnas):
@@ -2473,8 +2487,8 @@ def generar_excel_buffer_segmentado(df: pd.DataFrame) -> io.BytesIO:
     ws.row_dimensions[1].height = 24
     ws.row_dimensions[2].height = 30
 
-    # Congelar paneles: fija las 2 primeras columnas y las 2 filas de
-    # encabezado
+    # Congelar paneles: fija (EAN, PRODUCT_DESCRIPTION)
+    # y las 2 filas de encabezado. El orden ya se garantiza arriba.
     ws.freeze_panes = 'C3'
 
     buffer = io.BytesIO()
@@ -2486,8 +2500,8 @@ def generar_excel_buffer_segmentado(df: pd.DataFrame) -> io.BytesIO:
 # 2. Funciones de gestion e integracion con SharePoint
 # ----------------------------------------------------------------
 def listar_archivos_sharepoint(outputs_dir: str, sp_cred: dict) -> list:
-    """Devuelve la lista de nombres de archivo existentes en la carpeta
-    de SharePoint."""
+    """Devuelve la lista de nombres de archivo existentes en la
+      carpeta de SharePoint."""
     carpeta = sp.SharePointFolder(**sp_cred, server_relative_folder=outputs_dir)
     return carpeta.fileList()
 
@@ -2566,6 +2580,7 @@ def exportar_y_subir_excel_segmentado(
     )
 
     logging.info(f'Proceso finalizado. Archivo final: {nombre_final}')
+
 
 
 def main():
