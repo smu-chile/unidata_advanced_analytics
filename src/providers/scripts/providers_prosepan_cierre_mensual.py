@@ -43,19 +43,19 @@ parser.add_argument(
 SQL_QUERIES = QueryDict({
     'Prosepan Weights' :
     """
-    SELECT * FROM cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_WEIGHTS_MARCA
+    SELECT * FROM cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_WEIGHTS
     WHERE YEAR = ${year}
     AND MONTH = ${month}
 
     """,
     'Prosepan Visits' : """
-    SELECT * FROM cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VISITS_MARCA
+    SELECT * FROM cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_VISITS
     WHERE YEAR = ${year}
     AND MONTH = ${month}
     """,
     'Store Visits' : """
     SELECT * FROM
-    cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_STORE_VISITS_MARCA
+    cl-cda-unidata-prod.DS_UNIDATA_PROVEEDORES.PROVEEDORES_PROSEPAN_STORE_VISITS
     WHERE YEAR = ${year}
     AND MONTH = ${month}
     """,
