@@ -353,7 +353,7 @@
         },
         {
             "name": "TIPOLOGIA_DEMANDA",
-            "field_type": "FLOAT64",
+            "field_type": "STRING",
             "mode": "NULLABLE",
             "description": "Clasificación adi/cv2"
         }
