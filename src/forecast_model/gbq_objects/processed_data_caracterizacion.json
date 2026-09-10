@@ -352,5 +352,5 @@
             "description": "Clasificación adi/cv2"
         }
     ],
-    "clustering_fields": ["EXECUTION_DATE"]
+    "clustering_fields": ["CATEGORY_DESCRIPTION", "EAN", "MATERIAL"]
 }
