@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 # Pip
 import numpy as np  # noqa: I001
 import pandas as pd
+import pendulum
 import statsmodels.api as sm
 from google.cloud.bigquery import Client, DatasetReference
 from joblib import Parallel, delayed, parallel_config
@@ -211,6 +212,7 @@ COLUMNAS_FINALES_ORDENADAS = [
     'METODO',
     'SCORE_CONFIABILIDAD',
     'CONFIABILIDAD',
+    'PERIODO_EJECUCION',
 ]
 
 # =======================================================================
@@ -330,10 +332,14 @@ def main() -> None:  # noqa: D103
     proyecto: str = args['project_id']
     store_banner: str = args['store_banner']
     zona: str = args['zona']
+    # Granularidad MES, no dia -- mismo patron que
+    # elasticidad_general.py/regular/promocional.
+    periodo_ejecucion = pendulum.parse(execution_date).format('YYYY-MM')
     logger.info(f'execution_date: {execution_date}')
     logger.info(f'proyecto: {proyecto}')
     logger.info(f'store_banner: {store_banner}')
     logger.info(f'zona: {zona}')
+    logger.info(f'periodo_ejecucion: {periodo_ejecucion}')
 
     # Set gbq client for all subsequent queries
     gbq_client = Client()
@@ -3447,6 +3453,7 @@ def main() -> None:  # noqa: D103
 
     roster['STORE_BANNER'] = store_banner
     roster['ZONA'] = zona
+    roster['PERIODO_EJECUCION'] = periodo_ejecucion
     roster['N_Eventos'] = roster['n_dias_evidencia']
     roster_slim = roster.rename(columns=MAPEO_COLUMNAS_SLIM)
     faltantes = [c for c in COLUMNAS_FINALES_ORDENADAS if c not in roster_slim.columns]
@@ -3475,7 +3482,10 @@ def main() -> None:  # noqa: D103
     # filas de este store_banner, despues agrega -- no pisa otros bancos
     # ya cargados en la misma tabla)
     # ----------------------------------------------------------------
-    where_clause = f"STORE_BANNER = '{store_banner}' AND ZONA = '{zona}'"
+    where_clause = (
+        f"STORE_BANNER = '{store_banner}' AND ZONA = '{zona}' "
+        f"AND PERIODO_EJECUCION = '{periodo_ejecucion}'"
+    )
 
     deleteFromTable(
         table_ref=f'{proyecto}.{esquema}.{tabla}',

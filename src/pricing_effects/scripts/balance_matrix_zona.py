@@ -1,0 +1,590 @@
+# Default
+from __future__ import annotations
+
+import io
+import os
+import logging
+import argparse
+from logging import config
+
+import numpy as np
+
+# Pip
+import pandas as pd
+import pendulum
+from google.cloud.bigquery import Client
+
+import common.office365_extended.sharepoint as sp
+
+# Own
+from common.constants import LOGGING_CONFIG
+from common.databases.queries import QueryDict
+from common.gcp_extended.bigquery import (
+    uploadFrame,
+    readBigQuery,
+    deleteFromTable,
+)
+from common.gcp_extended.secretsmanager import getSecret
+
+
+# -------------------------------------------------------------------------
+#  Config
+# -------------------------------------------------------------------------
+# Logging config
+config.dictConfig(LOGGING_CONFIG)
+# Parser config
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '--project_id', type=str,
+    help='GCP project in which the script will be executed'
+)
+parser.add_argument(
+    '--execution_date', type=str,
+    help='DAG execution date'
+)
+parser.add_argument(
+    '--store_banner', type=str,
+    help='Store banner'
+)
+parser.add_argument(
+    '--zona', type=str,
+    help='Zona comercial (Unimarc)'
+)
+parser.add_argument(
+    '--subir_a_sharepoint', type=str, default='False',
+    help="'True' o 'False' -- si se sube el Excel a Sharepoint ademas de BigQuery"
+)
+
+#######
+# -------------------------------------------------------------------------
+#  SQL Queries
+# -------------------------------------------------------------------------
+SQL_QUERIES = QueryDict({    # Region: Explicación de query
+
+ 'query_sensibilidad':
+"""
+SELECT
+* EXCEPT (MATERIAL),
+  CAST(MATERIAL AS INT64) AS MATERIAL
+FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY_ZONA`
+where STORE_BANNER = '${store_banner}' AND ZONA = '${zona}'
+""",
+
+'query_elasticidad':
+"""
+SELECT * FROM `${proyecto}.PRECIO_PROMOCIONES.ELASTICITY_ZONA`
+where STORE_BANNER = '${store_banner}' AND ZONA = '${zona}'
+""",
+
+'query_ventas':
+"""
+WITH tabla_fecha_max AS (
+  SELECT
+    MAX(P_DATE) AS fecha_max
+  FROM `${proyecto}.PRECIO_PROMOCIONES.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_ZONA`
+  WHERE STORE_BANNER = '${store_banner}' AND ZONA = '${zona}'
+)
+
+SELECT
+  MATERIAL,
+  EAN,
+  SUM(VENTAS_TOTALES_PRODUCTO) AS ventas_totales,
+  MAX(SUB_CATEGORY_DESCRIPTION) AS SUB_CATEGORY_DESCRIPTION,
+FROM `${proyecto}.PRECIO_PROMOCIONES.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_ZONA`
+CROSS JOIN tabla_fecha_max
+WHERE STORE_BANNER = '${store_banner}' AND ZONA = '${zona}'
+  AND P_DATE BETWEEN DATE_SUB(
+  tabla_fecha_max.fecha_max, INTERVAL 12 MONTH) AND tabla_fecha_max.fecha_max
+GROUP BY MATERIAL, EAN;
+
+"""
+})
+
+
+# -------------------------------------------------------------------------
+# Functions and Classes
+# -------------------------------------------------------------------------
+
+# Se agrega cuadrante de BM
+def asignar_segmento_bm(row):
+    if row['kvi'] == 'BKG' and row['segmento_elasticidad'] == 'high':
+        return 'Hi-Lo'
+    if row['kvi'] == 'BKG' and row['segmento_elasticidad'] == 'low':
+        return 'Margin'
+    if row['kvi'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'low':
+        return 'EDLP'
+    if row['kvi'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'high':
+        return 'Low-Lower'
+    return 'Otro'  # En caso de que haya algún valor inesperado
+
+def asignar_segmento_bm_NUEVO_METODO(row):
+    if row['NUEVOS_KVI'] == 'BKG' and row['segmento_elasticidad'] == 'high':
+        return 'Hi-Lo'
+    if row['NUEVOS_KVI'] == 'BKG' and row['segmento_elasticidad'] == 'low':
+        return 'Margin'
+    if row['NUEVOS_KVI'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'low':
+        return 'EDLP'
+    if row['NUEVOS_KVI'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'high':
+        return 'Low-Lower'
+    return 'Otro'  # En caso de que haya algún valor inesperado
+
+
+# -------------------------------------------------------------------------
+# Main function
+# -------------------------------------------------------------------------
+def main() -> None:  # noqa: D103
+
+
+    # Parse input variables
+    args = vars(parser.parse_args())
+    execution_date: str = args['execution_date']
+    proyecto: str = args['project_id']  # noqa: F841
+    store_banner:str = args['store_banner']
+    zona: str = args['zona']
+    subir_a_sharepoint = str(args['subir_a_sharepoint']).strip().lower() == 'true'
+    # Granularidad MES, no dia -- '2026-07-02' -> '2026-07'. Mismo
+    # patron que elasticidad_general.py/product_sensibility.py.
+    periodo_ejecucion = pendulum.parse(execution_date).format('YYYY-MM')
+    logging.info(f'execution_date: {execution_date}')
+    logging.info(f'proyecto: {proyecto}')
+    logging.info(f'zona: {zona}')
+
+
+    # Set gbq client for all subsequent queries
+    gbq_client = Client()
+
+
+    # REGION: Inputs del proceso
+    #----------------------------------------------------------------------
+
+    # Usuario
+    usuario = 'balance_matrix'
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ENDREGION
+
+    # REGION: Querys de GCP
+    #----------------------------------------------------------------------
+
+    # SENSIBILIDAD
+
+    query_sensibilidad = SQL_QUERIES['query_sensibilidad'].substitute(
+        proyecto = proyecto,
+        store_banner = store_banner,
+        zona = zona)
+
+    df_sensibilidad = readBigQuery(
+            query=query_sensibilidad,
+            user=usuario,
+            gbq_client=gbq_client)
+
+    print('[PARCHE] Query Sensibilidad Info: ')
+    print(df_sensibilidad.info())
+
+    df_sensibilidad.columns = df_sensibilidad.columns.str.lower()
+    # Forzar 'material' a string -- evita el ValueError de pandas al
+    # unir columnas de distinto tipo (object vs Int64) mas adelante,
+    # sin importar de que lado venga el tipo inesperado.
+    df_sensibilidad['material'] = df_sensibilidad['material'].astype(str)
+    logging.info('Consulta de sensibilidad lista')
+
+    # ELASTICIDAD
+
+    query_elasticidad = SQL_QUERIES['query_elasticidad'].substitute(
+        proyecto = proyecto,
+        store_banner = store_banner,
+        zona = zona)
+
+    df_elasticidad = readBigQuery(
+            query=query_elasticidad,
+            user=usuario,
+            gbq_client=gbq_client)
+
+    print('[PARCHE] Query Elasticidad Info: ')
+    print(df_elasticidad.info())
+
+    df_elasticidad.columns = df_elasticidad.columns.str.lower()
+    df_elasticidad['material'] = df_elasticidad['material'].astype(str)
+    logging.info('Consulta de elasticidad lista')
+
+    # VENTAS
+
+    query_ventas = SQL_QUERIES['query_ventas'].substitute(
+        proyecto = proyecto,
+        store_banner = store_banner,
+        zona = zona)
+
+    df_ventas = readBigQuery(
+            query=query_ventas,
+            user=usuario,
+            gbq_client=gbq_client)
+
+    print('[PARCHE] Query Ventas Info: ')
+    print(df_ventas.info())
+
+    df_ventas.columns = df_ventas.columns.str.lower()
+    df_ventas['material'] = df_ventas['material'].astype(str)
+    logging.info('Consulta de ventas lista')
+
+    #----------------------------------------------------------------------
+    # ENDREGION
+
+
+    # REGION: Se crea Balance Matrix BM
+    #----------------------------------------------------------------------
+
+    df_balance_matrix = df_elasticidad.merge(
+        df_sensibilidad[['material', 'material_padre', 'indice_sensibilidad', 'indice_sensibilidad_familia','kvi']],  # noqa: E501
+        on='material',
+        how='left'
+    )
+
+    mask_fillna_is  = df_balance_matrix['indice_sensibilidad'].isna()
+    mask_fillna_isf = df_balance_matrix['indice_sensibilidad_familia'].isna()
+
+    df_balance_matrix['indice_sensibilidad'] = df_balance_matrix['indice_sensibilidad'].fillna(0)
+
+    #[PARCHE] En estrico rigor se debería rellenar ISF yendo a buscar los padres ¿?  # noqa: W505
+
+    df_balance_matrix['indice_sensibilidad_familia'] = df_balance_matrix['indice_sensibilidad_familia'].fillna(0)  # noqa: E501
+
+    print('#(IS nans) agregados: ', mask_fillna_is.sum())
+    print('#(ISF nans) agregados: ', mask_fillna_isf.sum())
+
+    df_balance_matrix['kvi'] = df_balance_matrix['kvi'].fillna('BKG')
+
+    #Parche: agregamos columna subcat description
+    df_balance_matrix = df_balance_matrix.merge(
+          df_ventas[['ean','ventas_totales','sub_category_description']], on = 'ean', how='left')
+
+    logging.info('Merge de tablas listo')
+
+    #----------------------------------------------------------------------
+    # ENDREGION
+
+    # REGION: Se agregan parametros
+    #----------------------------------------------------------------------
+
+    # Para la sensibilidad se asignan los nombres del equipo Comercial
+    mapa = {'KVI': 'SE', 'KCI': 'SG', 'BKG': 'FS'}
+    pos = df_balance_matrix.columns.get_loc('kvi') + 1
+    df_balance_matrix.insert(
+        pos,
+        'codigo_sensibilidad',
+        df_balance_matrix['kvi'].astype(str).str.upper().str.strip().map(mapa))
+
+
+    # Aplicar la función al dataframe
+    df_balance_matrix['segmento_bm'] = df_balance_matrix.apply(asignar_segmento_bm, axis=1)
+
+    logging.info('Parámetros adicionales listos')
+    #----------------------------------------------------------------------
+    # ENDREGION
+
+    # REGION: Se ordenan las columnas
+    #----------------------------------------------------------------------
+
+    # Periodo de ejecucion -- valor literal de execution_date (ej.
+    # '2026-07-02'), no un mes agregado.
+    # Granularidad MES, no dia -- ya calculado arriba comperiodo_ejecucion.
+    df_balance_matrix['periodo_ejecucion'] = periodo_ejecucion
+    df_balance_matrix['zona'] = zona
+
+    df_balance_matrix_sp = df_balance_matrix[['store_banner',
+                                            'zona',
+                                            'categoria',
+                                            'sub_category_description',
+                                            'descripcion_material',
+                                            'material',
+                                            'umv',
+                                            'ean',
+                                            'ventas_totales',
+                                            'indice_sensibilidad',
+                                            'indice_sensibilidad_familia',
+                                            'material_padre',
+                                            'elasticidad',
+                                            'kvi',
+                                            'codigo_sensibilidad',
+                                            'segmento_elasticidad',
+                                            'segmento_bm',
+                                            'periodo_ejecucion',
+                                            'zona']]
+
+
+
+
+    def clasificar_kvi_old(df_temp,
+                    ventas='ventas_totales',
+                    sensibilidad='indice_sensibilidad_familia',
+                    desempate='ean'):   # columna única por producto
+        total_ventas = df_temp[ventas].sum()
+
+        if total_ventas <= 0:
+            msg = f"'{ventas}' debe sumar más de 0."
+            raise ValueError(msg)
+
+        # Orden: sensibilidad de familia desc -> ventas del producto desc.
+        # El desempate único garantiza un orden reproducible en BigQuery.
+        df_temp = df_temp.sort_values(
+            by=[sensibilidad, ventas, desempate],
+            ascending=[False, False, True],
+            kind='stable'
+        ).reset_index(drop=True)
+
+        # Columna explícita que fija el orden usado para el acumulado.
+        df_temp['orden_kvi'] = range(1, len(df_temp) + 1)
+
+        # Acumulado a nivel PRODUCTO sobre el total del formato.
+        df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
+        df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
+
+        df_temp['NUEVOS_KVI'] = np.select(
+            [
+                df_temp['pct_ventas_acumulado'] <= 0.30,
+                df_temp['pct_ventas_acumulado'] <= 0.60,
+            ],
+            ['KVI', 'KCI'],
+            default='BKG'
+        )
+
+        return df_temp
+
+    def clasificar_kvi(df_temp,
+                    ventas='ventas_totales',
+                    sensibilidad='indice_sensibilidad_familia',
+                    familia='material_padre',      # identificador único de familia
+                    desempate='ean'):           # columna única por producto
+        total_ventas = df_temp[ventas].sum()
+
+        if total_ventas <= 0:
+            msg = f"'{ventas}' debe sumar más de 0."
+            raise ValueError(msg)
+
+        # ------------------------------------------------------------
+        # 1. ORDEN DE PRODUCTOS
+        #    Sensibilidad de familia desc -> ventas del producto desc.
+        #    Se ordena también por familia para que sus productos queden
+        #    contiguos y ninguna familia quede "interrumpida" por otra.
+        # ------------------------------------------------------------
+        df_temp = df_temp.sort_values(
+            by=[sensibilidad, familia, ventas, desempate],
+            ascending=[False, False, False, True],
+            kind='stable'
+        ).reset_index(drop=True)
+
+        df_temp['orden_kvi'] = range(1, len(df_temp) + 1)
+
+        # Acumulado a nivel PRODUCTO sobre el total del formato.
+        df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
+        df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
+
+        # ------------------------------------------------------------
+        # 2. CLASIFICACIÓN A NIVEL DE FAMILIA (sin partir familias)
+        #    Se construye el orden de familias respetando el orden de
+        #    productos ya definido, y se acumulan las ventas por familia.
+        # ------------------------------------------------------------
+        orden_familias = df_temp[familia].drop_duplicates().tolist()
+
+        ventas_familia = (
+            df_temp.groupby(familia)[ventas].sum()
+            .reindex(orden_familias)
+        )
+
+        pct_familia = ventas_familia / total_ventas
+
+        # Acumulado ANTES de cada familia (exclusivo): lo ya acumulado
+        # por las familias anteriores en el orden.
+        acum_antes_familia = pct_familia.cumsum().shift(fill_value=0.0)
+
+        # Regla 2 (redondeo hacia arriba): una familia entra en el tramo
+        # mientras el acumulado ANTES de ella no haya superado el umbral.
+        # Así, si una familia previa dejó el acumulado en 0.3299, la
+        # siguiente familia todavía entra como KVI y el corte queda un
+        # poco por encima de 0.33 (idem para 0.66).
+        clasificacion_familia = np.select(
+            [
+                acum_antes_familia < 0.33,
+                acum_antes_familia < 0.66,
+            ],
+            ['KVI', 'KCI'],
+            default='BKG'
+        )
+
+        mapa_familia = dict(zip(orden_familias, clasificacion_familia))
+
+        # ------------------------------------------------------------
+        # 3. PROPAGAR LA CLASIFICACIÓN A CADA PRODUCTO DE LA FAMILIA
+        # ------------------------------------------------------------
+        df_temp['NUEVOS_KVI'] = df_temp[familia].map(mapa_familia)
+
+        return df_temp
+
+    df_balance_matrix_sp = clasificar_kvi(
+        df_balance_matrix_sp,
+        sensibilidad='indice_sensibilidad_familia'
+    )
+
+    df_balance_matrix_sp = df_balance_matrix_sp.drop(columns=['material_padre'], errors='ignore')  # noqa: E501
+
+    df_balance_matrix_sp['segmento_bm_new'] = df_balance_matrix_sp.apply(asignar_segmento_bm_NUEVO_METODO, axis=1)  # noqa: E501
+
+    print('[PATCH N] Balance Matrix Info pre drop: ', df_balance_matrix_sp.info())
+    df_balance_matrix_sp = df_balance_matrix_sp.drop(columns=['kvi', 'segmento_bm'], errors='ignore')  # noqa: E501, ERA001
+
+    print('[PATCH N] Balance Matrix Info post drop: ', df_balance_matrix_sp.info())
+    #Nota: codigo sensibilidad viene con la frecuencia de la sensibilidad
+    # sin forzados
+    mapa = {'BKG': 'FS', 'KCI': 'SG', 'KVI': 'SE'}
+    df_balance_matrix_sp['codigo_sensibilidad'] = df_balance_matrix_sp['NUEVOS_KVI'].map(mapa)
+    print('info df_temp post nuevos KVI: ', df_balance_matrix_sp.info())
+
+    # Orden Columnas y renombramiento para Excel
+    df_balance_matrix_sp = df_balance_matrix_sp[
+        ['store_banner', 'zona', 'categoria', 'sub_category_description',
+         'descripcion_material', 'material', 'umv', 'ean',
+         'ventas_totales', 'indice_sensibilidad', 'indice_sensibilidad_familia',
+         'elasticidad', 'NUEVOS_KVI','codigo_sensibilidad', 'segmento_elasticidad',
+         'segmento_bm_new', 'pct_ventas', 'pct_ventas_acumulado', 'orden_kvi',
+         'periodo_ejecucion']
+    ]
+
+    df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
+        'store_banner':'Formato',
+        'zona':'Zona',
+        'categoria':'Categoria',
+        'sub_category_description': 'Grupo artículo',
+        'descripcion_material': 'Descripción material',
+        'material':'Material',
+        'umv':'UMV',
+        'ean':'EAN',
+        'ventas_totales': 'Ventas EAN (12 meses)',
+        'indice_sensibilidad': 'Índice sensibilidad',
+        'indice_sensibilidad_familia': 'Índice sensibilidad familia',
+        'elasticidad': 'Elasticidad',
+        #'kvi':'KVI',  # noqa: ERA001
+        'NUEVOS_KVI': 'KVI',
+        'codigo_sensibilidad': 'Código sensibilidad',
+        'segmento_elasticidad': 'Segmento elasticidad',
+        # 'segmento_bm': 'Segmento Balance Matrix',  # noqa: ERA001
+        'segmento_bm_new': 'Segmento Balance Matrix',
+        'orden_kvi': 'Orden KVI',
+        'periodo_ejecucion': 'Periodo Ejecución'
+    })
+
+    #df_balance_matrix_sp.sort_values(by='Categoria')  # noqa: ERA001
+
+    logging.info('Cambio de nombres para Excel listo')
+    #----------------------------------------------------------------------
+    # ENDREGION
+
+
+        # REGION: Se sube a sharepoint
+    #----------------------------------------------------------------------
+
+    print(f'[PARCHE] Balance Matrix Dimensiones: {df_balance_matrix_sp.shape}')
+    cantidad_eliminadas = df_balance_matrix_sp['Elasticidad'].isna().sum()
+    df_balance_matrix_sp = df_balance_matrix_sp[df_balance_matrix_sp['Elasticidad'].notna()]
+    print(f'Se eliminaron {cantidad_eliminadas} filas con Elasticidad nula')
+    print(f'[PARCHE] Balance Matrix Dimensiones: {df_balance_matrix_sp.shape}')
+
+    if subir_a_sharepoint:
+        buffer = io.BytesIO()
+
+        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+            nombre_hoja = f'BM {store_banner} {zona}'
+            df_balance_matrix_sp.to_excel(writer, index=False, sheet_name=nombre_hoja)
+            sheet = writer.sheets[nombre_hoja]
+            workbook = writer.book
+
+            # formato general centrado
+            formato_centrado = workbook.add_format({'align': 'center'})
+
+            # formato dinero para Ventas EAN (12 meses)
+            formato_moneda = workbook.add_format({
+                'num_format': '$#,##0',
+                'align': 'center'
+            })
+
+            # formato número para material
+            formato_material = workbook.add_format({
+                'num_format': '#,##0',
+                'align': 'center'
+            })
+
+            columnas = list(df_balance_matrix_sp.columns)
+
+            for i, col in enumerate(columnas):
+                serie = df_balance_matrix_sp[col].astype(str)
+                max_len = max(serie.map(len).max(), len(col))
+                width = max_len + 2
+
+                # aplicar formato según columna
+                if col == 'Ventas EAN (12 meses)':
+                    sheet.set_column(i, i, width, formato_moneda)
+                elif col == 'material':
+                    sheet.set_column(i, i, width, formato_material)
+                else:
+                    sheet.set_column(i, i, width, formato_centrado)
+
+            sheet.freeze_panes(1, 0)
+
+        buffer.seek(0)
+
+        sp.SharePointFile(
+            **getSecret(
+                'bdaa_sharepoint_credentials',
+                proyecto,
+            ),
+            server_relative_path=(
+                '/sites/'
+                'BigDatayAdvancedAnalytics/'
+                'Documentos%20compartidos/'
+                'Pricing/'
+                'Balance Matrix AA - GCP/'
+                f'Balance_Matrix_AA_{store_banner}_{zona}_{execution_date}_v3.xlsx'
+            )
+        ).upload(buffer)
+        logging.info('Tabla subida en Sharepoint')
+    else:
+        logging.info('SUBIR_A_SHAREPOINT=False -- se omite la subida a Sharepoint.')
+
+    #----------------------------------------------------------------------
+    # ENDREGION
+
+
+    # REGION: Se sube a GCP
+    #----------------------------------------------------------------------
+    # Definir el WHERE
+    where_clause = (
+        f"store_banner = '{store_banner}' AND zona = '{zona}' "
+        f"AND periodo_ejecucion = '{periodo_ejecucion}'"
+    )
+
+    # Parametros
+    esquema = 'PRECIO_PROMOCIONES'
+    tabla = 'BALANCE_MATRIX_ZONA'
+
+    # Se elimina los datos para cierto store_banner y rango (si existen)
+    deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
+                    where_clause=where_clause,
+                    gbq_client=gbq_client)
+
+
+
+    # Se carga en BQ con los datos recalculados
+    uploadFrame(
+        df_balance_matrix_sp,
+        table_ddl_json_path=os.path.join('gbq_objects',
+                                         'ingest_product_balance_matrix_zona.json'),
+        project=proyecto,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    logging.info('Se sube la tabla a GCP')
+
+    #----------------------------------------------------------------------
+    # ENDREGION
+
+if __name__ == '__main__':
+    main()
