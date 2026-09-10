@@ -101,7 +101,7 @@
         },
         {
             "name": "INTERVALO_P90_VENTAS",
-            "field_type": "INT64",
+            "field_type": "FLOAT64",
             "mode": "NULLABLE",
             "description": "P90 de longitud de pausas entre ventas"
         },
