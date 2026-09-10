@@ -1,0 +1,356 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "FORECAST_CARACTERIZACION_PRODUCTOS",
+
+    "columns": [
+        {
+            "name": "EAN",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Ean del producto a analizar"
+        },
+        {
+            "name": "PRODUCT_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Descripción del producto"
+        },
+        {
+            "name": "CATEGORY_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Descripción de la categoría"
+        },
+        {
+            "name": "SUB_CATEGORY_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Descripción sub categoría"
+        },
+        {
+            "name": "MATERIAL",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Material del producto"
+        },
+        {
+            "name": "SALES_UOM",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "UOM"
+        },
+        {
+            "name": "SALES_UNIT",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "UMV"
+        },
+        {
+            "name": "UNIDADES_VENDIDAS",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Cantidad de unidades vendidas periodo forecast"
+        },
+        {
+            "name":"DIAS_CON_VENTA",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Días registrados de venta periodo forecast"
+        },
+        {
+            "name": "PARTICIPACION_VENTAS",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Porcentaje ventas respecto del total"
+        },
+        {
+            "name": "PARTICIPACION_ACUMULADA",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Porcentaje ventas acumulado (ordenado de mayor venta a menor) respecto del total"
+        },
+        {
+            "name": "SEGMENTO_ABCD",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Segmento participación ventas acumulada: A (80%), B(90%), C(95%), D(100%)"
+        },
+        {
+            "name": "ESTADO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Identificador productos muertos"
+        },
+        {
+            "name": "PRIMERA_VENTA",
+            "field_type": "DATE",
+            "mode": "NULLABLE",
+            "description": "Fecha primera venta registrada"
+        },
+        {
+            "name": "ULTIMA_VENTA",
+            "field_type": "DATE",
+            "mode": "NULLABLE",
+            "description": "Fecha última venta registrada"
+        },
+        {
+            "name": "DIAS_DESDE_ULTIMA_VENTA",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Días desde execution date hasta última venta"
+        },
+        {
+            "name": "INTERVALO_P90_VENTAS",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "P90 de longitud de pausas entre ventas"
+        },
+        {
+            "name": "DIAS_VENTA_BASE",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Cantidad de días con venta registrada en los últimos 90 días"
+        },
+        {
+            "name": "DIAS_VENTA_RECIENTE",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Cantidad de días con venta registrada en los últimos 28 días"
+        },
+        {
+            "name": "RATIO_CANTIDAD_RECIENTE_BASE",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Promedio diario de unidades entre las ventanas reciente (30) y base (90)"
+        },
+        {
+            "name": "RATIO_FRECUENCIA_RECIENTE_BASE",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Promedio diario de días con venta entre las ventanas reciente (30) y base (90)"
+        },
+        {
+            "name": "PORCENTAJE_COBERTURA",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Porcentaje de días con venta registrada versus días calendario"
+        },
+        {
+            "name": "MAYOR_PAUSA_SIN_VENTA_DIAS",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Pausa más larga sin días"
+        },
+        {
+            "name": "N_PAUSAS_INUSUALES",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Cantidad de pausas mayores a 28 días"
+        },
+        {
+            "name": "ELEGIBLE_PARA_EVALUACION_PAUSAS",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Booleano si cumple con condición para evaluación intermitencias"
+        },
+        {
+            "name": "RATIO_DIAS_PERDIDOS_RECIENTE",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Promedio diario de días sin venta periodo reciente vs periodo base"
+        },
+        {
+            "name": "FLAG_LANZAMIENTO_FANTASMA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Booleano si un producto es fantasma o no"
+        },
+        {
+            "name": "FLAG_MUERTE_RECIENTE",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Booleano si un producto está muerto o no"
+        },
+        {
+            "name": "DIAS_SIN_VENTA_INICIO",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Cantidad de días sin venta en el periodo de inicio"
+        },
+        {
+            "name": "DIAS_SIN_VENTA_MEDIO",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Cantidad de días sin venta en el periodo del medio"
+        },
+        {
+            "name": "DIAS_SIN_VENTA_RECIENTE",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Cantidad de días sin venta en el periodo final"
+        },
+        {
+            "name": "ZONA_CONCENTRACION_PAUSAS",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Zona donde se concentran las ventas"
+        },
+        {
+            "name": "ES_PRODUCTO_NUEVO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Booleano si el producto es nuevo o no (venta contenida primeros últimos 180 días"
+        },
+        {
+            "name": "CV_UNIDADES",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "std(unidades) / media (unidades)"
+        },
+        {
+            "name": "RATIO_DISPERSION_UNIDADES",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Varianza / media de unidades"
+        },
+        {
+            "name": "CV_ROBUSTO_PRECIO",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "IQR/mediana del precio"
+        },
+        {
+            "name": "CORRELACION_PRECIO_UNIDADES",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Pearson entre precio y unidades"
+        },
+        {
+            "name": "FLAG_DEMANDA_MUY_VARIABLE",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Evaluable y cv unidades > 1"
+        },
+        {
+            "name": "FLAG_SOBREDISPERSION_UNIDADES",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "evaluable y fano >= 1.5"
+        },
+        {
+            "name": "FLAG_PRECIO_MUY_VARIABLE",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Evaluable y cv robusto precio >= 0.15"
+        },
+        {
+            "name": "FLAG_RELACION_PRECIO_UNIDADES",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "corr absoluta mayor a 0.3"
+        },
+        {
+            "name": "N_DIAS_PROMOCIONALES",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Días con promo activa"
+        },
+        {
+            "name": "INTENSIDAD_PROMOCIONAL",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Porcentaje de tiempo en promoción vs historial completo"
+        },
+        {
+            "name": "PRECIO_MIN_PROMO",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio mínimo promocional"
+        },
+        {
+            "name": "PRECIO_MAX_PROMO",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio máximo promocional"
+        },
+        {
+            "name": "DESCUENTO_MAX_PROMO",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Descuento máximo en promoción"
+        },
+        {
+            "name": "CV_PRECIO_PROMO",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio std promo / precio medio promo"
+        },
+        {
+            "name": "MECANICA_PRECIO_MIN",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Mecánica con el precio mínimo promocional"
+        },
+        {
+            "name": "MECANICA_PRECIO_MAX",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Mecánica con el precio máximo promocional"
+        },
+                {
+            "name": "N_MECANICAS_OBSERVADAS",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Cantidad de mecánicas observadas durante el historial"
+        },
+        {
+            "name": "RACHA_MAX_MISMA_MECANICA",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Racha más larga en promoción"
+        },
+        {
+            "name": "N_MECANICAS_VALIDAS",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Mecánicas validas (> 10% de presencia)"
+        },
+        {
+            "name": "CASO_MODELO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Tipo de modelo a utilizar según intensidad promocional"
+        },
+        {
+            "name": "INCLUIR_MECANICA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Booleano si incluir variable mecánica"
+        },
+        {
+            "name": "MECANICA_REFERENCIA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Mecánica con mayor presencia en el producto"
+        },
+        {
+            "name": "ADI",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "n días observados / n días con venta"
+        },
+        {
+            "name": "CV2",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "(std(cantidad)/media(cantidad))^2"
+        },
+        {
+            "name": "TIPOLOGIA_DEMANDA",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Clasificación adi/cv2"
+        }
+    ],
+    "clustering_fields": ["EXECUTION_DATE"]
+}
