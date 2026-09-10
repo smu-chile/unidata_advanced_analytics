@@ -74,8 +74,8 @@ STORE_BANNER_LIST = [
 # simplemente no se crea para ese banner, y la cadena salta al
 # siguiente eslabon activo.
 # ====================================================================
-EJECUTAR_REGRESSION_FISICOS = False
-EJECUTAR_BASELINE_PANEL = False
+EJECUTAR_REGRESSION_FISICOS = True
+EJECUTAR_BASELINE_PANEL = True
 EJECUTAR_ELASTICIDAD_GENERAL = True
 EJECUTAR_SENSIBILIDAD = True
 EJECUTAR_BALANCE_MATRIX = True
