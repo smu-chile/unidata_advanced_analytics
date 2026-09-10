@@ -8,12 +8,16 @@ Para banners fisicos (Unimarc, Super 10, Alvi). Cadena por banner:
     sensibilidad? (rama independiente, en paralelo)   --/
 
 Cada etapa tiene su propio interruptor -- si esta apagada, se salta
-sin dejar ningun eslabon roto. balance_matrix, si esta activo,
+sin dejar ningun eslabon roto (misma logica ya usada para baseline en
+versiones anteriores de este DAG). balance_matrix, si esta activo,
 espera a que terminen AMBAS ramas para ese banner (si estan activas);
 si alguna rama esta apagada, balance_matrix igual corre, leyendo lo
 que ya exista en ELASTICITY_PR/PRODUCT_SENSIBILITY de una corrida
 anterior.
 
+NOTA IMPORTANTE: a diferencia de versiones anteriores de este DAG,
+este NO incluye banners de ecommerce. Si se necesita elasticidad
+de ecommerce, corre por fuera de este DAG.
 """
 import json
 import platform
@@ -55,11 +59,13 @@ with open(
 
 PROJECT_NAME = 'pricing_effects'
 
-# Solo banners fisicos
+# Solo banners fisicos -- decision confirmada, ver docstring del
+# modulo.
 STORE_BANNER_LIST = [
     #'Unimarc',
     #'Super 10',
-    'Alvi'#,
+    'Alvi'
+    #,
 ]
 
 # ====================================================================
@@ -70,10 +76,10 @@ STORE_BANNER_LIST = [
 # ====================================================================
 EJECUTAR_REGRESSION_FISICOS = False
 EJECUTAR_BASELINE_PANEL = False
-EJECUTAR_ELASTICIDAD_GENERAL = False
-EJECUTAR_SENSIBILIDAD = False
+EJECUTAR_ELASTICIDAD_GENERAL = True
+EJECUTAR_SENSIBILIDAD = True
 EJECUTAR_BALANCE_MATRIX = True
-#
+
 # Controla si balance_matrix, cuando corre, tambien sube el Excel a
 # Sharepoint (ademas de BigQuery, que siempre se hace). Se pasa como
 # argumento al script, no como constante fija -- ver
@@ -96,7 +102,7 @@ RECURSOS_EXTRA_POR_BANNER = {
 }
 
 dag_args = {
-    'dag_id': 'pricing_effects',
+    'dag_id': 'pricing_effects_balance_matrix',
     'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': False,
