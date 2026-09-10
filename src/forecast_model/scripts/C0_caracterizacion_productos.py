@@ -581,6 +581,7 @@ segmentos_config = {
             'N_MECANICAS_OBSERVADAS',
             'RACHA_MAX_MISMA_MECANICA',
             'N_MECANICAS_VALIDAS',
+            'MECANICAS_VALIDAS',
             'CASO_MODELO',
             'INCLUIR_MECANICA',
             'MECANICA_REFERENCIA',

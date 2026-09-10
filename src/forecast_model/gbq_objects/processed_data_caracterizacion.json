@@ -322,6 +322,12 @@
             "description": "Mecánicas validas (> 10% de presencia)"
         },
         {
+            "name": "MECANICAS_VALIDAS",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Mecánicas que cumplen la condición de 10% de presencia"
+        },
+        {
             "name": "CASO_MODELO",
             "field_type": "STRING",
             "mode": "NULLABLE",
