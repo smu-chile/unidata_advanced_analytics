@@ -175,6 +175,10 @@ def main() -> None:  # noqa: D103
     print(df_sensibilidad.info())
 
     df_sensibilidad.columns = df_sensibilidad.columns.str.lower()
+    # Forzar 'material' a string -- evita el ValueError de pandas al
+    # unir columnas de distinto tipo (object vs Int64) mas adelante,
+    # sin importar de que lado venga el tipo inesperado.
+    df_sensibilidad['material'] = df_sensibilidad['material'].astype(str)
     logging.info('Consulta de sensibilidad lista')
 
     # ELASTICIDAD
@@ -192,6 +196,7 @@ def main() -> None:  # noqa: D103
     print(df_elasticidad.info())
 
     df_elasticidad.columns = df_elasticidad.columns.str.lower()
+    df_elasticidad['material'] = df_elasticidad['material'].astype(str)
     logging.info('Consulta de elasticidad lista')
 
     # VENTAS
@@ -209,6 +214,7 @@ def main() -> None:  # noqa: D103
     print(df_ventas.info())
 
     df_ventas.columns = df_ventas.columns.str.lower()
+    df_ventas['material'] = df_ventas['material'].astype(str)
     logging.info('Consulta de ventas lista')
 
     #----------------------------------------------------------------------
@@ -271,8 +277,7 @@ def main() -> None:  # noqa: D103
 
     # Periodo de ejecucion -- valor literal de execution_date (ej.
     # '2026-07-02'), no un mes agregado.
-    # Granularidad MES, no dia -- ya calculado arriba como
-    # periodo_ejecucion.
+    # Granularidad MES, no dia -- ya calculado arriba comperiodo_ejecucion.
     df_balance_matrix['periodo_ejecucion'] = periodo_ejecucion
 
     df_balance_matrix_sp = df_balance_matrix[['store_banner',
