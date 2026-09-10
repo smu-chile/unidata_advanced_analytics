@@ -1,6 +1,6 @@
 {
     "schema": "PRECIO_PROMOCIONES",
-    "table": "BALANCE_MATRIX",
+    "table": "BALANCE_MATRIX_PR",
     "columns": [
         {
             "name": "STORE_BANNER",
@@ -109,6 +109,12 @@
             "field_type": "INT64",
             "mode": "NULLABLE",
             "description": "Orden de cálculo para porcentaje acumulado de ventas respecto del total"
+        },
+        {
+            "name": "PERIODO_EJECUCION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Mes de ejecucion del DAG (YYYY-MM, derivado de execution_date) -- permite acumular historial: mismo mes reemplaza esa corrida, mes distinto se agrega sin borrar los anteriores"
         }
     ],
     "clustering_fields": [

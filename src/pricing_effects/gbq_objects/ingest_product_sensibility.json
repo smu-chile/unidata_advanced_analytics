@@ -1,7 +1,6 @@
 {
     "schema": "PRECIO_PROMOCIONES",
-    "table": "PRODUCT_SENSIBILITY",
-
+    "table": "PRODUCT_SENSIBILITY_PR",
     "columns": [
         {
             "name": "STORE_BANNER",
@@ -80,8 +79,15 @@
             "field_type": "FLOAT",
             "mode": "REQUIRED",
             "description": "Indice de sensibilidad desnormalizada"
+        },
+        {
+            "name": "PERIODO_EJECUCION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Mes de ejecucion del DAG (YYYY-MM, derivado de execution_date) -- permite acumular historial: mismo mes reemplaza esa corrida, mes distinto se agrega sin borrar los anteriores"
         }
     ],
-
-    "clustering_fields": ["STORE_BANNER"]
+    "clustering_fields": [
+        "STORE_BANNER"
+    ]
 }

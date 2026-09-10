@@ -11,6 +11,7 @@ import numpy as np
 
 # Pip
 import pandas as pd
+import pendulum
 from google.cloud.bigquery import Client
 
 import common.office365_extended.sharepoint as sp
@@ -61,7 +62,7 @@ SQL_QUERIES = QueryDict({    # Region: Explicación de query
 SELECT
 * EXCEPT (MATERIAL),
   CAST(MATERIAL AS INT64) AS MATERIAL
-FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY`
+FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY_PR`
 where STORE_BANNER = '${store_banner}'
 """,
 
@@ -136,6 +137,9 @@ def main() -> None:  # noqa: D103
     proyecto: str = args['project_id']  # noqa: F841
     store_banner:str = args['store_banner']
     subir_a_sharepoint = str(args['subir_a_sharepoint']).strip().lower() == 'true'
+    # Granularidad MES, no dia -- '2026-07-02' -> '2026-07'. Mismo
+    # patron que elasticidad_general.py/product_sensibility.py.
+    periodo_ejecucion = pendulum.parse(execution_date).format('YYYY-MM')
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'proyecto: {proyecto}')
 
@@ -265,6 +269,12 @@ def main() -> None:  # noqa: D103
     # REGION: Se ordenan las columnas
     #----------------------------------------------------------------------
 
+    # Periodo de ejecucion -- valor literal de execution_date (ej.
+    # '2026-07-02'), no un mes agregado.
+    # Granularidad MES, no dia -- ya calculado arriba como
+    # periodo_ejecucion.
+    df_balance_matrix['periodo_ejecucion'] = periodo_ejecucion
+
     df_balance_matrix_sp = df_balance_matrix[['store_banner',
                                             'categoria',
                                             'sub_category_description',
@@ -280,7 +290,8 @@ def main() -> None:  # noqa: D103
                                             'kvi',
                                             'codigo_sensibilidad',
                                             'segmento_elasticidad',
-                                            'segmento_bm']]
+                                            'segmento_bm',
+                                            'periodo_ejecucion']]
 
 
 
@@ -416,7 +427,8 @@ def main() -> None:  # noqa: D103
          'descripcion_material', 'material', 'umv', 'ean',
          'ventas_totales', 'indice_sensibilidad', 'indice_sensibilidad_familia',
          'elasticidad', 'NUEVOS_KVI','codigo_sensibilidad', 'segmento_elasticidad',
-         'segmento_bm_new', 'pct_ventas', 'pct_ventas_acumulado', 'orden_kvi']
+         'segmento_bm_new', 'pct_ventas', 'pct_ventas_acumulado', 'orden_kvi',
+         'periodo_ejecucion']
     ]
 
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
@@ -437,7 +449,8 @@ def main() -> None:  # noqa: D103
         'segmento_elasticidad': 'Segmento elasticidad',
         # 'segmento_bm': 'Segmento Balance Matrix',  # noqa: ERA001
         'segmento_bm_new': 'Segmento Balance Matrix',
-        'orden_kvi': 'Orden KVI'
+        'orden_kvi': 'Orden KVI',
+        'periodo_ejecucion': 'Periodo Ejecución'
     })
 
     #df_balance_matrix_sp.sort_values(by='Categoria')  # noqa: ERA001
@@ -524,11 +537,13 @@ def main() -> None:  # noqa: D103
     # REGION: Se sube a GCP
     #----------------------------------------------------------------------
     # Definir el WHERE
-    where_clause = f"store_banner = '{store_banner}'"
+    where_clause = (
+        f"store_banner = '{store_banner}' AND periodo_ejecucion = '{periodo_ejecucion}'"
+    )
 
     # Parametros
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'BALANCE_MATRIX'
+    tabla = 'BALANCE_MATRIX_PR'
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',

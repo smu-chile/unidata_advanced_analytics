@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 # Pip
 import numpy as np  # noqa: I001
 import pandas as pd
+import pendulum
 import statsmodels.api as sm
 from google.cloud.bigquery import Client, DatasetReference
 from joblib import Parallel, delayed, parallel_config
@@ -207,6 +208,7 @@ COLUMNAS_FINALES_ORDENADAS = [
     'METODO',
     'SCORE_CONFIABILIDAD',
     'CONFIABILIDAD',
+    'PERIODO_EJECUCION',
 ]
 
 MAPA_BANNER_REGRESSION_ECOMMERCE = {
@@ -330,9 +332,14 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']
     store_banner: str = args['store_banner']
+    # Granularidad MES, no dia -- '2026-07-02' -> '2026-07'. Correr el
+    # mismo mes reemplaza esa corrida; un mes distinto se acumula
+    # (ver where_clause en la carga final).
+    periodo_ejecucion = pendulum.parse(execution_date).format('YYYY-MM')
     logger.info(f'execution_date: {execution_date}')
     logger.info(f'proyecto: {proyecto}')
     logger.info(f'store_banner: {store_banner}')
+    logger.info(f'periodo_ejecucion: {periodo_ejecucion}')
 
     n_clusters_banner = 8 if store_banner == 'Unimarc' else 6
 
@@ -3439,6 +3446,7 @@ def main() -> None:  # noqa: D103
     #   - CLUSTER: tipo_cluster (limpio/ciclos_rapidos/etc) agregada.
     # ================================================================
     roster['STORE_BANNER'] = store_banner
+    roster['PERIODO_EJECUCION'] = periodo_ejecucion
     roster['N_Eventos'] = roster['n_dias_evidencia']
     roster_slim = roster.rename(columns=MAPEO_COLUMNAS_SLIM)
     faltantes = [c for c in COLUMNAS_FINALES_ORDENADAS if c not in roster_slim.columns]
@@ -3467,7 +3475,9 @@ def main() -> None:  # noqa: D103
     # filas de este store_banner, despues agrega -- no pisa otros bancos
     # ya cargados en la misma tabla)
     # ----------------------------------------------------------------
-    where_clause = f"STORE_BANNER = '{store_banner}'"
+    where_clause = (
+        f"STORE_BANNER = '{store_banner}' AND PERIODO_EJECUCION = '{periodo_ejecucion}'"
+    )
 
     deleteFromTable(
         table_ref=f'{proyecto}.{esquema}.{tabla}',

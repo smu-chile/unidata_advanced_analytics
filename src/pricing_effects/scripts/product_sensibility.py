@@ -525,8 +525,12 @@ def main() -> None:  # noqa: D103
     execution_date: str = args['execution_date']
     proyecto: str = args['project_id']  # noqa: F841
     store_banner:str = args['store_banner']
+    # Granularidad MES, no dia -- '2026-07-02' -> '2026-07'. Mismo
+    # patron que elasticidad_general.py/balance_matrix.py.
+    periodo_ejecucion = pendulum.parse(execution_date).format('YYYY-MM')
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'proyecto: {proyecto}')
+    logging.info(f'periodo_ejecucion: {periodo_ejecucion}')
 
 
     # Set gbq client for all subsequent queries
@@ -551,7 +555,7 @@ def main() -> None:  # noqa: D103
     factor_outliers = 10
 
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'PRODUCT_SENSIBILITY'
+    tabla = 'PRODUCT_SENSIBILITY_PR'
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ENDREGION
@@ -898,7 +902,8 @@ def main() -> None:  # noqa: D103
         familia=df_final['con_familia'],
         indice_sensibilidad=df_final['media_geometrica'].round(5),
         indice_sensibilidad_familia=df_final['media_geometrica_familia'].round(5),
-        KVI=df_final['cluster'].map(mapa_kvi)
+        KVI=df_final['cluster'].map(mapa_kvi),
+        periodo_ejecucion=periodo_ejecucion
     )[['store_banner',
         'categoria',
         'material',
@@ -912,6 +917,7 @@ def main() -> None:  # noqa: D103
         'porcentaje',
         'porcentaje_categoria',
         'media_geometrica_original',
+        'periodo_ejecucion',
     ]]
 
 # [PATCH 110826] -> se le añaden columnas: gasto: prod, cat y material
@@ -932,7 +938,9 @@ def main() -> None:  # noqa: D103
     # ---------------------------------------------------------------------
 
     # Definir el WHERE
-    where_clause = f"store_banner = '{store_banner}'"
+    where_clause = (
+        f"store_banner = '{store_banner}' AND periodo_ejecucion = '{periodo_ejecucion}'"
+    )
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
