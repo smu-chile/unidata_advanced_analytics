@@ -274,6 +274,12 @@
             "description": "Precio máximo promocional"
         },
         {
+            "name": "DESCUENTO_MIN_PROMO",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Descuento mínimo en promoción"
+        },
+        {
             "name": "DESCUENTO_MAX_PROMO",
             "field_type": "FLOAT64",
             "mode": "NULLABLE",
