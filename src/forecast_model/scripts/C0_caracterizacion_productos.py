@@ -3076,6 +3076,8 @@ def main():
     logging.info('[8.1] Subida Caracterización a tabla...')
     print('Justo antes de subir a GCP: ', df_caracterizacion.info())
 
+    df_caracterizacion['MECANICAS_VALIDAS'] = df_caracterizacion['MECANICAS_VALIDAS'].str.join('|')
+
     uploadFrame(
         df_caracterizacion,
         table_ddl_json_path=os.path.join('gbq_objects',
