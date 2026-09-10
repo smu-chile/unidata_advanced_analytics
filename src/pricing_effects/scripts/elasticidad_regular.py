@@ -3177,6 +3177,11 @@ def main() -> None:  # noqa: D103
     #   - CONFIABILIDAD: categorica (alta/media/baja) agregada de vuelta.
     #   - CLUSTER: tipo_cluster (limpio/ciclos_rapidos/etc) agregada.
     # ================================================================
+    # Redondeo a 2 decimales -- SOLO para el valor final reportado. La
+    # segmentacion GMM de arriba ya uso la precision completa, esto no
+    # la afecta -- es puramente cosmetico para el dato que se entrega.
+    roster['elasticidad_final'] = roster['elasticidad_final'].round(2)
+
     roster['STORE_BANNER'] = store_banner
     roster['N_Eventos'] = roster['n_dias_evidencia']
     roster_slim = roster.rename(columns=MAPEO_COLUMNAS_SLIM)
