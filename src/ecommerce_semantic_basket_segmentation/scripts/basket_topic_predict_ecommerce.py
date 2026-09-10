@@ -153,25 +153,25 @@ SQL_QUERIES = QueryDict({
     -- Lógica HOGAR: DESPENSA, LIMPIEZA, HIGIENE
     CASE
         WHEN es_uniforme THEN DESPENSA
-        WHEN (DESPENSA > 0.05 OR LIMPIEZA > 0.05 OR HIGIENE > 0.05) THEN
-        (IF(DESPENSA > 0.05, DESPENSA, 0) + IF(LIMPIEZA > 0.05, LIMPIEZA, 0) + IF(HIGIENE > 0.05, HIGIENE, 0))
+        WHEN (DESPENSA > ${umbral} OR LIMPIEZA > ${umbral} OR HIGIENE > ${umbral}) THEN
+        (IF(DESPENSA > ${umbral}, DESPENSA, 0) + IF(LIMPIEZA > ${umbral}, LIMPIEZA, 0) + IF(HIGIENE > ${umbral}, HIGIENE, 0))
         ELSE GREATEST(DESPENSA, LIMPIEZA, HIGIENE)
     END AS HOGAR,
 
     -- Lógica CELEBRACION: CARNES, ALCOHOL, BEBIDAS_HELADOS, APERITIVOS_SNACKS
     CASE
         WHEN es_uniforme THEN CARNES
-        WHEN (CARNES > 0.05 OR ALCOHOL > 0.05 OR BEBIDAS_HELADOS > 0.05 OR APERITIVOS_SNACKS > 0.05) THEN
-        (IF(CARNES > 0.05, CARNES, 0) + IF(ALCOHOL > 0.05, ALCOHOL, 0) +
-        IF(BEBIDAS_HELADOS > 0.05, BEBIDAS_HELADOS, 0) + IF(APERITIVOS_SNACKS > 0.05, APERITIVOS_SNACKS, 0))
+        WHEN (CARNES > ${umbral} OR ALCOHOL > ${umbral} OR BEBIDAS_HELADOS > ${umbral} OR APERITIVOS_SNACKS > ${umbral}) THEN
+        (IF(CARNES > ${umbral}, CARNES, 0) + IF(ALCOHOL > ${umbral}, ALCOHOL, 0) +
+        IF(BEBIDAS_HELADOS > ${umbral}, BEBIDAS_HELADOS, 0) + IF(APERITIVOS_SNACKS > ${umbral}, APERITIVOS_SNACKS, 0))
         ELSE GREATEST(CARNES, ALCOHOL, BEBIDAS_HELADOS, APERITIVOS_SNACKS)
     END AS CELEBRACION,
 
     -- Lógica COLACIONES: COLACIONES, GALLETAS_CHOCOLATES
     CASE
         WHEN es_uniforme THEN COLACIONES
-        WHEN (COLACIONES > 0.05 OR GALLETAS_CHOCOLATES > 0.05) THEN
-        (IF(COLACIONES > 0.05, COLACIONES, 0) + IF(GALLETAS_CHOCOLATES > 0.05, GALLETAS_CHOCOLATES, 0))
+        WHEN (COLACIONES > ${umbral} OR GALLETAS_CHOCOLATES > ${umbral}) THEN
+        (IF(COLACIONES > ${umbral}, COLACIONES, 0) + IF(GALLETAS_CHOCOLATES > ${umbral}, GALLETAS_CHOCOLATES, 0))
         ELSE GREATEST(COLACIONES, GALLETAS_CHOCOLATES)
     END AS COLACIONES,
 
@@ -216,8 +216,11 @@ def main() -> None:  # noqa: D103
     execution_date = pd.to_datetime(execution_date[:8] + '01').strftime('%Y-%m-%d')
     monthid = pd.to_datetime(execution_date[:8] + '01').strftime('%Y%m')
 
+    umbral = 2.0/12 # Factor / N° Topicos
+
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'monthid: {monthid}')
+    logging.info(f'umbral: {umbral}')
 
     # Set gbq client for all subsequent queries
     gbq_client = Client()
@@ -338,7 +341,8 @@ def main() -> None:  # noqa: D103
 
     semantic_baskets_k6 = readBigQuery(SQL_QUERIES['semantic_customer_baskets_k6'].substitute(
         gcp_project = gcp_project,
-        fecha_carga = execution_date
+        fecha_carga = execution_date,
+        umbral = umbral
         ),
     user = usuario,
     gbq_client = gbq_client
