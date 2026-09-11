@@ -60,13 +60,13 @@ PROJECT_NAME = 'pricing_effects'
 STORE_BANNER = 'Unimarc'
 
 ZONAS = [
-    'Austral',
-    'Baja Competencia',
-    'Competencia Media',
-    'Competencia Regional',
-    'Hipercompetitiva',
-    'Norte',
-    'Premium',
+    'Austral'#,
+    #'Baja Competencia',
+    #'Competencia Media',
+    #'Competencia Regional',
+    #'Hipercompetitiva',
+    #'Norte',
+    #'Premium',
 ]
 
 # ====================================================================
@@ -74,8 +74,8 @@ ZONAS = [
 # Ninguna corre "siempre" -- si esta en False, esa tarea simplemente no
 # se crea para esa zona, y la cadena salta al siguiente eslabon activo.
 # ====================================================================
-EJECUTAR_REGRESSION_ZONA = True
-EJECUTAR_ELASTICIDAD_ZONA = True
+EJECUTAR_REGRESSION_ZONA = False
+EJECUTAR_ELASTICIDAD_ZONA = False
 EJECUTAR_SENSIBILIDAD_ZONA = True
 EJECUTAR_BALANCE_MATRIX_ZONA = True
 
