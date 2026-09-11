@@ -286,7 +286,7 @@ def main() -> None:  # noqa: D103
 
     # Periodo de ejecucion -- valor literal de execution_date (ej.
     # '2026-07-02'), no un mes agregado.
-    # Granularidad MES, no dia -- ya calculado arribacomo periodo_ejecucion.
+    # Granularidad MES, no dia -- ya calculado arribacomo periodo_ejecucin.
     df_balance_matrix['periodo_ejecucion'] = periodo_ejecucion
     df_balance_matrix['zona'] = zona
 
