@@ -76,7 +76,7 @@ ZONAS = [
 # ====================================================================
 EJECUTAR_REGRESSION_ZONA = False
 EJECUTAR_ELASTICIDAD_ZONA = False
-EJECUTAR_SENSIBILIDAD_ZONA = True
+EJECUTAR_SENSIBILIDAD_ZONA = False
 EJECUTAR_BALANCE_MATRIX_ZONA = True
 
 # Controla si balance_matrix_zona, cuando corre, tambien sube el Excel
