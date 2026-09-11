@@ -570,7 +570,7 @@ def main() -> None:  # noqa: D103
     logging.info(
         f'Tiendas resueltas para la zona "{zona}": {len(lista_store_ids_zona)}'
     )
-    lista_store_ids = ', '.join(lista_store_ids_zona)
+    lista_store_ids = ', '.join(f"'{s}'" for s in lista_store_ids_zona)
 
 
     # REGION: Inputs del proceso
