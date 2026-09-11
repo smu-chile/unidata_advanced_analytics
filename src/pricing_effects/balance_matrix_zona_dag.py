@@ -60,14 +60,13 @@ PROJECT_NAME = 'pricing_effects'
 STORE_BANNER = 'Unimarc'
 
 ZONAS = [
-    'Austral'
-    #,
-    #'Baja Competencia',
-    #'Competencia Media',
-    #'Competencia Regional',
-    #'Hipercompetitiva',
-    #'Norte',
-    #'Premium',
+    'Austral',
+    'Baja Competencia',
+    'Competencia Media',
+    'Competencia Regional',
+    'Hipercompetitiva',
+    'Norte',
+    'Premium',
 ]
 
 # ====================================================================
