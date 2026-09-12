@@ -1,30 +1,42 @@
 # Default
-r"""DAG unificado -- regresion, elasticidad, sensibilidad y BM por zona.
+"""DAG unificado -- regresion, elasticidad, sensibilidad y BM por zona.
 
-Para las 7 zonas comerciales de Unimarc. Cadena por zona:
-    regresion? -> elasticidad_zona?  --\
-                                   --> balance_matrix_zona?
-    sensibilidad_zona? (rama independiente, en paralelo)   --/
+Para las 7 zonas comerciales de Unimarc, con FASES secuenciales (no
+las 4 etapas compitiendo a la vez por el mismo pool de slots de
+BigQuery -- causa mas probable de la falla observada al correr todo
+junto):
 
-Cada etapa tiene su propio interruptor -- si esta apagada, se salta
-sin dejar ningun eslabon roto (mismo patron que
-pricing_effects_balance_matrix.py, la version por banner completo).
-balance_matrix_zona, si esta activo, espera a que terminen AMBAS ramas
-para esa zona (si estan activas); si alguna rama esta apagada,
-balance_matrix_zona igual corre, leyendo lo que ya exista en
-ELASTICITY_ZONA/PRODUCT_SENSIBILITY_ZONA de una corrida anterior.
+    FASE 1: Regresion (7 zonas)
+        |  (barrera -- TODAS deben terminar)
+    FASE 2: Elasticidad (7 zonas, depende de Regresion)
+        |  (barrera -- TODAS deben terminar)
+    FASE 3: Sensibilidad (7 zonas, independiente de datos, pero
+        |   secuenciada igual para no competir por recursos)
+        |  (barrera -- TODAS deben terminar)
+    FASE 4: Balance Matrix (7 zonas, usa Elasticidad + Sensibilidad)
 
+Dentro de cada fase activa, el 'concurrency' del DAG sigue limitando
+cuantas de las 7 tareas corren en simultaneo -- las barreras evitan
+que fases DISTINTAS se crucen entre si, no reemplazan ese control.
+
+Cada fase tiene su propio interruptor -- si esta apagada, sus tareas
+no se crean, y la barrera de la fase activa siguiente se conecta
+directo a la ultima fase activa anterior (sin dejar ningun eslabon
+roto).
+
+Reemplaza a balance_matrix_zona_dag.py (la version anterior, con las
+4 etapas corriendo sin secuenciar entre si).
 """
 import json
 import platform
 import importlib
-import itertools
 from datetime import timedelta
 
 # Pip
 import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
+from airflow.operators.empty import EmptyOperator
 
 
 if platform.system() == 'Windows':
@@ -55,8 +67,6 @@ with open(
 
 PROJECT_NAME = 'pricing_effects'
 
-# Exclusivo Unimarc -- SEGMENTACION_ZONAS_BM_PRICING es propia de ese
-# banner.
 STORE_BANNER = 'Unimarc'
 
 ZONAS = [
@@ -70,17 +80,15 @@ ZONAS = [
 ]
 
 # ====================================================================
-# INTERRUPTORES -- 4 en total, cada etapa controlable por separado.
-# Ninguna corre "siempre" -- si esta en False, esa tarea simplemente no
-# se crea para esa zona, y la cadena salta al siguiente eslabon activo.
+# INTERRUPTORES -- 4 en total, 1 por fase. Si una fase esta en False,
+# sus tareas no se crean, y la barrera se conecta directo entre las
+# fases activas vecinas.
 # ====================================================================
 EJECUTAR_REGRESSION_ZONA = False
-EJECUTAR_ELASTICIDAD_ZONA = True
-EJECUTAR_SENSIBILIDAD_ZONA = True
-EJECUTAR_BALANCE_MATRIX_ZONA = True
+EJECUTAR_ELASTICIDAD_ZONA = False
+EJECUTAR_SENSIBILIDAD_ZONA = False
+EJECUTAR_BALANCE_MATRIX_ZONA = False
 
-# Controla si balance_matrix_zona, cuando corre, tambien sube el Excel
-# a Sharepoint (ademas de BigQuery, que siempre se hace).
 SUBIR_A_SHAREPOINT = False
 
 RECURSOS_EXTRA = {
@@ -94,7 +102,10 @@ dag_args = {
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
-    'concurrency': 4,
+    # Limita cuantas tareas corren a la vez DENTRO de una fase activa
+    # -- las barreras entre fases son una proteccion complementaria,
+    # no un reemplazo de este limite.
+    'concurrency': 2,
     'tags': [
         PROJECT_NAME,
         'jsanmartin'
@@ -134,8 +145,12 @@ with DAG(**dag_args) as dag:
         ").strftime('%Y-%m-%d')) }}"
     )
 
-    # ---------- resolver_tiendas_zona (1x, condicional) ----------
-    resolver_task = None
+    # punto_enganche: lista de tareas de la ULTIMA fase activa vista
+    # hasta ahora -- la siguiente fase activa se conecta desde aca.
+    # Empieza vacia (None = nada de que depender todavia).
+    punto_enganche = None
+
+    # ---------- FASE 1: Regresion ----------
     if EJECUTAR_REGRESSION_ZONA:
         resolver_task = ExtendedDataprocCreateBatchOperator(
             task_id='resolver_tiendas_zona',
@@ -151,17 +166,9 @@ with DAG(**dag_args) as dag:
             include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
         )
 
-    regression_tasks = []
-    elasticidad_tasks = []
-    sensibilidad_tasks = []
-    balance_matrix_tasks = []
-
-    for zona in ZONAS:
-        zona_suffix = zona.replace(' ', '_').lower()
-
-        # ---------- Rama elasticidad: regresion (condicional) ----------
-        regression_task = None
-        if EJECUTAR_REGRESSION_ZONA:
+        regression_tasks = []
+        for zona in ZONAS:
+            zona_suffix = zona.replace(' ', '_').lower()
             regression_task = ExtendedDataprocCreateBatchOperator(
                 task_id=f'regression_data_zona_{zona_suffix}',
                 python_script_path=(
@@ -179,13 +186,18 @@ with DAG(**dag_args) as dag:
                 include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
                 **RECURSOS_EXTRA,
             )
+            resolver_task >> regression_task
             regression_tasks.append(regression_task)
-            if resolver_task is not None:
-                resolver_task >> regression_task
 
-        # ---------- Rama elasticidad: elasticidad_zona (condicional) ---
-        elasticidad_task = None
-        if EJECUTAR_ELASTICIDAD_ZONA:
+        fin_fase_regresion = EmptyOperator(task_id='fin_fase_regresion')
+        regression_tasks >> fin_fase_regresion
+        punto_enganche = [fin_fase_regresion]
+
+    # ---------- FASE 2: Elasticidad ----------
+    if EJECUTAR_ELASTICIDAD_ZONA:
+        elasticidad_tasks = []
+        for zona in ZONAS:
+            zona_suffix = zona.replace(' ', '_').lower()
             elasticidad_task = ExtendedDataprocCreateBatchOperator(
                 task_id=f'elasticidad_zona_{zona_suffix}',
                 python_script_path=(
@@ -202,19 +214,19 @@ with DAG(**dag_args) as dag:
                 include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
                 **RECURSOS_EXTRA,
             )
+            if punto_enganche is not None:
+                punto_enganche >> elasticidad_task
             elasticidad_tasks.append(elasticidad_task)
 
-        # Encadenamiento dinamico de la rama elasticidad -- solo entre
-        # etapas activas.
-        cadena_elasticidad = [
-            t for t in (regression_task, elasticidad_task) if t is not None
-        ]
-        for tarea_anterior, tarea_siguiente in itertools.pairwise(cadena_elasticidad):
-            tarea_anterior >> tarea_siguiente
+        fin_fase_elasticidad = EmptyOperator(task_id='fin_fase_elasticidad')
+        elasticidad_tasks >> fin_fase_elasticidad
+        punto_enganche = [fin_fase_elasticidad]
 
-        # ---------- Rama sensibilidad (independiente) ----------
-        sensibilidad_task = None
-        if EJECUTAR_SENSIBILIDAD_ZONA:
+    # ---------- FASE 3: Sensibilidad ----------
+    if EJECUTAR_SENSIBILIDAD_ZONA:
+        sensibilidad_tasks = []
+        for zona in ZONAS:
+            zona_suffix = zona.replace(' ', '_').lower()
             sensibilidad_task = ExtendedDataprocCreateBatchOperator(
                 task_id=f'product_sensibility_zona_{zona_suffix}',
                 python_script_path=(
@@ -231,10 +243,18 @@ with DAG(**dag_args) as dag:
                 include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
                 **RECURSOS_EXTRA,
             )
+            if punto_enganche is not None:
+                punto_enganche >> sensibilidad_task
             sensibilidad_tasks.append(sensibilidad_task)
 
-        # ---------- balance_matrix_zona (converge ambas ramas) ----------
-        if EJECUTAR_BALANCE_MATRIX_ZONA:
+        fin_fase_sensibilidad = EmptyOperator(task_id='fin_fase_sensibilidad')
+        sensibilidad_tasks >> fin_fase_sensibilidad
+        punto_enganche = [fin_fase_sensibilidad]
+
+    # ---------- FASE 4: Balance Matrix ----------
+    if EJECUTAR_BALANCE_MATRIX_ZONA:
+        for zona in ZONAS:
+            zona_suffix = zona.replace(' ', '_').lower()
             balance_matrix_task = ExtendedDataprocCreateBatchOperator(
                 task_id=f'balance_matrix_zona_{zona_suffix}',
                 python_script_path=(
@@ -252,9 +272,5 @@ with DAG(**dag_args) as dag:
                 include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
                 **RECURSOS_EXTRA,
             )
-            balance_matrix_tasks.append(balance_matrix_task)
-
-            if cadena_elasticidad:
-                cadena_elasticidad[-1] >> balance_matrix_task
-            if sensibilidad_task is not None:
-                sensibilidad_task >> balance_matrix_task
+            if punto_enganche is not None:
+                punto_enganche >> balance_matrix_task

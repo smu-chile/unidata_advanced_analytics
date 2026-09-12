@@ -139,7 +139,12 @@ category_counts AS (
     A.CUSTOMER_KEY,
     P.CATEGORY_DESCRIPTION,
     COUNT(*) AS CATEGORY_COUNT
-  FROM `${proyecto}.CDA_VISTAS.VW_SALES_ITEM` A
+  FROM (
+    SELECT *
+    FROM `${proyecto}.CDA_VISTAS.VW_SALES_ITEM`
+    WHERE TRANSACTION_DATE >=     DATE('${fecha_inicial_str}')
+      AND TRANSACTION_DATE <= DATE('${fecha_final_str}')
+  ) A
   INNER JOIN distinct_products P
     ON A.EAN = P.EAN
   INNER JOIN `${proyecto}.CDA_VISTAS.VW_DIM_STORE` DS
@@ -167,7 +172,12 @@ SELECT
   A.VALUE,
   A.TRANSACTION_DATE AS P_DATE
 
-FROM `${proyecto}.CDA_VISTAS.VW_SALES_ITEM` A
+FROM (
+  SELECT *
+  FROM `${proyecto}.CDA_VISTAS.VW_SALES_ITEM`
+  WHERE TRANSACTION_DATE >=     DATE('${fecha_inicial_str}')
+    AND TRANSACTION_DATE <= DATE('${fecha_final_str}')
+) A
 INNER JOIN distinct_products P
   ON A.EAN = P.EAN
 INNER JOIN `${proyecto}.CDA_VISTAS.VW_DIM_STORE` D
@@ -368,7 +378,12 @@ SELECT
   A.VALUE,
   A.TRANSACTION_DATE AS P_DATE
 
-FROM `${proyecto}.CDA_VISTAS.VW_SALES_ITEM` A
+FROM (
+  SELECT *
+  FROM `${proyecto}.CDA_VISTAS.VW_SALES_ITEM`
+  WHERE TRANSACTION_DATE >=     DATE('${fecha_inicial_str}')
+    AND TRANSACTION_DATE <= DATE('${fecha_final_str}')
+) A
 INNER JOIN distinct_products P
   ON A.EAN = P.EAN
 INNER JOIN `${proyecto}.CDA_VISTAS.VW_DIM_STORE` D
