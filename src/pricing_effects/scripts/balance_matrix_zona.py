@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import os
+import time
 import logging
 import argparse
 from logging import config
@@ -13,6 +14,7 @@ import numpy as np
 import pandas as pd
 import pendulum
 from google.cloud.bigquery import Client
+from google.api_core.exceptions import Conflict
 
 import common.office365_extended.sharepoint as sp
 
@@ -286,7 +288,7 @@ def main() -> None:  # noqa: D103
 
     # Periodo de ejecucion -- valor literal de execution_date (ej.
     # '2026-07-02'), no un mes agregado.
-    # Granularidad MES, no dia -- ya calculado arribacomo periodo_ejecucin.
+    # Granularidad MES, no dia -- ya calculado arriba como periodo_ejecucion.
     df_balance_matrix['periodo_ejecucion'] = periodo_ejecucion
     df_balance_matrix['zona'] = zona
 
@@ -571,14 +573,34 @@ def main() -> None:  # noqa: D103
 
 
     # Se carga en BQ con los datos recalculados
-    uploadFrame(
-        df_balance_matrix_sp,
-        table_ddl_json_path=os.path.join('gbq_objects',
-                                         'ingest_product_balance_matrix_zona.json'),
-        project=proyecto,
-        gbq_client=gbq_client,
-        if_exists='append'
-    )
+    #
+    # Si varias zonas corren en simultaneo (concurrency>1) y la tabla
+    # BALANCE_MATRIX_ZONA no existe todavia, es posible que 2 zonas
+    # vean "la tabla no existe" al mismo tiempo y ambas intenten
+    # crearla -- la 2da choca con un 409 Conflict genuino (condicion
+    # de carrera de arranque, no un error de datos). Se reintenta 1
+    # vez: para cuando se reintenta, la tabla ya deberia existir
+    # (creada por la otra zona), y uploadFrame simplemente hace el
+    # insert en vez de intentar crearla de nuevo.
+    kwargs_upload = {
+        'table_ddl_json_path': os.path.join(
+            'gbq_objects', 'ingest_product_balance_matrix_zona.json'
+        ),
+        'project': proyecto,
+        'gbq_client': gbq_client,
+        'if_exists': 'append',
+    }
+    try:
+        uploadFrame(df_balance_matrix_sp, **kwargs_upload)
+    except Conflict:
+        logging.warning(
+            'uploadFrame choco con 409 Conflict al crear '
+            'BALANCE_MATRIX_ZONA -- probable condicion de carrera con '
+            'otra zona corriendo en simultaneo. Se espera 10s y se '
+            'reintenta 1 vez.'
+        )
+        time.sleep(10)
+        uploadFrame(df_balance_matrix_sp, **kwargs_upload)
 
     logging.info('Se sube la tabla a GCP')
 
