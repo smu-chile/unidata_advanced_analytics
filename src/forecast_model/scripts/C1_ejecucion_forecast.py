@@ -8,11 +8,11 @@ import argparse  # noqa: F401
 import posixpath
 from logging import config  # noqa: F401
 
-import numpy as np
-import pandas as pd
+import numpy as np  # type: ignore  # noqa: F401, PGH003
+import pandas as pd  # type: ignore  # noqa: PGH003, TC002
 
 # Pip
-from google.cloud.bigquery import Client
+from google.cloud.bigquery import Client  # type: ignore  # noqa: F401, PGH003
 
 
 directorio_actual = os.path.abspath(os.curdir)
@@ -27,17 +27,13 @@ while directorio_actual != os.path.sep:
         directorio_actual = os.path.dirname(directorio_actual)  # Retrocede
 
 
-from __future__ import annotations  # noqa: F404
+from __future__ import annotations  # noqa: E402, F404
 
-import re
-import logging
-import posixpath
+import re  # noqa: E402, TC003
+import logging  # noqa: E402, F811
+import posixpath  # noqa: E402, F811
 
-from openpyxl import Workbook  # noqa: E402
-from openpyxl.utils import get_column_letter  # noqa: E402
-from openpyxl.styles import Font, Side, Border, Alignment, PatternFill  # noqa: E402
-
-import common.gcp_extended.secretsmanager as secretmanager  # noqa: E402
+import common.gcp_extended.secretsmanager as secretmanager  # noqa: E402, F401
 import common.office365_extended.sharepoint as sp  # noqa: E402
 from common.constants import LOGGING_CONFIG  # noqa: E402
 from common.databases.queries import QueryDict  # noqa: E402
@@ -154,9 +150,12 @@ def obtener_clave_input(
     '2025_11_05_v5_input_proyeccion.xlsx' -> '2025_11_05_v5'
     """
     if not nombre_input.endswith(SUFIJO_INPUT):
-        raise ValueError(
+        msg = (
             f'El archivo no cumple el sufijo esperado: {SUFIJO_INPUT}. '
             f'Archivo recibido: {nombre_input}.'
+        )
+        raise ValueError(
+            msg
         )
 
     return nombre_input.removesuffix(SUFIJO_INPUT)
@@ -257,7 +256,8 @@ def validar_input_promociones(
     Raises
     ------
     ValueError
-        Si faltan columnas requeridas o no existen promociones seleccionadas.
+        Si faltan columnas requeridas o no existen promociones seleccio-
+        nadas.
     """
     columnas_requeridas = {
         'n_promocion',
@@ -319,7 +319,8 @@ def preparar_input_promociones(
 
     1. Automático:
        Busca en SharePoint el último archivo pendiente de procesamiento.
-       Un input se considera pendiente cuando no existe su output equivalente.
+       Un input se considera pendiente cuando no existe su output equiva-
+       lente.
 
     2. Manual:
        Recibe directamente un DataFrame y el nombre lógico del input.
@@ -361,15 +362,19 @@ def preparar_input_promociones(
     ------
     ValueError
         Si se combinan incorrectamente los parámetros manuales, el nombre
-        manual no cumple el patrón, no hay pendientes o el input es inválido.
+        manual no cumple el patrón, no hay pendientes o
+        el input es inválido.
     """
     usa_input_manual = input_manual is not None
     tiene_nombre_manual = nombre_input_manual is not None
 
     if usa_input_manual != tiene_nombre_manual:
-        raise ValueError(
+        msg = (
             '`input_manual` y `nombre_input_manual` deben entregarse '
             'juntos.'
+        )
+        raise ValueError(
+            msg
         )
 
     ruta_inputs, ruta_outputs = obtener_rutas_sharepoint(
@@ -378,9 +383,12 @@ def preparar_input_promociones(
 
     if usa_input_manual:
         if not patron_input.fullmatch(nombre_input_manual):
-            raise ValueError(
+            msg_0 = (
                 '`nombre_input_manual` no cumple el patrón de input válido: '
                 f'{nombre_input_manual}.'
+            )
+            raise ValueError(
+                msg_0
             )
 
         tabla_input = input_manual.copy()
