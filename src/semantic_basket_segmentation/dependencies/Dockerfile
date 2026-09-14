@@ -101,3 +101,4 @@ ENV TZ="America/Santiago"
 RUN groupadd -g 1099 spark
 RUN useradd -u 1099 -g 1099 -d /home/spark -m spark
 USER spark
+
