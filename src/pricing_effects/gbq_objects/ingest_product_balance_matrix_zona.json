@@ -41,7 +41,7 @@
         {
             "name": "UMV",
             "field_type": "STRING",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Unidad del display"
         },
         {
