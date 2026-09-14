@@ -507,5 +507,10 @@ def main():
         patron_output=PATRON_OUTPUT,
     )
 
+    logging.info('tabla_input: ',tabla_input)
+    logging.info('promociones: ',promociones)
+    logging.info('ruta_outputs: ',ruta_outputs)
+    logging.info('nombre_output: ',nombre_output)
+
 if __name__ == '__main__':
     main()
