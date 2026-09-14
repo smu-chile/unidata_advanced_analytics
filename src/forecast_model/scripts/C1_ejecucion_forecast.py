@@ -505,10 +505,12 @@ def main():
         patron_output=PATRON_OUTPUT,
     )
 
-    logging.info('tabla_input: ',tabla_input)
-    logging.info('promociones: ',promociones)
-    logging.info('ruta_outputs: ',ruta_outputs)
-    logging.info('nombre_output: ',nombre_output)
+    print('\n' + '=' * 70)
+    print('PARTE 1: LECTURA DE PROMOCIONES A PROYECTAR')
+    print('=' * 70)
+    print(f'Archivo proyecciones: {nombre_output}')
+    print(f'Promociones a proyectar: {len(promociones)}')
+    print('=' * 70 + '\n')
 
 if __name__ == '__main__':
     main()
