@@ -27,8 +27,6 @@ while directorio_actual != os.path.sep:
         directorio_actual = os.path.dirname(directorio_actual)  # Retrocede
 
 
-from __future__ import annotations  # noqa: E402, F404
-
 import re  # noqa: E402, TC003
 import logging  # noqa: E402, F811
 import posixpath  # noqa: E402, F811
