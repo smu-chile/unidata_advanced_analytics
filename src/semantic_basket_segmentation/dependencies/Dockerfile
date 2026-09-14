@@ -73,14 +73,12 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       regex \
       requests \
       rtree \
-      scikit-learn \
       scipy \
       seaborn \
       sqlalchemy \
       sympy \
       pendulum \
       pandas-gbq \
-      gensim \
       virtualenv \
     && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
