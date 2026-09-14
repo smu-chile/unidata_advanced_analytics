@@ -6,7 +6,8 @@ las 4 etapas compitiendo a la vez por el mismo pool de slots de
 BigQuery -- causa mas probable de la falla observada al correr todo
 junto):
 
-    FASE 1: Regresion (7 zonas)
+    FASE 1: Regresion (7 zonas, SECUENCIAL ESTRICTA -- 1 zona tras
+        |   otra, nunca 2 al mismo tiempo, ver nota abajo)
         |  (barrera -- TODAS deben terminar)
     FASE 2: Elasticidad (7 zonas, depende de Regresion)
         |  (barrera -- TODAS deben terminar)
@@ -15,9 +16,13 @@ junto):
         |  (barrera -- TODAS deben terminar)
     FASE 4: Balance Matrix (7 zonas, usa Elasticidad + Sensibilidad)
 
-Dentro de cada fase activa, el 'concurrency' del DAG sigue limitando
-cuantas de las 7 tareas corren en simultaneo -- las barreras evitan
-que fases DISTINTAS se crucen entre si, no reemplazan ese control.
+Regresion corre 1 zona a la vez, encadenadas entre si (no solo por
+'concurrency') -- es la unica fase que mostro contencion real de
+BigQuery ("Resources exceeded during query execution", con
+Competencia Media). Las demas 3 fases siguen usando el 'concurrency'
+del DAG para permitir hasta 2 tareas en simultaneo dentro de esa fase
+-- las barreras evitan que fases DISTINTAS se crucen entre si, no
+reemplazan ese control.
 
 Cada fase tiene su propio interruptor -- si esta apagada, sus tareas
 no se crean, y la barrera de la fase activa siguiente se conecta
@@ -30,6 +35,7 @@ Reemplaza a balance_matrix_zona_dag.py (la version anterior, con las
 import json
 import platform
 import importlib
+import itertools
 from datetime import timedelta
 
 # Pip
@@ -186,11 +192,20 @@ with DAG(**dag_args) as dag:
                 include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
                 **RECURSOS_EXTRA,
             )
-            resolver_task >> regression_task
             regression_tasks.append(regression_task)
 
+        # Secuencial estricta -- 1 zona tras otra, nunca 2 al mismo
+        # tiempo, sin importar el 'concurrency' del DAG. Regresion es
+        # la unica fase que mostro contencion real de recursos de
+        # BigQuery (Competencia Media, "Resources exceeded during
+        # query execution") -- las demas fases se quedan con el
+        # concurrency=2 normal.
+        resolver_task >> regression_tasks[0]
+        for tarea_anterior, tarea_siguiente in itertools.pairwise(regression_tasks):
+            tarea_anterior >> tarea_siguiente
+
         fin_fase_regresion = EmptyOperator(task_id='fin_fase_regresion')
-        regression_tasks >> fin_fase_regresion
+        regression_tasks[-1] >> fin_fase_regresion
         punto_enganche = [fin_fase_regresion]
 
     # ---------- FASE 2: Elasticidad ----------
