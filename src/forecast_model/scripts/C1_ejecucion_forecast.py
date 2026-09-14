@@ -463,3 +463,49 @@ def preparar_input_promociones(
         ruta_outputs,
         nombre_output,
     )
+
+
+# -------------------------------------------------------------------------
+#  Config
+# -------------------------------------------------------------------------
+# Logging config
+config.dictConfig(LOGGING_CONFIG)
+# Parser config
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '--project_id', type=str,
+    help='GCP project in which the script will be executed')
+parser.add_argument('--execution_date', type=str, help='DAG execution date')
+parser.add_argument('--store_banner', type=str, help='Store banner')
+
+PATRON_INPUT = re.compile(
+    r'^\d{4}_\d{2}_\d{2}_v\d+_input_proyeccion\.xlsx$',
+    re.IGNORECASE)
+
+PATRON_OUTPUT = re.compile(
+    r'^\d{4}_\d{2}_\d{2}_v\d+_resultado_proyeccion\.xlsx$',
+    re.IGNORECASE)
+
+def main():
+
+    #------- Inputs ---------#
+    print('Hola mundillo')
+
+    args = vars(parser.parse_args())
+    proyecto: str = args['project_id']  # noqa: F841
+    store_banner:str = args['store_banner']  # noqa: F841
+
+    file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
+    file_site += 'Pricing/Forecast Promociones'
+    secret_name = 'bdaa_sharepoint_credentials'  # noqa: S105#HC
+    sp_cred = secretmanager.getSecret(secret_name, project=proyecto)
+
+    tabla_input, promociones, ruta_outputs, nombre_output = preparar_input_promociones(  # noqa: RUF059
+        credenciales_sharepoint=sp_cred,
+        ruta_base_sharepoint=file_site,
+        patron_input=PATRON_INPUT,
+        patron_output=PATRON_OUTPUT,
+    )
+
+if __name__ == '__main__':
+    main()
