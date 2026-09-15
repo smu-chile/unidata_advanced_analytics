@@ -88,6 +88,21 @@ WHERE STORE_BANNER = '${store_banner}'
   tabla_fecha_max.fecha_max, INTERVAL 12 MONTH) AND tabla_fecha_max.fecha_max
 GROUP BY MATERIAL, EAN;
 
+""",
+
+'query_genfix':
+"""
+WITH ean_con_sensibilidad AS (
+    SELECT
+    DISTINCT( CAST(MATERIAL AS INT64) )  AS MATERIAL
+    FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY`
+    where STORE_BANNER = '${store_banner}'
+    )
+
+SELECT
+    SKU_PADRE,
+    MATERIAL
+FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.TBL_PRICING_GENFIX`
 """
 })
 
@@ -153,6 +168,11 @@ def main() -> None:  # noqa: D103
 
     # SENSIBILIDAD
 
+    print('\n' + '=' * 70)
+    logging.info('PARTE 1: EJECUCIÓN QUERYS')
+    print('=' * 70)
+
+    print('P1.1: QUERY SENSIBILIDAD (1/4)')
     query_sensibilidad = SQL_QUERIES['query_sensibilidad'].substitute(
         proyecto = proyecto,
         store_banner = store_banner)
@@ -162,14 +182,17 @@ def main() -> None:  # noqa: D103
             user=usuario,
             gbq_client=gbq_client)
 
-    print('[PARCHE] Query Sensibilidad Info: ')
-    print(df_sensibilidad.info())
+    print('Dimensiones df: ', df_sensibilidad.shape)
+    print('Cantidad de eans únicos: ', df_sensibilidad['EAN'].nunique())
+    print('Query Sensibilidad Info: \n', df_sensibilidad.info())
 
     df_sensibilidad.columns = df_sensibilidad.columns.str.lower()
-    logging.info('Consulta de sensibilidad lista')
+
 
     # ELASTICIDAD
 
+    print('=' * 70)
+    print('P1.1: QUERY ELASTICIDAD (2/4)')
     query_elasticidad = SQL_QUERIES['query_elasticidad'].substitute(
         proyecto = proyecto,
         store_banner = store_banner)
@@ -179,13 +202,18 @@ def main() -> None:  # noqa: D103
             user=usuario,
             gbq_client=gbq_client)
 
-    print('[PARCHE] Query Elasticidad Info: ')
-    print(df_elasticidad.info())
+    print('Dimensiones df: ', df_elasticidad.shape)
+    print('Cantidad de eans únicos: ', df_elasticidad['EAN'].nunique())
+    print('Query Elasticidad Info: \n', df_elasticidad.info())
 
     df_elasticidad.columns = df_elasticidad.columns.str.lower()
-    logging.info('Consulta de elasticidad lista')
+
+
 
     # VENTAS
+
+    print('=' * 70)
+    print('P1.1: QUERY VENTAS (3/4)')
 
     query_ventas = SQL_QUERIES['query_ventas'].substitute(
         proyecto = proyecto,
@@ -196,11 +224,31 @@ def main() -> None:  # noqa: D103
             user=usuario,
             gbq_client=gbq_client)
 
-    print('[PARCHE] Query Ventas Info: ')
-    print(df_ventas.info())
+    print('Dimensiones df: ', df_ventas.shape)
+    print('Cantidad de eans únicos: ', df_ventas['EAN'].nunique())
+    print('Query Ventas Info: \n', df_ventas.info())
 
     df_ventas.columns = df_ventas.columns.str.lower()
-    logging.info('Consulta de ventas lista')
+
+    print('=' * 70)
+    print('P1.1: QUERY GENFIX (4/4)')
+
+    query_genfix = SQL_QUERIES['query_genfix'].substitute(
+        proyecto = proyecto,
+        store_banner = store_banner)
+
+    df_genfix = readBigQuery(
+            query=query_genfix,
+            user=usuario,
+            gbq_client=gbq_client)
+
+    print('Dimensiones df: ', df_genfix.shape)
+    print('Cantidad de materiales únicos: ', df_genfix['MATERIAL'].nunique())
+    print('Query Genfix Info: \n', df_genfix.info())
+
+    df_genfix.columns = df_genfix.columns.str.lower()
+
+    print('=' * 70)
 
     #----------------------------------------------------------------------
     # ENDREGION
