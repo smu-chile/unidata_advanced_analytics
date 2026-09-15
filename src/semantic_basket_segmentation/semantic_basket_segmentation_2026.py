@@ -101,6 +101,8 @@ with DAG(**dag_args) as dag:
             'common/',
             f'{PROJECT_NAME}/gbq_objects/'
         ],
+        spark_driver_cores=8,
+        spark_driver_memory=35
     )
 
     semantic_basket_topic >> semantic_customer_topic

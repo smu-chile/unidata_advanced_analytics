@@ -348,6 +348,9 @@ def main() -> None:
         if_exists='append'
     )
 
+    del semantic_baskets_k9
+    gc.collect()
+
     logging.info('Finaliza Proceso Calculo Topicos K9')
 
     logging.info('Inicio Proceso Calculo Topicos K6')
