@@ -541,7 +541,7 @@ def main():
     print('=' * 70 + '\n')
 
 
-    query_historial = QUERY_HISTORIAL['query_historial'].substitute(string_promos =  ','.join(promociones))  # noqa: E501
+    query_historial = QUERY_HISTORIAL['query_historial'].substitute(promos =  ','.join(promociones))  # noqa: E501
     print(query_historial)
 
 
