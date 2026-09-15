@@ -545,11 +545,16 @@ def main():
     df_historial = readBigQuery(
                     query=query_historial, user='pricing', gbq_client=gbq_client)
 
+
+    print('\n' + '=' * 70)
+    print('PARTE 2: LECTURA DE DF HISTORIAL')
+    print('=' * 70)
     print('Dimensiones df stock: ', df_historial.shape)
     print(f'Peso Historial: {df_historial.memory_usage(deep=True).sum() / 1024**2:.2f} MB')
     print('Cantidad de eans únicos: ', df_historial['EAN'].nunique())
     print(f'[HISTORIAL] Fecha MIN: {df_historial['P_DATE'].min()} - Fecha MAX {df_historial['P_DATE'].max()}')  # noqa: E501
     print('Cantidad de columnas: ', len(df_historial.columns))
+    print('=' * 70 + '\n')
     print(df_historial.info())
 
 if __name__ == '__main__':
