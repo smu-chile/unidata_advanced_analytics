@@ -546,7 +546,9 @@ def main():
                     query=query_historial, user='pricing', gbq_client=gbq_client)
 
     print('Dimensiones df stock: ', df_historial.shape)
-    print(f'{df_historial.memory_usage(deep=True).sum() / 1024**2:.2f} MB')
+    print(f'Peso Historial: {df_historial.memory_usage(deep=True).sum() / 1024**2:.2f} MB')
+    print('Cantidad de eans únicos: ', df_historial['EAN'].nunique())
+    print(f'[HISTORIAL] Fecha MIN: {df_historial['P_DATE'].min()} - Fecha MAX {df_historial['P_DATE'].max()}')  # noqa: E501
 
 
 if __name__ == '__main__':
