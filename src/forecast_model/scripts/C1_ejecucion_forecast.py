@@ -549,7 +549,8 @@ def main():
     print(f'Peso Historial: {df_historial.memory_usage(deep=True).sum() / 1024**2:.2f} MB')
     print('Cantidad de eans únicos: ', df_historial['EAN'].nunique())
     print(f'[HISTORIAL] Fecha MIN: {df_historial['P_DATE'].min()} - Fecha MAX {df_historial['P_DATE'].max()}')  # noqa: E501
-
+    print('Cantidad de columnas: ', len(df_historial.columns))
+    print(df_historial.info())
 
 if __name__ == '__main__':
     main()
