@@ -484,6 +484,34 @@ PATRON_OUTPUT = re.compile(
     r'^\d{4}_\d{2}_\d{2}_v\d+_resultado_proyeccion\.xlsx$',
     re.IGNORECASE)
 
+
+# -------------------------------------------------------------------------
+#  Config
+# -------------------------------------------------------------------------
+
+QUERY_HISTORIAL = QueryDict({
+    'query_historial':
+    """
+
+
+WITH productos_objetivo as (
+  SELECT DISTINCT(EAN) FROM `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WORKFLOW`
+  WHERE organizacion_ventas = '1000'
+    AND canal_distribucion = '10'
+    AND registro_valido = 'X'
+    AND n_promocion in (${promos})
+
+)
+
+SELECT * EXCEPT(STORE_BANNER,
+SALES_UOM, SALES_UNIT,
+MULTIPLICADOR_X05, APO,PROPORCION_CATEGORIA,VARIACION_PORCENTUAL_SUBCATEGORIA,
+EAN_SUSTITUTO_1, EAN_SUSTITUTO_2, EAN_SUSTITUTO_3,EAN_SUSTITUTO_4, EAN_SUSTITUTO_5)
+FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.FORECAST_HISTORIALES_PROCESSED_DATA`
+WHERE EAN IN (SELECT EAN FROM productos_objetivo)
+""" })
+
+
 def main():
 
     #------- Inputs ---------#
@@ -511,6 +539,11 @@ def main():
     print(f'Archivo proyecciones: {nombre_output}')
     print(f'Promociones a proyectar: {len(promociones)}')
     print('=' * 70 + '\n')
+
+
+    query_historial = QUERY_HISTORIAL['query_historial'].substitute(string_promos =  ','.join(promociones))  # noqa: E501
+    print(query_historial)
+
 
 if __name__ == '__main__':
     main()
