@@ -485,10 +485,6 @@ PATRON_OUTPUT = re.compile(
     re.IGNORECASE)
 
 
-# -------------------------------------------------------------------------
-#  Config
-# -------------------------------------------------------------------------
-
 QUERY_HISTORIAL = QueryDict({
     'query_historial':
     """
@@ -526,6 +522,8 @@ def main():
     secret_name = 'bdaa_sharepoint_credentials'  # noqa: S105#HC
     sp_cred = secretmanager.getSecret(secret_name, project=proyecto)
 
+    gbq_client = Client()
+
     tabla_input, promociones, ruta_outputs, nombre_output = preparar_input_promociones(  # noqa: RUF059
         credenciales_sharepoint=sp_cred,
         ruta_base_sharepoint=file_site,
@@ -543,6 +541,12 @@ def main():
 
     query_historial = QUERY_HISTORIAL['query_historial'].substitute(promos =  ','.join(promociones))  # noqa: E501
     print(query_historial)
+
+    df_historial = readBigQuery(
+                    query=query_historial, user='pricing', gbq_client=gbq_client)
+
+    print('Dimensiones df stock: ', df_historial.shape)
+    print(f'{df_historial.memory_usage(deep=True).sum() / 1024**2:.2f} MB')
 
 
 if __name__ == '__main__':
