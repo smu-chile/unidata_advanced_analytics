@@ -163,7 +163,7 @@ SQL_QUERIES = QueryDict({
             SELECT
                 *,
                 ROW_NUMBER() OVER (PARTITION BY SKU_PRODUCT) AS SKU_INDEX
-            FROM ${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT_HIERARCHY
+            FROM cl-cda-prod.DS_CDA_VW_SMU.DW_VW_DIM_PRODUCT_HIERARCHY
         )
         WHERE
             SKU_INDEX = 1
