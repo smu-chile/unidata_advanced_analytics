@@ -362,7 +362,7 @@ def main() -> None:  # noqa: D103
             gbq_client=gbq_client)
 
     print('Dimensiones df: ', df_sensibilidad.shape)
-    print('Cantidad de eans únicos: ', df_sensibilidad['EAN'].nunique())
+    print('Cantidad de eans únicos: ', df_sensibilidad['MATERIAL'].nunique())
     print('Query Sensibilidad Info: \n', df_sensibilidad.info())
 
     df_sensibilidad.columns = df_sensibilidad.columns.str.lower()
