@@ -395,7 +395,7 @@ def main() -> None:  # noqa: D103
     print('P1.1: QUERY VENTAS (3/4)')
 
     query_ventas = SQL_QUERIES['query_ventas'].substitute(
-        proyecto = proyecto,
+        proyecto = 'PRECIO_PROMOCIONES',
         store_banner = store_banner)
 
     df_ventas = readBigQuery(
