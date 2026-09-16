@@ -100,7 +100,7 @@ WITH ean_con_sensibilidad AS (
     )
 
 SELECT
-    SKU_PADRE,
+    sku_padre,
     MATERIAL
 FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.TBL_PRICING_GENFIX`
 """
@@ -143,7 +143,7 @@ def crear_kvi_con_contagio(
 ) -> pd.DataFrame:
     """Crea/reemplaza la columna 'KVI' usando sensibilidad, ventas
     acumuladas
-    y contagio por SKU_PADRE.
+    y contagio por sku_padre.
 
     Clasificación base:
         - KVI: productos desde el inicio hasta alcanzar/superar corte_kvi.
@@ -151,8 +151,8 @@ def crear_kvi_con_contagio(
         - BKG: productos restantes.
 
     Contagio:
-        - Identifica los SKU_PADRE asociados a materiales KVI.
-        - Todos los materiales de BM que compartan esos SKU_PADRE
+        - Identifica los sku_padre asociados a materiales KVI.
+        - Todos los materiales de BM que compartan esos sku_padre
           pasan a ser KVI.
         - 'flag_contagiados' identifica los KVI generados por contagio.
     """
@@ -165,7 +165,7 @@ def crear_kvi_con_contagio(
     }
     columnas_genfix = {
         'material',
-        'SKU_PADRE',
+        'sku_padre',
     }
 
     faltantes_bm = columnas_bm.difference(BM.columns)
@@ -271,19 +271,19 @@ def crear_kvi_con_contagio(
         'material',
     ].dropna().unique()
 
-    # SKU_PADRE asociados a los materiales KVI
+    # sku_padre asociados a los materiales KVI
     sku_padres_kvi = genfix_kvi.loc[
         genfix_kvi['material'].isin(materiales_kvi_originales),
-        'SKU_PADRE',
+        'sku_padre',
     ].dropna().unique()
 
-    # Materiales asociados a SKU_PADRE que contienen algún KVI
+    # Materiales asociados a sku_padre que contienen algún KVI
     materiales_hijos_kvi = genfix_kvi.loc[
-        genfix_kvi['SKU_PADRE'].isin(sku_padres_kvi),
+        genfix_kvi['sku_padre'].isin(sku_padres_kvi),
         'material',
     ].dropna().unique()
 
-    # Materiales de BM que comparten SKU_PADRE con un KVI
+    # Materiales de BM que comparten sku_padre con un KVI
     pertenece_familia_kvi = bm_kvi['material'].isin(materiales_hijos_kvi)
 
     # Flag: KVI generado por contagio, no por el corte inicial
