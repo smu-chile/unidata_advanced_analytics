@@ -453,7 +453,6 @@ def main() -> None:  # noqa: D103
     print('#(IS nans) agregados: ', mask_fillna_is.sum())
     print('#(ISF nans) agregados: ', mask_fillna_isf.sum())
 
-    df_balance_matrix['KVI'] = df_balance_matrix['KVI'].fillna('BKG')
 
     #Parche: agregamos columna subcat description
     df_balance_matrix = df_balance_matrix.merge(
