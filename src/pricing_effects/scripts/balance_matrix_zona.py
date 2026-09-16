@@ -1,5 +1,5 @@
 # Default
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import io
 import os
@@ -13,14 +13,13 @@ import numpy as np
 # Pip
 import pandas as pd
 import pendulum
-from google.cloud.bigquery import Client
-from google.api_core.exceptions import Conflict
-
 import common.office365_extended.sharepoint as sp
 
 # Own
 from common.constants import LOGGING_CONFIG
+from google.cloud.bigquery import Client
 from common.databases.queries import QueryDict
+from google.api_core.exceptions import Conflict
 from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
@@ -99,6 +98,21 @@ WHERE STORE_BANNER = '${store_banner}' AND ZONA = '${zona}'
   tabla_fecha_max.fecha_max, INTERVAL 12 MONTH) AND tabla_fecha_max.fecha_max
 GROUP BY MATERIAL, EAN;
 
+""",
+
+'query_genfix':
+"""
+WITH ean_con_sensibilidad AS (
+    SELECT
+    DISTINCT( CAST(MATERIAL AS INT64) )  AS MATERIAL
+    FROM `${proyecto}.PRECIO_PROMOCIONES.PRODUCT_SENSIBILITY_ZONA`
+    where STORE_BANNER = '${store_banner}' AND ZONA = '${zona}'
+    )
+
+SELECT
+    sku_padre,
+    MATERIAL
+FROM `${proyecto}.PRECIO_PROMOCIONES.TBL_PRICING_GENFIX`
 """
 })
 
@@ -129,6 +143,184 @@ def asignar_segmento_bm_NUEVO_METODO(row):
     if row['NUEVOS_KVI'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'high':
         return 'Low-Lower'
     return 'Otro'  # En caso de que haya algún valor inesperado
+
+
+def crear_kvi_con_contagio(
+    BM: pd.DataFrame,  # noqa: N803
+    genfix: pd.DataFrame,
+    corte_kvi: float = 0.33,
+    corte_kci: float = 0.66,
+) -> pd.DataFrame:
+    """Crea/reemplaza la columna 'NUEVOS_KVI' usando sensibilidad y ventas.
+
+    Combina sensibilidad, ventas acumuladas y contagio por sku_padre
+    -- requerimiento de negocio (mismo cambio aplicado a la version de
+    banner completo).
+
+    Clasificación base (a nivel de PRODUCTO, no de familia):
+        - KVI: productos desde el inicio hasta alcanzar/superar corte_kvi.
+        - KCI: productos posteriores a KVI hasta alcanzar/superar
+          corte_kci.
+        - BKG: productos restantes.
+
+    Contagio (asimetrico, solo hacia KVI):
+        - Identifica los sku_padre asociados a materiales KVI.
+        - Todos los materiales de BM que compartan esos sku_padre
+          pasan a ser KVI, aunque individualmente no calificaran.
+        - 'flag_contagiados' identifica los KVI generados por contagio.
+
+    NOTA (zona): el contagio via sku_padre NO esta acotado por zona --
+    TBL_PRICING_GENFIX es una relacion de producto (sku_padre/material)
+    sin dimension geografica, igual que en la version de banner
+    completo. El contagio se calcula sobre los materiales de ESTA
+    zona especifica (BM ya viene filtrado a la zona desde main()), asi
+    que el resultado de por si queda acotado a esa zona.
+    """
+    # Validaciones
+    columnas_bm = {
+        'material',
+        'indice_sensibilidad',
+        'ventas_totales',
+    }
+    columnas_genfix = {
+        'material',
+        'sku_padre',
+    }
+
+    faltantes_bm = columnas_bm.difference(BM.columns)
+    faltantes_genfix = columnas_genfix.difference(genfix.columns)
+
+    if faltantes_bm:
+        msg = f'BM no contiene las columnas requeridas: {sorted(faltantes_bm)}'
+        raise ValueError(
+            msg
+        )
+
+    if faltantes_genfix:
+        msg = (
+            'genfix no contiene las columnas requeridas: '
+            f'{sorted(faltantes_genfix)}'
+        )
+        raise ValueError(
+            msg
+        )
+
+    if not 0 < corte_kvi < corte_kci <= 1:
+        msg = 'Los cortes deben cumplir: 0 < corte_kvi < corte_kci <= 1.'
+        raise ValueError(
+            msg
+        )
+
+    # Copias para no modificar los dataframes originales
+    bm_kvi = BM.copy()
+    genfix_kvi = genfix.copy()
+
+    # Convertir ventas a formato numérico
+    bm_kvi['ventas_totales'] = pd.to_numeric(
+        bm_kvi['ventas_totales'],
+        errors='coerce',
+    ).fillna(0)
+
+    # Calcular porcentaje de ventas por producto
+    total_ventas = bm_kvi['ventas_totales'].sum()
+
+    if total_ventas <= 0:
+        msg = 'La suma de ventas_totales debe ser mayor que cero.'
+        raise ValueError(
+            msg
+        )
+
+    bm_kvi['pct_ventas'] = bm_kvi['ventas_totales'] / total_ventas
+
+    # Normalizar materiales para cruzar BM con genfix
+    bm_kvi['material'] = bm_kvi['material'].astype('string').str.strip()
+    genfix_kvi['material'] = (
+        genfix_kvi['material']
+        .astype('string')
+        .str.strip()
+    )
+
+    # Guardar el orden original para restaurarlo al finalizar
+    bm_kvi['_orden_original'] = np.arange(len(bm_kvi))
+
+    # Ordenar por sensibilidad y ventas como criterio de desempate
+    bm_kvi = bm_kvi.sort_values(
+        by=[
+            'indice_sensibilidad',
+            'pct_ventas',
+            '_orden_original',
+        ],
+        ascending=[False, False, True],
+        kind='mergesort',
+    ).reset_index(drop=True)
+
+    # Posición definitiva usada para clasificar KVI
+    bm_kvi['orden_kvi'] = np.arange(1, len(bm_kvi) + 1)
+
+    # Porcentaje acumulado de ventas según el orden anterior
+    bm_kvi['pct_ventas_acumuladas'] = bm_kvi['pct_ventas'].cumsum()
+
+    # Clasificación base: KVI / KCI / BKG
+    bm_kvi['NUEVOS_KVI'] = 'BKG'
+
+    # KVI: hasta incluir el producto que alcanza/supera corte_kvi
+    supera_corte_kvi = bm_kvi['pct_ventas_acumuladas'].ge(corte_kvi)
+
+    if supera_corte_kvi.any():
+        pos_fin_kvi = supera_corte_kvi.idxmax()
+        bm_kvi.loc[:pos_fin_kvi, 'NUEVOS_KVI'] = 'KVI'
+    else:
+        pos_fin_kvi = len(bm_kvi) - 1
+        bm_kvi['NUEVOS_KVI'] = 'KVI'
+
+    # KCI: desde después de KVI hasta incluir el producto que
+    # alcanza/supera corte_kci
+    supera_corte_kci = bm_kvi['pct_ventas_acumuladas'].ge(corte_kci)
+
+    if supera_corte_kci.any():
+        pos_fin_kci = supera_corte_kci.idxmax()
+        inicio_kci = pos_fin_kvi + 1
+
+        if inicio_kci <= pos_fin_kci:
+            bm_kvi.loc[inicio_kci:pos_fin_kci, 'NUEVOS_KVI'] = 'KCI'
+
+    # Materiales definidos como KVI antes del contagio
+    materiales_kvi_originales = bm_kvi.loc[
+        bm_kvi['NUEVOS_KVI'].eq('KVI'),
+        'material',
+    ].dropna().unique()
+
+    # sku_padre asociados a los materiales KVI
+    sku_padres_kvi = genfix_kvi.loc[
+        genfix_kvi['material'].isin(materiales_kvi_originales),
+        'sku_padre',
+    ].dropna().unique()
+
+    # Materiales asociados a sku_padre que contienen algún KVI
+    materiales_hijos_kvi = genfix_kvi.loc[
+        genfix_kvi['sku_padre'].isin(sku_padres_kvi),
+        'material',
+    ].dropna().unique()
+
+    # Materiales de BM que comparten sku_padre con un KVI
+    pertenece_familia_kvi = bm_kvi['material'].isin(materiales_hijos_kvi)
+
+    # Flag: KVI generado por contagio, no por el corte inicial
+    bm_kvi['flag_contagiados'] = (
+        pertenece_familia_kvi
+        & bm_kvi['NUEVOS_KVI'].ne('KVI')
+    ).astype(int)
+
+    # Aplicar contagio
+    bm_kvi.loc[pertenece_familia_kvi, 'NUEVOS_KVI'] = 'KVI'
+
+    # Restaurar orden original
+    return (
+        bm_kvi
+        .sort_values('orden_kvi', ascending=True)
+        .drop(columns='_orden_original')
+        .reset_index(drop=True)
+    )
 
 
 # -------------------------------------------------------------------------
@@ -228,6 +420,23 @@ def main() -> None:  # noqa: D103
     df_ventas['material'] = df_ventas['material'].astype(str)
     logging.info('Consulta de ventas lista')
 
+    query_genfix = SQL_QUERIES['query_genfix'].substitute(
+        proyecto = proyecto,
+        store_banner = store_banner,
+        zona = zona)
+
+    df_genfix = readBigQuery(
+            query=query_genfix,
+            user=usuario,
+            gbq_client=gbq_client)
+
+    print('[PARCHE] Query Genfix Info: ')
+    print(df_genfix.info())
+
+    df_genfix.columns = df_genfix.columns.str.lower()
+    df_genfix['material'] = df_genfix['material'].astype(str)
+    logging.info('Consulta de genfix lista')
+
     #----------------------------------------------------------------------
     # ENDREGION
 
@@ -314,115 +523,15 @@ def main() -> None:  # noqa: D103
 
 
 
-    def clasificar_kvi_old(df_temp,
-                    ventas='ventas_totales',
-                    sensibilidad='indice_sensibilidad_familia',
-                    desempate='ean'):   # columna única por producto
-        total_ventas = df_temp[ventas].sum()
-
-        if total_ventas <= 0:
-            msg = f"'{ventas}' debe sumar más de 0."
-            raise ValueError(msg)
-
-        # Orden: sensibilidad de familia desc -> ventas del producto desc.
-        # El desempate único garantiza un orden reproducible en BigQuery.
-        df_temp = df_temp.sort_values(
-            by=[sensibilidad, ventas, desempate],
-            ascending=[False, False, True],
-            kind='stable'
-        ).reset_index(drop=True)
-
-        # Columna explícita que fija el orden usado para el acumulado.
-        df_temp['orden_kvi'] = range(1, len(df_temp) + 1)
-
-        # Acumulado a nivel PRODUCTO sobre el total del formato.
-        df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
-        df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
-
-        df_temp['NUEVOS_KVI'] = np.select(
-            [
-                df_temp['pct_ventas_acumulado'] <= 0.30,
-                df_temp['pct_ventas_acumulado'] <= 0.60,
-            ],
-            ['KVI', 'KCI'],
-            default='BKG'
-        )
-
-        return df_temp
-
-    def clasificar_kvi(df_temp,
-                    ventas='ventas_totales',
-                    sensibilidad='indice_sensibilidad_familia',
-                    familia='material_padre',      # identificador único de familia
-                    desempate='ean'):           # columna única por producto
-        total_ventas = df_temp[ventas].sum()
-
-        if total_ventas <= 0:
-            msg = f"'{ventas}' debe sumar más de 0."
-            raise ValueError(msg)
-
-        # ------------------------------------------------------------
-        # 1. ORDEN DE PRODUCTOS
-        #    Sensibilidad de familia desc -> ventas del producto desc.
-        #    Se ordena también por familia para que sus productos queden
-        #    contiguos y ninguna familia quede "interrumpida" por otra.
-        # ------------------------------------------------------------
-        df_temp = df_temp.sort_values(
-            by=[sensibilidad, familia, ventas, desempate],
-            ascending=[False, False, False, True],
-            kind='stable'
-        ).reset_index(drop=True)
-
-        df_temp['orden_kvi'] = range(1, len(df_temp) + 1)
-
-        # Acumulado a nivel PRODUCTO sobre el total del formato.
-        df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
-        df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
-
-        # ------------------------------------------------------------
-        # 2. CLASIFICACIÓN A NIVEL DE FAMILIA (sin partir familias)
-        #    Se construye el orden de familias respetando el orden de
-        #    productos ya definido, y se acumulan las ventas por familia.
-        # ------------------------------------------------------------
-        orden_familias = df_temp[familia].drop_duplicates().tolist()
-
-        ventas_familia = (
-            df_temp.groupby(familia)[ventas].sum()
-            .reindex(orden_familias)
-        )
-
-        pct_familia = ventas_familia / total_ventas
-
-        # Acumulado ANTES de cada familia (exclusivo): lo ya acumulado
-        # por las familias anteriores en el orden.
-        acum_antes_familia = pct_familia.cumsum().shift(fill_value=0.0)
-
-        # Regla 2 (redondeo hacia arriba): una familia entra en el tramo
-        # mientras el acumulado ANTES de ella no haya superado el umbral.
-        # Así, si una familia previa dejó el acumulado en 0.3299, la
-        # siguiente familia todavía entra como KVI y el corte queda un
-        # poco por encima de 0.33 (idem para 0.66).
-        clasificacion_familia = np.select(
-            [
-                acum_antes_familia < 0.33,
-                acum_antes_familia < 0.66,
-            ],
-            ['KVI', 'KCI'],
-            default='BKG'
-        )
-
-        mapa_familia = dict(zip(orden_familias, clasificacion_familia))
-
-        # ------------------------------------------------------------
-        # 3. PROPAGAR LA CLASIFICACIÓN A CADA PRODUCTO DE LA FAMILIA
-        # ------------------------------------------------------------
-        df_temp['NUEVOS_KVI'] = df_temp[familia].map(mapa_familia)
-
-        return df_temp
-
-    df_balance_matrix_sp = clasificar_kvi(
-        df_balance_matrix_sp,
-        sensibilidad='indice_sensibilidad_familia'
+    # CREACION KVI: cortes 0.33-0.66 + contagio por sku_padre --
+    # requerimiento de negocio, reemplaza la clasificacion anterior
+    # por familia (material_padre). Mismo cambio aplicado a la
+    # version de banner completo.
+    df_balance_matrix_sp = crear_kvi_con_contagio(
+        BM=df_balance_matrix_sp,
+        genfix=df_genfix,
+        corte_kvi=0.33,
+        corte_kci=0.66,
     )
 
     df_balance_matrix_sp = df_balance_matrix_sp.drop(columns=['material_padre'], errors='ignore')  # noqa: E501
