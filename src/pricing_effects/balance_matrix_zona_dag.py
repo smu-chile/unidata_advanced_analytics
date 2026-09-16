@@ -92,7 +92,7 @@ ZONAS = [
 # ====================================================================
 EJECUTAR_REGRESSION_ZONA = False
 EJECUTAR_ELASTICIDAD_ZONA = False
-EJECUTAR_SENSIBILIDAD_ZONA = True
+EJECUTAR_SENSIBILIDAD_ZONA = False
 EJECUTAR_BALANCE_MATRIX_ZONA = True
 
 SUBIR_A_SHAREPOINT = False
