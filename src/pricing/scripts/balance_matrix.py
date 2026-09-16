@@ -298,10 +298,11 @@ def crear_kvi_con_contagio(
     # Restaurar orden original
     return (
         bm_kvi
-        .sort_values('_orden_original')
+        .sort_values('orden_kvi', ascending=True)
         .drop(columns='_orden_original')
         .reset_index(drop=True)
     )
+
 
 
 # -------------------------------------------------------------------------
