@@ -90,8 +90,8 @@ ZONAS = [
 # sus tareas no se crean, y la barrera se conecta directo entre las
 # fases activas vecinas.
 # ====================================================================
-EJECUTAR_REGRESSION_ZONA = True
-EJECUTAR_ELASTICIDAD_ZONA = True
+EJECUTAR_REGRESSION_ZONA = False
+EJECUTAR_ELASTICIDAD_ZONA = False
 EJECUTAR_SENSIBILIDAD_ZONA = True
 EJECUTAR_BALANCE_MATRIX_ZONA = True
 
