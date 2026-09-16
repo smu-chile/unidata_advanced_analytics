@@ -141,12 +141,13 @@ def crear_kvi_con_contagio(
     corte_kvi: float = 0.33,
     corte_kci: float = 0.66,
 ) -> pd.DataFrame:
-    """Crea/reemplaza la columna 'KVI' usando sensibilidad, ventas acumuladas
+    """Crea/reemplaza la columna 'KVI' usando sensibilidad, ventas
+    acumuladas
     y contagio por SKU_PADRE.
 
     Clasificación base:
         - KVI: productos desde el inicio hasta alcanzar/superar corte_kvi.
-        - KCI: productos posteriores a KVI hasta alcanzar/superar corte_kci.
+        - KCI: productos posteriores a KVI hasta alcanzar/superar corte_kci
         - BKG: productos restantes.
 
     Contagio:
