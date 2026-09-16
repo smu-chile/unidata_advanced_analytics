@@ -139,53 +139,33 @@ def crear_kvi_con_contagio(
     BM: pd.DataFrame,  # noqa: N803
     genfix: pd.DataFrame,
     corte_kvi: float = 0.33,
-    corte_kci: float = 0.66
+    corte_kci: float = 0.66,
 ) -> pd.DataFrame:
-    """Crea/reemplaza la columna 'KVI' en BM usando:
+    """Crea/reemplaza la columna 'KVI' usando sensibilidad, ventas acumuladas
+    y contagio por SKU_PADRE.
 
-    1. Orden descendente por 'Índice de sensibilidad'.
-    2. Desempate descendente por 'pct_ventas'.
-    3. Clasificación según venta acumulada:
-       - KVI: hasta superar corte_kvi.
-       - KCI: desde después de KVI hasta superar corte_kci.
-       - BKG: productos restantes.
-    4. Contagio de KVI:
-       - Se identifican los SKU_PADRE asociados a los Material KVI.
-       - Todos los Material de BM que compartan esos SKU_PADRE
-         pasan a ser KVI.
-    5. Crea 'flag_contagiados':
-       - 1: el producto se convirtió en KVI por contagio.
-       - 0: era KVI por el corte inicial o no fue contagiado.
+    Clasificación base:
+        - KVI: productos desde el inicio hasta alcanzar/superar corte_kvi.
+        - KCI: productos posteriores a KVI hasta alcanzar/superar corte_kci.
+        - BKG: productos restantes.
 
-    Parameters
-    ----------
-    BM : pd.DataFrame
-        Debe contener las columnas:
-        'Material', 'Índice de sensibilidad' y 'pct_ventas'.
-
-    genfix : pd.DataFrame
-        Debe contener las columnas:
-        'Material' y 'SKU_PADRE'.
-
-    corte_kvi : float, default=0.33
-        Umbral acumulado de pct_ventas para definir KVI.
-
-    corte_kci : float, default=0.66
-        Umbral acumulado de pct_ventas para definir KCI.
-
-    Returns
-    -------
-    pd.DataFrame
-        Copia de BM con las columnas:
-        'Orden KVI Nuevo',
-        'pct_ventas_acumuladas',
-        'KVI',
-        'flag_contagiados'.
+    Contagio:
+        - Identifica los SKU_PADRE asociados a materiales KVI.
+        - Todos los materiales de BM que compartan esos SKU_PADRE
+          pasan a ser KVI.
+        - 'flag_contagiados' identifica los KVI generados por contagio.
     """
 
-    # Validaciones de columnas requeridas
-    columnas_bm = {'Material', 'Índice de sensibilidad', 'pct_ventas'}
-    columnas_genfix = {'Material', 'SKU_PADRE'}
+    # Validaciones
+    columnas_bm = {
+        'material',
+        'indice_sensibilidad',
+        'ventas_totales',
+    }
+    columnas_genfix = {
+        'material',
+        'SKU_PADRE',
+    }
 
     faltantes_bm = columnas_bm.difference(BM.columns)
     faltantes_genfix = columnas_genfix.difference(genfix.columns)
@@ -197,115 +177,124 @@ def crear_kvi_con_contagio(
         )
 
     if faltantes_genfix:
-        msg_0 = (
+        msg = (
             'genfix no contiene las columnas requeridas: '
             f'{sorted(faltantes_genfix)}'
         )
         raise ValueError(
-            msg_0
+            msg
         )
 
     if not 0 < corte_kvi < corte_kci <= 1:
-        msg_1 = 'Los cortes deben cumplir: 0 < corte_kvi < corte_kci <= 1.'
+        msg = 'Los cortes deben cumplir: 0 < corte_kvi < corte_kci <= 1.'
         raise ValueError(
-            msg_1
+            msg
         )
 
     # Copias para no modificar los dataframes originales
     bm_kvi = BM.copy()
     genfix_kvi = genfix.copy()
 
-    # Asegurar que pct_ventas sea numérico
-    bm_kvi['pct_ventas'] = pd.to_numeric(
-        bm_kvi['pct_ventas'],
-        errors='coerce'
+    # Convertir ventas a formato numérico
+    bm_kvi['ventas_totales'] = pd.to_numeric(
+        bm_kvi['ventas_totales'],
+        errors='coerce',
     ).fillna(0)
 
-    # Normalizar Material para realizar cruces seguros
-    bm_kvi['Material'] = bm_kvi['Material'].astype('string').str.strip()
-    genfix_kvi['Material'] = (
-        genfix_kvi['Material']
+    # Calcular porcentaje de ventas por producto
+    total_ventas = bm_kvi['ventas_totales'].sum()
+
+    if total_ventas <= 0:
+        msg = 'La suma de ventas_totales debe ser mayor que cero.'
+        raise ValueError(
+            msg
+        )
+
+    bm_kvi['pct_ventas'] = bm_kvi['ventas_totales'] / total_ventas
+
+    # Normalizar materiales para cruzar BM con genfix
+    bm_kvi['material'] = bm_kvi['material'].astype('string').str.strip()
+    genfix_kvi['material'] = (
+        genfix_kvi['material']
         .astype('string')
         .str.strip()
     )
 
-    # Mantener orden original de BM
+    # Guardar el orden original para restaurarlo al finalizar
     bm_kvi['_orden_original'] = np.arange(len(bm_kvi))
 
-    # Ordenar por sensibilidad y, ante empate, por pct_ventas
+    # Ordenar por sensibilidad y ventas como criterio de desempate
     bm_kvi = bm_kvi.sort_values(
-        by=['Índice de sensibilidad', 'pct_ventas', '_orden_original'],
+        by=[
+            'indice_sensibilidad',
+            'pct_ventas',
+            '_orden_original',
+        ],
         ascending=[False, False, True],
-        kind='mergesort'
+        kind='mergesort',
     ).reset_index(drop=True)
 
-    # Guardar orden final de priorización
-    bm_kvi['orden_kvi'] = np.arange(1, len(bm_kvi) + 1)
+    # Posición definitiva usada para clasificar KVI
+    bm_kvi['Orden KVI Nuevo'] = np.arange(1, len(bm_kvi) + 1)
 
-    # Calcular ventas acumuladas según el nuevo orden
+    # Porcentaje acumulado de ventas según el orden anterior
     bm_kvi['pct_ventas_acumuladas'] = bm_kvi['pct_ventas'].cumsum()
 
-    # Clasificación inicial
+    # Clasificación base: KVI / KCI / BKG
     bm_kvi['KVI'] = 'BKG'
 
-    # Posición que supera/alcanza el corte KVI
+    # KVI: hasta incluir el producto que alcanza/supera corte_kvi
     supera_corte_kvi = bm_kvi['pct_ventas_acumuladas'].ge(corte_kvi)
 
     if supera_corte_kvi.any():
         pos_fin_kvi = supera_corte_kvi.idxmax()
         bm_kvi.loc[:pos_fin_kvi, 'KVI'] = 'KVI'
     else:
-        # Si las ventas acumuladas no llegan al corte, todos son KVI
+        pos_fin_kvi = len(bm_kvi) - 1
         bm_kvi['KVI'] = 'KVI'
 
-    # Posición que supera/alcanza el corte KCI
+    # KCI: desde después de KVI hasta incluir el producto que
+    # alcanza/supera corte_kci
     supera_corte_kci = bm_kvi['pct_ventas_acumuladas'].ge(corte_kci)
 
     if supera_corte_kci.any():
         pos_fin_kci = supera_corte_kci.idxmax()
-
-        # Clasifica como KCI desde el siguiente registro posterior
-        # al bloque KVI hasta el registro que alcanza/supera corte_kci.
-        inicio_kci = pos_fin_kvi + 1 if supera_corte_kvi.any() else len(bm_kvi)
+        inicio_kci = pos_fin_kvi + 1
 
         if inicio_kci <= pos_fin_kci:
             bm_kvi.loc[inicio_kci:pos_fin_kci, 'KVI'] = 'KCI'
 
-    # -------------------------------------------------
-    # CONTAGIO KVI POR SKU_PADRE
-    # -------------------------------------------------
-
-    # Materiales KVI definidos directamente por el corte de ventas
+    # Materiales definidos como KVI antes del contagio
     materiales_kvi_originales = bm_kvi.loc[
         bm_kvi['KVI'].eq('KVI'),
-        'Material'
+        'material',
     ].dropna().unique()
 
     # SKU_PADRE asociados a los materiales KVI
     sku_padres_kvi = genfix_kvi.loc[
-        genfix_kvi['Material'].isin(materiales_kvi_originales),
-        'SKU_PADRE'
+        genfix_kvi['material'].isin(materiales_kvi_originales),
+        'SKU_PADRE',
     ].dropna().unique()
 
-    # Todos los materiales que pertenecen a SKU_PADRE con al menos un KVI
+    # Materiales asociados a SKU_PADRE que contienen algún KVI
     materiales_hijos_kvi = genfix_kvi.loc[
         genfix_kvi['SKU_PADRE'].isin(sku_padres_kvi),
-        'Material'
+        'material',
     ].dropna().unique()
 
     # Materiales de BM que comparten SKU_PADRE con un KVI
-    es_hijo_de_kvi = bm_kvi['Material'].isin(materiales_hijos_kvi)
+    pertenece_familia_kvi = bm_kvi['material'].isin(materiales_hijos_kvi)
 
-    # Se marca solamente a los productos que no eran KVI por corte
+    # Flag: KVI generado por contagio, no por el corte inicial
     bm_kvi['flag_contagiados'] = (
-        es_hijo_de_kvi
+        pertenece_familia_kvi
         & bm_kvi['KVI'].ne('KVI')
     ).astype(int)
 
-    # Contagio: convertir hijos de SKU_PADRE KVI en KVI
-    bm_kvi.loc[es_hijo_de_kvi, 'KVI'] = 'KVI'
+    # Aplicar contagio
+    bm_kvi.loc[pertenece_familia_kvi, 'KVI'] = 'KVI'
 
-    # Restaurar el orden original de BM
+    # Restaurar orden original
     return (
         bm_kvi
         .sort_values('_orden_original')
