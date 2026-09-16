@@ -18,7 +18,7 @@
         {
             "name": "SUB_CATEGORY_DESCRIPTION",
             "field_type": "STRING",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Descripión de la subcategoría del producto"
         },
         {
