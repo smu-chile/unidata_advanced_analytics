@@ -72,7 +72,7 @@ where STORE_BANNER = '${store_banner}'
 WITH tabla_fecha_max AS (
   SELECT
     MAX(P_DATE) AS fecha_max
-  FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY`
+  FROM `cl-bigdata-analytics-preprod.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_RECOVER`
   WHERE STORE_BANNER = '${store_banner}'
 )
 
@@ -81,7 +81,7 @@ SELECT
   EAN,
   SUM(VENTAS_TOTALES_PRODUCTO) AS ventas_totales,
   MAX(SUB_CATEGORY_DESCRIPTION) AS SUB_CATEGORY_DESCRIPTION,
-FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY`
+FROM `cl-bigdata-analytics-preprod.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_RECOVER`
 CROSS JOIN tabla_fecha_max
 WHERE STORE_BANNER = '${store_banner}'
   AND P_DATE BETWEEN DATE_SUB(
@@ -603,7 +603,7 @@ def main() -> None:  # noqa: D103
             'Documentos%20compartidos/'
             'Pricing/'
             'Balance Matrix AA - GCP/'
-            f'Balance_Matrix_AA_{store_banner}_{execution_date}_last_bm.xlsx'
+            f'Balance_Matrix_AA_{store_banner}_{execution_date}_last_bm_recover.xlsx'
         )
     ).upload(buffer)
     logging.info('Tabla subida en Sharepoint')
@@ -619,7 +619,7 @@ def main() -> None:  # noqa: D103
 
     # Parametros
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'BALANCE_MATRIX_TESTING_LAST_BM_JULIO_2026'
+    tabla = 'BALANCE_MATRIX_TESTING_LAST_BM_JULIO_2026_RECOVER'
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
