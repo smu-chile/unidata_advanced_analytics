@@ -72,7 +72,7 @@ where STORE_BANNER = '${store_banner}'
 WITH tabla_fecha_max AS (
   SELECT
     MAX(P_DATE) AS fecha_max
-  FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY`
+  FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY`
   WHERE STORE_BANNER = '${store_banner}'
 )
 
@@ -81,7 +81,7 @@ SELECT
   EAN,
   SUM(VENTAS_TOTALES_PRODUCTO) AS ventas_totales,
   MAX(SUB_CATEGORY_DESCRIPTION) AS SUB_CATEGORY_DESCRIPTION,
-FROM `${proyecto}.TMP.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY`
+FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.TMP_REGRESSION_PROCESSED_DATA_ELASTICITY`
 CROSS JOIN tabla_fecha_max
 WHERE STORE_BANNER = '${store_banner}'
   AND P_DATE BETWEEN DATE_SUB(
@@ -395,7 +395,6 @@ def main() -> None:  # noqa: D103
     print('P1.1: QUERY VENTAS (3/4)')
 
     query_ventas = SQL_QUERIES['query_ventas'].substitute(
-        proyecto = 'PRECIO_PROMOCIONES',
         store_banner = store_banner)
 
     df_ventas = readBigQuery(
