@@ -236,7 +236,7 @@ def crear_kvi_con_contagio(
     ).reset_index(drop=True)
 
     # Posición definitiva usada para clasificar KVI
-    bm_kvi['Orden KVI Nuevo'] = np.arange(1, len(bm_kvi) + 1)
+    bm_kvi['orden_kvi'] = np.arange(1, len(bm_kvi) + 1)
 
     # Porcentaje acumulado de ventas según el orden anterior
     bm_kvi['pct_ventas_acumuladas'] = bm_kvi['pct_ventas'].cumsum()
@@ -497,22 +497,15 @@ def main() -> None:  # noqa: D103
                                             'ventas_totales',
                                             'indice_sensibilidad',
                                             'indice_sensibilidad_familia',
-                                            'material_padre',
                                             'elasticidad',
+                                            'segmento_elasticidad',
                                             'KVI',
                                             'codigo_sensibilidad',
-                                            'segmento_elasticidad',
-                                            'segmento_bm']]
+                                            'segmento_bm',
+                                            'pct_ventas',
+                                            'pct_ventas_acumuladas',
+                                            'orden_kvi']]
 
-
-    # Orden Columnas y renombramiento para Excel
-    df_balance_matrix_sp = df_balance_matrix_sp[
-        ['store_banner', 'categoria', 'sub_category_description',
-         'descripcion_material', 'material', 'umv', 'ean',
-         'ventas_totales', 'indice_sensibilidad', 'indice_sensibilidad_familia',
-         'elasticidad','codigo_sensibilidad', 'segmento_elasticidad',
-         'pct_ventas', 'pct_ventas_acumulado', 'orden_kvi']
-    ]
 
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
         'store_banner':'Formato',
