@@ -459,6 +459,7 @@ def main() -> None:  # noqa: D103
           df_ventas[['ean','ventas_totales','sub_category_description']], on = 'ean', how='left')
 
     logging.info('Merge de tablas listo')
+    print(df_balance_matrix.info())
 
     #----------------------------------------------------------------------
     # ENDREGION
