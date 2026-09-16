@@ -465,6 +465,7 @@ def main() -> None:  # noqa: D103
         corte_kci=0.66
     )
     print('post contagio :\n',df_balance_matrix.info())
+    print('KVI conteo: ', df_balance_matrix['KVI'].value_counts())
     # REGION: Se agregan parametros
     #----------------------------------------------------------------------
 

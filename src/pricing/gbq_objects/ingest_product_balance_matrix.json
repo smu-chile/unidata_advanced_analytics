@@ -70,6 +70,12 @@
             "description": "Valor númerico de la elasticidad del producto o contagio de otro producto similar"
         },
         {
+            "name": "SEGMENTO_ELASTICIDAD",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Cluster al que pertenece el producto según su elasticidad"
+        },
+        {
             "name": "KVI",
             "field_type": "STRING",
             "mode": "REQUIRED",
@@ -79,12 +85,6 @@
             "field_type": "STRING",
             "mode": "REQUIRED",
             "description": "Cluster al que pertenece con otra notación"
-        },
-        {
-            "name": "SEGMENTO_ELASTICIDAD",
-            "field_type": "STRING",
-            "mode": "REQUIRED",
-            "description": "Cluster al que pertenece el producto según su elasticidad"
         },
         {
             "name": "SEGMENTO_BM",
@@ -105,7 +105,7 @@
             "description": "Porcentaje acumulado de ventas respecto del total"
         },
         {
-            "name": "ORDEN ACUMULADO",
+            "name": "ORDEN_ACUMULADO",
             "field_type": "INT64",
             "mode": "NULLABLE",
             "description": "Orden de cálculo para porcentaje acumulado de ventas respecto del total"
