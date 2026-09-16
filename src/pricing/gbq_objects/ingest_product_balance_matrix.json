@@ -1,6 +1,6 @@
 {
     "schema": "PRECIO_PROMOCIONES",
-    "table": "BALANCE_MATRIX_TESTING_ORDER_JULIO_2026",
+    "table": "BALANCE_MATRIX_TESTING_LAST_BM_JULIO_2026",
 
     "columns": [
         {

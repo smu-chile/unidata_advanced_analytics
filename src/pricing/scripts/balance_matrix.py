@@ -113,13 +113,13 @@ FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.TBL_PRICING_GENFIX`
 
 # Se agrega cuadrante de BM
 def asignar_segmento_bm(row):
-    if row['kvi'] == 'BKG' and row['segmento_elasticidad'] == 'high':
+    if row['KVI'] == 'BKG' and row['segmento_elasticidad'] == 'high':
         return 'Hi-Lo'
-    if row['kvi'] == 'BKG' and row['segmento_elasticidad'] == 'low':
+    if row['KVI'] == 'BKG' and row['segmento_elasticidad'] == 'low':
         return 'Margin'
-    if row['kvi'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'low':
+    if row['KVI'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'low':
         return 'EDLP'
-    if row['kvi'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'high':
+    if row['KVI'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'high':
         return 'Low-Lower'
     return 'Otro'  # En caso de que haya algún valor inesperado
 
@@ -133,6 +133,185 @@ def asignar_segmento_bm_NUEVO_METODO(row):
     if row['NUEVOS_KVI'] in ['KCI', 'KVI'] and row['segmento_elasticidad'] == 'high':
         return 'Low-Lower'
     return 'Otro'  # En caso de que haya algún valor inesperado
+
+
+def crear_kvi_con_contagio(
+    BM: pd.DataFrame,  # noqa: N803
+    genfix: pd.DataFrame,
+    corte_kvi: float = 0.33,
+    corte_kci: float = 0.66
+) -> pd.DataFrame:
+    """Crea/reemplaza la columna 'KVI' en BM usando:
+
+    1. Orden descendente por 'Índice de sensibilidad'.
+    2. Desempate descendente por 'pct_ventas'.
+    3. Clasificación según venta acumulada:
+       - KVI: hasta superar corte_kvi.
+       - KCI: desde después de KVI hasta superar corte_kci.
+       - BKG: productos restantes.
+    4. Contagio de KVI:
+       - Se identifican los SKU_PADRE asociados a los Material KVI.
+       - Todos los Material de BM que compartan esos SKU_PADRE
+         pasan a ser KVI.
+    5. Crea 'flag_contagiados':
+       - 1: el producto se convirtió en KVI por contagio.
+       - 0: era KVI por el corte inicial o no fue contagiado.
+
+    Parameters
+    ----------
+    BM : pd.DataFrame
+        Debe contener las columnas:
+        'Material', 'Índice de sensibilidad' y 'pct_ventas'.
+
+    genfix : pd.DataFrame
+        Debe contener las columnas:
+        'Material' y 'SKU_PADRE'.
+
+    corte_kvi : float, default=0.33
+        Umbral acumulado de pct_ventas para definir KVI.
+
+    corte_kci : float, default=0.66
+        Umbral acumulado de pct_ventas para definir KCI.
+
+    Returns
+    -------
+    pd.DataFrame
+        Copia de BM con las columnas:
+        'Orden KVI Nuevo',
+        'pct_ventas_acumuladas',
+        'KVI',
+        'flag_contagiados'.
+    """
+
+    # Validaciones de columnas requeridas
+    columnas_bm = {'Material', 'Índice de sensibilidad', 'pct_ventas'}
+    columnas_genfix = {'Material', 'SKU_PADRE'}
+
+    faltantes_bm = columnas_bm.difference(BM.columns)
+    faltantes_genfix = columnas_genfix.difference(genfix.columns)
+
+    if faltantes_bm:
+        msg = f'BM no contiene las columnas requeridas: {sorted(faltantes_bm)}'
+        raise ValueError(
+            msg
+        )
+
+    if faltantes_genfix:
+        msg_0 = (
+            'genfix no contiene las columnas requeridas: '
+            f'{sorted(faltantes_genfix)}'
+        )
+        raise ValueError(
+            msg_0
+        )
+
+    if not 0 < corte_kvi < corte_kci <= 1:
+        msg_1 = 'Los cortes deben cumplir: 0 < corte_kvi < corte_kci <= 1.'
+        raise ValueError(
+            msg_1
+        )
+
+    # Copias para no modificar los dataframes originales
+    bm_kvi = BM.copy()
+    genfix_kvi = genfix.copy()
+
+    # Asegurar que pct_ventas sea numérico
+    bm_kvi['pct_ventas'] = pd.to_numeric(
+        bm_kvi['pct_ventas'],
+        errors='coerce'
+    ).fillna(0)
+
+    # Normalizar Material para realizar cruces seguros
+    bm_kvi['Material'] = bm_kvi['Material'].astype('string').str.strip()
+    genfix_kvi['Material'] = (
+        genfix_kvi['Material']
+        .astype('string')
+        .str.strip()
+    )
+
+    # Mantener orden original de BM
+    bm_kvi['_orden_original'] = np.arange(len(bm_kvi))
+
+    # Ordenar por sensibilidad y, ante empate, por pct_ventas
+    bm_kvi = bm_kvi.sort_values(
+        by=['Índice de sensibilidad', 'pct_ventas', '_orden_original'],
+        ascending=[False, False, True],
+        kind='mergesort'
+    ).reset_index(drop=True)
+
+    # Guardar orden final de priorización
+    bm_kvi['orden_kvi'] = np.arange(1, len(bm_kvi) + 1)
+
+    # Calcular ventas acumuladas según el nuevo orden
+    bm_kvi['pct_ventas_acumuladas'] = bm_kvi['pct_ventas'].cumsum()
+
+    # Clasificación inicial
+    bm_kvi['KVI'] = 'BKG'
+
+    # Posición que supera/alcanza el corte KVI
+    supera_corte_kvi = bm_kvi['pct_ventas_acumuladas'].ge(corte_kvi)
+
+    if supera_corte_kvi.any():
+        pos_fin_kvi = supera_corte_kvi.idxmax()
+        bm_kvi.loc[:pos_fin_kvi, 'KVI'] = 'KVI'
+    else:
+        # Si las ventas acumuladas no llegan al corte, todos son KVI
+        bm_kvi['KVI'] = 'KVI'
+
+    # Posición que supera/alcanza el corte KCI
+    supera_corte_kci = bm_kvi['pct_ventas_acumuladas'].ge(corte_kci)
+
+    if supera_corte_kci.any():
+        pos_fin_kci = supera_corte_kci.idxmax()
+
+        # Clasifica como KCI desde el siguiente registro posterior
+        # al bloque KVI hasta el registro que alcanza/supera corte_kci.
+        inicio_kci = pos_fin_kvi + 1 if supera_corte_kvi.any() else len(bm_kvi)
+
+        if inicio_kci <= pos_fin_kci:
+            bm_kvi.loc[inicio_kci:pos_fin_kci, 'KVI'] = 'KCI'
+
+    # -------------------------------------------------
+    # CONTAGIO KVI POR SKU_PADRE
+    # -------------------------------------------------
+
+    # Materiales KVI definidos directamente por el corte de ventas
+    materiales_kvi_originales = bm_kvi.loc[
+        bm_kvi['KVI'].eq('KVI'),
+        'Material'
+    ].dropna().unique()
+
+    # SKU_PADRE asociados a los materiales KVI
+    sku_padres_kvi = genfix_kvi.loc[
+        genfix_kvi['Material'].isin(materiales_kvi_originales),
+        'SKU_PADRE'
+    ].dropna().unique()
+
+    # Todos los materiales que pertenecen a SKU_PADRE con al menos un KVI
+    materiales_hijos_kvi = genfix_kvi.loc[
+        genfix_kvi['SKU_PADRE'].isin(sku_padres_kvi),
+        'Material'
+    ].dropna().unique()
+
+    # Materiales de BM que comparten SKU_PADRE con un KVI
+    es_hijo_de_kvi = bm_kvi['Material'].isin(materiales_hijos_kvi)
+
+    # Se marca solamente a los productos que no eran KVI por corte
+    bm_kvi['flag_contagiados'] = (
+        es_hijo_de_kvi
+        & bm_kvi['KVI'].ne('KVI')
+    ).astype(int)
+
+    # Contagio: convertir hijos de SKU_PADRE KVI en KVI
+    bm_kvi.loc[es_hijo_de_kvi, 'KVI'] = 'KVI'
+
+    # Restaurar el orden original de BM
+    return (
+        bm_kvi
+        .sort_values('_orden_original')
+        .drop(columns='_orden_original')
+        .reset_index(drop=True)
+    )
 
 
 # -------------------------------------------------------------------------
@@ -258,7 +437,7 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
 
     df_balance_matrix = df_elasticidad.merge(
-        df_sensibilidad[['material', 'material_padre', 'indice_sensibilidad', 'indice_sensibilidad_familia','kvi']],  # noqa: E501
+        df_sensibilidad[['material', 'material_padre', 'indice_sensibilidad', 'indice_sensibilidad_familia']],  # noqa: E501
         on='material',
         how='left'
     )
@@ -286,16 +465,26 @@ def main() -> None:  # noqa: D103
     #----------------------------------------------------------------------
     # ENDREGION
 
+
+    #----------------------------------------------------------------------
+    # CREACIÓN KVI: cortes 0.33-0.66 + nuevo contagio
+
+    df_balance_matrix = crear_kvi_con_contagio(
+        BM=df_balance_matrix,
+        genfix=df_genfix,
+        corte_kvi=0.33,
+        corte_kci=0.66
+    )
     # REGION: Se agregan parametros
     #----------------------------------------------------------------------
 
     # Para la sensibilidad se asignan los nombres del equipo Comercial
     mapa = {'KVI': 'SE', 'KCI': 'SG', 'BKG': 'FS'}
-    pos = df_balance_matrix.columns.get_loc('kvi') + 1
+    pos = df_balance_matrix.columns.get_loc('KVI') + 1
     df_balance_matrix.insert(
         pos,
         'codigo_sensibilidad',
-        df_balance_matrix['kvi'].astype(str).str.upper().str.strip().map(mapa))
+        df_balance_matrix['KVI'].astype(str).str.upper().str.strip().map(mapa))
 
 
     # Aplicar la función al dataframe
@@ -320,146 +509,19 @@ def main() -> None:  # noqa: D103
                                             'indice_sensibilidad_familia',
                                             'material_padre',
                                             'elasticidad',
-                                            'kvi',
+                                            'KVI',
                                             'codigo_sensibilidad',
                                             'segmento_elasticidad',
                                             'segmento_bm']]
 
-
-
-
-    def clasificar_kvi_old(df_temp,
-                    ventas='ventas_totales',
-                    sensibilidad='indice_sensibilidad_familia',
-                    desempate='ean'):   # columna única por producto
-        total_ventas = df_temp[ventas].sum()
-
-        if total_ventas <= 0:
-            msg = f"'{ventas}' debe sumar más de 0."
-            raise ValueError(msg)
-
-        # Orden: sensibilidad de familia desc -> ventas del producto desc.
-        # El desempate único garantiza un orden reproducible en BigQuery.
-        df_temp = df_temp.sort_values(
-            by=[sensibilidad, ventas, desempate],
-            ascending=[False, False, True],
-            kind='stable'
-        ).reset_index(drop=True)
-
-        # Columna explícita que fija el orden usado para el acumulado.
-        df_temp['orden_kvi'] = range(1, len(df_temp) + 1)
-
-        # Acumulado a nivel PRODUCTO sobre el total del formato.
-        df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
-        df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
-
-        df_temp['NUEVOS_KVI'] = np.select(
-            [
-                df_temp['pct_ventas_acumulado'] <= 0.30,
-                df_temp['pct_ventas_acumulado'] <= 0.60,
-            ],
-            ['KVI', 'KCI'],
-            default='BKG'
-        )
-
-        return df_temp
-
-    def clasificar_kvi(df_temp,
-                    ventas='ventas_totales',
-                    sensibilidad='indice_sensibilidad_familia',
-                    familia='material_padre',      # identificador único de familia
-                    desempate='ean'):           # columna única por producto
-        total_ventas = df_temp[ventas].sum()
-
-        if total_ventas <= 0:
-            msg = f"'{ventas}' debe sumar más de 0."
-            raise ValueError(msg)
-
-        # ------------------------------------------------------------
-        # 1. ORDEN DE PRODUCTOS
-        #    Sensibilidad de familia desc -> ventas del producto desc.
-        #    Se ordena también por familia para que sus productos queden
-        #    contiguos y ninguna familia quede "interrumpida" por otra.
-        # ------------------------------------------------------------
-        df_temp = df_temp.sort_values(
-            by=[sensibilidad, familia, ventas, desempate],
-            ascending=[False, False, False, True],
-            kind='stable'
-        ).reset_index(drop=True)
-
-        df_temp['orden_kvi'] = range(1, len(df_temp) + 1)
-
-        # Acumulado a nivel PRODUCTO sobre el total del formato.
-        df_temp['pct_ventas'] = df_temp[ventas] / total_ventas
-        df_temp['pct_ventas_acumulado'] = df_temp['pct_ventas'].cumsum()
-
-        # ------------------------------------------------------------
-        # 2. CLASIFICACIÓN A NIVEL DE FAMILIA (sin partir familias)
-        #    Se construye el orden de familias respetando el orden de
-        #    productos ya definido, y se acumulan las ventas por familia.
-        # ------------------------------------------------------------
-        orden_familias = df_temp[familia].drop_duplicates().tolist()
-
-        ventas_familia = (
-            df_temp.groupby(familia)[ventas].sum()
-            .reindex(orden_familias)
-        )
-
-        pct_familia = ventas_familia / total_ventas
-
-        # Acumulado ANTES de cada familia (exclusivo): lo ya acumulado
-        # por las familias anteriores en el orden.
-        acum_antes_familia = pct_familia.cumsum().shift(fill_value=0.0)
-
-        # Regla 2 (redondeo hacia arriba): una familia entra en el tramo
-        # mientras el acumulado ANTES de ella no haya superado el umbral.
-        # Así, si una familia previa dejó el acumulado en 0.3299, la
-        # siguiente familia todavía entra como KVI y el corte queda un
-        # poco por encima de 0.33 (idem para 0.66).
-        clasificacion_familia = np.select(
-            [
-                acum_antes_familia < 0.33,
-                acum_antes_familia < 0.66,
-            ],
-            ['KVI', 'KCI'],
-            default='BKG'
-        )
-
-        mapa_familia = dict(zip(orden_familias, clasificacion_familia))
-
-        # ------------------------------------------------------------
-        # 3. PROPAGAR LA CLASIFICACIÓN A CADA PRODUCTO DE LA FAMILIA
-        # ------------------------------------------------------------
-        df_temp['NUEVOS_KVI'] = df_temp[familia].map(mapa_familia)
-
-        return df_temp
-
-    df_balance_matrix_sp = clasificar_kvi(
-        df_balance_matrix_sp,
-        sensibilidad='indice_sensibilidad_familia'
-    )
-
-    df_balance_matrix_sp = df_balance_matrix_sp.drop(columns=['material_padre'], errors='ignore')  # noqa: E501
-
-    df_balance_matrix_sp['segmento_bm_new'] = df_balance_matrix_sp.apply(asignar_segmento_bm_NUEVO_METODO, axis=1)  # noqa: E501
-
-    print('[PATCH N] Balance Matrix Info pre drop: ', df_balance_matrix_sp.info())
-    df_balance_matrix_sp = df_balance_matrix_sp.drop(columns=['kvi', 'segmento_bm'], errors='ignore')  # noqa: E501, ERA001
-
-    print('[PATCH N] Balance Matrix Info post drop: ', df_balance_matrix_sp.info())
-    #Nota: codigo sensibilidad viene con la frecuencia de la sensibilidad
-    # sin forzados
-    mapa = {'BKG': 'FS', 'KCI': 'SG', 'KVI': 'SE'}
-    df_balance_matrix_sp['codigo_sensibilidad'] = df_balance_matrix_sp['NUEVOS_KVI'].map(mapa)
-    print('info df_temp post nuevos KVI: ', df_balance_matrix_sp.info())
 
     # Orden Columnas y renombramiento para Excel
     df_balance_matrix_sp = df_balance_matrix_sp[
         ['store_banner', 'categoria', 'sub_category_description',
          'descripcion_material', 'material', 'umv', 'ean',
          'ventas_totales', 'indice_sensibilidad', 'indice_sensibilidad_familia',
-         'elasticidad', 'NUEVOS_KVI','codigo_sensibilidad', 'segmento_elasticidad',
-         'segmento_bm_new', 'pct_ventas', 'pct_ventas_acumulado', 'orden_kvi']
+         'elasticidad','codigo_sensibilidad', 'segmento_elasticidad',
+         'pct_ventas', 'pct_ventas_acumulado', 'orden_kvi']
     ]
 
     df_balance_matrix_sp = df_balance_matrix_sp.rename(columns={
@@ -474,12 +536,9 @@ def main() -> None:  # noqa: D103
         'indice_sensibilidad': 'Índice sensibilidad',
         'indice_sensibilidad_familia': 'Índice sensibilidad familia',
         'elasticidad': 'Elasticidad',
-        #'kvi':'KVI',  # noqa: ERA001
-        'NUEVOS_KVI': 'KVI',
         'codigo_sensibilidad': 'Código sensibilidad',
         'segmento_elasticidad': 'Segmento elasticidad',
-        # 'segmento_bm': 'Segmento Balance Matrix',  # noqa: ERA001
-        'segmento_bm_new': 'Segmento Balance Matrix',
+        'segmento_bm': 'Segmento Balance Matrix',
         'orden_kvi': 'Orden KVI'
     })
 
@@ -559,7 +618,7 @@ def main() -> None:  # noqa: D103
             'Documentos%20compartidos/'
             'Pricing/'
             'Balance Matrix AA - GCP/'
-            f'Balance_Matrix_AA_{store_banner}_{execution_date}_v3.xlsx'
+            f'Balance_Matrix_AA_{store_banner}_{execution_date}_last_bm.xlsx'
         )
     ).upload(buffer)
     logging.info('Tabla subida en Sharepoint')
@@ -575,7 +634,7 @@ def main() -> None:  # noqa: D103
 
     # Parametros
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'BALANCE_MATRIX_TESTING_ORDER_JULIO_2026'
+    tabla = 'BALANCE_MATRIX_TESTING_LAST_BM_JULIO_2026'
 
     # Se elimina los datos para cierto store_banner y rango (si existen)
     deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
