@@ -14,15 +14,19 @@ junto):
     FASE 3: Sensibilidad (7 zonas, independiente de datos, pero
         |   secuenciada igual para no competir por recursos)
         |  (barrera -- TODAS deben terminar)
-    FASE 4: Balance Matrix (7 zonas, usa Elasticidad + Sensibilidad)
+    FASE 4: Balance Matrix (7 zonas, SECUENCIAL ESTRICTA -- mismo
+        |   motivo que Regresion, ver nota abajo)
 
-Regresion corre 1 zona a la vez, encadenadas entre si (no solo por
-'concurrency') -- es la unica fase que mostro contencion real de
-BigQuery ("Resources exceeded during query execution", con
-Competencia Media). Las demas 3 fases siguen usando el 'concurrency'
-del DAG para permitir hasta 2 tareas en simultaneo dentro de esa fase
--- las barreras evitan que fases DISTINTAS se crucen entre si, no
-reemplazan ese control.
+Regresion y Balance Matrix corren 1 zona a la vez cada una,
+encadenadas entre si (no solo por 'concurrency') -- son las 2 fases
+que mostraron contencion real de BigQuery: Regresion con "Resources
+exceeded during query execution" (Competencia Media), y Balance
+Matrix con "429 TooManyRequests -- too many table update operations"
+(2 zonas haciendo DELETE+INSERT sobre BALANCE_MATRIX_ZONA casi al
+mismo tiempo). Elasticidad y Sensibilidad se quedan con el
+'concurrency' del DAG (hasta 2 tareas en simultaneo dentro de esa
+fase) -- las barreras evitan que fases DISTINTAS se crucen entre si,
+no reemplazan ese control.
 
 Cada fase tiene su propio interruptor -- si esta apagada, sus tareas
 no se crean, y la barrera de la fase activa siguiente se conecta
@@ -268,6 +272,7 @@ with DAG(**dag_args) as dag:
 
     # ---------- FASE 4: Balance Matrix ----------
     if EJECUTAR_BALANCE_MATRIX_ZONA:
+        balance_matrix_tasks = []
         for zona in ZONAS:
             zona_suffix = zona.replace(' ', '_').lower()
             balance_matrix_task = ExtendedDataprocCreateBatchOperator(
@@ -287,5 +292,9 @@ with DAG(**dag_args) as dag:
                 include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
                 **RECURSOS_EXTRA,
             )
-            if punto_enganche is not None:
-                punto_enganche >> balance_matrix_task
+            balance_matrix_tasks.append(balance_matrix_task)
+
+        if punto_enganche is not None:
+            punto_enganche >> balance_matrix_tasks[0]
+        for tarea_anterior, tarea_siguiente in itertools.pairwise(balance_matrix_tasks):
+            tarea_anterior >> tarea_siguiente
