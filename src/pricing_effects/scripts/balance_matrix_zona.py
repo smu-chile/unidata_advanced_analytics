@@ -554,7 +554,7 @@ def main() -> None:  # noqa: D103
          'descripcion_material', 'material', 'umv', 'ean',
          'ventas_totales', 'indice_sensibilidad', 'indice_sensibilidad_familia',
          'elasticidad', 'NUEVOS_KVI','codigo_sensibilidad', 'segmento_elasticidad',
-         'segmento_bm_new', 'pct_ventas', 'pct_ventas_acumulado', 'orden_kvi',
+         'segmento_bm_new', 'pct_ventas', 'pct_ventas_acumuladas', 'orden_kvi',
          'periodo_ejecucion']
     ]
 

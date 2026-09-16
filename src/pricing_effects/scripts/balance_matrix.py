@@ -435,7 +435,7 @@ def main() -> None:
 
     df_balance_matrix['indice_sensibilidad'] = df_balance_matrix['indice_sensibilidad'].fillna(0)
 
-    #[PARCHE] En estrico rigor se debería rellenar ISFyendo a bupadres ¿?
+    #[PARCHE] En estrico rigor se debería rellenar ISF yendo los padres ¿?
 
     df_balance_matrix['indice_sensibilidad_familia'] = df_balance_matrix['indice_sensibilidad_familia'].fillna(0)  # noqa: E501
 
@@ -531,7 +531,7 @@ def main() -> None:
          'descripcion_material', 'material', 'umv', 'ean',
          'ventas_totales', 'indice_sensibilidad', 'indice_sensibilidad_familia',
          'elasticidad', 'NUEVOS_KVI','codigo_sensibilidad', 'segmento_elasticidad',
-         'segmento_bm_new', 'pct_ventas', 'pct_ventas_acumulado', 'orden_kvi',
+         'segmento_bm_new', 'pct_ventas', 'pct_ventas_acumuladas', 'orden_kvi',
          'periodo_ejecucion']
     ]
 
