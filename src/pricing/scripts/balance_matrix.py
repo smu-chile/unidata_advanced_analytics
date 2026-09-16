@@ -453,7 +453,7 @@ def main() -> None:  # noqa: D103
     print('#(IS nans) agregados: ', mask_fillna_is.sum())
     print('#(ISF nans) agregados: ', mask_fillna_isf.sum())
 
-    df_balance_matrix['kvi'] = df_balance_matrix['KVI'].fillna('BKG')
+    df_balance_matrix['KVI'] = df_balance_matrix['KVI'].fillna('BKG')
 
     #Parche: agregamos columna subcat description
     df_balance_matrix = df_balance_matrix.merge(
@@ -474,6 +474,7 @@ def main() -> None:  # noqa: D103
         corte_kvi=0.33,
         corte_kci=0.66
     )
+    print('post contagio :\n',df_balance_matrix.info())
     # REGION: Se agregan parametros
     #----------------------------------------------------------------------
 
