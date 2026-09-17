@@ -578,7 +578,7 @@ def main():
     print('=' * 70)
 
     lista_eans = list(df_historial['EAN'].unique())
-    query_caracterizacion = QUERY_CARACTERIZACION['query_caracterizacion'].substitute(promos =  ','.join(lista_eans))  # noqa: E501
+    query_caracterizacion = QUERY_CARACTERIZACION['query_caracterizacion'].substitute(lista_eans =  ','.join(lista_eans))  # noqa: E501
     df_caracterizacion = readBigQuery(
                     query=query_caracterizacion, user='pricing', gbq_client=gbq_client)
 
