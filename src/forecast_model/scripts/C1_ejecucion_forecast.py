@@ -508,6 +508,14 @@ WHERE EAN IN (SELECT EAN FROM productos_objetivo)
 """ })
 
 
+QUERY_CARACTERIZACION = QueryDict({
+    'query_caracterizacion':
+    """
+    SELECT * FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.FORECAST_CARACTERIZACION_PRODUCTOS`
+    WHERE EAN IN (${lista_eans})
+""" })  # noqa: E501
+
+
 def main():
 
     #------- Inputs ---------#
@@ -524,38 +532,63 @@ def main():
 
     gbq_client = Client()
 
+
+    print('\n' + '#' * 70)
+    print('PARTE 1: LECTURA DE DATASETS')
+    print('\n' + '#' * 70)
+
+
+    ### 1.1 PROMOCIONES
+    print('\n' + '=' * 70)
+    print('PARTE 1.1: PROMOCIONES A PROYECTAR')
+    print('=' * 70)
+
     tabla_input, promociones, ruta_outputs, nombre_output = preparar_input_promociones(  # noqa: RUF059
         credenciales_sharepoint=sp_cred,
         ruta_base_sharepoint=file_site,
         patron_input=PATRON_INPUT,
-        patron_output=PATRON_OUTPUT,
-    )
+        patron_output=PATRON_OUTPUT)
 
-    print('\n' + '=' * 70)
-    print('PARTE 1: LECTURA DE PROMOCIONES A PROYECTAR')
-    print('=' * 70)
     print(f'Archivo proyecciones: {nombre_output}')
     print(f'Promociones a proyectar: {len(promociones)}')
     print('=' * 70 + '\n')
 
 
-    query_historial = QUERY_HISTORIAL['query_historial'].substitute(promos =  ','.join(promociones))  # noqa: E501
-    print(query_historial)
+    ### 1.2 HISTORIAL
+    print('\n' + '=' * 70)
+    print('PARTE 1.2: DF HISTORIAL')
+    print('=' * 70)
 
+    query_historial = QUERY_HISTORIAL['query_historial'].substitute(promos =  ','.join(promociones))  # noqa: E501
     df_historial = readBigQuery(
                     query=query_historial, user='pricing', gbq_client=gbq_client)
 
-
-    print('\n' + '=' * 70)
-    print('PARTE 2: LECTURA DE DF HISTORIAL')
-    print('=' * 70)
-    print('Dimensiones df stock: ', df_historial.shape)
+    print('Dimensiones df historial: ', df_historial.shape)
     print(f'Peso Historial: {df_historial.memory_usage(deep=True).sum() / 1024**2:.2f} MB')
     print('Cantidad de eans únicos: ', df_historial['EAN'].nunique())
     print(f'[HISTORIAL] Fecha MIN: {df_historial['P_DATE'].min()} - Fecha MAX {df_historial['P_DATE'].max()}')  # noqa: E501
     print('Cantidad de columnas: ', len(df_historial.columns))
     print('=' * 70 + '\n')
     print(df_historial.info())
+
+
+    ### 1.3 CARACTERIZACIÓN
+    print('\n' + '=' * 70)
+    print('PARTE 1.3: DF CARACTERIZACION')
+    print('=' * 70)
+
+    lista_eans = df_historial['EAN'].unique().to_list()
+    query_caracterizacion = QUERY_CARACTERIZACION['query_caracterizacion'].substitute(promos =  ','.join(lista_eans))  # noqa: E501
+    df_caracterizacion = readBigQuery(
+                    query=query_caracterizacion, user='pricing', gbq_client=gbq_client)
+
+    print('Dimensiones df caracterizacion: ', df_caracterizacion.shape)
+    print(f'Peso Caracterizacion: {df_caracterizacion.memory_usage(deep=True).sum() / 1024**2:.2f} MB')  # noqa: E501
+    print('Cantidad de eans únicos: ', df_caracterizacion['EAN'].nunique())
+    print('Cantidad de columnas: ', len(df_caracterizacion.columns))
+    print('=' * 70 + '\n')
+    print(df_caracterizacion.info())
+
 
 if __name__ == '__main__':
     main()
