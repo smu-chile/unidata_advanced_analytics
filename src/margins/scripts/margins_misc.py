@@ -111,7 +111,7 @@ def cleaning_func(file: str,df_file: pd.DataFrame) -> pd.DataFrame :
         df_file['SELLOUT'] = (
             pd.to_numeric(df_file['SELLOUT'], errors='coerce')
             .fillna(0)
-            .astype(float)
+            .astype(int)
             .round(1)
         )
         #df_file['SELLOUT'] = df_file['SELLOUT'].astype('Float64')  # noqa: ERA001, W505
