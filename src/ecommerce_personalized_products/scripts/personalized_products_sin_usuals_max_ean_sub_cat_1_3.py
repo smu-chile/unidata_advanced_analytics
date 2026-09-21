@@ -525,14 +525,15 @@ def main() -> None:  # noqa: D103
     gcp_project_cda = 'cl-cda-unidata-prod'
 
     date_table = execution_date.add(days=1)
-    fecha_prom = execution_date.add(days=4)
     fecha_emb = execution_date.replace(day=1)
     fin_mes_n1 = execution_date.add(months=1).end_of('month')
 
     if execution_date.day_of_week == pendulum.WEDNESDAY:
         fecha_my_usuals = date_table
+        fecha_prom = execution_date.add(days=4)
     elif execution_date.day_of_week == pendulum.SUNDAY:
         fecha_my_usuals = execution_date.previous(pendulum.THURSDAY).to_date_string()
+        fecha_prom = execution_date.add(days=3)
 
     upper_store_banner = store_banner.upper()
 
