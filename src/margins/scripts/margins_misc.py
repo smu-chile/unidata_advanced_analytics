@@ -101,19 +101,19 @@ def cleaning_func(file: str,df_file: pd.DataFrame) -> pd.DataFrame :
     if file.startswith('admg'):
         df_file['MES'] = df_file['MES'].astype('Int64')
         df_file['Material'] = df_file['Material'].astype('Int64')
-        df_file['SELLOUT'] = df_file['SELLOUT'].astype(str).str.replace(',', '.').astype(float)
         df_file['SELLOUT'] = (
             df_file['SELLOUT']
             .astype(str)
             .str.replace('$', '', regex=False)
-            .str.replace('.', '', regex=False)
             .str.strip()
+            .str.replace(',', '.', regex=False)   # coma es el separador decimal
         )
+
         df_file['SELLOUT'] = (
             pd.to_numeric(df_file['SELLOUT'], errors='coerce')
             .fillna(0)
-            .astype(int)
-            .round(1)
+            .round(0)      # redondea al entero más cercano
+            .astype(int)   # sin decimales
         )
         #df_file['SELLOUT'] = df_file['SELLOUT'].astype('Float64')  # noqa: ERA001, W505
         df_file = df_file.dropna(axis=0,subset=['MES'])
