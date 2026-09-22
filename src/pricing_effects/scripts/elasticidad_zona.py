@@ -3451,6 +3451,22 @@ def main() -> None:  # noqa: D103
     # la afecta -- es puramente cosmetico para el dato que se entrega.
     roster['elasticidad_final'] = roster['elasticidad_final'].round(2)
 
+    # Exclusion explicita -- los materiales que llegaron al Nivel 4b
+    # (ORIGEN='zona_completa', el ultimo recurso de la cascada) NO se
+    # reportan en la tabla final. No se dejan en NaN ni con ningun
+    # valor de relleno -- se asume que no fue posible calcular una
+    # elasticidad confiable para estos SKUs dentro de esta zona, y
+    # simplemente no aparecen. Esto rompe la garantia de 100% de
+    # cobertura para esos casos especificos, a proposito.
+    n_antes_exclusion = len(roster)
+    roster = roster[roster['nivel_herencia'] != 'zona_completa'].copy()
+    n_excluidos = n_antes_exclusion - len(roster)
+    logger.info(
+        f'Exclusion de zona_completa: {n_excluidos:,} materiales '
+        f'excluidos de la tabla final (de {n_antes_exclusion:,} totales) '
+        '-- no se reportan con ningun valor de relleno.'
+    )
+
     roster['STORE_BANNER'] = store_banner
     roster['ZONA'] = zona
     roster['PERIODO_EJECUCION'] = periodo_ejecucion
