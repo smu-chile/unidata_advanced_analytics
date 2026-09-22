@@ -101,6 +101,7 @@ def cleaning_func(file: str,df_file: pd.DataFrame) -> pd.DataFrame :
     if file.startswith('admg'):
         df_file['MES'] = df_file['MES'].astype('Int64')
         df_file['Material'] = df_file['Material'].astype('Int64')
+        df_file['SELLOUT'] = df_file['SELLOUT'].astype(str).str.replace(',', '.').astype(float)
         df_file['SELLOUT'] = (
             df_file['SELLOUT']
             .astype(str)
