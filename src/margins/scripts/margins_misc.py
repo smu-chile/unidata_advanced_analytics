@@ -113,7 +113,7 @@ def cleaning_func(file: str,df_file: pd.DataFrame) -> pd.DataFrame :
             pd.to_numeric(df_file['SELLOUT'], errors='coerce')
             .fillna(0)
             .round(0)      # redondea al entero más cercano
-            .astype(int)   # sin decimales
+            .astype('int64')   # sin decimales
         )
         #df_file['SELLOUT'] = df_file['SELLOUT'].astype('Float64')  # noqa: ERA001, W505
         df_file = df_file.dropna(axis=0,subset=['MES'])
