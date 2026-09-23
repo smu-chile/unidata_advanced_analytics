@@ -31,9 +31,6 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
   && ${CONDA_HOME}/bin/conda config --system --set auto_update_conda False \
   && ${CONDA_HOME}/bin/conda config --system --prepend channels conda-forge \
   && ${CONDA_HOME}/bin/conda config --system --set channel_priority strict
-# Packages ipython and ipykernel are required if using custom conda and want to
-# use this container for running notebooks.
-#RUN ${CONDA_HOME}/bin/conda install ipython ipykernel
 
 # (Optional) Install Conda packages.
 #
@@ -42,7 +39,9 @@ RUN bash miniconda.sh -b -p /opt/miniconda3 \
 #
 # Use mamba to install packages quickly.
 RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
-    && ${CONDA_HOME}/bin/micromamba install -y -c conda-forge\
+    && ${CONDA_HOME}/bin/micromamba install -y -c conda-forge \
+      awswrangler \
+      boto3 \
       conda \
       cython \
       fastavro \
@@ -63,13 +62,13 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       google-cloud-spanner \
       google-cloud-storage \
       koalas \
-      matplotlib \
       nltk \
       numba \
       numpy \
+      office365-rest-python-client \
       openblas \
-      orc \
       openpyxl \
+      orc \
       pandas \
       pyarrow \
       pytables \
@@ -79,19 +78,18 @@ RUN ${CONDA_HOME}/bin/conda install -y micromamba -n base -c conda-forge \
       rtree \
       scikit-learn \
       scipy \
-      seaborn \
       sqlalchemy \
+      statsmodels \
       sympy \
-      office365-rest-python-client \
       pendulum \
-      awswrangler \
       pandas-gbq \
       virtualenv \
+      xlsxwriter \
     && ${CONDA_HOME}/bin/micromamba clean --all --yes
 
 # (Optional) Install additional requirements
 # COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
+# RUN pip install --no-cache-dir --no-cache -r requirements.txt
 
 # Set timezone
 ENV TZ="America/Santiago"
