@@ -1,5 +1,5 @@
 # Debian 11 is recommended.
-FROM debian:11-slim
+FROM debian:12-slim
 
 # Suppress interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
