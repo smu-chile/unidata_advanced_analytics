@@ -651,7 +651,7 @@ def main() -> None:  # noqa: D103
                 'Documentos%20compartidos/'
                 'Pricing/'
                 'Balance Matrix AA - GCP/'
-                f'Balance_Matrix_AA_{store_banner}_{zona}_{execution_date}_v3.xlsx'
+                f'Balance_Matrix_AA_{store_banner}_{zona}_{execution_date}.xlsx'
             )
         ).upload(buffer)
         logging.info('Tabla subida en Sharepoint')

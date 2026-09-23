@@ -95,11 +95,11 @@ ZONAS = [
 # fases activas vecinas.
 # ====================================================================
 EJECUTAR_REGRESSION_ZONA = False
-EJECUTAR_ELASTICIDAD_ZONA = True
+EJECUTAR_ELASTICIDAD_ZONA = False
 EJECUTAR_SENSIBILIDAD_ZONA = False
-EJECUTAR_BALANCE_MATRIX_ZONA = True
+EJECUTAR_BALANCE_MATRIX_ZONA = False
 
-SUBIR_A_SHAREPOINT = False
+SUBIR_A_SHAREPOINT = True
 
 RECURSOS_EXTRA = {
     'spark_driver_cores': 8,
