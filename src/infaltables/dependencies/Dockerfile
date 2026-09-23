@@ -5,7 +5,10 @@ FROM debian:11-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 # (Required) Install utilities required by Spark scripts.
-RUN apt update && apt install -y procps tini libjemalloc2 wget
+RUN echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4 \
+    && for i in 1 2 3 4 5; do apt update && break || sleep 10; done \
+    && apt install -y --no-install-recommends procps tini libjemalloc2 wget \
+    && rm -rf /var/lib/apt/lists/*
 
 # (Optional) Install utilities required by XGBoost for Spark.
 RUN apt install -y procps libgomp1
