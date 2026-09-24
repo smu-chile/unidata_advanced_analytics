@@ -1276,6 +1276,7 @@ def main() -> None:
             gcp_project = gcp_project,
             gcp_project_cda = 'cl-cda-prod',
             execution_date = execution_date,
+            store_banner = store_banner
         ),
         table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_{upper_store_banner_table}',
         create_disposition='CREATE_IF_NEEDED',
