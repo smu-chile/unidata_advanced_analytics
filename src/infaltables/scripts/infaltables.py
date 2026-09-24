@@ -26,6 +26,7 @@ from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
     deleteFromTable,
+    createTableAsSelect,
 )
 
 
@@ -57,6 +58,312 @@ parser.add_argument(
 # SQL Queries
 # -------------------------------------------------------------------------
 SQL_QUERIES = QueryDict({
+    'infaltables_penetracion':
+    """
+    WITH raw_sales AS (
+    -- ==========================================================
+    -- 1. EXTRACCIÓN TRANSACCIONAL (Ventana 12 meses móviles)
+    -- ==========================================================
+    SELECT
+        A.TXN_KEY AS TXN_KEY,
+        A.MARKET_BASKET_KEY,
+        A.ITM_TXN_FCN_TP_DSC,
+        LTRIM(B.STORE_ID, '0') AS STORE_ID,
+        DATE(A.ITM_TXN_TMS) AS TRANSACTION_DATE,
+        TIME(A.ITM_TXN_TMS) AS TRANSACTION_TIME,
+        D.SKU_PRODUCT AS SKU_PRODUCT,
+        CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC,
+        C.EAN AS EAN,
+
+        ROUND(
+            SUM(CASE
+                WHEN (((D.NEG_ID = '14') OR (D.NEG_ID = '15')) AND (D.GRUPO_ID <> '210010103')) THEN 0
+                WHEN (A.WGHT_ITM <> 0 AND A.WGHT_ITM IS NOT NULL) THEN A.ITM_TXN_AMT / (A.WGHT_ITM / 1000)
+                WHEN (A.NBR_PD_ITM <> 0 AND C.CONT_CONV_UMB IS NOT NULL) THEN A.ITM_TXN_AMT / (CAST(C.CONT_CONV_UMB AS NUMERIC) * A.NBR_PD_ITM)
+                WHEN (A.NBR_PD_ITM <> 0 AND C.CONT_CONV_UMB IS NULL) THEN A.ITM_TXN_AMT / A.NBR_PD_ITM
+                ELSE 0
+            END),
+            2
+        ) AS UNIT_PRICE,
+
+        CASE
+            WHEN (((D.NEG_ID = '14') OR (D.NEG_ID = '15')) AND (D.GRUPO_ID <> '210010103')) THEN 0
+            WHEN (A.NBR_PD_ITM = 0 AND A.WGHT_ITM > 0 AND A.WGHT_ITM IS NOT NULL) THEN 1
+            WHEN ((A.WGHT_ITM < 0) AND (A.WGHT_ITM IS NOT NULL)) THEN -1
+            WHEN (A.NBR_PD_ITM <> 0 AND C.CONT_CONV_UMB IS NOT NULL) THEN CAST(C.CONT_CONV_UMB AS NUMERIC) * A.NBR_PD_ITM
+            ELSE A.NBR_PD_ITM
+        END AS QUANTITY,
+
+        SUM(CASE
+            WHEN (((D.NEG_ID = '14') OR (D.NEG_ID = '15')) AND (D.GRUPO_ID <> '210010103')) THEN 0
+            ELSE A.ITM_TXN_AMT
+        END) AS VALUE,
+
+        SUM(CASE
+            WHEN (A.WGHT_ITM IS NOT NULL) THEN A.WGHT_ITM / 1000
+            ELSE 0
+        END) AS WEIGHT,
+
+        C.UNIDAD_DE_MEDIDA AS UNIDAD_DE_MEDIDA,
+        A.CUSTOMER_KEY,
+
+        CASE
+            WHEN (E.FNC_DOC_TP_DSC = 'NE') THEN 'TN'
+            WHEN ((E.FNC_DOC_TP_DSC = 'FE') OR (E.FNC_DOC_TP_DSC = 'FX')) THEN 'TF'
+            ELSE E.FNC_DOC_TP_DSC
+        END AS TRANSACTION_TYPE,
+
+        SUM(A.DCN_AMT) AS DISCOUNT_VALUE,
+
+        CASE
+            WHEN (((D.NEG_ID = '14') OR (D.NEG_ID = '15')) AND (D.GRUPO_ID <> '210010103')) THEN 0
+            WHEN (A.NBR_PD_ITM = 0 AND A.WGHT_ITM > 0 AND A.WGHT_ITM IS NOT NULL) THEN 1
+            WHEN ((A.WGHT_ITM < 0) AND (A.WGHT_ITM IS NOT NULL)) THEN -1
+            WHEN (A.NBR_PD_ITM <> 0 AND C.CONT_CONV_UMB IS NOT NULL) THEN CAST(C.CONT_CONV_UMB AS NUMERIC) * A.NBR_PD_ITM / (COALESCE(C.UMREZ, 1) / COALESCE(C.UMREN, 1))
+            ELSE A.NBR_PD_ITM
+        END AS QUANTITY_SU,
+
+        SUM(TAX_AMOUNT) AS TAX_AMOUNT
+
+    FROM `${gcp_project_cda}.DS_CDA_VW_SMU.DW_VW_FACT_ITM_TXN` A
+
+    JOIN `${gcp_project_cda}.DS_CDA_VW_SMU.DW_VW_DIM_STORE_HIERARCHY` B
+    ON (
+        (A.STORE_KEY = B.STORE_KEY)
+        AND (B.ORG_IP_ID IN ('01', '04', '02', '08', '06', '09'))
+    )
+
+    JOIN (
+        SELECT
+            PRODUCT_KEY,
+            EAN,
+            CONT_CONV_UMB,
+            UNIDAD_DE_MEDIDA,
+            CAST(CONT_CONV_UMB AS NUMERIC) AS UMREZ,
+            CAST(DENOM_UMB AS NUMERIC) AS UMREN
+        FROM `${gcp_project_cda}.DS_CDA_VW_SMU.DW_VW_DIM_PRODUCT`
+    ) C
+        ON A.PRODUCT_KEY_1 = C.PRODUCT_KEY
+
+    JOIN (
+        SELECT
+            PRODUCT_KEY,
+            SKU_PRODUCT,
+            NEG_ID,
+            GRUPO_ID, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC
+        FROM `${gcp_project_cda}.DS_CDA_VW_SMU.DW_VW_DIM_PRODUCT_HIERARCHY`
+    ) D
+        ON A.PRODUCT_KEY_1 = D.PRODUCT_KEY
+
+    JOIN `${gcp_project_cda}.DS_CDA_VW_SMU.DW_VW_DIM_FIN_DOC_TP_TYPE` E
+        ON A.FNC_DOC_TP_KEY = E.FIN_DOC_TP_KEY
+
+    WHERE
+        A.ITM_TXN_TMS >= DATE_TRUNC(DATE_SUB('${execution_date}', INTERVAL 12 MONTH), MONTH)
+        AND A.ITM_TXN_TMS < DATE_TRUNC('${execution_date}', MONTH)
+        AND A.MARKET_BASKET_KEY NOT IN (
+            SELECT DISTINCT MARKET_BASKET_KEY
+            FROM `${gcp_project_cda}.DS_CDA_VW_SMU.DW_VW_FACT_MARKET_BASKET_E_COMMERCE`
+            WHERE CANAL_VENTA IN ('PEDIDOS YA', 'UBER EATS', 'RAPPI', 'RAPPI TURBO')
+        )
+        AND B.ORG_IP = 'Unimarc'
+        AND A.CUSTOMER_HEX NOT IN ('3588d47a76aac91fcf2a3c2f55f6a351')
+    GROUP BY
+        D.NEG_ID, D.GRUPO_ID, A.NBR_PD_ITM, C.CONT_CONV_UMB, A.WGHT_ITM, A.ITM_TXN_TMS, A.TXN_KEY,
+        B.STORE_ID, D.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC, C.EAN, A.MARKET_BASKET_KEY,
+        A.ITM_TXN_FCN_TP_DSC, C.UNIDAD_DE_MEDIDA, C.UMREZ, C.UMREN, A.CUSTOMER_KEY, E.FNC_DOC_TP_DSC
+    ),
+
+    clientes_sensibles AS (
+        SELECT DISTINCT
+            CUSTOMER_KEY
+        FROM `${gcp_project}.CONOCIMIENTO_CLIENTE.CUSTOMER_SEGMENTATION_SOPHISTICATION`
+        WHERE STORE_BANNER = 'Unimarc'
+        AND CLASIFICACION_CLIENTE = 'PRICE SENSITIVE'
+        AND DATE = DATE_TRUNC('${execution_date}', MONTH)
+    ),
+
+    universo_totales AS (
+        SELECT
+            COUNT(DISTINCT MARKET_BASKET_KEY) AS TOTAL_CANASTAS,
+            SUM(VALUE) AS TOTAL_VENTA,
+            SUM(VALUE)-SUM(TAX_AMOUNT) AS TOTAL_VENTA_NETA,
+            COUNT(DISTINCT CASE WHEN CUSTOMER_KEY IS NOT NULL THEN CUSTOMER_KEY END) AS TOTAL_CLIENTES
+        FROM raw_sales
+    ),
+
+    penetracion_producto AS (
+        SELECT
+            r.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC,
+            COUNT(DISTINCT r.MARKET_BASKET_KEY) AS CANASTAS_PRODUCTO,
+            COUNT(DISTINCT CASE WHEN r.CUSTOMER_KEY IS NOT NULL THEN r.CUSTOMER_KEY END) AS CLIENTES_PRODUCTO,
+            SUM(VALUE) AS VENTA_PRODUCTO,
+            SUM(VALUE)-SUM(TAX_AMOUNT) as VENTA_NETA_PRODUCTO,
+            SUM(VALUE)/sum(QUANTITY) AS PVP,
+
+            -- Métricas de Novedad / Antigüedad
+            MIN(r.TRANSACTION_DATE) AS FECHA_PRIMERA_VENTA,
+            COUNT(DISTINCT DATE_TRUNC(r.TRANSACTION_DATE, MONTH)) AS MESES_CON_VENTA,
+            DATE_DIFF('${execution_date}', MIN(r.TRANSACTION_DATE), DAY) AS DIAS_DESDE_PRIMERA_VENTA
+        FROM raw_sales r
+        WHERE r.QUANTITY > 0
+        GROUP BY r.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC
+    ),
+
+    penetracion_producto_clientes_sensibles AS (
+        SELECT
+            r.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC,
+            COUNT(DISTINCT r.MARKET_BASKET_KEY) AS CANASTAS_PRODUCTO_CS,
+            COUNT(DISTINCT CASE WHEN r.CUSTOMER_KEY IS NOT NULL THEN r.CUSTOMER_KEY END) AS CLIENTES_PRODUCTO_CS,
+            SUM(VALUE) AS VENTA_PRODUCTO_CS
+        FROM raw_sales r
+        JOIN clientes_sensibles s ON s.customer_key = r.customer_key
+        WHERE r.QUANTITY > 0
+        GROUP BY r.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC
+    ),
+
+    penetracion_producto_combinado AS (
+        SELECT
+            r.SKU_PRODUCT, r.CAT_DSC, r.LIN_DESC, r.SEC_DSC, r.NEG_DSC,
+            r.CANASTAS_PRODUCTO, r.CLIENTES_PRODUCTO, r.VENTA_PRODUCTO,r.VENTA_NETA_PRODUCTO,r.PVP,
+            s.CANASTAS_PRODUCTO_CS, s.CLIENTES_PRODUCTO_CS, s.VENTA_PRODUCTO_CS,
+            r.FECHA_PRIMERA_VENTA,
+            r.MESES_CON_VENTA,
+            r.DIAS_DESDE_PRIMERA_VENTA
+        FROM penetracion_producto r
+        JOIN penetracion_producto_clientes_sensibles s ON s.SKU_PRODUCT = r.SKU_PRODUCT
+    ),
+
+    importancia_categoria AS (
+        SELECT
+            CAT_DSC,
+            SUM(VALUE) AS TOTAL_VENTA_CATEGORIA,
+            SUM(CASE WHEN S.CUSTOMER_KEY IS NOT NULL THEN VALUE END) AS TOTAL_VENTA_CATEGORIA_CS
+        FROM raw_sales r
+        LEFT JOIN clientes_sensibles s ON s.customer_key = r.customer_key
+        WHERE r.QUANTITY > 0
+        GROUP BY CAT_DSC
+    ),
+
+    recompra_cliente_mensual AS (
+        SELECT
+            CUSTOMER_KEY, SKU_PRODUCT,
+            DATE_TRUNC(TRANSACTION_DATE, MONTH) AS MES,
+            COUNT(DISTINCT MARKET_BASKET_KEY) AS COMPRAS_EN_MES
+        FROM raw_sales
+        WHERE QUANTITY > 0 AND CUSTOMER_KEY IS NOT NULL
+        GROUP BY CUSTOMER_KEY, SKU_PRODUCT, MES
+    ),
+
+    resumen_recompra_mensual AS (
+        SELECT
+            SKU_PRODUCT,
+            ROUND(AVG(COMPRAS_EN_MES), 2) AS FREC_RECOMPRA_MENSUAL_PROM,
+            MAX(COMPRAS_EN_MES) AS MAX_RECOMPRA_MES
+        FROM recompra_cliente_mensual
+        GROUP BY SKU_PRODUCT
+    ),
+
+    recompra_cliente_trimestral AS (
+        SELECT
+            CUSTOMER_KEY, SKU_PRODUCT,
+            DATE_TRUNC(TRANSACTION_DATE, QUARTER) AS TRIMESTRE,
+            COUNT(DISTINCT MARKET_BASKET_KEY) AS COMPRAS_EN_TRIMESTRE
+        FROM raw_sales
+        WHERE QUANTITY > 0 AND CUSTOMER_KEY IS NOT NULL
+        GROUP BY CUSTOMER_KEY, SKU_PRODUCT, TRIMESTRE
+    ),
+
+    resumen_recompra_trimestral AS (
+        SELECT
+            r.SKU_PRODUCT,
+            COUNT(DISTINCT r.CUSTOMER_KEY) AS cant_clientes,
+            -- Suavizado Bayesiano (K=15, M=1.22)
+            ROUND(
+                SAFE_DIVIDE(
+                    (COUNT(DISTINCT r.CUSTOMER_KEY) * AVG(r.COMPRAS_EN_TRIMESTRE)) + (15 * 1.22),
+                    (COUNT(DISTINCT r.CUSTOMER_KEY) + 15)
+                ), 2
+            ) AS FREC_RECOMPRA_TRIMESTRAL_PROM,
+            MAX(r.COMPRAS_EN_TRIMESTRE) AS MAX_RECOMPRA_TRIMESTRE
+        FROM recompra_cliente_trimestral r
+        GROUP BY r.SKU_PRODUCT
+    ),
+
+    category_frequency_prep AS (
+        SELECT DISTINCT
+            p.CAT_DSC,
+            PERCENTILE_CONT(rm.FREC_RECOMPRA_MENSUAL_PROM, 0.5) OVER(PARTITION BY p.CAT_DSC) AS cat_frec_mensual_mediana,
+            PERCENTILE_CONT(rt.FREC_RECOMPRA_TRIMESTRAL_PROM, 0.5) OVER(PARTITION BY p.CAT_DSC) AS cat_frec_trimestral_mediana
+        FROM penetracion_producto p
+        LEFT JOIN resumen_recompra_mensual rm ON p.SKU_PRODUCT = rm.SKU_PRODUCT
+        LEFT JOIN resumen_recompra_trimestral rt ON p.SKU_PRODUCT = rt.SKU_PRODUCT
+    )
+
+    -- ==========================================================
+    -- 2. RESULTADO FINAL CONSOLIDADO
+    -- ==========================================================
+    SELECT
+        p.NEG_DSC, p.SEC_DSC, p.LIN_DESC, p.CAT_DSC,
+        CAST(p.SKU_PRODUCT AS INT64) AS PRODUCT_ID,
+
+        -- Indicadores de Novedad y Ciclo de Vida
+        p.FECHA_PRIMERA_VENTA,
+        p.MESES_CON_VENTA,
+        p.DIAS_DESDE_PRIMERA_VENTA,
+        CASE
+            WHEN p.DIAS_DESDE_PRIMERA_VENTA <= 90 THEN 1
+            ELSE 0
+        END AS ES_PRODUCTO_NUEVO_90D,
+        CASE
+            WHEN p.MESES_CON_VENTA >= 12 THEN 'TODO_EL_ANIO_12M'
+            WHEN p.DIAS_DESDE_PRIMERA_VENTA <= 90 THEN 'LANZAMIENTO_RECIENTE_LE_3M'
+            WHEN p.DIAS_DESDE_PRIMERA_VENTA <= 180 THEN 'MEDIO_ANIO_LE_6M'
+            ELSE 'INTERMITENTE_O_PARCIAL'
+        END AS SEGMENTO_MADUREZ_SKU,
+
+        -- Penetración en Canastas
+        p.CANASTAS_PRODUCTO AS CANASTAS_CON_SKU,
+        p.CANASTAS_PRODUCTO_CS AS CANASTAS_CON_SKU_CS,
+        u.TOTAL_CANASTAS,
+        ROUND(p.CANASTAS_PRODUCTO * 100.0 / NULLIF(u.TOTAL_CANASTAS, 0), 4) AS PENETRACION_CANASTAS_PCT,
+        ROUND(p.CANASTAS_PRODUCTO_CS * 100.0 / NULLIF(u.TOTAL_CANASTAS, 0), 4) AS PENETRACION_CANASTAS_PCT_CS,
+
+        -- Penetración en Clientes
+        p.CLIENTES_PRODUCTO AS CLIENTES_CON_SKU,
+        p.CLIENTES_PRODUCTO_CS AS CLIENTES_CON_SKU_CS,
+        u.TOTAL_CLIENTES,
+        ROUND(p.CLIENTES_PRODUCTO * 100.0 / NULLIF(u.TOTAL_CLIENTES, 0), 4) AS PENETRACION_CLIENTES_PCT,
+        ROUND(p.CLIENTES_PRODUCTO_CS * 100.0 / NULLIF(u.TOTAL_CLIENTES, 0), 4) AS PENETRACION_CLIENTES_PCT_CS,
+
+        -- Venta e Importancia
+        im.TOTAL_VENTA_CATEGORIA,
+        im.TOTAL_VENTA_CATEGORIA_CS,
+        u.TOTAL_VENTA,
+        u.TOTAL_VENTA_NETA,
+        p.VENTA_PRODUCTO,p.VENTA_NETA_PRODUCTO,p.PVP,
+        p.VENTA_PRODUCTO_CS,
+        ROUND(im.TOTAL_VENTA_CATEGORIA * 100.0 / NULLIF(u.TOTAL_VENTA, 0), 4) AS IMPORTANCIA_CATEGORIA_PCT,
+        ROUND(im.TOTAL_VENTA_CATEGORIA_CS * 100.0 / NULLIF(u.TOTAL_VENTA, 0), 4) AS IMPORTANCIA_CATEGORIA_PCT_CS,
+
+        -- Recompra SKU (Winsorizadas)
+        LEAST(COALESCE(rm.FREC_RECOMPRA_MENSUAL_PROM, 1.0), 3.0) AS FREC_RECOMPRA_MENSUAL_PROM,
+        COALESCE(rm.MAX_RECOMPRA_MES, 0) AS MAX_RECOMPRA_UN_CLIENTE_MES,
+        LEAST(COALESCE(rt.FREC_RECOMPRA_TRIMESTRAL_PROM, 1.22), 5.0) AS FREC_RECOMPRA_TRIMESTRAL_PROM,
+        COALESCE(rt.MAX_RECOMPRA_TRIMESTRE, 0) AS MAX_RECOMPRA_UN_CLIENTE_TRIMESTRE,
+
+        -- Recompra Categoría (Medianas)
+        COALESCE(cf.cat_frec_mensual_mediana, 1.15) AS cat_frec_mensual_mediana,
+        COALESCE(cf.cat_frec_trimestral_mediana, 1.22) AS cat_frec_trimestral_mediana
+
+    FROM penetracion_producto_combinado p
+    CROSS JOIN universo_totales u
+    LEFT JOIN resumen_recompra_mensual rm ON p.SKU_PRODUCT = rm.SKU_PRODUCT
+    LEFT JOIN resumen_recompra_trimestral rt ON p.SKU_PRODUCT = rt.SKU_PRODUCT
+    LEFT JOIN category_frequency_prep cf ON p.CAT_DSC = cf.CAT_DSC
+    LEFT JOIN importancia_categoria im ON p.CAT_DSC = im.CAT_DSC
+    """,  # noqa: E501
+
     'data_infaltables':
     """
     WITH
@@ -172,7 +479,7 @@ SQL_QUERIES = QueryDict({
 
     penetracion AS (
     SELECT *
-    FROM `${gcp_project}.CDA_VISTAS.VW_INFALTABLES_PENETRACION_SP_${upper_store_banner}`
+    FROM `${gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_${upper_store_banner}`
     ),
 
     -- 6. Importancia Nielsen ÚNICA por PRODUCT_ID
@@ -960,6 +1267,20 @@ def main() -> None:
 
     # Set gbq client for all subsequent queries
     gbq_client = Client()
+
+    logging.info('Creacion tabla transacciones clientes')
+    createTableAsSelect(
+        query=SQL_QUERIES['infaltables_penetracion'].substitute(
+            gcp_project = gcp_project,
+            gcp_project_cda = 'cl-cda-prod',
+            execution_date = execution_date,
+        ),
+        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_{upper_store_banner}',
+        create_disposition='CREATE_IF_NEEDED',
+        write_disposition='WRITE_TRUNCATE',
+        use_legacy_sql=False,
+        gbq_client=gbq_client,
+    )
 
     data_infaltables = readBigQuery(SQL_QUERIES['data_infaltables'].substitute(
         gcp_project = gcp_project,
