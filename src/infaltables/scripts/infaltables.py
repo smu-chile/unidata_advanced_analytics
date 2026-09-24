@@ -58,7 +58,7 @@ parser.add_argument(
 # SQL Queries
 # -------------------------------------------------------------------------
 SQL_QUERIES = QueryDict({
-    'infaltables_penetracion':
+    'raw_sales':
     """
     WITH raw_sales AS (
     -- ==========================================================
@@ -172,9 +172,12 @@ SQL_QUERIES = QueryDict({
         D.NEG_ID, D.GRUPO_ID, A.NBR_PD_ITM, C.CONT_CONV_UMB, A.WGHT_ITM, A.ITM_TXN_TMS, A.TXN_KEY,
         B.STORE_ID, D.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC, C.EAN, A.MARKET_BASKET_KEY,
         A.ITM_TXN_FCN_TP_DSC, C.UNIDAD_DE_MEDIDA, C.UMREZ, C.UMREN, A.CUSTOMER_KEY, E.FNC_DOC_TP_DSC
-    ),
+    )
+    """,  # noqa: E501
 
-    clientes_sensibles AS (
+    'infaltables_penetracion':
+    """
+    WITH clientes_sensibles AS (
         SELECT DISTINCT
             CUSTOMER_KEY
         FROM `${gcp_project}.CONOCIMIENTO_CLIENTE.CUSTOMER_SEGMENTATION_SOPHISTICATION`
@@ -189,7 +192,7 @@ SQL_QUERIES = QueryDict({
             SUM(VALUE) AS TOTAL_VENTA,
             SUM(VALUE)-SUM(TAX_AMOUNT) AS TOTAL_VENTA_NETA,
             COUNT(DISTINCT CASE WHEN CUSTOMER_KEY IS NOT NULL THEN CUSTOMER_KEY END) AS TOTAL_CLIENTES
-        FROM raw_sales
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}`
     ),
 
     penetracion_producto AS (
@@ -205,7 +208,7 @@ SQL_QUERIES = QueryDict({
             MIN(r.TRANSACTION_DATE) AS FECHA_PRIMERA_VENTA,
             COUNT(DISTINCT DATE_TRUNC(r.TRANSACTION_DATE, MONTH)) AS MESES_CON_VENTA,
             DATE_DIFF('${execution_date}', MIN(r.TRANSACTION_DATE), DAY) AS DIAS_DESDE_PRIMERA_VENTA
-        FROM raw_sales r
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}` r
         WHERE r.QUANTITY > 0
         GROUP BY r.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC
     ),
@@ -216,7 +219,7 @@ SQL_QUERIES = QueryDict({
             COUNT(DISTINCT r.MARKET_BASKET_KEY) AS CANASTAS_PRODUCTO_CS,
             COUNT(DISTINCT CASE WHEN r.CUSTOMER_KEY IS NOT NULL THEN r.CUSTOMER_KEY END) AS CLIENTES_PRODUCTO_CS,
             SUM(VALUE) AS VENTA_PRODUCTO_CS
-        FROM raw_sales r
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}` r
         JOIN clientes_sensibles s ON s.customer_key = r.customer_key
         WHERE r.QUANTITY > 0
         GROUP BY r.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC
@@ -239,7 +242,7 @@ SQL_QUERIES = QueryDict({
             CAT_DSC,
             SUM(VALUE) AS TOTAL_VENTA_CATEGORIA,
             SUM(CASE WHEN S.CUSTOMER_KEY IS NOT NULL THEN VALUE END) AS TOTAL_VENTA_CATEGORIA_CS
-        FROM raw_sales r
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}` r
         LEFT JOIN clientes_sensibles s ON s.customer_key = r.customer_key
         WHERE r.QUANTITY > 0
         GROUP BY CAT_DSC
@@ -250,7 +253,7 @@ SQL_QUERIES = QueryDict({
             CUSTOMER_KEY, SKU_PRODUCT,
             DATE_TRUNC(TRANSACTION_DATE, MONTH) AS MES,
             COUNT(DISTINCT MARKET_BASKET_KEY) AS COMPRAS_EN_MES
-        FROM raw_sales
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}`
         WHERE QUANTITY > 0 AND CUSTOMER_KEY IS NOT NULL
         GROUP BY CUSTOMER_KEY, SKU_PRODUCT, MES
     ),
@@ -269,7 +272,7 @@ SQL_QUERIES = QueryDict({
             CUSTOMER_KEY, SKU_PRODUCT,
             DATE_TRUNC(TRANSACTION_DATE, QUARTER) AS TRIMESTRE,
             COUNT(DISTINCT MARKET_BASKET_KEY) AS COMPRAS_EN_TRIMESTRE
-        FROM raw_sales
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}`
         WHERE QUANTITY > 0 AND CUSTOMER_KEY IS NOT NULL
         GROUP BY CUSTOMER_KEY, SKU_PRODUCT, TRIMESTRE
     ),
@@ -1270,7 +1273,21 @@ def main() -> None:
     # Set gbq client for all subsequent queries
     gbq_client = Client()
 
-    logging.info('Creacion tabla transacciones clientes')
+    logging.info('Creacion tabla infaltables raw sales')
+    createTableAsSelect(
+        query=SQL_QUERIES['raw_sales'].substitute(
+            gcp_project_cda = 'cl-cda-prod',
+            execution_date = execution_date,
+            store_banner = store_banner
+        ),
+        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_{upper_store_banner_table}',
+        create_disposition='CREATE_IF_NEEDED',
+        write_disposition='WRITE_TRUNCATE',
+        use_legacy_sql=False,
+        gbq_client=gbq_client,
+    )
+
+    logging.info('Creacion tabla infaltable penetracion')
     createTableAsSelect(
         query=SQL_QUERIES['infaltables_penetracion'].substitute(
             gcp_project = gcp_project,
@@ -1285,6 +1302,7 @@ def main() -> None:
         gbq_client=gbq_client,
     )
 
+    logging.info('Ejecucion Query data_infaltables')
     data_infaltables = readBigQuery(SQL_QUERIES['data_infaltables'].substitute(
         gcp_project = gcp_project,
         gcp_project_cda = 'cl-cda-prod',
