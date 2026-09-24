@@ -166,7 +166,7 @@ SQL_QUERIES = QueryDict({
             FROM `${gcp_project_cda}.DS_CDA_VW_SMU.DW_VW_FACT_MARKET_BASKET_E_COMMERCE`
             WHERE CANAL_VENTA IN ('PEDIDOS YA', 'UBER EATS', 'RAPPI', 'RAPPI TURBO')
         )
-        AND B.ORG_IP = 'Unimarc'
+        AND B.ORG_IP = '${store_banner}'
         AND A.CUSTOMER_HEX NOT IN ('3588d47a76aac91fcf2a3c2f55f6a351')
     GROUP BY
         D.NEG_ID, D.GRUPO_ID, A.NBR_PD_ITM, C.CONT_CONV_UMB, A.WGHT_ITM, A.ITM_TXN_TMS, A.TXN_KEY,
@@ -178,7 +178,7 @@ SQL_QUERIES = QueryDict({
         SELECT DISTINCT
             CUSTOMER_KEY
         FROM `${gcp_project}.CONOCIMIENTO_CLIENTE.CUSTOMER_SEGMENTATION_SOPHISTICATION`
-        WHERE STORE_BANNER = 'Unimarc'
+        WHERE STORE_BANNER = '${store_banner}'
         AND CLASIFICACION_CLIENTE = 'PRICE SENSITIVE'
         AND DATE = DATE_TRUNC('${execution_date}', MONTH)
     ),
@@ -1257,7 +1257,9 @@ def main() -> None:
     store_banner: str = args['store_banner']
     n_substitutes: int = args['n_substitutes']
 
-    store_banner = store_banner.replace(' ', '_').lower()
+    store_banner_table = store_banner.replace(' ', '_').lower()
+    upper_store_banner_table = store_banner_table.upper()
+
     upper_store_banner = store_banner.upper()
     execution_date = pd.to_datetime(execution_date[:8] + '01').strftime('%Y-%m-%d')
 
@@ -1275,7 +1277,7 @@ def main() -> None:
             gcp_project_cda = 'cl-cda-prod',
             execution_date = execution_date,
         ),
-        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_{upper_store_banner}',
+        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_{upper_store_banner_table}',
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_TRUNCATE',
         use_legacy_sql=False,
@@ -1786,7 +1788,7 @@ def main() -> None:
     df_ranking['pct_venta_neta_formato'] = (df_ranking['pct_venta_neta_formato']*100).round(2)
     df_ranking['PVP'] = df_ranking['PVP'].round(0).astype('int64')
 
-    df_ranking['STORE_BANNER'] = store_banner
+    df_ranking['STORE_BANNER'] = store_banner_table
     df_ranking['FECHA_CARGA'] = execution_date
 
     deleteFromTable(
