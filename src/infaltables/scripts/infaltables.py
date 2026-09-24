@@ -950,6 +950,7 @@ def main() -> None:
     store_banner: str = args['store_banner']
     n_substitutes: int = args['n_substitutes']
 
+    store_banner = store_banner.replace(' ', '_').lower()
     upper_store_banner = store_banner.upper()
     execution_date = pd.to_datetime(execution_date[:8] + '01').strftime('%Y-%m-%d')
 
@@ -1464,8 +1465,8 @@ def main() -> None:
     df_ranking['pct_venta_neta_formato'] = (df_ranking['pct_venta_neta_formato']*100).round(2)
     df_ranking['PVP'] = df_ranking['PVP'].round(0).astype('int64')
 
-    df_ranking['FECHA_CARGA'] = execution_date
     df_ranking['STORE_BANNER'] = store_banner
+    df_ranking['FECHA_CARGA'] = execution_date
 
     deleteFromTable(
         table_ref=f'{gcp_project}.GESTION_CATEGORIAS.INFALTABLES',
