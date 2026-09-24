@@ -173,6 +173,8 @@ SQL_QUERIES = QueryDict({
         B.STORE_ID, D.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC, C.EAN, A.MARKET_BASKET_KEY,
         A.ITM_TXN_FCN_TP_DSC, C.UNIDAD_DE_MEDIDA, C.UMREZ, C.UMREN, A.CUSTOMER_KEY, E.FNC_DOC_TP_DSC
     )
+
+    select * from raw_sales
     """,  # noqa: E501
 
     'infaltables_penetracion':
