@@ -4133,10 +4133,19 @@ def main():
         df_historial=df_historial,
         df_caracterizacion=df_caracterizacion,
         df_promos_proy=df_promos_proy,
-        configuracion=configuracion_pipeline,
-        ruta_salida_excel='proyeccion_promocional.xlsx',
+        configuracion=configuracion_pipeline
     )
 
+    ### Pequeños ajustes de formato
+    excel_final = excel_final.drop(columns=
+                                        ['Estado_Historial',
+                                        'Estado_Modelo',
+                                        'Estado_Elasticidad',
+                                        'Estado_fecha_proy',
+                                        'Estado_proyección'])
+
+    excel_final['Inicio Proy'] = excel_final['Inicio Proy'].dt.date
+    excel_final['Fin Proy']    = excel_final['Fin Proy'].dt.date
     # TEMP print
     print('Excel final info: ', excel_final.info())
 
