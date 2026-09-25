@@ -36,7 +36,7 @@ with open(
 PROJECT_NAME = 'infaltables'
 dag_args = {
     'dag_id': 'infaltables',
-    'schedule_interval': None,
+    'schedule_interval': '0 13 2 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
