@@ -56,7 +56,7 @@ with DAG(**dag_args) as dag:
         "dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"
     )
 
-    store_banners = ['Unimarc', 'Mayorista', 'Alvi', 'Super 10']
+    store_banners = ['Unimarc', 'Alvi', 'Super 10']
 
     computing_customer_segmentation_sophistication = []
 
