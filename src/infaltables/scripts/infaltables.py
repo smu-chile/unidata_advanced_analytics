@@ -1262,12 +1262,16 @@ def main() -> None:
     store_banner: str = args['store_banner']
     n_substitutes: int = args['n_substitutes']
 
-    store_banner = store_banner.replace(' ', '_').lower()
-    upper_store_banner = store_banner.upper()
+    if store_banner == 'Super 10':
+        upper_store_banner = store_banner.replace(' ', '_').upper()
+    else:
+        upper_store_banner = store_banner.upper()
+
     execution_date = pd.to_datetime(execution_date[:8] + '01').strftime('%Y-%m-%d')
 
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'store_banner: {store_banner}')
+    logging.info(f'upper_store_banner: {upper_store_banner}')
     logging.info(f'n_substitutes: {n_substitutes}')
 
     # Set gbq client for all subsequent queries
