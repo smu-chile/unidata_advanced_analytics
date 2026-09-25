@@ -468,9 +468,7 @@ def preparar_input_promociones(
     )
 
 
-
 logger = logging.getLogger('modelo_promocional')
-
 
 def configurar_logging(nivel: int = logging.INFO) -> None:
     """Configura el logger del pipeline con salida por consola.
@@ -3679,7 +3677,7 @@ def loop_promociones(  # noqa: D417
     ):
         total_ean_promocion = len(grupo_promocion)
 
-        logger.info(
+        logging.info(
             'Promoción %s/%s (N_PROMOCION=%s) — %s EAN a procesar',
             indice_promocion, total_promociones, numero_promocion,
             total_ean_promocion,
@@ -3690,7 +3688,7 @@ def loop_promociones(  # noqa: D417
         ):
             ean = str(promocion_ean['EAN'])
 
-            logger.info(
+            logging.info(
                 '  EAN %s/%s — %s', indice_ean, total_ean_promocion, ean
             )
 
@@ -3775,7 +3773,7 @@ def loop_promociones(  # noqa: D417
                     detalles_diarios.append(resultado_escenarios.detalle_diario)
 
             except Exception as error:  # noqa: BLE001
-                logger.warning(
+                logging.warning(
                     '  Error en Promoción %s / EAN %s: %s: %s',
                     numero_promocion, ean, type(error).__name__, error,
                 )
@@ -3805,7 +3803,7 @@ def loop_promociones(  # noqa: D417
         )
     )
 
-    logger.info(
+    logging.info(
         'Proceso finalizado: %s filas en Excel final, %s filas en '
         'detalle diario.',
         len(excel_final), len(detalle_diario_completo),
@@ -3849,7 +3847,7 @@ def ejecutar_pipeline_promocional(
 
     configuracion = configuracion or ConfiguracionModeloPromo()
 
-    logger.info('Preparando fuentes del modelo...')
+    logging.info('Preparando fuentes del modelo...')
     fuentes = preparar_fuentes_modelo(
         historial=df_historial,
         caracterizacion=df_caracterizacion,
@@ -3857,12 +3855,12 @@ def ejecutar_pipeline_promocional(
         configuracion=configuracion,
     )
 
-    logger.info('Construyendo calendario futuro (feriados Chile)...')
+    logging.info('Construyendo calendario futuro (feriados Chile)...')
     calendario_futuro = construir_calendario_futuro(
         promociones=fuentes.promociones_futuras,
     )
 
-    logger.info('Iniciando loop de promociones...')
+    logging.info('Iniciando loop de promociones...')
     excel_final, detalle_diario_completo = loop_promociones(
         promociones_modelo=fuentes.promociones_futuras,
         historial_modelo=fuentes.historial,
@@ -3873,7 +3871,7 @@ def ejecutar_pipeline_promocional(
     )
 
     if ruta_salida_excel is not None:
-        logger.info('Guardando Excel final en %s', ruta_salida_excel)
+        logging.info('Guardando Excel final en %s', ruta_salida_excel)
         excel_final.to_excel(ruta_salida_excel, index=False)
 
     return excel_final, detalle_diario_completo
