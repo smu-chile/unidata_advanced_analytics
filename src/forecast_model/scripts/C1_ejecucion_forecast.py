@@ -4088,13 +4088,16 @@ def main():
         familia_promocional='B',
     )
 
-    _excel_final, _detalle_diario_completo = ejecutar_pipeline_promocional(
+    excel_final, _detalle_diario_completo = ejecutar_pipeline_promocional(
         df_historial=df_historial,
         df_caracterizacion=df_caracterizacion,
         df_promos_proy=df_promos_proy,
         configuracion=configuracion_pipeline,
         ruta_salida_excel='proyeccion_promocional.xlsx',
     )
+
+    # TEMP print
+    print('Excel final info: ', excel_final.info())
 
 
 
