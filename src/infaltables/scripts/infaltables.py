@@ -1262,9 +1262,7 @@ def main() -> None:
     store_banner: str = args['store_banner']
     n_substitutes: int = args['n_substitutes']
 
-    store_banner_table = store_banner.replace(' ', '_').lower()
-    upper_store_banner_table = store_banner_table.upper()
-
+    store_banner = store_banner.replace(' ', '_').lower()
     upper_store_banner = store_banner.upper()
     execution_date = pd.to_datetime(execution_date[:8] + '01').strftime('%Y-%m-%d')
 
@@ -1282,7 +1280,7 @@ def main() -> None:
             execution_date = execution_date,
             store_banner = store_banner
         ),
-        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_{upper_store_banner_table}',
+        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_{upper_store_banner}',
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_TRUNCATE',
         use_legacy_sql=False,
@@ -1298,7 +1296,7 @@ def main() -> None:
             store_banner = store_banner,
             upper_store_banner = upper_store_banner
         ),
-        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_{upper_store_banner_table}',
+        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_{upper_store_banner}',
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_TRUNCATE',
         use_legacy_sql=False,
@@ -1810,7 +1808,7 @@ def main() -> None:
     df_ranking['pct_venta_neta_formato'] = (df_ranking['pct_venta_neta_formato']*100).round(2)
     df_ranking['PVP'] = df_ranking['PVP'].round(0).astype('int64')
 
-    df_ranking['STORE_BANNER'] = store_banner_table
+    df_ranking['STORE_BANNER'] = store_banner
     df_ranking['FECHA_CARGA'] = execution_date
 
     deleteFromTable(
