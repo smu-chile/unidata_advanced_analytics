@@ -2425,6 +2425,1458 @@ def entrenar_modelo_producto(  # noqa: D417
     )
 
 
+# 12. CALENDARIO Y VARIABLES TEMPORALES FUTURAS
+# =========================================================================
+def construir_calendario_promocion(promocion_ean: pd.Series) -> pd.DataFrame:
+    """Expande una combinación promoción-EAN a una fila por día.
+
+    Parameters
+    ----------
+    promocion_ean : pd.Series
+        Debe incluir FECHA_INICIO_DE_PROMOCION, FECHA_FIN_DE_PROMOCION,
+        N_PROMOCION, EAN.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columnas P_DATE, N_PROMOCION, EAN.
+    """
+    fecha_inicio = pd.to_datetime(
+        promocion_ean['FECHA_INICIO_DE_PROMOCION'], errors='raise'
+    )
+    fecha_fin = pd.to_datetime(
+        promocion_ean['FECHA_FIN_DE_PROMOCION'], errors='raise'
+    )
+
+    if fecha_fin < fecha_inicio:
+        msg = (
+            'FECHA_FIN_DE_PROMOCION no puede ser anterior a '
+            'FECHA_INICIO_DE_PROMOCION.'
+        )
+        raise ValueError(
+            msg
+        )
+
+    calendario = pd.DataFrame({
+        'P_DATE': pd.date_range(start=fecha_inicio, end=fecha_fin, freq='D')
+    })
+    calendario['N_PROMOCION'] = promocion_ean['N_PROMOCION']
+    calendario['EAN'] = str(promocion_ean['EAN'])
+
+    return calendario
+
+
+def agregar_variables_temporales_futuras(  # noqa: D417
+    calendario: pd.DataFrame,
+    historial_ean: pd.DataFrame,
+    calendario_futuro: pd.DataFrame | None = None,
+) -> tuple[pd.DataFrame, bool]:
+    """Construye variables temporales reproducibles en fechas futuras.
+
+    TENDENCIA_LINEAL continúa desde el origen del histórico; SIN_ANUAL y
+    COS_ANUAL usan periodicidad anual. Los feriados se toman de
+    calendario_futuro si está disponible; si no, se asignan en cero.
+
+    Parameters
+    ----------
+    calendario : pd.DataFrame
+    historial_ean : pd.DataFrame
+    calendario_futuro : pd.DataFrame | None
+        Debe incluir P_DATE, FLAG_FERIADO, FLAG_PRE_FERIADO.
+
+    Returns
+    -------
+    tuple[pd.DataFrame, bool]
+        Calendario enriquecido y flag de calendario incompleto.
+    """
+    resultado = calendario.copy()
+
+    fecha_origen = pd.to_datetime(
+        historial_ean['P_DATE'], errors='raise'
+    ).min()
+    dias_desde_origen = (resultado['P_DATE'] - fecha_origen).dt.days
+    resultado['TENDENCIA_LINEAL'] = dias_desde_origen.astype('int32')
+
+    dia_anio = resultado['P_DATE'].dt.dayofyear
+    resultado['SIN_ANUAL'] = np.sin(2.0 * np.pi * dia_anio / 365.25)
+    resultado['COS_ANUAL'] = np.cos(2.0 * np.pi * dia_anio / 365.25)
+
+    calendario_incompleto = False
+
+    if calendario_futuro is not None:
+        columnas_calendario = {'P_DATE', 'FLAG_FERIADO', 'FLAG_PRE_FERIADO'}
+        faltantes = columnas_calendario.difference(calendario_futuro.columns)
+
+        if faltantes:
+            msg = f'Faltan columnas en calendario_futuro: {sorted(faltantes)}'
+            raise KeyError(
+                msg
+            )
+
+        calendario_auxiliar = calendario_futuro[
+            ['P_DATE', 'FLAG_FERIADO', 'FLAG_PRE_FERIADO']
+        ].copy()
+        calendario_auxiliar['P_DATE'] = pd.to_datetime(
+            calendario_auxiliar['P_DATE'], errors='raise'
+        )
+        calendario_auxiliar = calendario_auxiliar.drop_duplicates(
+            'P_DATE', keep='last'
+        )
+
+        resultado = resultado.merge(
+            calendario_auxiliar, on='P_DATE', how='left', validate='one_to_one'
+        )
+
+        columnas_flag = ['FLAG_FERIADO', 'FLAG_PRE_FERIADO']
+        resultado[columnas_flag] = (
+            resultado[columnas_flag].fillna(0).astype('int8')
+        )
+
+        calendario_incompleto = bool(
+            resultado['P_DATE'].isin(calendario_auxiliar['P_DATE']).eq(False).any()  # noqa: FBT003
+        )
+    else:
+        resultado['FLAG_FERIADO'] = np.int8(0)
+        resultado['FLAG_PRE_FERIADO'] = np.int8(0)
+        calendario_incompleto = True
+
+    dia_semana = resultado['P_DATE'].dt.dayofweek
+    mapa_dias = {
+        'dow_martes': 1, 'dow_miercoles': 2, 'dow_jueves': 3,
+        'dow_viernes': 4, 'dow_sabado': 5, 'dow_domingo': 6,
+    }
+
+    for columna, numero_dia in mapa_dias.items():
+        resultado[columna] = dia_semana.eq(numero_dia).astype('int8')
+
+    return resultado, calendario_incompleto
+
+
+def incorporar_datos_observados(  # noqa: D417
+    calendario: pd.DataFrame,
+    historial_ean: pd.DataFrame,
+    configuracion: ConfiguracionModeloPromo,
+) -> pd.DataFrame:
+    """Incorpora el target real cuando la promoción ya comenzó.
+
+    Clasifica cada día en OBSERVADO, PROYECTADO (futuro) o
+    PASADO_SIN_REGISTRO.
+
+    Parameters
+    ----------
+    calendario : pd.DataFrame
+    historial_ean : pd.DataFrame
+    configuracion : ConfiguracionModeloPromo
+        Usa tratar_pasado_sin_registro_como_cero.
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+    resultado = calendario.copy()
+
+    historial_target = historial_ean[['P_DATE', configuracion.columna_target]].copy()
+    historial_target['P_DATE'] = pd.to_datetime(
+        historial_target['P_DATE'], errors='raise'
+    )
+    historial_target = historial_target.drop_duplicates(
+        'P_DATE', keep='last'
+    ).rename(columns={configuracion.columna_target: 'CANTIDAD_OBSERVADA'})
+
+    resultado = resultado.merge(
+        historial_target, on='P_DATE', how='left', validate='one_to_one'
+    )
+
+    ultima_fecha_disponible = pd.to_datetime(
+        historial_ean['P_DATE'], errors='raise'
+    ).max()
+
+    mascara_observada = resultado['CANTIDAD_OBSERVADA'].notna()
+    mascara_futura = resultado['P_DATE'] > ultima_fecha_disponible
+    mascara_pasado_sin_registro = ~mascara_observada & ~mascara_futura
+
+    resultado['ORIGEN_CANTIDAD'] = np.select(
+        [mascara_observada, mascara_futura, mascara_pasado_sin_registro],
+        ['OBSERVADO', 'PROYECTADO', 'PASADO_SIN_REGISTRO'],
+        default='PROYECTADO',
+    )
+
+    resultado['FLAG_DATO_REAL'] = mascara_observada.astype('int8')
+    resultado['FLAG_DIA_FUTURO'] = mascara_futura.astype('int8')
+    resultado['FLAG_DIA_PASADO_SIN_DATO'] = mascara_pasado_sin_registro.astype(
+        'int8'
+    )
+
+    if configuracion.tratar_pasado_sin_registro_como_cero:
+        resultado.loc[mascara_pasado_sin_registro, 'CANTIDAD_OBSERVADA'] = 0.0
+
+    return resultado
+
+
+def asignar_mecanicas_escenario(  # noqa: D417
+    escenario: pd.DataFrame,
+    columnas_modelo: list[str],
+    nombre_mecanica: object,
+    activar_mecanica: bool,
+) -> pd.DataFrame:
+    """Activa la dummy de mecánica correspondiente al escenario.
+
+    Parameters
+    ----------
+    escenario : pd.DataFrame
+    columnas_modelo : list[str]
+    nombre_mecanica : object
+    activar_mecanica : bool
+
+    Returns
+    -------
+    pd.DataFrame
+        El baseline mantiene todas las dummies de mecánica en cero.
+    """
+    resultado = escenario.copy()
+
+    columnas_mecanica = [
+        columna for columna in columnas_modelo
+        if columna.startswith('MECANICA_')
+    ]
+
+    for columna in columnas_mecanica:
+        resultado[columna] = np.int8(0)
+
+    if not activar_mecanica or pd.isna(nombre_mecanica):
+        return resultado
+
+    mecanica_normalizada = str(nombre_mecanica).strip().upper().replace(' ', '_')
+    columna_objetivo = f'MECANICA_{mecanica_normalizada}'
+
+    if columna_objetivo in columnas_mecanica:
+        resultado[columna_objetivo] = np.int8(1)
+    elif 'MECANICA_OTRA' in columnas_mecanica:
+        resultado['MECANICA_OTRA'] = np.int8(1)
+
+    return resultado
+
+
+# =========================================================================
+# 13. CONSTRUCCIÓN DE ESCENARIOS Y PREDICCIÓN
+# =========================================================================
+def construir_escenarios_promocional_baseline(  # noqa: D417
+    promocion_ean: pd.Series,
+    historial_ean: pd.DataFrame,
+    resultado_entrenamiento: ResultadoEntrenamiento,
+    regimen: RegimenPromocional,
+    columnas_familia: ColumnasFamiliaPromocional,
+    configuracion: ConfiguracionModeloPromo,
+    calendario_futuro: pd.DataFrame | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, bool]:
+    """Construye los escenarios diarios promocional y baseline.
+
+    El escenario promocional usa PRECIO_PROMOCIONAL y activa las
+    variables autorizadas por el régimen; el baseline usa PRECIO_MODAL y
+    desactiva promoción, descuento y mecánica.
+
+    Parameters
+    ----------
+    promocion_ean : pd.Series
+    historial_ean : pd.DataFrame
+    resultado_entrenamiento : ResultadoEntrenamiento
+    regimen : RegimenPromocional
+    columnas_familia : ColumnasFamiliaPromocional
+    configuracion : ConfiguracionModeloPromo
+    calendario_futuro : pd.DataFrame | None
+
+    Returns
+    -------
+    tuple[pd.DataFrame, pd.DataFrame, bool]
+        (escenario_promocional, escenario_baseline, calendario_incompleto)
+    """
+    calendario = construir_calendario_promocion(promocion_ean)
+
+    calendario, calendario_incompleto = agregar_variables_temporales_futuras(
+        calendario=calendario,
+        historial_ean=historial_ean,
+        calendario_futuro=calendario_futuro,
+    )
+
+    calendario = incorporar_datos_observados(
+        calendario=calendario, historial_ean=historial_ean,
+        configuracion=configuracion,
+    )
+
+    precio_promocional = pd.to_numeric(
+        promocion_ean['PRECIO_PROMOCIONAL'], errors='coerce'
+    )
+    precio_modal = pd.to_numeric(promocion_ean['PRECIO_MODAL'], errors='coerce')
+    porcentaje_descuento = pd.to_numeric(
+        promocion_ean['PORCENTAJE_DESCUENTO'], errors='coerce'
+    )
+
+    if pd.isna(precio_promocional) or precio_promocional <= 0:
+        msg = 'PRECIO_PROMOCIONAL debe ser mayor que cero.'
+        raise ValueError(msg)
+
+    if pd.isna(precio_modal) or precio_modal <= 0:
+        msg = 'PRECIO_MODAL debe ser mayor que cero.'
+        raise ValueError(msg)
+
+    porcentaje_descuento = max(
+        float(porcentaje_descuento) if pd.notna(porcentaje_descuento) else 0.0,
+        0.0,
+    )
+
+    columnas_modelo = resultado_entrenamiento.columnas_modelo
+
+    escenario_promocional = calendario.copy()
+    escenario_promocional[configuracion.columna_precio] = float(precio_promocional)
+
+    if columnas_familia.flag_promocion in columnas_modelo:
+        escenario_promocional[columnas_familia.flag_promocion] = np.int8(1)
+
+    if columnas_familia.porcentaje_descuento in columnas_modelo:
+        escenario_promocional[columnas_familia.porcentaje_descuento] = (
+            porcentaje_descuento
+        )
+
+    nombre_mecanica = promocion_ean.get('DESCRIPCION_EVENTO_PROMOCIONAL', pd.NA)
+
+    escenario_promocional = asignar_mecanicas_escenario(
+        escenario=escenario_promocional,
+        columnas_modelo=columnas_modelo,
+        nombre_mecanica=nombre_mecanica,
+        activar_mecanica=regimen.usar_mecanica,
+    )
+    escenario_promocional['ESCENARIO'] = 'PROMOCIONAL'
+    escenario_promocional['PRECIO_ESCENARIO'] = float(precio_promocional)
+
+    escenario_baseline = calendario.copy()
+    escenario_baseline[configuracion.columna_precio] = float(precio_modal)
+
+    if columnas_familia.flag_promocion in columnas_modelo:
+        escenario_baseline[columnas_familia.flag_promocion] = np.int8(0)
+
+    if columnas_familia.porcentaje_descuento in columnas_modelo:
+        escenario_baseline[columnas_familia.porcentaje_descuento] = 0.0
+
+    escenario_baseline = asignar_mecanicas_escenario(
+        escenario=escenario_baseline,
+        columnas_modelo=columnas_modelo,
+        nombre_mecanica=pd.NA,
+        activar_mecanica=False,
+    )
+    escenario_baseline['ESCENARIO'] = 'BASELINE'
+    escenario_baseline['PRECIO_ESCENARIO'] = float(precio_modal)
+
+    for columna in columnas_modelo:
+        if columna not in escenario_promocional.columns:
+            escenario_promocional[columna] = 0.0
+
+        if columna not in escenario_baseline.columns:
+            escenario_baseline[columna] = 0.0
+
+    return escenario_promocional, escenario_baseline, calendario_incompleto
+
+
+def predecir_escenario(  # noqa: D417
+    escenario: pd.DataFrame,
+    resultado_entrenamiento: ResultadoEntrenamiento,
+    usar_observados_en_total: bool,
+    configuracion: ConfiguracionModeloPromo,
+) -> pd.DataFrame:
+    """Predice un escenario con el modelo productivo.
+
+    En el promocional, los días observados usan el target real en
+    CANTIDAD_FINAL; el baseline nunca se reemplaza (es contrafactual).
+
+    Parameters
+    ----------
+    escenario : pd.DataFrame
+    resultado_entrenamiento : ResultadoEntrenamiento
+    usar_observados_en_total : bool
+    configuracion : ConfiguracionModeloPromo
+
+    Returns
+    -------
+    pd.DataFrame
+        Con columnas CANTIDAD_MODELO y CANTIDAD_FINAL agregadas.
+    """
+    resultado = escenario.copy()
+
+    matriz_modelo = resultado[
+        resultado_entrenamiento.columnas_modelo
+    ].astype('float64')
+
+    cantidad_modelo = np.clip(
+        resultado_entrenamiento.modelo_productivo.predict(matriz_modelo),
+        0.0, None,
+    )
+    resultado['CANTIDAD_MODELO'] = cantidad_modelo
+
+    if usar_observados_en_total:
+        cantidad_final = resultado['CANTIDAD_OBSERVADA'].where(
+            resultado['FLAG_DATO_REAL'].eq(1), resultado['CANTIDAD_MODELO']
+        )
+
+        if configuracion.tratar_pasado_sin_registro_como_cero:
+            cantidad_final = cantidad_final.where(
+                resultado['FLAG_DIA_PASADO_SIN_DATO'].eq(0), 0.0
+            )
+
+        resultado['CANTIDAD_FINAL'] = cantidad_final
+    else:
+        resultado['CANTIDAD_FINAL'] = resultado['CANTIDAD_MODELO']
+
+    return resultado
+
+
+# 14. UTILIDADES DE ACCESO SEGURO
+# =========================================================================
+def obtener_valor_caracterizacion(  # noqa: D417
+    caracterizacion_ean: pd.Series, columna: str
+) -> object:
+    """Obtiene un valor ya calculado desde caracterización (sin recalcular)
+
+    Parameters
+    ----------
+    caracterizacion_ean : pd.Series
+    columna : str
+
+    Returns
+    -------
+    object
+        pd.NA si la columna no existe.
+    """
+    if columna not in caracterizacion_ean.index:
+        return pd.NA
+
+    return caracterizacion_ean[columna]
+
+
+def obtener_valor(  # noqa: D417
+    registro: pd.Series | Mapping | None,
+    columna: str,
+    valor_default: object = '-',
+) -> object:
+    """Obtiene un valor desde una Series, dict o Mapping de forma segura.
+
+    Parameters
+    ----------
+    registro : pd.Series | Mapping | None
+    columna : str
+    valor_default : object
+
+    Returns
+    -------
+    object
+        valor_default si el atributo no existe o es nulo.
+    """
+    if registro is None:
+        return valor_default
+
+    if isinstance(registro, pd.Series):
+        valor = registro[columna] if columna in registro.index else valor_default
+    elif isinstance(registro, Mapping):
+        valor = registro.get(columna, valor_default)
+    else:
+        msg = (
+            'registro debe ser pd.Series, Mapping o None. '
+            f'Tipo recibido: {type(registro).__name__}.'
+        )
+        raise TypeError(
+            msg
+        )
+
+    if valor is None:
+        return valor_default
+
+    if isinstance(valor, (list, tuple, dict, set, np.ndarray)):
+        return valor
+
+    if pd.isna(valor):
+        return valor_default
+
+    return valor
+
+
+def redondear_total(valor: float | int | object, decimales: int = 2) -> float | str:  # noqa: D417, PYI041
+    """Redondea un total numérico para la salida final.
+
+    Parameters
+    ----------
+    valor : float | int | object
+    decimales : int
+
+    Returns
+    -------
+    float | str
+        '-' si el valor no es numérico.
+    """
+    valor_numerico = pd.to_numeric(valor, errors='coerce')
+
+    if pd.isna(valor_numerico):
+        return '-'
+
+    return round(float(valor_numerico), decimales)
+
+
+def obtener_motivo_elegibilidad(elegibilidad: object) -> str:  # noqa: D417
+    """Obtiene el primer motivo textual disponible en un objeto de
+    elegibilidad, sin asumir un nombre fijo de atributo.
+
+    Parameters
+    ----------
+    elegibilidad : object
+
+    Returns
+    -------
+    str
+    """
+    atributos = vars(elegibilidad)
+
+    for nombre_atributo in ('motivo', 'comentario', 'razon', 'mensaje'):
+        valor = atributos.get(nombre_atributo)
+
+        if valor is not None and str(valor).strip():
+            return str(valor)
+
+    return 'EAN no elegible o sin régimen de entrenamiento asignado.'
+
+
+def obtener_metadata_ean(  # noqa: D417
+    caracterizacion_ean: pd.Series | None,
+) -> dict[str, object]:
+    """Obtiene metadata descriptiva desde caracterización.
+
+    Disponible aunque el EAN no tenga historial, no sea elegible o no
+    pueda proyectarse.
+
+    Parameters
+    ----------
+    caracterizacion_ean : pd.Series | None
+
+    Returns
+    -------
+    dict[str, object]
+    """
+    return {
+        'Categoría': obtener_valor(caracterizacion_ean, 'CATEGORY_DESCRIPTION'),
+        'Subcategoría': obtener_valor(
+            caracterizacion_ean, 'SUB_CATEGORY_DESCRIPTION'
+        ),
+        'Descripcion': obtener_valor(caracterizacion_ean, 'PRODUCT_DESCRIPTION'),
+        'Material': obtener_valor(caracterizacion_ean, 'MATERIAL'),
+        'UMV': obtener_valor(caracterizacion_ean, 'SALES_UOM'),
+        'TIPOLOGIA_DEMANDA': obtener_valor(
+            caracterizacion_ean, 'TIPOLOGIA_DEMANDA'
+        ),
+        'SEGMENTO_ABCD': obtener_valor(caracterizacion_ean, 'SEGMENTO_ABCD'),
+        'ADI': obtener_valor(caracterizacion_ean, 'ADI'),
+        'CV2': obtener_valor(caracterizacion_ean, 'CV2'),
+        'Intensidad Promocional': obtener_valor(
+            caracterizacion_ean, 'INTENSIDAD_PROMOCIONAL'
+        ),
+        'DIAS_CON_VENTA': obtener_valor(caracterizacion_ean, 'DIAS_CON_VENTA'),
+    }
+
+
+# =========================================================================
+# 15. RESUMEN Y CONSOLIDACIÓN DE ESCENARIOS
+# =========================================================================
+def construir_resumen_escenarios(  # noqa: D417
+    detalle_promocional: pd.DataFrame,
+    detalle_baseline: pd.DataFrame,
+    promocion_ean: pd.Series,
+    caracterizacion_ean: pd.Series,
+    resultado_entrenamiento: ResultadoEntrenamiento,
+    regimen: RegimenPromocional,
+    calendario_incompleto: bool,
+    configuracion: ConfiguracionModeloPromo,
+) -> dict[str, object]:
+    """Construye el resultado agregado de una combinación promoción-EAN.
+
+    Parameters
+    ----------
+    detalle_promocional : pd.DataFrame
+    detalle_baseline : pd.DataFrame
+    promocion_ean : pd.Series
+    caracterizacion_ean : pd.Series
+    resultado_entrenamiento : ResultadoEntrenamiento
+    regimen : RegimenPromocional
+    calendario_incompleto : bool
+    configuracion : ConfiguracionModeloPromo
+
+    Returns
+    -------
+    dict[str, object]
+    """
+    total_promocional = int(
+        np.rint(float(detalle_promocional['CANTIDAD_FINAL'].sum()))
+    )
+    total_baseline = int(
+        np.rint(float(detalle_baseline['CANTIDAD_FINAL'].sum()))
+    )
+    unidades_incrementales = total_promocional - total_baseline
+
+    uplift_porcentual = (
+        unidades_incrementales / total_baseline if total_baseline > 0 else np.nan
+    )
+
+    fecha_actual = pd.Timestamp.now().normalize()
+    fecha_inicio = pd.to_datetime(promocion_ean['FECHA_INICIO_DE_PROMOCION'])
+    fecha_fin = pd.to_datetime(promocion_ean['FECHA_FIN_DE_PROMOCION'])
+
+    contiene_datos_reales = bool(detalle_promocional['FLAG_DATO_REAL'].eq(1).any())
+    contiene_dias_futuros = bool(
+        detalle_promocional['FLAG_DIA_FUTURO'].eq(1).any()
+    )
+    contiene_pasados_sin_dato = bool(
+        detalle_promocional['FLAG_DIA_PASADO_SIN_DATO'].eq(1).any()
+    )
+
+    comentarios = []
+
+    if not regimen.baseline_claro:
+        comentarios.append(regimen.comentario_baseline)
+
+    if contiene_pasados_sin_dato:
+        comentarios.append('Existen días pasados sin registro histórico')
+
+    if calendario_incompleto:
+        comentarios.append(
+            'Calendario futuro sin cobertura completa de feriados'
+        )
+
+    comentario = '; '.join(comentarios) if comentarios else 'Proyección generada'
+
+    return {
+        'N_PROMOCION': promocion_ean['N_PROMOCION'],
+        'EAN': str(promocion_ean['EAN']),
+        'FECHA_INICIO_DE_PROMOCION': fecha_inicio,
+        'FECHA_FIN_DE_PROMOCION': fecha_fin,
+        'CASO_MODELO': regimen.nombre,
+        'TIPO_BASELINE': regimen.tipo_baseline,
+        'CONFIANZA_BASELINE': regimen.confianza_baseline,
+        'ADI': obtener_valor_caracterizacion(
+            caracterizacion_ean, configuracion.columna_adi
+        ),
+        'CV2': obtener_valor_caracterizacion(
+            caracterizacion_ean, configuracion.columna_cv2
+        ),
+        'CLASIFICACION_ADI_CV2': obtener_valor_caracterizacion(
+            caracterizacion_ean, configuracion.columna_clasificacion_adi_cv2
+        ),
+        'CANTIDAD_PROMOCIONAL_TOTAL': total_promocional,
+        'CANTIDAD_BASELINE_TOTAL': total_baseline,
+        'UNIDADES_INCREMENTALES': unidades_incrementales,
+        'UPLIFT_PORCENTUAL': uplift_porcentual,
+        'WMAPE_TRAIN': resultado_entrenamiento.metricas_train.wmape,
+        'BIAS_TRAIN': resultado_entrenamiento.metricas_train.bias,
+        'MAE_TRAIN': resultado_entrenamiento.metricas_train.mae,
+        'COVERAGE_TRAIN': resultado_entrenamiento.metricas_train.coverage,
+        'WMAPE_TEST': resultado_entrenamiento.metricas_test.wmape,
+        'BIAS_TEST': resultado_entrenamiento.metricas_test.bias,
+        'MAE_TEST': resultado_entrenamiento.metricas_test.mae,
+        'COVERAGE_TEST': resultado_entrenamiento.metricas_test.coverage,
+        'WIN_RATE_TEST': resultado_entrenamiento.metricas_test.win_rate,
+        'ITERACIONES_VALIDACION': resultado_entrenamiento.iteraciones_validacion,
+        'ITERACIONES_PRODUCTIVO': resultado_entrenamiento.iteraciones_productivo,
+        'FLAG_MODELO_VALIDADO': 1,
+        'FLAG_MODELO_PRODUCTIVO': 1,
+        'FLAG_USA_PESOS': int(resultado_entrenamiento.uso_pesos_temporales),
+        'METODO_PESOS_TEMPORALES': resultado_entrenamiento.metodo_pesos_temporales,
+        'FLAG_PROMOCION_INICIADA': int(fecha_inicio <= fecha_actual),
+        'FLAG_PROMOCION_FINALIZADA': int(fecha_fin < fecha_actual),
+        'FLAG_CONTIENE_DATOS_REALES': int(contiene_datos_reales),
+        'FLAG_CONTIENE_DIAS_FUTUROS': int(contiene_dias_futuros),
+        'FLAG_CONTIENE_PASADOS_SIN_DATO': int(contiene_pasados_sin_dato),
+        'FLAG_BASELINE_REFERENCIAL': int(not regimen.baseline_claro),
+        'FLAG_CALENDARIO_INCOMPLETO': int(calendario_incompleto),
+        'COMENTARIO': comentario,
+    }
+
+
+def proyectar_promocion_ean(  # noqa: D417
+    promocion_ean: pd.Series,
+    historial_ean: pd.DataFrame,
+    caracterizacion_ean: pd.Series,
+    resultado_entrenamiento: ResultadoEntrenamiento,
+    regimen: RegimenPromocional,
+    columnas_familia: ColumnasFamiliaPromocional,
+    configuracion: ConfiguracionModeloPromo,
+    calendario_futuro: pd.DataFrame | None = None,
+) -> ResultadoEscenarios:
+    """Construye, predice y consolida los escenarios de una combinación
+    promoción-EAN.
+
+    Parameters
+    ----------
+    promocion_ean : pd.Series
+    historial_ean : pd.DataFrame
+    caracterizacion_ean : pd.Series
+    resultado_entrenamiento : ResultadoEntrenamiento
+    regimen : RegimenPromocional
+    columnas_familia : ColumnasFamiliaPromocional
+    configuracion : ConfiguracionModeloPromo
+    calendario_futuro : pd.DataFrame | None
+
+    Returns
+    -------
+    ResultadoEscenarios
+    """
+    escenario_promocional, escenario_baseline, calendario_incompleto = (
+        construir_escenarios_promocional_baseline(
+            promocion_ean=promocion_ean,
+            historial_ean=historial_ean,
+            resultado_entrenamiento=resultado_entrenamiento,
+            regimen=regimen,
+            columnas_familia=columnas_familia,
+            configuracion=configuracion,
+            calendario_futuro=calendario_futuro,
+        )
+    )
+
+    detalle_promocional = predecir_escenario(
+        escenario=escenario_promocional,
+        resultado_entrenamiento=resultado_entrenamiento,
+        usar_observados_en_total=True,
+        configuracion=configuracion,
+    )
+    detalle_baseline = predecir_escenario(
+        escenario=escenario_baseline,
+        resultado_entrenamiento=resultado_entrenamiento,
+        usar_observados_en_total=False,
+        configuracion=configuracion,
+    )
+
+    resumen = construir_resumen_escenarios(
+        detalle_promocional=detalle_promocional,
+        detalle_baseline=detalle_baseline,
+        promocion_ean=promocion_ean,
+        caracterizacion_ean=caracterizacion_ean,
+        resultado_entrenamiento=resultado_entrenamiento,
+        regimen=regimen,
+        calendario_incompleto=calendario_incompleto,
+        configuracion=configuracion,
+    )
+
+    columnas_detalle = [
+        'N_PROMOCION', 'EAN', 'P_DATE', 'ESCENARIO', 'PRECIO_ESCENARIO',
+        'CANTIDAD_OBSERVADA', 'CANTIDAD_MODELO', 'CANTIDAD_FINAL',
+        'ORIGEN_CANTIDAD', 'FLAG_DATO_REAL', 'FLAG_DIA_FUTURO',
+        'FLAG_DIA_PASADO_SIN_DATO',
+    ]
+
+    detalle_diario = pd.concat(
+        [detalle_promocional[columnas_detalle], detalle_baseline[columnas_detalle]],
+        axis=0, ignore_index=True,
+    ).sort_values(['P_DATE', 'ESCENARIO'], kind='stable').reset_index(drop=True)
+
+    return ResultadoEscenarios(detalle_diario=detalle_diario, resumen=resumen)
+
+
+# =========================================================================
+# 16. FILAS DEL EXCEL FINAL
+# =========================================================================
+def construir_fila_no_proyectable(  # noqa: D417
+    promocion_ean: pd.Series,
+    caracterizacion_ean: pd.Series | None,
+    motivo: str,
+) -> dict[str, object]:
+    """Construye una fila del Excel final para un EAN que no pudo
+    entrenarse o proyectarse, preservando metadatos disponibles.
+
+    Parameters
+    ----------
+    promocion_ean : pd.Series
+    caracterizacion_ean : pd.Series | None
+    motivo : str
+
+    Returns
+    -------
+    dict[str, object]
+    """
+    metadata_ean = obtener_metadata_ean(caracterizacion_ean=caracterizacion_ean)
+
+    return {
+        'N° promoción': promocion_ean['N_PROMOCION'],
+        'Nombre promoción': obtener_valor(promocion_ean, 'NOMBRE_PROMOCION'),
+        'Intensidad Promocional': metadata_ean['Intensidad Promocional'],
+        'WMAPE Train': '-', 'Bias Train': '-', 'MAE Train': '-',
+        'Coverage Train': '-', 'WMAPE Test': '-', 'Bias Test': '-',
+        'MAE Test': '-', 'Coverage Test': '-', 'Win Rate Test': '-',
+        'Categoría': metadata_ean['Categoría'],
+        'Subcategoría': metadata_ean['Subcategoría'],
+        'Descripcion': metadata_ean['Descripcion'],
+        'Material': metadata_ean['Material'],
+        'UMV': obtener_valor(promocion_ean, 'UN_MEDIDA_VENTA'),
+        'EAN': obtener_valor(promocion_ean, 'EAN'),
+        'R²': '-', 'Elasticidad': '-',
+        'Estable': obtener_valor(caracterizacion_ean, 'CLASIFICACION_ADI_CV2'),
+        'TIPOLOGIA_DEMANDA': metadata_ean['TIPOLOGIA_DEMANDA'],
+        'Inicio Proy': obtener_valor(promocion_ean, 'FECHA_INICIO_DE_PROMOCION'),
+        'Fin Proy': obtener_valor(promocion_ean, 'FECHA_FIN_DE_PROMOCION'),
+        'Precio Modal': obtener_valor(promocion_ean, 'PRECIO_MODAL'),
+        'Precio Promocional': obtener_valor(promocion_ean, 'PRECIO_PROMOCIONAL'),
+        'Baseline_UV': '-', 'UV Incremental Real': '-',
+        'UV Incremental Proy': '-', 'UV Real': '-', 'UV Proy': '-',
+        'Baseline Venta': '-', 'Venta Incremental Real': '-',
+        'Venta Incremental Proy': '-', 'Venta Real': '-', 'Venta Proy': '-',
+        'Estado_Historial': 'No elegible',
+        'Estado_Modelo': 'No entrenado',
+        'Estado_Elasticidad': '-', 'Estado_fecha_proy': '-',
+        'Estado_proyección': 'No se pudo proyectar',
+        'Comentario': motivo,
+        'SEGMENTO_ABCD': metadata_ean['SEGMENTO_ABCD'],
+        'ADI': redondear_total(metadata_ean['ADI'], decimales=4),
+        'CV2': redondear_total(metadata_ean['CV2'], decimales=4),
+        'DIAS_CON_VENTA': metadata_ean['DIAS_CON_VENTA'],
+    }
+
+
+def construir_fila_excel_final(  # noqa: D417
+    resultado_escenarios: ResultadoEscenarios,
+    promocion_ean: pd.Series,
+    caracterizacion_ean: pd.Series,
+) -> dict[str, object]:
+    """Construye una fila del Excel final para una combinación
+    promoción-EAN proyectada.
+
+    Baseline Venta = Baseline_UV * PRECIO_MODAL; Venta Proy =
+    UV Proy * PRECIO_PROMOCIONAL. Los precios provienen directamente de
+    promocion_ean, sin recalcular precios efectivos ni ponderados.
+
+    Parameters
+    ----------
+    resultado_escenarios : ResultadoEscenarios
+    promocion_ean : pd.Series
+    caracterizacion_ean : pd.Series
+
+    Returns
+    -------
+    dict[str, object]
+    """
+    resumen = resultado_escenarios.resumen
+    detalle = resultado_escenarios.detalle_diario.copy()
+
+    columnas_detalle_requeridas = {
+        'P_DATE', 'ESCENARIO', 'CANTIDAD_FINAL', 'FLAG_DATO_REAL',
+    }
+    faltantes_detalle = columnas_detalle_requeridas.difference(detalle.columns)
+
+    if faltantes_detalle:
+        msg = f'Faltan columnas en detalle_diario: {sorted(faltantes_detalle)}'
+        raise KeyError(
+            msg
+        )
+
+    columnas_promocion_requeridas = {'PRECIO_MODAL', 'PRECIO_PROMOCIONAL'}
+    faltantes_promocion = columnas_promocion_requeridas.difference(
+        promocion_ean.index
+    )
+
+    if faltantes_promocion:
+        msg = f'Faltan columnas en promocion_ean: {sorted(faltantes_promocion)}'
+        raise KeyError(
+            msg
+        )
+
+    detalle['P_DATE'] = pd.to_datetime(detalle['P_DATE'], errors='coerce')
+    detalle['CANTIDAD_FINAL'] = pd.to_numeric(
+        detalle['CANTIDAD_FINAL'], errors='coerce'
+    ).fillna(0.0)
+    detalle['FLAG_DATO_REAL'] = (
+        pd.to_numeric(detalle['FLAG_DATO_REAL'], errors='coerce')
+        .fillna(0).astype(np.int8)
+    )
+
+    precio_modal = pd.to_numeric(promocion_ean['PRECIO_MODAL'], errors='coerce')
+    precio_promocional = pd.to_numeric(
+        promocion_ean['PRECIO_PROMOCIONAL'], errors='coerce'
+    )
+
+    identificador_promocion = obtener_valor(
+        resumen, 'N_PROMOCION',
+        valor_default=obtener_valor(promocion_ean, 'N_PROMOCION'),
+    )
+    identificador_ean = obtener_valor(
+        resumen, 'EAN', valor_default=obtener_valor(promocion_ean, 'EAN')
+    )
+
+    if pd.isna(precio_modal):
+        msg = (
+            'PRECIO_MODAL es nulo o inválido para promoción-EAN '
+            f'{identificador_promocion}-{identificador_ean}.'
+        )
+        raise ValueError(
+            msg
+        )
+
+    if pd.isna(precio_promocional):
+        msg = (
+            'PRECIO_PROMOCIONAL es nulo o inválido para promoción-EAN '
+            f'{identificador_promocion}-{identificador_ean}.'
+        )
+        raise ValueError(
+            msg
+        )
+
+    precio_modal = float(precio_modal)
+    precio_promocional = float(precio_promocional)
+
+    detalle_promocional = detalle.loc[detalle['ESCENARIO'].eq('PROMOCIONAL')].copy()
+    detalle_baseline = detalle.loc[detalle['ESCENARIO'].eq('BASELINE')].copy()
+
+    if detalle_promocional.empty:
+        msg = (
+            'No existen filas PROMOCIONAL para promoción-EAN '
+            f'{identificador_promocion}-{identificador_ean}.'
+        )
+        raise ValueError(
+            msg
+        )
+
+    if detalle_baseline.empty:
+        msg = (
+            'No existen filas BASELINE para promoción-EAN '
+            f'{identificador_promocion}-{identificador_ean}.'
+        )
+        raise ValueError(
+            msg
+        )
+
+    detalle_promocional_real = detalle_promocional.loc[
+        detalle_promocional['FLAG_DATO_REAL'].eq(1)
+    ]
+    detalle_baseline_real = detalle_baseline.loc[
+        detalle_baseline['FLAG_DATO_REAL'].eq(1)
+    ]
+
+    uv_proy = detalle_promocional['CANTIDAD_FINAL'].sum()
+    baseline_uv = detalle_baseline['CANTIDAD_FINAL'].sum()
+    uv_incremental_proy = uv_proy - baseline_uv
+
+    uv_real = detalle_promocional_real['CANTIDAD_FINAL'].sum()
+    baseline_uv_real = detalle_baseline_real['CANTIDAD_FINAL'].sum()
+    uv_incremental_real = uv_real - baseline_uv_real
+
+    baseline_venta = baseline_uv * precio_modal
+    venta_proy = uv_proy * precio_promocional
+    venta_incremental_proy = venta_proy - baseline_venta
+
+    venta_real = uv_real * precio_promocional
+    baseline_venta_real = baseline_uv_real * precio_modal
+    venta_incremental_real = venta_real - baseline_venta_real
+
+    metadata_ean = obtener_metadata_ean(caracterizacion_ean=caracterizacion_ean)
+
+    return {
+        'N° promoción': identificador_promocion,
+        'Nombre promoción': obtener_valor(promocion_ean, 'NOMBRE_PROMOCION'),
+        'Categoría': metadata_ean['Categoría'],
+        'Subcategoría': metadata_ean['Subcategoría'],
+        'Descripcion': metadata_ean['Descripcion'],
+        'Material': metadata_ean['Material'],
+        'UMV': metadata_ean['UMV'],
+        'EAN': identificador_ean,
+        'R²': '-', 'Elasticidad': '-',
+        'Estable': obtener_valor(caracterizacion_ean, 'CLASIFICACION_ADI_CV2'),
+        'TIPOLOGIA_DEMANDA': metadata_ean['TIPOLOGIA_DEMANDA'],
+        'Inicio Proy': obtener_valor(
+            resumen, 'FECHA_INICIO_DE_PROMOCION',
+            valor_default=obtener_valor(promocion_ean, 'FECHA_INICIO_DE_PROMOCION'),
+        ),
+        'Fin Proy': obtener_valor(
+            resumen, 'FECHA_FIN_DE_PROMOCION',
+            valor_default=obtener_valor(promocion_ean, 'FECHA_FIN_DE_PROMOCION'),
+        ),
+        'Precio Modal': precio_modal,
+        'Precio Promocional': precio_promocional,
+        'Baseline_UV': redondear_total(baseline_uv),
+        'UV Incremental Real': uv_incremental_real,
+        'UV Incremental Proy': redondear_total(uv_incremental_proy),
+        'UV Real': uv_real,
+        'UV Proy': redondear_total(uv_proy),
+        'Baseline Venta': redondear_total(baseline_venta),
+        'Venta Incremental Real': venta_incremental_real,
+        'Venta Incremental Proy': redondear_total(venta_incremental_proy),
+        'Venta Real': venta_real,
+        'Venta Proy': redondear_total(venta_proy),
+        'Estado_Historial': obtener_valor(resumen, 'FLAG_BASELINE_REFERENCIAL'),
+        'Estado_Modelo': obtener_valor(resumen, 'FLAG_MODELO_PRODUCTIVO'),
+        'Estado_Elasticidad': '-',
+        'Estado_fecha_proy': obtener_valor(resumen, 'FLAG_CONTIENE_DIAS_FUTUROS'),
+        'Estado_proyección': 'Proyectado',
+        'Comentario': obtener_valor(resumen, 'COMENTARIO'),
+        'WMAPE Train': redondear_total(
+            obtener_valor(resumen, 'WMAPE_TRAIN'), decimales=4
+        ),
+        'Bias Train': redondear_total(
+            obtener_valor(resumen, 'BIAS_TRAIN'), decimales=4
+        ),
+        'MAE Train': redondear_total(
+            obtener_valor(resumen, 'MAE_TRAIN'), decimales=4
+        ),
+        'Coverage Train': redondear_total(
+            obtener_valor(resumen, 'COVERAGE_TRAIN'), decimales=4
+        ),
+        'WMAPE Test': redondear_total(
+            obtener_valor(resumen, 'WMAPE_TEST'), decimales=4
+        ),
+        'Bias Test': redondear_total(
+            obtener_valor(resumen, 'BIAS_TEST'), decimales=4
+        ),
+        'MAE Test': redondear_total(
+            obtener_valor(resumen, 'MAE_TEST'), decimales=4
+        ),
+        'Coverage Test': redondear_total(
+            obtener_valor(resumen, 'COVERAGE_TEST'), decimales=4
+        ),
+        'Win Rate Test': redondear_total(
+            obtener_valor(resumen, 'WIN_RATE_TEST'), decimales=4
+        ),
+        'Intensidad Promocional': metadata_ean['Intensidad Promocional'],
+        'SEGMENTO_ABCD': metadata_ean['SEGMENTO_ABCD'],
+        'ADI': redondear_total(metadata_ean['ADI'], decimales=4),
+        'CV2': redondear_total(metadata_ean['CV2'], decimales=4),
+        'DIAS_CON_VENTA': metadata_ean['DIAS_CON_VENTA'],
+    }
+
+
+# =========================================================================
+# 17. FERIADOS DE CHILE Y CALENDARIO FUTURO
+# =========================================================================
+def procesar_feriados_chile(historial_diario: pd.DataFrame) -> pd.DataFrame:
+    """Reconstruye de forma determinista las dummies FLAG_FERIADO y
+    FLAG_PRE_FERIADO para Chile, incluyendo feriados irrenunciables.
+
+    Los nombres de columna coinciden exactamente con los usados en
+    df_historial (FLAG_FERIADO, FLAG_PRE_FERIADO) para evitar
+    desalineaciones entre el histórico y el calendario futuro.
+
+    Parameters
+    ----------
+    historial_diario : pd.DataFrame
+        Debe incluir la columna P_DATE.
+
+    Returns
+    -------
+    pd.DataFrame
+        Copia con columnas FLAG_FERIADO y FLAG_PRE_FERIADO (int8).
+    """
+    resultado = historial_diario.copy()
+
+    if not pd.api.types.is_datetime64_any_dtype(resultado['P_DATE']):
+        resultado['P_DATE'] = pd.to_datetime(resultado['P_DATE'])
+
+    feriados_fijos = {
+        (1, 1), (5, 1), (5, 21), (6, 20), (6, 29), (7, 16), (8, 15),
+        (9, 18), (9, 19), (10, 12), (10, 31), (11, 1), (12, 8), (12, 25),
+    }
+
+    feriados_moviles = {
+        2024: [pd.Timestamp('2024-03-29'), pd.Timestamp('2024-03-30')],
+        2025: [pd.Timestamp('2025-04-18'), pd.Timestamp('2025-04-19')],
+        2026: [pd.Timestamp('2026-04-03'), pd.Timestamp('2026-04-04')],
+    }
+
+    fechas_unicas = resultado['P_DATE'].drop_duplicates()
+
+    def es_fecha_feriado(fecha: pd.Timestamp) -> bool:
+        anio = fecha.year
+
+        if anio in feriados_moviles and fecha in feriados_moviles[anio]:
+            return True
+
+        return (fecha.month, fecha.day) in feriados_fijos
+
+    es_feriado = fechas_unicas.apply(es_fecha_feriado)
+    es_pre_feriado = (
+        (fechas_unicas + pd.Timedelta(days=1)).apply(es_fecha_feriado)
+    )
+
+    mapa_feriados = pd.DataFrame({
+        'P_DATE': fechas_unicas,
+        'FLAG_FERIADO': es_feriado.astype(np.int8),
+        'FLAG_PRE_FERIADO': es_pre_feriado.astype(np.int8),
+    })
+
+    columnas_a_borrar = [
+        columna
+        for columna in (
+            'FLAG_FERIADO', 'FLAG_PRE_FERIADO', 'FERIADO_IRRENUNCIABLE'
+        )
+        if columna in resultado.columns
+    ]
+
+    if columnas_a_borrar:
+        resultado = resultado.drop(columns=columnas_a_borrar)
+
+    return resultado.merge(mapa_feriados, on='P_DATE', how='left')
+
+
+def construir_calendario_futuro(  # noqa: D417
+    promociones: pd.DataFrame,
+    columna_fecha_inicio: str = 'FECHA_INICIO_DE_PROMOCION',
+    columna_fecha_fin: str = 'FECHA_FIN_DE_PROMOCION',
+) -> pd.DataFrame:
+    """Construye el calendario diario requerido para proyectar promociones.
+
+    Cubre desde la fecha de inicio más temprana hasta la fecha de
+    término más tardía presente en promociones.
+
+    Parameters
+    ----------
+    promociones : pd.DataFrame
+    columna_fecha_inicio : str
+    columna_fecha_fin : str
+
+    Returns
+    -------
+    pd.DataFrame
+        Columnas P_DATE, FLAG_FERIADO, FLAG_PRE_FERIADO.
+    """
+    columnas_faltantes = {columna_fecha_inicio, columna_fecha_fin}.difference(
+        promociones.columns
+    )
+
+    if columnas_faltantes:
+        msg = f'Faltan las siguientes columnas: {sorted(columnas_faltantes)}'
+        raise KeyError(
+            msg
+        )
+
+    fechas_inicio = pd.to_datetime(
+        promociones[columna_fecha_inicio], errors='coerce'
+    )
+    fechas_fin = pd.to_datetime(promociones[columna_fecha_fin], errors='coerce')
+
+    promociones_invalidas = (
+        fechas_inicio.isna() | fechas_fin.isna() | fechas_fin.lt(fechas_inicio)
+    )
+
+    if promociones_invalidas.any():
+        msg = (
+            'Existen promociones con fechas nulas, inválidas o con '
+            'término anterior al inicio.'
+        )
+        raise ValueError(
+            msg
+        )
+
+    calendario_futuro = pd.DataFrame({
+        'P_DATE': pd.date_range(
+            start=fechas_inicio.min().normalize(),
+            end=fechas_fin.max().normalize(),
+            freq='D',
+        )
+    })
+
+    calendario_futuro = procesar_feriados_chile(calendario_futuro)
+
+    calendario_futuro['FLAG_FERIADO'] = (
+        calendario_futuro['FLAG_FERIADO'].fillna(0).astype(np.int8)
+    )
+    calendario_futuro['FLAG_PRE_FERIADO'] = (
+        calendario_futuro['FLAG_PRE_FERIADO'].fillna(0).astype(np.int8)
+    )
+
+    return calendario_futuro
+
+
+# 18. ORQUESTACIÓN: LOOP PROMOCIÓN-EAN
+# =========================================================================
+def loop_promociones(  # noqa: D417
+    promociones_modelo: pd.DataFrame,
+    historial_modelo: pd.DataFrame,
+    caracterizacion_modelo: pd.DataFrame,
+    columnas_familia: ColumnasFamiliaPromocional,
+    configuracion: ConfiguracionModeloPromo,
+    calendario_futuro: pd.DataFrame | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Procesa cada combinación promoción-EAN y retorna las dos salidas
+    finales del pipeline.
+
+    Los EAN sin caracterización, historial, elegibilidad, régimen o con
+    errores puntuales quedan registrados como no proyectables, sin
+    detener el procesamiento del resto.
+
+    Para eficiencia, el historial se agrupa por EAN una sola vez (en
+    lugar de filtrar el historial completo en cada iteración) y la
+    caracterización se indexa por EAN.
+
+    Parameters
+    ----------
+    promociones_modelo : pd.DataFrame
+        Debe incluir N_PROMOCION y EAN (una fila por combinación).
+    historial_modelo : pd.DataFrame
+        Debe incluir EAN.
+    caracterizacion_modelo : pd.DataFrame
+        Debe incluir EAN.
+    columnas_familia : ColumnasFamiliaPromocional
+    configuracion : ConfiguracionModeloPromo
+    calendario_futuro : pd.DataFrame | None
+
+    Returns
+    -------
+    tuple[pd.DataFrame, pd.DataFrame]
+        (excel_final, detalle_diario_completo). excel_final tiene una
+        fila por combinación promoción-EAN; detalle_diario_completo
+        concatena el detalle diario de todas las combinaciones
+        proyectadas.
+    """
+    columnas_requeridas_por_tabla = {
+        'promociones_modelo': ('N_PROMOCION', 'EAN'),
+        'historial_modelo': ('EAN',),
+        'caracterizacion_modelo': ('EAN',),
+    }
+
+    tablas = {
+        'promociones_modelo': promociones_modelo,
+        'historial_modelo': historial_modelo,
+        'caracterizacion_modelo': caracterizacion_modelo,
+    }
+
+    for nombre_tabla, columnas_requeridas in columnas_requeridas_por_tabla.items():
+        faltantes = set(columnas_requeridas).difference(
+            tablas[nombre_tabla].columns
+        )
+
+        if faltantes:
+            msg = f'Faltan columnas en {nombre_tabla}: {sorted(faltantes)}'
+            raise KeyError(msg)
+
+    promociones_trabajo = promociones_modelo.copy()
+    historial_trabajo = historial_modelo.copy()
+    caracterizacion_trabajo = caracterizacion_modelo.copy()
+
+    promociones_trabajo['EAN'] = (
+        promociones_trabajo['EAN'].astype('string').str.strip()
+    )
+    promociones_trabajo['N_PROMOCION'] = (
+        promociones_trabajo['N_PROMOCION'].astype('string').str.strip()
+    )
+    historial_trabajo['EAN'] = historial_trabajo['EAN'].astype('string').str.strip()
+    caracterizacion_trabajo['EAN'] = (
+        caracterizacion_trabajo['EAN'].astype('string').str.strip()
+    )
+
+    # Pre-agrupación: evita re-filtrar el historial completo por cada fila.
+    historial_por_ean = {  # noqa: C416
+        ean: subhistorial
+        for ean, subhistorial in historial_trabajo.groupby('EAN', sort=False)
+    }
+    caracterizacion_indexada = caracterizacion_trabajo.set_index(
+        'EAN', drop=False
+    )
+
+    filas_excel_final: list[dict[str, object]] = []
+    detalles_diarios: list[pd.DataFrame] = []
+
+    promociones_agrupadas = promociones_trabajo.groupby('N_PROMOCION', sort=False)
+    total_promociones = promociones_agrupadas.ngroups
+
+    for indice_promocion, (numero_promocion, grupo_promocion) in enumerate(
+        promociones_agrupadas, start=1
+    ):
+        total_ean_promocion = len(grupo_promocion)
+
+        logger.info(
+            'Promoción %s/%s (N_PROMOCION=%s) — %s EAN a procesar',
+            indice_promocion, total_promociones, numero_promocion,
+            total_ean_promocion,
+        )
+
+        for indice_ean, (_, promocion_ean) in enumerate(
+            grupo_promocion.iterrows(), start=1
+        ):
+            ean = str(promocion_ean['EAN'])
+
+            logger.info(
+                '  EAN %s/%s — %s', indice_ean, total_ean_promocion, ean
+            )
+
+            caracterizacion_ean = (
+                caracterizacion_indexada.loc[ean]
+                if ean in caracterizacion_indexada.index
+                else None
+            )
+
+            if caracterizacion_ean is None:
+                filas_excel_final.append(
+                    construir_fila_no_proyectable(
+                        promocion_ean=promocion_ean,
+                        caracterizacion_ean=None,
+                        motivo='EAN sin registro en caracterización.',
+                    )
+                )
+                continue
+
+            historial_ean = historial_por_ean.get(ean)
+
+            if historial_ean is None or historial_ean.empty:
+                filas_excel_final.append(
+                    construir_fila_no_proyectable(
+                        promocion_ean=promocion_ean,
+                        caracterizacion_ean=caracterizacion_ean,
+                        motivo='EAN sin historial disponible.',
+                    )
+                )
+                continue
+
+            try:
+                elegibilidad, regimen = evaluar_ean(
+                    ean=ean,
+                    caracterizacion=caracterizacion_indexada,
+                    configuracion=configuracion,
+                )
+
+                if not elegibilidad.elegible or regimen is None:
+                    filas_excel_final.append(
+                        construir_fila_no_proyectable(
+                            promocion_ean=promocion_ean,
+                            caracterizacion_ean=caracterizacion_ean,
+                            motivo=obtener_motivo_elegibilidad(elegibilidad),
+                        )
+                    )
+                    continue
+
+                datos_entrenamiento = preparar_datos_entrenamiento(
+                    historial_ean=historial_ean,
+                    regimen=regimen,
+                    columnas_familia=columnas_familia,
+                    configuracion=configuracion,
+                )
+
+                resultado_entrenamiento = entrenar_modelo_producto(
+                    datos_entrenamiento=datos_entrenamiento,
+                    regimen=regimen,
+                    configuracion=configuracion,
+                )
+
+                resultado_escenarios = proyectar_promocion_ean(
+                    promocion_ean=promocion_ean,
+                    historial_ean=historial_ean,
+                    caracterizacion_ean=caracterizacion_ean,
+                    resultado_entrenamiento=resultado_entrenamiento,
+                    regimen=regimen,
+                    columnas_familia=columnas_familia,
+                    configuracion=configuracion,
+                    calendario_futuro=calendario_futuro,
+                )
+
+                filas_excel_final.append(
+                    construir_fila_excel_final(
+                        resultado_escenarios=resultado_escenarios,
+                        promocion_ean=promocion_ean,
+                        caracterizacion_ean=caracterizacion_ean,
+                    )
+                )
+
+                if configuracion.guardar_detalle_diario:
+                    detalles_diarios.append(resultado_escenarios.detalle_diario)
+
+            except Exception as error:  # noqa: BLE001
+                logger.warning(
+                    '  Error en Promoción %s / EAN %s: %s: %s',
+                    numero_promocion, ean, type(error).__name__, error,
+                )
+                filas_excel_final.append(
+                    construir_fila_no_proyectable(
+                        promocion_ean=promocion_ean,
+                        caracterizacion_ean=caracterizacion_ean,
+                        motivo=(
+                            'Error durante entrenamiento o proyección: '
+                            f'{type(error).__name__}: {error}'
+                        ),
+                    )
+                )
+
+    excel_final = pd.DataFrame(filas_excel_final, columns=COLUMNAS_EXCEL_FINAL)
+
+    detalle_diario_completo = (
+        pd.concat(detalles_diarios, axis=0, ignore_index=True)
+        if detalles_diarios
+        else pd.DataFrame(
+            columns=[
+                'N_PROMOCION', 'EAN', 'P_DATE', 'ESCENARIO',
+                'PRECIO_ESCENARIO', 'CANTIDAD_OBSERVADA', 'CANTIDAD_MODELO',
+                'CANTIDAD_FINAL', 'ORIGEN_CANTIDAD', 'FLAG_DATO_REAL',
+                'FLAG_DIA_FUTURO', 'FLAG_DIA_PASADO_SIN_DATO',
+            ]
+        )
+    )
+
+    logger.info(
+        'Proceso finalizado: %s filas en Excel final, %s filas en '
+        'detalle diario.',
+        len(excel_final), len(detalle_diario_completo),
+    )
+
+    return excel_final, detalle_diario_completo
+
+
+# =========================================================================
+# 19. EJECUCIÓN FINAL
+# =========================================================================
+def ejecutar_pipeline_promocional(
+    df_historial: pd.DataFrame,
+    df_caracterizacion: pd.DataFrame,
+    df_promos_proy: pd.DataFrame,
+    configuracion: ConfiguracionModeloPromo | None = None,
+    ruta_salida_excel: str | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Ejecuta el pipeline completo de forecast promocional.
+
+    Parameters
+    ----------
+    df_historial : pd.DataFrame
+        Historial diario por producto (nombre acordado con negocio).
+    df_caracterizacion : pd.DataFrame
+        Características y flags de productos.
+    df_promos_proy : pd.DataFrame
+        Información promocional de productos y promos a proyectar.
+    configuracion : ConfiguracionModeloPromo | None
+        Si es None, se usa la configuración por defecto.
+    ruta_salida_excel : str | None
+        Si se entrega, el Excel final se guarda en esa ruta.
+
+    Returns
+    -------
+    tuple[pd.DataFrame, pd.DataFrame]
+        (excel_final, detalle_diario_completo) — las únicas dos salidas
+        requeridas por el proceso de implementación.
+    """
+    configurar_logging()
+
+    configuracion = configuracion or ConfiguracionModeloPromo()
+
+    logger.info('Preparando fuentes del modelo...')
+    fuentes = preparar_fuentes_modelo(
+        historial=df_historial,
+        caracterizacion=df_caracterizacion,
+        promociones_futuras=df_promos_proy,
+        configuracion=configuracion,
+    )
+
+    logger.info('Construyendo calendario futuro (feriados Chile)...')
+    calendario_futuro = construir_calendario_futuro(
+        promociones=fuentes.promociones_futuras,
+    )
+
+    logger.info('Iniciando loop de promociones...')
+    excel_final, detalle_diario_completo = loop_promociones(
+        promociones_modelo=fuentes.promociones_futuras,
+        historial_modelo=fuentes.historial,
+        caracterizacion_modelo=fuentes.caracterizacion,
+        columnas_familia=fuentes.columnas_familia,
+        configuracion=configuracion,
+        calendario_futuro=calendario_futuro,
+    )
+
+    if ruta_salida_excel is not None:
+        logger.info('Guardando Excel final en %s', ruta_salida_excel)
+        excel_final.to_excel(ruta_salida_excel, index=False)
+
+    return excel_final, detalle_diario_completo
 
 
 
@@ -2631,6 +4083,19 @@ def main():
     print('Cantidad de columnas: ', len(df_promos_proy.columns))
     print('=' * 70 + '\n')
     print(df_promos_proy.info())
+
+    configuracion_pipeline = ConfiguracionModeloPromo(
+        familia_promocional='B',
+    )
+
+    _excel_final, _detalle_diario_completo = ejecutar_pipeline_promocional(
+        df_historial=df_historial,
+        df_caracterizacion=df_caracterizacion,
+        df_promos_proy=df_promos_proy,
+        configuracion=configuracion_pipeline,
+        ruta_salida_excel='proyeccion_promocional.xlsx',
+    )
+
 
 
 if __name__ == '__main__':
