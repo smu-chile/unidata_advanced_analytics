@@ -1922,7 +1922,507 @@ def calcular_indice_corte_temporal(  # noqa: D417
     return numero_observaciones - numero_test
 
 
+# 9. PREPARACIÓN DE ENTRENAMIENTO POR EAN
+# =========================================================================
+def preparar_datos_entrenamiento(  # noqa: D417
+    historial_ean: pd.DataFrame,
+    regimen: RegimenPromocional,
+    columnas_familia: ColumnasFamiliaPromocional,
+    configuracion: ConfiguracionModeloPromo,
+) -> DatosEntrenamiento:
+    """Prepara matrices de entrenamiento y test para un EAN.
 
+    Las variables TENDENCIA_LINEAL, SIN_ANUAL, COS_ANUAL, FLAG_FERIADO y
+    FLAG_PRE_FERIADO deben existir previamente en historial_ean.
+
+    Parameters
+    ----------
+    historial_ean : pd.DataFrame
+    regimen : RegimenPromocional
+    columnas_familia : ColumnasFamiliaPromocional
+    configuracion : ConfiguracionModeloPromo
+
+    Returns
+    -------
+    DatosEntrenamiento
+    """
+    columnas_requeridas = [
+        configuracion.columna_ean,
+        configuracion.columna_fecha,
+        configuracion.columna_target,
+        *COLUMNAS_TRANSVERSALES,
+    ]
+
+    if configuracion.incluir_precio:
+        columnas_requeridas.append(configuracion.columna_precio)
+
+    if regimen.usar_flag_promocion:
+        columnas_requeridas.append(columnas_familia.flag_promocion)
+
+    if regimen.usar_porcentaje_descuento:
+        columnas_requeridas.append(columnas_familia.porcentaje_descuento)
+
+    if regimen.usar_mecanica:
+        columnas_requeridas.extend(
+            [columnas_familia.flag_promocion, columnas_familia.descripcion_evento]
+        )
+
+    columnas_requeridas = list(dict.fromkeys(columnas_requeridas))
+    columnas_faltantes = set(columnas_requeridas).difference(
+        historial_ean.columns
+    )
+
+    if columnas_faltantes:
+        msg = f'Faltan columnas para el entrenamiento: {sorted(columnas_faltantes)}'
+        raise ValueError(
+            msg
+        )
+
+    datos_modelo = (
+        historial_ean.sort_values(configuracion.columna_fecha, kind='stable')
+        .reset_index(drop=True)
+        .copy()
+    )
+
+    datos_modelo[configuracion.columna_fecha] = pd.to_datetime(
+        datos_modelo[configuracion.columna_fecha], errors='coerce'
+    )
+
+    fechas_invalidas = datos_modelo[configuracion.columna_fecha].isna()
+
+    if fechas_invalidas.any():
+        msg_0 = (
+            f'La columna {configuracion.columna_fecha!r} contiene '
+            f'{int(fechas_invalidas.sum())} fecha(s) inválida(s).'
+        )
+        raise ValueError(
+            msg_0
+        )
+
+    if configuracion.incluir_dia_semana:
+        datos_modelo = agregar_dummies_dia_semana(
+            historial=datos_modelo,
+            columna_ean=configuracion.columna_ean,
+            columna_fecha=configuracion.columna_fecha,
+        )
+
+    mecanicas_validas: list[str] = []
+    columnas_mecanica: list[str] = []
+    usar_mecanica = regimen.usar_mecanica
+
+    if usar_mecanica:
+        mecanicas_validas = obtener_mecanicas_validas(
+            historial_ean=datos_modelo,
+            columna_mecanica=columnas_familia.descripcion_evento,
+            columna_flag_promocion=columnas_familia.flag_promocion,
+            configuracion=configuracion,
+        )
+
+        if mecanicas_validas:
+            datos_modelo, columnas_mecanica = agregar_variables_mecanica(
+                datos_ean=datos_modelo,
+                columna_mecanica=columnas_familia.descripcion_evento,
+                columna_flag_promocion=columnas_familia.flag_promocion,
+                mecanicas_validas=mecanicas_validas,
+            )
+            comentario_mecanica = (
+                'Mecánica incluida con soporte histórico suficiente'
+            )
+        else:
+            usar_mecanica = False
+            comentario_mecanica = (
+                'Mecánica excluida por falta de categorías u '
+                'observaciones suficientes'
+            )
+    else:
+        comentario_mecanica = 'Mecánica no requerida para el régimen'
+
+    columnas_modelo = seleccionar_columnas_modelo(
+        regimen=regimen,
+        columnas_familia=columnas_familia,
+        configuracion=configuracion,
+        columnas_mecanica=columnas_mecanica if usar_mecanica else [],
+    )
+
+    columnas_modelo_faltantes = set(columnas_modelo).difference(
+        datos_modelo.columns
+    )
+
+    if columnas_modelo_faltantes:
+        msg_1 = (
+            'No fue posible construir las siguientes variables del '
+            f'modelo: {sorted(columnas_modelo_faltantes)}'
+        )
+        raise ValueError(
+            msg_1
+        )
+
+    matriz_variables = datos_modelo.loc[:, columnas_modelo].copy()
+
+    for columna in columnas_modelo:
+        matriz_variables[columna] = pd.to_numeric(
+            matriz_variables[columna], errors='coerce'
+        )
+
+    matriz_variables = matriz_variables.astype('float32')
+
+    objetivo = pd.to_numeric(
+        datos_modelo[configuracion.columna_target], errors='coerce'
+    ).astype('float32')
+
+    fechas = datos_modelo[configuracion.columna_fecha].copy()
+    mascara_objetivo_valido = objetivo.notna()
+
+    matriz_variables = matriz_variables.loc[mascara_objetivo_valido].reset_index(
+        drop=True
+    )
+    objetivo = objetivo.loc[mascara_objetivo_valido].reset_index(drop=True)
+    fechas = fechas.loc[mascara_objetivo_valido].reset_index(drop=True)
+
+    numero_observaciones = len(objetivo)
+
+    if numero_observaciones < 2:
+        msg_2 = 'No existen observaciones suficientes para la división temporal.'
+        raise ValueError(
+            msg_2
+        )
+
+    indice_corte = calcular_indice_corte_temporal(
+        numero_observaciones=numero_observaciones,
+        proporcion_test=configuracion.proporcion_test,
+    )
+
+    X_train = matriz_variables.iloc[:indice_corte].reset_index(drop=True)  # noqa: N806
+    X_test = matriz_variables.iloc[indice_corte:].reset_index(drop=True)  # noqa: N806
+    y_train = objetivo.iloc[:indice_corte].reset_index(drop=True)
+    y_test = objetivo.iloc[indice_corte:].reset_index(drop=True)
+    fechas_train = fechas.iloc[:indice_corte].reset_index(drop=True)
+    fechas_test = fechas.iloc[indice_corte:].reset_index(drop=True)
+
+    pesos_train = calcular_pesos_recencia(
+        fechas_train=fechas_train, configuracion=configuracion
+    )
+
+    return DatosEntrenamiento(
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+        pesos_train=pesos_train,
+        fechas_train=fechas_train,
+        fechas_test=fechas_test,
+        columnas_modelo=columnas_modelo,
+        columnas_mecanica=columnas_mecanica if usar_mecanica else [],
+        mecanicas_validas=mecanicas_validas if usar_mecanica else [],
+        fecha_inicio_train=fechas_train.min(),
+        fecha_fin_train=fechas_train.max(),
+        fecha_inicio_test=fechas_test.min() if not fechas_test.empty else None,
+        fecha_fin_test=fechas_test.max() if not fechas_test.empty else None,
+        numero_observaciones=numero_observaciones,
+        numero_observaciones_train=len(y_train),
+        numero_observaciones_test=len(y_test),
+        usar_mecanica=usar_mecanica,
+        comentario_mecanica=comentario_mecanica,
+    )
+
+
+# =========================================================================
+# 10. MÉTRICAS Y BENCHMARK
+# =========================================================================
+def calcular_metricas_modelo(  # noqa: D417
+    valores_reales: pd.Series | np.ndarray,
+    valores_predichos: np.ndarray,
+    configuracion: ConfiguracionModeloPromo,
+    benchmark: np.ndarray | None = None,
+) -> MetricasModelo:
+    """Calcula WMAPE, Bias, MAE, Coverage y Win Rate.
+
+    Parameters
+    ----------
+    valores_reales : pd.Series | np.ndarray
+    valores_predichos : np.ndarray
+    configuracion : ConfiguracionModeloPromo
+        Usa tolerancia_cobertura_absoluta/relativa.
+    benchmark : np.ndarray | None
+        Predicción alternativa para calcular win_rate (opcional).
+
+    Returns
+    -------
+    MetricasModelo
+    """
+    reales = np.asarray(valores_reales, dtype='float64')
+    predichos = np.asarray(valores_predichos, dtype='float64')
+
+    mascara_valida = np.isfinite(reales) & np.isfinite(predichos)
+    reales = reales[mascara_valida]
+    predichos = predichos[mascara_valida]
+
+    if reales.size == 0:
+        return MetricasModelo(
+            wmape=np.nan, bias=np.nan, mae=np.nan, coverage=np.nan,
+            win_rate=None, suma_real=0.0, suma_predicha=0.0,
+            error_absoluto_total=0.0, numero_observaciones=0,
+            numero_predicciones_validas=0,
+        )
+
+    errores = predichos - reales
+    errores_absolutos = np.abs(errores)
+
+    suma_real = float(reales.sum())
+    suma_predicha = float(predichos.sum())
+    error_absoluto_total = float(errores_absolutos.sum())
+
+    if suma_real > 0:
+        wmape = error_absoluto_total / suma_real
+        bias = float(errores.sum()) / suma_real
+    else:
+        wmape = np.nan
+        bias = np.nan
+
+    mae = float(errores_absolutos.mean())
+
+    tolerancia = np.maximum(
+        configuracion.tolerancia_cobertura_absoluta,
+        configuracion.tolerancia_cobertura_relativa * np.abs(reales),
+    )
+    coverage = float(np.mean(errores_absolutos <= tolerancia))
+
+    win_rate = None
+
+    if benchmark is not None:
+        benchmark_array = np.asarray(benchmark, dtype='float64')[mascara_valida]
+        mascara_benchmark = np.isfinite(benchmark_array)
+
+        if mascara_benchmark.any():
+            error_modelo = errores_absolutos[mascara_benchmark]
+            error_benchmark = np.abs(
+                benchmark_array[mascara_benchmark] - reales[mascara_benchmark]
+            )
+            win_rate = float(np.mean(error_modelo < error_benchmark))
+
+    return MetricasModelo(
+        wmape=float(wmape), bias=float(bias), mae=mae, coverage=coverage,
+        win_rate=win_rate, suma_real=suma_real, suma_predicha=suma_predicha,
+        error_absoluto_total=error_absoluto_total,
+        numero_observaciones=int(reales.size),
+        numero_predicciones_validas=int(reales.size),
+    )
+
+
+def construir_benchmark_dia_semana(  # noqa: D417
+    fechas_train: pd.Series,
+    target_train: pd.Series,
+    fechas_objetivo: pd.Series,
+) -> np.ndarray:
+    """Construye un benchmark ingenuo: promedio histórico por día de semana
+
+    Parameters
+    ----------
+    fechas_train : pd.Series
+    target_train : pd.Series
+    fechas_objetivo : pd.Series
+
+    Returns
+    -------
+    np.ndarray
+        Un valor de benchmark por cada fecha en fechas_objetivo. Si un
+        día de semana no tiene representación en train, usa el promedio
+        global.
+    """
+    tabla_benchmark = pd.DataFrame({
+        'P_DATE': pd.to_datetime(fechas_train, errors='raise').to_numpy(),
+        'TARGET': np.asarray(target_train, dtype='float64'),
+    })
+
+    tabla_benchmark['DIA_SEMANA'] = tabla_benchmark['P_DATE'].dt.dayofweek
+    promedio_global = float(tabla_benchmark['TARGET'].mean())
+
+    promedio_por_dia = (
+        tabla_benchmark.groupby('DIA_SEMANA', observed=True)['TARGET'].mean()
+    )
+
+    dias_objetivo = pd.to_datetime(fechas_objetivo, errors='raise').dt.dayofweek
+
+    return (
+        dias_objetivo.map(promedio_por_dia)
+        .fillna(promedio_global)
+        .to_numpy(dtype='float64')
+    )
+
+
+# =========================================================================
+# 11. CONSTRUCCIÓN Y ENTRENAMIENTO DEL MODELO
+# =========================================================================
+def construir_modelo_hist_gradient_boosting(  # noqa: D417
+    regimen: RegimenPromocional,
+    configuracion: ConfiguracionModeloPromo,
+) -> HistGradientBoostingRegressor:
+    """Construye el estimador con configuración regular o conservadora.
+
+    Parameters
+    ----------
+    regimen : RegimenPromocional
+    configuracion : ConfiguracionModeloPromo
+
+    Returns
+    -------
+    HistGradientBoostingRegressor
+    """
+    if regimen.usar_configuracion_regularizada:
+        max_leaf_nodes = configuracion.max_leaf_nodes_regularizado
+        min_samples_leaf = configuracion.min_samples_leaf_regularizado
+        l2_regularization = configuracion.l2_regularization_regularizado
+    else:
+        max_leaf_nodes = configuracion.max_leaf_nodes
+        min_samples_leaf = configuracion.min_samples_leaf
+        l2_regularization = configuracion.l2_regularization
+
+    return HistGradientBoostingRegressor(
+        loss=configuracion.loss,
+        learning_rate=configuracion.learning_rate,
+        max_iter=configuracion.max_iter,
+        max_leaf_nodes=max_leaf_nodes,
+        max_depth=configuracion.max_depth,
+        min_samples_leaf=min_samples_leaf,
+        l2_regularization=l2_regularization,
+        max_bins=configuracion.max_bins,
+        early_stopping=configuracion.early_stopping,
+        validation_fraction=configuracion.validation_fraction,
+        n_iter_no_change=configuracion.n_iter_no_change,
+        tol=configuracion.tol,
+        random_state=configuracion.random_state,
+    )
+
+
+def entrenar_modelo_producto(  # noqa: D417
+    datos_entrenamiento: DatosEntrenamiento,
+    regimen: RegimenPromocional,
+    configuracion: ConfiguracionModeloPromo,
+) -> ResultadoEntrenamiento:
+    """Ejecuta el entrenamiento de validación y el productivo.
+
+    El modelo de validación se ajusta solo con train (para métricas); el
+    productivo se reajusta desde cero con train + test y es el único
+    usado en la proyección.
+
+    Parameters
+    ----------
+    datos_entrenamiento : DatosEntrenamiento
+    regimen : RegimenPromocional
+    configuracion : ConfiguracionModeloPromo
+
+    Returns
+    -------
+    ResultadoEntrenamiento
+    """
+    pesos_train = construir_pesos_temporales(
+        datos_entrenamiento.fechas_train, configuracion
+    )
+
+    modelo_validacion = construir_modelo_hist_gradient_boosting(
+        regimen, configuracion
+    )
+    modelo_validacion.fit(
+        datos_entrenamiento.X_train,
+        datos_entrenamiento.y_train,
+        sample_weight=pesos_train,
+    )
+
+    predicciones_train = np.clip(
+        modelo_validacion.predict(datos_entrenamiento.X_train), 0.0, None
+    )
+    predicciones_test = np.clip(
+        modelo_validacion.predict(datos_entrenamiento.X_test), 0.0, None
+    )
+
+    benchmark_test = construir_benchmark_dia_semana(
+        fechas_train=datos_entrenamiento.fechas_train,
+        target_train=datos_entrenamiento.y_train,
+        fechas_objetivo=datos_entrenamiento.fechas_test,
+    )
+
+    metricas_train = calcular_metricas_modelo(
+        valores_reales=datos_entrenamiento.y_train,
+        valores_predichos=predicciones_train,
+        configuracion=configuracion,
+    )
+    metricas_test = calcular_metricas_modelo(
+        valores_reales=datos_entrenamiento.y_test,
+        valores_predichos=predicciones_test,
+        configuracion=configuracion,
+        benchmark=benchmark_test,
+    )
+
+    variables_completas = pd.concat(
+        [datos_entrenamiento.X_train, datos_entrenamiento.X_test],
+        axis=0, ignore_index=True,
+    )
+    target_completo = pd.concat(
+        [datos_entrenamiento.y_train, datos_entrenamiento.y_test],
+        axis=0, ignore_index=True,
+    )
+    fechas_completas = pd.concat(
+        [datos_entrenamiento.fechas_train, datos_entrenamiento.fechas_test],
+        axis=0, ignore_index=True,
+    )
+
+    pesos_productivo = construir_pesos_temporales(fechas_completas, configuracion)
+
+    modelo_productivo = construir_modelo_hist_gradient_boosting(
+        regimen, configuracion
+    )
+    modelo_productivo.fit(
+        variables_completas, target_completo, sample_weight=pesos_productivo
+    )
+
+    parametros_modelo = {
+        'loss': configuracion.loss,
+        'learning_rate': configuracion.learning_rate,
+        'max_iter': configuracion.max_iter,
+        'early_stopping': configuracion.early_stopping,
+        'validation_fraction': configuracion.validation_fraction,
+        'n_iter_no_change': configuracion.n_iter_no_change,
+        'tol': configuracion.tol,
+        'random_state': configuracion.random_state,
+        'usar_configuracion_regularizada': (
+            regimen.usar_configuracion_regularizada
+        ),
+        'usar_pesos_temporales': pesos_productivo is not None,
+        'metodo_pesos_temporales': configuracion.metodo_pesos_temporales,
+    }
+
+    return ResultadoEntrenamiento(
+        modelo_validacion=modelo_validacion,
+        modelo_productivo=modelo_productivo,
+        metricas_train=metricas_train,
+        metricas_test=metricas_test,
+        predicciones_train=predicciones_train,
+        predicciones_test=predicciones_test,
+        benchmark_test=benchmark_test,
+        columnas_modelo=datos_entrenamiento.columnas_modelo.copy(),
+        parametros_modelo=parametros_modelo,
+        iteraciones_validacion=int(modelo_validacion.n_iter_),
+        iteraciones_productivo=int(modelo_productivo.n_iter_),
+        uso_pesos_temporales=pesos_productivo is not None,
+        metodo_pesos_temporales=(
+            configuracion.metodo_pesos_temporales
+            if pesos_productivo is not None else 'sin_pesos'
+        ),
+        peso_minimo_train=(
+            float(pesos_train.min()) if pesos_train is not None else None
+        ),
+        peso_maximo_train=(
+            float(pesos_train.max()) if pesos_train is not None else None
+        ),
+        peso_minimo_productivo=(
+            float(pesos_productivo.min())
+            if pesos_productivo is not None else None
+        ),
+        peso_maximo_productivo=(
+            float(pesos_productivo.max())
+            if pesos_productivo is not None else None
+        ),
+    )
 
 
 
