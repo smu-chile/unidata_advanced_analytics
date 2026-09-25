@@ -44,7 +44,7 @@ parser.add_argument(
 )
 parser.add_argument(
     '--store_banner', type=str, required=True,
-    choices=['Unimarc', 'Alvi', 'Super 10', 'Mayorista'],
+    choices=['Unimarc', 'Alvi', 'Super 10'],
     help='SMU subsidiary for which the allocation will be made'
 )
 parser.add_argument(
