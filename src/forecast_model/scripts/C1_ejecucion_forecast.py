@@ -516,6 +516,29 @@ QUERY_CARACTERIZACION = QueryDict({
 """ })  # noqa: E501
 
 
+QUERY_INFO_PROMOS = QueryDict({
+    'query_info_promos':
+    """
+    SELECT
+        N_PROMOCION,
+        NOMBRE_PROMOCION,
+        DESCRIPCION_EVENTO_PROMOCIONAL,
+        EAN,
+        MATERIAL,
+        FECHA_INICIO_DE_PROMOCION,
+        FECHA_FIN_DE_PROMOCION,
+        PORCENTAJE_DESCUENTO,
+        PRECIO_MODAL,
+        PRECIO_PROMOCIONAL
+    FROM `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WORKFLOW`
+    WHERE ORGANIZACION_VENTAS = '1000'
+    AND CANAL_DISTRIBUCION = '10'
+    AND REGISTRO_VALIDO = 'X'
+    AND N_PROMOCION in (${promos})
+"""
+})
+
+
 def main():
 
     #------- Inputs ---------#
@@ -588,6 +611,23 @@ def main():
     print('Cantidad de columnas: ', len(df_caracterizacion.columns))
     print('=' * 70 + '\n')
     print(df_caracterizacion.info())
+
+
+    ### 1.4 PROMOS A PROYECTAR
+    print('\n' + '=' * 70)
+    print('PARTE 1.4: DF PROMOS A PROYECTAR')
+    print('=' * 70)
+
+    query_promos_proy = QUERY_INFO_PROMOS['query_info_promos'].substitute(promos =  ','.join(promociones))  # noqa: E501
+    df_promos_proy = readBigQuery(
+                    query=query_promos_proy, user='pricing', gbq_client=gbq_client)
+
+    print('Dimensiones df promos proy: ', df_promos_proy.shape)
+    print(f'Peso Caracterizacion: {df_promos_proy.memory_usage(deep=True).sum() / 1024**2:.2f} MB')  # noqa: E501
+    print('Cantidad de eans únicos: ', df_promos_proy['N_PROMOCION'].nunique())
+    print('Cantidad de columnas: ', len(df_promos_proy.columns))
+    print('=' * 70 + '\n')
+    print(df_promos_proy.info())
 
 
 if __name__ == '__main__':
