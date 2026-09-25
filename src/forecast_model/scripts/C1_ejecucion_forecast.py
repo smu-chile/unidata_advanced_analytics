@@ -8,11 +8,13 @@ import argparse  # noqa: F401
 import posixpath
 from logging import config  # noqa: F401
 from dataclasses import field, dataclass
-from collections.abc import Mapping
+from collections.abc import Mapping  # noqa: F401
 
 import numpy as np  # type: ignore  # noqa: F401, PGH003
 import pandas as pd  # type: ignore  # noqa: PGH003, TC002
-from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.ensemble import (
+    HistGradientBoostingRegressor,  # type: ignore  # noqa: PGH003, TC002
+)
 
 # Pip
 from google.cloud.bigquery import Client  # type: ignore  # noqa: F401, PGH003
@@ -940,7 +942,7 @@ def normalizar_flag(serie_flag: pd.Series) -> pd.Series:  # noqa: D417
     return serie_flag.astype('string').str.strip().str.upper()
 
 
-def limpiar_porcentaje_descuento(serie_descuento: pd.Series) -> pd.Series:
+def limpiar_porcentaje_descuento(serie_descuento: pd.Series) -> pd.Series:  # noqa: D417
     """Convierte descuento a float32, con NaN/negativos reemplazados por 0.
 
     Parameters
@@ -1327,6 +1329,597 @@ def preparar_fuentes_modelo(  # noqa: D417
         columnas_familia=columnas_familia,
     )
 
+
+# 6. ELEGIBILIDAD
+# =========================================================================
+def evaluar_elegibilidad(  # noqa: D417
+    caracterizacion_ean: pd.Series | None,
+    configuracion: ConfiguracionModeloPromo,
+) -> ResultadoElegibilidad:
+    """Evalúa las reglas mínimas para proyectar un EAN.
+
+    Reglas: (1) debe existir en caracterización, (2) no ser producto
+    nuevo, (3) tener al menos configuracion.minimo_dias_con_venta.
+
+    Parameters
+    ----------
+    caracterizacion_ean : pd.Series | None
+    configuracion : ConfiguracionModeloPromo
+
+    Returns
+    -------
+    ResultadoElegibilidad
+    """
+    if caracterizacion_ean is None:
+        return ResultadoElegibilidad(
+            elegible=False,
+            es_producto_nuevo=False,
+            dias_con_venta=0,
+            estado_historial='Sin caracterización',
+            comentario='EAN no encontrado en caracterización',
+        )
+
+    dias_con_venta_crudo = pd.to_numeric(
+        caracterizacion_ean.get('DIAS_CON_VENTA', 0), errors='coerce'
+    )
+    dias_con_venta = (
+        int(dias_con_venta_crudo) if pd.notna(dias_con_venta_crudo) else 0
+    )
+
+    es_producto_nuevo = es_valor_afirmativo(
+        caracterizacion_ean.get('ES_PRODUCTO_NUEVO'), configuracion
+    )
+
+    causas_exclusion = []
+
+    if es_producto_nuevo:
+        causas_exclusion.append('Producto nuevo')
+
+    if dias_con_venta < configuracion.minimo_dias_con_venta:
+        causas_exclusion.append(
+            'Historial insuficiente: menos de '
+            f'{configuracion.minimo_dias_con_venta} días con venta'
+        )
+
+    if causas_exclusion:
+        return ResultadoElegibilidad(
+            elegible=False,
+            es_producto_nuevo=es_producto_nuevo,
+            dias_con_venta=dias_con_venta,
+            estado_historial='Inválido',
+            comentario='; '.join(causas_exclusion),
+        )
+
+    return ResultadoElegibilidad(
+        elegible=True,
+        es_producto_nuevo=False,
+        dias_con_venta=dias_con_venta,
+        estado_historial='Válido',
+        comentario='-',
+    )
+
+
+# =========================================================================
+# 7. RÉGIMEN PROMOCIONAL
+# =========================================================================
+def determinar_uso_mecanica(  # noqa: D417
+    caracterizacion_ean: pd.Series,
+    configuracion: ConfiguracionModeloPromo,
+) -> bool:
+    """Determina si la mecánica promocional puede utilizarse.
+
+    Se incluye solo si está habilitada globalmente, marcada en
+    caracterización y existen al menos minimo_mecanicas_distintas.
+
+    Parameters
+    ----------
+    caracterizacion_ean : pd.Series
+    configuracion : ConfiguracionModeloPromo
+
+    Returns
+    -------
+    bool
+    """
+    if not configuracion.incluir_mecanica:
+        return False
+
+    if not es_valor_afirmativo(
+        caracterizacion_ean.get('INCLUIR_MECANICA'), configuracion
+    ):
+        return False
+
+    numero_mecanicas = pd.to_numeric(
+        caracterizacion_ean.get('N_MECANICAS_VALIDAS', 0), errors='coerce'
+    )
+    numero_mecanicas = 0 if pd.isna(numero_mecanicas) else int(
+        numero_mecanicas
+    )
+
+    return numero_mecanicas >= configuracion.minimo_mecanicas_distintas
+
+
+def clasificar_regimen_promocional(  # noqa: D417
+    caracterizacion_ean: pd.Series,
+    configuracion: ConfiguracionModeloPromo,
+) -> RegimenPromocional:
+    """Clasifica el EAN según su intensidad promocional.
+
+    Intervalos: 0 → BASELINE; (0, bajo] → BASE_UPLIFT;
+    (bajo, alto] → BASE_UPLIFT_REGULARIZADO; (alto, 100] →
+    BASELINE_PROMOCIONAL (excluye flag, descuento y mecánica).
+
+    Parameters
+    ----------
+    caracterizacion_ean : pd.Series
+    configuracion : ConfiguracionModeloPromo
+
+    Returns
+    -------
+    RegimenPromocional
+    """
+    intensidad = pd.to_numeric(
+        caracterizacion_ean.get('INTENSIDAD_PROMOCIONAL', 0.0),
+        errors='coerce',
+    )
+    intensidad = 0.0 if pd.isna(intensidad) else float(
+        np.clip(intensidad, 0.0, 100.0)
+    )
+
+    usar_mecanica = determinar_uso_mecanica(
+        caracterizacion_ean=caracterizacion_ean, configuracion=configuracion
+    )
+
+    if intensidad == 0.0:
+        return RegimenPromocional(
+            nombre='BASELINE',
+            intensidad_promocional=intensidad,
+            usar_flag_promocion=False,
+            usar_porcentaje_descuento=False,
+            usar_mecanica=False,
+            usar_configuracion_regularizada=False,
+            baseline_claro=True,
+            tipo_baseline='BASELINE_OBSERVADO',
+            confianza_baseline='ALTA',
+            comentario_baseline='-',
+        )
+
+    if intensidad <= configuracion.umbral_intensidad_baja:
+        return RegimenPromocional(
+            nombre='BASE_UPLIFT',
+            intensidad_promocional=intensidad,
+            usar_flag_promocion=configuracion.incluir_promocion,
+            usar_porcentaje_descuento=configuracion.incluir_descuento,
+            usar_mecanica=usar_mecanica,
+            usar_configuracion_regularizada=False,
+            baseline_claro=True,
+            tipo_baseline='BASELINE_CONVENCIONAL',
+            confianza_baseline='ALTA',
+            comentario_baseline='-',
+        )
+
+    if intensidad <= configuracion.umbral_intensidad_alta:
+        return RegimenPromocional(
+            nombre='BASE_UPLIFT_REGULARIZADO',
+            intensidad_promocional=intensidad,
+            usar_flag_promocion=configuracion.incluir_promocion,
+            usar_porcentaje_descuento=configuracion.incluir_descuento,
+            usar_mecanica=usar_mecanica,
+            usar_configuracion_regularizada=True,
+            baseline_claro=True,
+            tipo_baseline='BASELINE_CONVENCIONAL',
+            confianza_baseline='MEDIA',
+            comentario_baseline=(
+                'Baseline estimado con menor disponibilidad relativa '
+                'de observaciones sin promoción'
+            ),
+        )
+
+    return RegimenPromocional(
+        nombre='BASELINE_PROMOCIONAL',
+        intensidad_promocional=intensidad,
+        usar_flag_promocion=False,
+        usar_porcentaje_descuento=False,
+        usar_mecanica=False,
+        usar_configuracion_regularizada=False,
+        baseline_claro=False,
+        tipo_baseline='CONTRAFACTUAL_PRECIO_MODAL',
+        confianza_baseline='BAJA',
+        comentario_baseline=(
+            'Baseline referencial por alta intensidad promocional; '
+            'existe evidencia limitada de ventas sin promoción'
+        ),
+    )
+
+
+def evaluar_ean(  # noqa: D417
+    ean: str,
+    caracterizacion: pd.DataFrame,
+    configuracion: ConfiguracionModeloPromo,
+) -> tuple[ResultadoElegibilidad, RegimenPromocional | None]:
+    """Evalúa elegibilidad y régimen promocional de un EAN.
+
+    Parameters
+    ----------
+    ean : str
+    caracterizacion : pd.DataFrame
+        Indexado por EAN (ver preparar_caracterizacion).
+    configuracion : ConfiguracionModeloPromo
+
+    Returns
+    -------
+    tuple[ResultadoElegibilidad, RegimenPromocional | None]
+        El régimen es None si el EAN no es elegible.
+    """
+    if ean not in caracterizacion.index:
+        return evaluar_elegibilidad(None, configuracion), None
+
+    caracterizacion_ean = caracterizacion.loc[ean]
+    elegibilidad = evaluar_elegibilidad(caracterizacion_ean, configuracion)
+
+    if not elegibilidad.elegible:
+        return elegibilidad, None
+
+    regimen = clasificar_regimen_promocional(
+        caracterizacion_ean=caracterizacion_ean, configuracion=configuracion
+    )
+
+    return elegibilidad, regimen
+
+
+# =========================================================================
+# 8. VARIABLES: DÍA DE SEMANA, MECÁNICA, PESOS
+# =========================================================================
+def agregar_dummies_dia_semana(  # noqa: D417
+    historial: pd.DataFrame,
+    columna_ean: str = 'EAN',
+    columna_fecha: str = 'P_DATE',
+) -> pd.DataFrame:
+    """Agrega dummies de día de semana (lunes = categoría de referencia).
+
+    Parameters
+    ----------
+    historial : pd.DataFrame
+    columna_ean : str
+    columna_fecha : str
+
+    Returns
+    -------
+    pd.DataFrame
+        Copia ordenada por EAN y fecha, con las 6 dummies dow_*.
+    """
+    columnas_faltantes = {columna_ean, columna_fecha}.difference(
+        historial.columns
+    )
+
+    if columnas_faltantes:
+        msg = f'Faltan las siguientes columnas: {sorted(columnas_faltantes)}'
+        raise KeyError(
+            msg
+        )
+
+    historial_resultado = historial.copy()
+    historial_resultado[columna_fecha] = pd.to_datetime(
+        historial_resultado[columna_fecha], errors='coerce'
+    )
+
+    fechas_invalidas = historial_resultado[columna_fecha].isna()
+
+    if fechas_invalidas.any():
+        msg = (
+            f'La columna {columna_fecha!r} contiene '
+            f'{int(fechas_invalidas.sum())} fecha(s) inválida(s).'
+        )
+        raise ValueError(
+            msg
+        )
+
+    historial_resultado = historial_resultado.sort_values(
+        [columna_ean, columna_fecha], kind='stable'
+    ).reset_index(drop=True)
+
+    dia_semana = historial_resultado[columna_fecha].dt.dayofweek
+
+    mapa_dias = {
+        'dow_martes': 1, 'dow_miercoles': 2, 'dow_jueves': 3,
+        'dow_viernes': 4, 'dow_sabado': 5, 'dow_domingo': 6,
+    }
+
+    for nombre_columna, codigo_dia in mapa_dias.items():
+        historial_resultado[nombre_columna] = dia_semana.eq(
+            codigo_dia
+        ).astype('int8')
+
+    return historial_resultado
+
+
+def obtener_mecanicas_validas(  # noqa: D417
+    historial_ean: pd.DataFrame,
+    columna_mecanica: str,
+    columna_flag_promocion: str,
+    configuracion: ConfiguracionModeloPromo,
+) -> list[str]:
+    """Identifica mecánicas con soporte histórico suficiente.
+
+    Parameters
+    ----------
+    historial_ean : pd.DataFrame
+    columna_mecanica : str
+    columna_flag_promocion : str
+    configuracion : ConfiguracionModeloPromo
+
+    Returns
+    -------
+    list[str]
+        Vacía si no se alcanza minimo_mecanicas_distintas.
+    """
+    mascara_promocion = pd.to_numeric(
+        historial_ean[columna_flag_promocion], errors='coerce'
+    ).fillna(0).eq(1)
+
+    mecanica = (
+        historial_ean.loc[mascara_promocion, columna_mecanica]
+        .astype('string')
+        .fillna('SIN_MECANICA')
+        .str.strip()
+        .replace('', 'SIN_MECANICA')
+    )
+
+    conteo_mecanicas = mecanica.value_counts()
+
+    mecanicas_validas = conteo_mecanicas[
+        conteo_mecanicas >= configuracion.minimo_observaciones_por_mecanica
+    ].index.tolist()
+
+    mecanicas_validas = [
+        valor for valor in mecanicas_validas if valor != 'SIN_MECANICA'
+    ]
+
+    if len(mecanicas_validas) < configuracion.minimo_mecanicas_distintas:
+        return []
+
+    return sorted(mecanicas_validas)
+
+
+def agregar_variables_mecanica(  # noqa: D417
+    datos_ean: pd.DataFrame,
+    columna_mecanica: str,
+    columna_flag_promocion: str,
+    mecanicas_validas: list[str],
+) -> tuple[pd.DataFrame, list[str]]:
+    """Codifica la mecánica promocional como variables binarias.
+
+    Días sin promoción → SIN_MECANICA (referencia, sin dummy). Mecánicas
+    poco frecuentes → MECANICA_OTRA.
+
+    Parameters
+    ----------
+    datos_ean : pd.DataFrame
+    columna_mecanica : str
+    columna_flag_promocion : str
+    mecanicas_validas : list[str]
+
+    Returns
+    -------
+    tuple[pd.DataFrame, list[str]]
+        Datos con dummies agregadas y la lista de columnas creadas.
+    """
+    resultado = datos_ean.copy()
+
+    mecanica_original = (
+        resultado[columna_mecanica]
+        .astype('string')
+        .fillna('SIN_MECANICA')
+        .str.strip()
+        .replace('', 'SIN_MECANICA')
+    )
+
+    es_promocion = pd.to_numeric(
+        resultado[columna_flag_promocion], errors='coerce'
+    ).fillna(0).eq(1)
+
+    mecanica_agrupada = mecanica_original.where(es_promocion, 'SIN_MECANICA')
+    es_mecanica_valida = mecanica_agrupada.isin(mecanicas_validas)
+
+    mecanica_agrupada = mecanica_agrupada.where(
+        es_mecanica_valida | mecanica_agrupada.eq('SIN_MECANICA'),
+        'MECANICA_OTRA',
+    )
+
+    categorias = ['SIN_MECANICA', *mecanicas_validas, 'MECANICA_OTRA']
+    mecanica_agrupada = pd.Categorical(mecanica_agrupada, categories=categorias)
+
+    variables_mecanica = pd.get_dummies(
+        mecanica_agrupada, prefix='MECANICA', dtype='int8'
+    )
+
+    columna_referencia = 'MECANICA_SIN_MECANICA'
+
+    if columna_referencia in variables_mecanica.columns:
+        variables_mecanica = variables_mecanica.drop(columns=columna_referencia)
+
+    resultado = pd.concat(
+        [resultado.reset_index(drop=True), variables_mecanica.reset_index(drop=True)],
+        axis=1,
+    )
+
+    return resultado, variables_mecanica.columns.tolist()
+
+
+def calcular_pesos_recencia(  # noqa: D417
+    fechas_train: pd.Series,
+    configuracion: ConfiguracionModeloPromo,
+) -> np.ndarray | None:
+    """Calcula pesos exponenciales por antigüedad
+    (promedio normalizado a 1).
+
+    Parameters
+    ----------
+    fechas_train : pd.Series
+    configuracion : ConfiguracionModeloPromo
+        Usa usar_peso_recencia y tasa_decaimiento_recencia.
+
+    Returns
+    -------
+    np.ndarray | None
+        None si la ponderación por recencia está desactivada.
+    """
+    if not configuracion.usar_peso_recencia or fechas_train.empty:
+        return None
+
+    fecha_maxima = fechas_train.max()
+    antiguedad_dias = (fecha_maxima - fechas_train).dt.days.to_numpy(
+        dtype='float32'
+    )
+
+    pesos = np.exp(
+        -configuracion.tasa_decaimiento_recencia * antiguedad_dias
+    ).astype('float32')
+
+    promedio_pesos = pesos.mean()
+
+    if promedio_pesos > 0:
+        pesos = pesos / promedio_pesos
+
+    return pesos
+
+
+def construir_pesos_temporales(  # noqa: D417
+    fechas: pd.Series,
+    configuracion: ConfiguracionModeloPromo,
+) -> np.ndarray | None:
+    """Construye pesos cronológicos opcionales (crecen con la recencia).
+
+    Parameters
+    ----------
+    fechas : pd.Series
+    configuracion : ConfiguracionModeloPromo
+        Usa usar_pesos_temporales, metodo_pesos_temporales
+        {'sin_pesos', 'lineal', 'raiz', 'logaritmico', 'exponencial'}
+        y normalizar_pesos_temporales.
+
+    Returns
+    -------
+    np.ndarray | None
+    """
+    if not configuracion.usar_pesos_temporales:
+        return None
+
+    metodo = configuracion.metodo_pesos_temporales.strip().lower()
+
+    if metodo == 'sin_pesos':
+        return None
+
+    metodos_validos = {'lineal', 'raiz', 'logaritmico', 'exponencial'}
+
+    if metodo not in metodos_validos:
+        msg = (
+            f'Método de pesos temporales inválido: {metodo!r}. '
+            f'Permitidos: {sorted(metodos_validos)}.'
+        )
+        raise ValueError(
+            msg
+        )
+
+    orden_temporal = (
+        pd.to_datetime(fechas, errors='raise')
+        .rank(method='dense')
+        .to_numpy(dtype='float64')
+    )
+
+    if metodo == 'lineal':
+        pesos = orden_temporal
+    elif metodo == 'raiz':
+        pesos = np.sqrt(orden_temporal)
+    elif metodo == 'logaritmico':
+        pesos = np.log1p(orden_temporal)
+    else:
+        distancia = orden_temporal.max() - orden_temporal
+        pesos = np.exp(-configuracion.tasa_decaimiento_exponencial * distancia)
+
+    if configuracion.normalizar_pesos_temporales:
+        promedio_pesos = pesos.mean()
+
+        if promedio_pesos > 0:
+            pesos = pesos / promedio_pesos
+
+    return pesos.astype('float64', copy=False)
+
+
+def seleccionar_columnas_modelo(  # noqa: D417
+    regimen: RegimenPromocional,
+    columnas_familia: ColumnasFamiliaPromocional,
+    configuracion: ConfiguracionModeloPromo,
+    columnas_mecanica: list[str],
+) -> list[str]:
+    """Construye la lista final de variables explicativas del modelo.
+
+    Parameters
+    ----------
+    regimen : RegimenPromocional
+    columnas_familia : ColumnasFamiliaPromocional
+    configuracion : ConfiguracionModeloPromo
+    columnas_mecanica : list[str]
+
+    Returns
+    -------
+    list[str]
+        Sin duplicados, preservando orden de inserción.
+    """
+    columnas_modelo: list[str] = []
+
+    if configuracion.incluir_precio:
+        columnas_modelo.append(configuracion.columna_precio)
+
+    columnas_modelo.extend(COLUMNAS_TRANSVERSALES)
+
+    if configuracion.incluir_dia_semana:
+        columnas_modelo.extend(COLUMNAS_DIA_SEMANA)
+
+    if regimen.usar_flag_promocion:
+        columnas_modelo.append(columnas_familia.flag_promocion)
+
+    if regimen.usar_porcentaje_descuento:
+        columnas_modelo.append(columnas_familia.porcentaje_descuento)
+
+    if regimen.usar_mecanica and columnas_mecanica:
+        columnas_modelo.extend(columnas_mecanica)
+
+    return list(dict.fromkeys(columnas_modelo))
+
+
+def calcular_indice_corte_temporal(  # noqa: D417
+    numero_observaciones: int,
+    proporcion_test: float,
+) -> int:
+    """Calcula la posición del corte temporal train/test.
+
+    Parameters
+    ----------
+    numero_observaciones : int
+    proporcion_test : float — (0, 1)
+
+    Returns
+    -------
+    int
+        Índice de corte; se conserva al menos 1 observación por lado.
+    """
+    if numero_observaciones < 2:
+        msg = (
+            'Se requieren al menos dos observaciones para la división '
+            'temporal.'
+        )
+        raise ValueError(
+            msg
+        )
+
+    if not 0 < proporcion_test < 1:
+        msg = 'proporcion_test debe estar entre 0 y 1.'
+        raise ValueError(msg)
+
+    numero_test = max(1, int(np.ceil(numero_observaciones * proporcion_test)))
+    numero_test = min(numero_test, numero_observaciones - 1)
+
+    return numero_observaciones - numero_test
 
 
 
