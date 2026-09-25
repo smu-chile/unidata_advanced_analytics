@@ -2888,7 +2888,7 @@ def obtener_valor(  # noqa: D417
     if valor is None:
         return valor_default
 
-    if isinstance(valor, (list, tuple, dict, set, np.ndarray)):
+    if isinstance(valor, list | tuple | dict | set | np.ndarray):
         return valor
 
     if pd.isna(valor):
