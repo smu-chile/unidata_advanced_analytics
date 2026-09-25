@@ -3879,6 +3879,45 @@ def ejecutar_pipeline_promocional(
     return excel_final, detalle_diario_completo
 
 
+def generar_excel_buffer(
+    df: pd.DataFrame,
+    sheet_name: str = 'Resultados_proyeccion'
+) -> io.BytesIO:
+    buffer = io.BytesIO()
+
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name=sheet_name)
+        writer.sheets[sheet_name].freeze_panes(1, 0)
+
+    buffer.seek(0)
+    return buffer
+
+# Main Parte 5
+def subir_archivo_sharepoint(
+    contenido: io.BytesIO,
+    nombre_archivo: str,
+    outputs_dir: str,
+    sp_cred: dict
+) -> None:
+    """Sube un archivo a SharePoint usando un buffer en memoria.
+    """
+
+    # MUY IMPORTANTE: asegurar puntero al inicio
+    contenido.seek(0)
+
+    output_remote_path = posixpath.join(outputs_dir, nombre_archivo)
+
+    logging.info(f'Subiendo archivo a SharePoint: {output_remote_path}')
+
+    sp_output = sp.SharePointFile(
+        **sp_cred,
+        server_relative_path=output_remote_path
+    )
+
+    # PASAR EL BUFFER, NO LOS BYTES
+    sp_output.upload(content=contenido)
+
+    logging.info('✅ Archivo subido correctamente a SharePoint')
 
 
 
@@ -4005,6 +4044,8 @@ def main():
 
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
     file_site += 'Pricing/Forecast Promociones'
+    outputs_dir = posixpath.join(file_site, 'Outputs')
+
     secret_name = 'bdaa_sharepoint_credentials'  # noqa: S105#HC
     sp_cred = secretmanager.getSecret(secret_name, project=proyecto)
 
@@ -4098,6 +4139,16 @@ def main():
 
     # TEMP print
     print('Excel final info: ', excel_final.info())
+
+    output_buffer = generar_excel_buffer(excel_final)  # noqa: F841
+
+    subir_archivo_sharepoint(
+       contenido=output_buffer,  # noqa: ERA001
+        nombre_archivo=nombre_output,  # noqa: ERA001
+       outputs_dir=outputs_dir,  # noqa: ERA001
+       sp_cred=sp_cred  # noqa: ERA001
+    )  # noqa: ERA001
+
 
 
 
