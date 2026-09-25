@@ -588,10 +588,8 @@ def main() -> None:  # noqa: D103
         formato_list = ['Unimarc']
     elif formato == 'Alvi':
         formato_list = ['Alvi']
-    elif formato == 'Mayorista':
-        formato_list = ['Mayorista']
     elif formato == 'Super 10':
-        formato_list = ['Super 10', 'Mayorista']
+        formato_list = ['Super 10']
 
 
     formato_query = ','.join([f"'{f}'" for f in formato_list])
