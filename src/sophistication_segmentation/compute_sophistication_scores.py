@@ -37,7 +37,7 @@ with open(
 PROJECT_NAME = 'sophistication_segmentation'
 dag_args = {
     'dag_id': 'sophistication_segmentation_scores',
-    'schedule_interval': '17 30 1 * *',
+    'schedule_interval': '30 17 1 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
