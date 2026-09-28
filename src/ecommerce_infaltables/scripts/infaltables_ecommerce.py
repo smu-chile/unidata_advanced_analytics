@@ -161,7 +161,7 @@ SQL_QUERIES = QueryDict({
     WHERE
         A.ITM_TXN_TMS >= DATE_TRUNC(DATE_SUB('${execution_date}', INTERVAL 12 MONTH), MONTH)
         AND A.ITM_TXN_TMS < DATE_TRUNC('${execution_date}', MONTH)
-        AND A.MARKET_BASKET_KEY NOT IN (
+        AND A.MARKET_BASKET_KEY IN (
             SELECT DISTINCT MARKET_BASKET_KEY
             FROM `${gcp_project_cda}.DS_CDA_VW_SMU.DW_VW_FACT_MARKET_BASKET_E_COMMERCE`
             WHERE CANAL_VENTA IN ('E-COMMERCE')
