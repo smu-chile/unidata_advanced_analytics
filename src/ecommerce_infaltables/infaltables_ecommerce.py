@@ -8,7 +8,7 @@ from datetime import timedelta
 import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
-from airflow.models.baseoperator import chain
+from airflow.models.baseoperator import chain  # noqa: F401
 
 
 if platform.system() == 'Windows':
@@ -33,10 +33,10 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'infaltables'
+PROJECT_NAME = 'ecommerce_infaltables'
 dag_args = {
-    'dag_id': 'infaltables',
-    'schedule_interval': '0 13 2 * *',
+    'dag_id': 'ecommerce_infaltables',
+    'schedule_interval': '30 14 2 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
@@ -63,13 +63,13 @@ dag_args = {
 with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
-    computing_infaltables = [
+    computing_infaltables_ecommerce = [
         ExtendedDataprocCreateBatchOperator(
-            task_id = f"computing_infaltables_{store_banner.replace(' ', '_').lower()}",  # noqa: E501
+            task_id = f"computing_infaltables_ecommerce_{store_banner.replace(' ', '_').lower()}",  # noqa: E501
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 'scripts/'
-                'infaltables.py'
+                'infaltables_ecommerce.py'
             ),
             dag_env_config=dag_env_config,
             docker_image_name=f'{PROJECT_NAME}',
@@ -86,10 +86,6 @@ with DAG(**dag_args) as dag:
         )
 
         for store_banner in [
-            'Unimarc',
-            'Alvi',
-            'Super 10'
+            'Unimarc'
         ]
     ]
-
-chain(computing_infaltables)
