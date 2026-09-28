@@ -2818,7 +2818,7 @@ def main():
     outputs_dir = posixpath.join(file_site, 'Caracterización_productos')
 
     esquema = 'TMP'
-    tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST'
+    tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST_V2' #V2 sufijo temporal
     path_table = f'{proyecto}.{esquema}.{tabla}'
 
     esquema_subida  = 'PRECIO_PROMOCIONES'
