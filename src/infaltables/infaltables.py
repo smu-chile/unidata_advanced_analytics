@@ -8,7 +8,7 @@ from datetime import timedelta
 import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
-from airflow.models.baseoperator import chain
+from airflow.models.baseoperator import chain  # noqa: F401
 
 
 if platform.system() == 'Windows':
@@ -92,4 +92,31 @@ with DAG(**dag_args) as dag:
         ]
     ]
 
-chain(computing_infaltables)
+    computing_infaltables_ecommerce = [
+        ExtendedDataprocCreateBatchOperator(
+            task_id = f"computing_infaltables_ecommerce_{store_banner.replace(' ', '_').lower()}",  # noqa: E501
+            python_script_path=(
+                f'{PROJECT_NAME}/'
+                'scripts/'
+                'infaltables_ecommerce.py'
+            ),
+            dag_env_config=dag_env_config,
+            docker_image_name=f'{PROJECT_NAME}',
+            pyspark_batch_args=[
+                '--project_id', dag_env_config['project_id'],
+                '--execution_date', EXECUTION_DATE,
+                '--store_banner', store_banner,
+                '--n_substitutes', "{{ dag_run.conf.get('n_substitutes', 5) }}",
+            ],
+            include_paths=[
+                'common/',
+                f'{PROJECT_NAME}/gbq_objects/'
+            ],
+        )
+
+        for store_banner in [
+            'Unimarc'
+        ]
+    ]
+
+computing_infaltables[0] >> computing_infaltables_ecommerce[0]
