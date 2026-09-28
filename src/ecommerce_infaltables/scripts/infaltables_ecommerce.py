@@ -1285,7 +1285,7 @@ def main() -> None:
             execution_date = execution_date,
             store_banner = store_banner
         ),
-        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_{upper_store_banner}',
+        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_{upper_store_banner}',
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_TRUNCATE',
         use_legacy_sql=False,
@@ -1301,7 +1301,7 @@ def main() -> None:
             store_banner = store_banner,
             upper_store_banner = upper_store_banner
         ),
-        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_{upper_store_banner}',
+        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_ECOMMERCE_{upper_store_banner}',
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_TRUNCATE',
         use_legacy_sql=False,
