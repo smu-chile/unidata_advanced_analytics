@@ -37,7 +37,7 @@ with open(
 PROJECT_NAME = 'sophistication_segmentation'
 dag_args = {
     'dag_id': 'sophistication_segmentation_scores',
-    'schedule_interval': '30 0 1 * *',
+    'schedule_interval': '30 17 1 * *',
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
@@ -97,40 +97,5 @@ with DAG(**dag_args) as dag:
         ]
     ]
 
-    customer_compute_score_tasks = [
-        ExtendedDataprocCreateBatchOperator(
-            task_id=f"compute_customer_score_{store_banner.replace(' ', '_').lower()}",
-            python_script_path=(
-                f'{PROJECT_NAME}/'
-                'scripts/'
-                'customer_sophistication_score.py'
-            ),
-            dag_env_config=dag_env_config,
-            docker_image_name=PROJECT_NAME,
-            pyspark_batch_args=[
-                '--project_name', PROJECT_NAME,
-                '--gcp_project', dag_env_config['project_id'],
-                '--execution_date', "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}",  # noqa: E501
-                '--store_banner', store_banner,
-                '--min_category_transacted_items', "{{ dag_run.conf.get('min_category_transacted_items', 3) }}"  # noqa: E501
-            ],
-            include_paths=[
-                'common/',
-                f'{PROJECT_NAME}/gbq_objects/'
-            ],
-            ttl=43200,
 
-            # Driver config (dinámico por banner)
-            spark_driver_cores = 8 if store_banner == 'Unimarc' else 4,
-            spark_driver_memory = 35 if store_banner == 'Unimarc' else 20
-        )
-
-        for store_banner in [
-            'Unimarc',
-            'Alvi',
-            'Super 10'
-        ]
-    ]
-
-
-chain(customer_compute_score_tasks,brand_compute_score_tasks)
+chain(brand_compute_score_tasks)
