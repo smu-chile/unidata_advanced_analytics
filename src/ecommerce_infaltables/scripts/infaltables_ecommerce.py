@@ -195,7 +195,7 @@ SQL_QUERIES = QueryDict({
             SUM(VALUE) AS TOTAL_VENTA,
             SUM(VALUE)-SUM(TAX_AMOUNT) AS TOTAL_VENTA_NETA,
             COUNT(DISTINCT CASE WHEN CUSTOMER_KEY IS NOT NULL THEN CUSTOMER_KEY END) AS TOTAL_CLIENTES
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}`
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}`
     ),
 
     penetracion_producto AS (
@@ -211,7 +211,7 @@ SQL_QUERIES = QueryDict({
             MIN(r.TRANSACTION_DATE) AS FECHA_PRIMERA_VENTA,
             COUNT(DISTINCT DATE_TRUNC(r.TRANSACTION_DATE, MONTH)) AS MESES_CON_VENTA,
             DATE_DIFF('${execution_date}', MIN(r.TRANSACTION_DATE), DAY) AS DIAS_DESDE_PRIMERA_VENTA
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}` r
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}` r
         WHERE r.QUANTITY > 0
         GROUP BY r.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC
     ),
@@ -222,7 +222,7 @@ SQL_QUERIES = QueryDict({
             COUNT(DISTINCT r.MARKET_BASKET_KEY) AS CANASTAS_PRODUCTO_CS,
             COUNT(DISTINCT CASE WHEN r.CUSTOMER_KEY IS NOT NULL THEN r.CUSTOMER_KEY END) AS CLIENTES_PRODUCTO_CS,
             SUM(VALUE) AS VENTA_PRODUCTO_CS
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}` r
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}` r
         JOIN clientes_sensibles s ON s.customer_key = r.customer_key
         WHERE r.QUANTITY > 0
         GROUP BY r.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC
@@ -245,7 +245,7 @@ SQL_QUERIES = QueryDict({
             CAT_DSC,
             SUM(VALUE) AS TOTAL_VENTA_CATEGORIA,
             SUM(CASE WHEN S.CUSTOMER_KEY IS NOT NULL THEN VALUE END) AS TOTAL_VENTA_CATEGORIA_CS
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}` r
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}` r
         LEFT JOIN clientes_sensibles s ON s.customer_key = r.customer_key
         WHERE r.QUANTITY > 0
         GROUP BY CAT_DSC
@@ -256,7 +256,7 @@ SQL_QUERIES = QueryDict({
             CUSTOMER_KEY, SKU_PRODUCT,
             DATE_TRUNC(TRANSACTION_DATE, MONTH) AS MES,
             COUNT(DISTINCT MARKET_BASKET_KEY) AS COMPRAS_EN_MES
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}`
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}`
         WHERE QUANTITY > 0 AND CUSTOMER_KEY IS NOT NULL
         GROUP BY CUSTOMER_KEY, SKU_PRODUCT, MES
     ),
@@ -275,7 +275,7 @@ SQL_QUERIES = QueryDict({
             CUSTOMER_KEY, SKU_PRODUCT,
             DATE_TRUNC(TRANSACTION_DATE, QUARTER) AS TRIMESTRE,
             COUNT(DISTINCT MARKET_BASKET_KEY) AS COMPRAS_EN_TRIMESTRE
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_${upper_store_banner}`
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}`
         WHERE QUANTITY > 0 AND CUSTOMER_KEY IS NOT NULL
         GROUP BY CUSTOMER_KEY, SKU_PRODUCT, TRIMESTRE
     ),
@@ -485,7 +485,7 @@ SQL_QUERIES = QueryDict({
 
     penetracion AS (
     SELECT *
-    FROM `${gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_${upper_store_banner}`
+    FROM `${gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_ECOMMERCE_${upper_store_banner}`
     ),
 
     -- 6. Importancia Nielsen ÚNICA por PRODUCT_ID
