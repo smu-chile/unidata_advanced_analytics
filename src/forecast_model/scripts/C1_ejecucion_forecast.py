@@ -3442,13 +3442,45 @@ def construir_fila_excel_final(  # noqa: D417
 # =========================================================================
 # 17. FERIADOS DE CHILE Y CALENDARIO FUTURO
 # =========================================================================
+def calcular_domingo_pascua(anio: int) -> pd.Timestamp:
+    """Calcula el Domingo de Pascua con el algoritmo de Gauss/Meeus.
+
+    Parameters
+    ----------
+    anio : int
+        Año a calcular.
+
+    Returns
+    -------
+    pd.Timestamp
+        Fecha del Domingo de Pascua para el año dado.
+    """
+    a = anio % 19
+    b = anio // 100
+    c = anio % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    lu = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * lu) // 451
+    mes = (h + lu - 7 * m + 114) // 31
+    dia = ((h + lu - 7 * m + 114) % 31) + 1
+    return pd.Timestamp(year=anio, month=mes, day=dia)
+
+
 def procesar_feriados_chile(historial_diario: pd.DataFrame) -> pd.DataFrame:
     """Reconstruye de forma determinista las dummies FLAG_FERIADO y
-    FLAG_PRE_FERIADO para Chile, incluyendo feriados irrenunciables.
+    FLAG_PRE_FERIADO para Chile, robusta a cualquier año.
 
-    Los nombres de columna coinciden exactamente con los usados en
-    df_historial (FLAG_FERIADO, FLAG_PRE_FERIADO) para evitar
-    desalineaciones entre el histórico y el calendario futuro.
+    Los feriados fijos se comparan por (mes, día) y los movibles
+    (Viernes y Sábado Santo) se derivan del Domingo de Pascua, por lo
+    que el proceso funciona para 2027 en adelante sin hardcodear años.
+    Los nombres de columna coinciden con df_historial (FLAG_FERIADO,
+    FLAG_PRE_FERIADO) para evitar desalineaciones train/proyección.
 
     Parameters
     ----------
@@ -3470,20 +3502,18 @@ def procesar_feriados_chile(historial_diario: pd.DataFrame) -> pd.DataFrame:
         (9, 18), (9, 19), (10, 12), (10, 31), (11, 1), (12, 8), (12, 25),
     }
 
-    feriados_moviles = {
-        2024: [pd.Timestamp('2024-03-29'), pd.Timestamp('2024-03-30')],
-        2025: [pd.Timestamp('2025-04-18'), pd.Timestamp('2025-04-19')],
-        2026: [pd.Timestamp('2026-04-03'), pd.Timestamp('2026-04-04')],
-    }
-
     fechas_unicas = resultado['P_DATE'].drop_duplicates()
 
+    # Semana Santa por año presente en los datos (movible, no hardcodeada)
+    feriados_moviles: set = set()
+    for anio in fechas_unicas.dt.year.unique():
+        pascua = calcular_domingo_pascua(int(anio))
+        feriados_moviles.add(pascua - pd.Timedelta(days=2))  # Viernes Santo
+        feriados_moviles.add(pascua - pd.Timedelta(days=1))  # Sabado Santo
+
     def es_fecha_feriado(fecha: pd.Timestamp) -> bool:
-        anio = fecha.year
-
-        if anio in feriados_moviles and fecha in feriados_moviles[anio]:
+        if fecha.normalize() in feriados_moviles:
             return True
-
         return (fecha.month, fecha.day) in feriados_fijos
 
     es_feriado = fechas_unicas.apply(es_fecha_feriado)
