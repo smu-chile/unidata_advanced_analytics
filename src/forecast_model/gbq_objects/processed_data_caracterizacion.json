@@ -362,6 +362,36 @@
             "field_type": "STRING",
             "mode": "NULLABLE",
             "description": "Clasificación adi/cv2"
+        },
+        {
+            "name": "UMBRAL_CV_UNIDADES_Q4",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Umbral 75% dispersión unidades vendidas"
+        },
+        {
+            "name": "FLAG_CV_UNIDADES_Q4",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Booleano para CV unidades > Q4"
+        },
+        {
+            "name": "SCORE_CONFIABILIDAD_DATOS",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Puntaje confiabilidad de los datos, 0 es alta, 100 y más baja"
+        },
+        {
+            "name": "CONFIABILIDAD_DATOS",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Segmentación confiabilidad de los datos"
+        },
+        {
+            "name": "MOTIVO_CONFIABILIDAD_DATOS",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Motivo por el cual el producto puntua en score de confiabilidad"
         }
     ],
     "clustering_fields": ["CATEGORY_DESCRIPTION", "EAN", "MATERIAL"]
