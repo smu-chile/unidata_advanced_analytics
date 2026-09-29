@@ -6,6 +6,7 @@ import sys
 import logging
 import argparse
 import posixpath
+import unicodedata
 from logging import config
 
 import numpy as np
@@ -2702,6 +2703,273 @@ def generar_excel_buffer_segmentado(df: pd.DataFrame) -> io.BytesIO:
     return df_final,buffer
 
 
+def normalizar_etiqueta(valor: object) -> str:
+    """Normaliza texto para comparaciones de categorías.
+
+    Parameters
+    ----------
+    valor : object
+        Valor textual a normalizar.
+
+    Returns
+    -------
+    str
+        Texto en mayúsculas, sin tildes y sin espacios externos.
+        Retorna una cadena vacía cuando el valor es nulo.
+    """
+    if pd.isna(valor):
+        return ''
+
+    texto = str(valor).strip().upper()
+    texto_sin_tildes = unicodedata.normalize('NFKD', texto)
+
+    return ''.join(
+        caracter
+        for caracter in texto_sin_tildes
+        if not unicodedata.combining(caracter)
+    )
+
+
+def calcular_confiabilidad_datos(
+    caracterizacion: pd.DataFrame,
+    minimo_dias_con_venta: int = 150,
+    umbral_ratio_dias_perdidos: float = 0.30,
+    cuantíl_cv_q4: float = 0.75,
+) -> pd.DataFrame:
+    """Calcula la confiabilidad de los datos históricos por EAN.
+
+    Reglas graves, equivalentes a 100 puntos:
+    - DIAS_CON_VENTA menor o igual a minimo_dias_con_venta.
+    - ES_PRODUCTO_NUEVO igual a True.
+    - ESTADO grave.
+    - TIPOLOGIA_DEMANDA igual a GRUMOSA.
+    - CV_UNIDADES ubicado en el cuarto cuartil.
+
+    Reglas medias, equivalentes a 30 puntos:
+    - RATIO_DIAS_PERDIDOS_RECIENTE mayor o igual al umbral.
+    - ESTADO igual a CAIDA MODERADA.
+    - TIPOLOGIA_DEMANDA INTERMITENTE o ERRATICA.
+
+    La clasificación final sigue esta prioridad:
+    - BAJA: al menos una regla grave.
+    - ALTA: cumple todos los criterios de alta.
+    - MEDIA: no es baja y no cumple todos los criterios de alta.
+
+    Parameters
+    ----------
+    caracterizacion : pd.DataFrame
+        Tabla de capa 0 a nivel de EAN.
+    minimo_dias_con_venta : int
+        Cantidad máxima de días con venta que activa una condición grave.
+    umbral_ratio_dias_perdidos : float
+        Máximo ratio permitido para ser candidato a confiabilidad alta.
+    cuantíl_cv_q4 : float
+        Cuantíl de CV_UNIDADES usado para definir el inicio de Q4.
+
+    Returns
+    -------
+    pd.DataFrame
+        Copia de caracterizacion con las columnas:
+        - UMBRAL_CV_UNIDADES_Q4
+        - FLAG_CV_UNIDADES_Q4
+        - SCORE_CONFIABILIDAD_DATOS
+        - CONFIABILIDAD_DATOS
+        - MOTIVO_CONFIABILIDAD_DATOS
+    """
+    columnas_requeridas = {
+        'DIAS_CON_VENTA',
+        'ES_PRODUCTO_NUEVO',
+        'ESTADO',
+        'RATIO_DIAS_PERDIDOS_RECIENTE',
+        'CV_UNIDADES',
+        'TIPOLOGIA_DEMANDA',
+    }
+
+    columnas_faltantes = columnas_requeridas.difference(
+        caracterizacion.columns
+    )
+
+    if columnas_faltantes:
+        mensaje = (
+            'Faltan columnas para calcular CONFIABILIDAD_DATOS: '
+            f'{sorted(columnas_faltantes)}'
+        )
+        raise KeyError(mensaje)
+
+    if minimo_dias_con_venta < 1:
+        msg = 'minimo_dias_con_venta debe ser mayor o igual a 1.'
+        raise ValueError(
+            msg
+        )
+
+    if not 0 <= umbral_ratio_dias_perdidos <= 1:
+        raise ValueError(
+            'umbral_ratio_dias_perdidos debe estar entre 0 y 1.'  # noqa: EM101
+        )
+
+    if not 0 < cuantíl_cv_q4 < 1:
+        msg = 'cuantíl_cv_q4 debe estar estrictamente entre 0 y 1.'
+        raise ValueError(
+            msg
+        )
+
+    resultado = caracterizacion.copy()
+
+    dias_con_venta = pd.to_numeric(
+        resultado['DIAS_CON_VENTA'],
+        errors='coerce',
+    )
+    ratio_dias_perdidos = pd.to_numeric(
+        resultado['RATIO_DIAS_PERDIDOS_RECIENTE'],
+        errors='coerce',
+    )
+    cv_unidades = pd.to_numeric(
+        resultado['CV_UNIDADES'],
+        errors='coerce',
+    )
+
+    umbral_cv_q4 = cv_unidades.quantile(cuantíl_cv_q4)
+
+    if pd.isna(umbral_cv_q4):
+        msg = (
+            'CV_UNIDADES no contiene valores numéricos válidos para '
+            'calcular el cuarto cuartil.'
+        )
+        raise ValueError(
+            msg
+        )
+
+    resultado['UMBRAL_CV_UNIDADES_Q4'] = float(umbral_cv_q4)
+    resultado['FLAG_CV_UNIDADES_Q4'] = cv_unidades.ge(
+        umbral_cv_q4
+    ).fillna(False).astype(bool)  # noqa: FBT003
+
+    estado = resultado['ESTADO'].map(normalizar_etiqueta)
+    tipologia = resultado['TIPOLOGIA_DEMANDA'].map(normalizar_etiqueta)
+
+    es_producto_nuevo = resultado['ES_PRODUCTO_NUEVO'].fillna(
+        False  # noqa: FBT003
+    ).astype(bool)
+
+    dias_insuficientes = dias_con_venta.le(minimo_dias_con_venta)
+    cv_unidades_q4 = resultado['FLAG_CV_UNIDADES_Q4']
+    cv_unidades_disponible = cv_unidades.notna()
+    ratio_dias_perdidos_disponible = ratio_dias_perdidos.notna()
+
+    estado_grave = estado.isin({
+        'MUERTO PROBABLE',
+        'CAIDA SEVERA',
+        'HISTORIAL INSUFICIENTE',
+    })
+    estado_medio = estado.eq('CAIDA MODERADA')
+    estado_alto = estado.isin({'NORMAL', 'EN CRECIMIENTO'})
+
+    tipologia_grave = tipologia.eq('GRUMOSA')
+    tipologia_media = tipologia.isin({'INTERMITENTE', 'ERRATICA'})
+    tipologia_alta = tipologia.eq('SUAVE')
+
+    ratio_dias_perdidos_alto = ratio_dias_perdidos.ge(
+        umbral_ratio_dias_perdidos
+    )
+    ratio_dias_perdidos_bajo = ratio_dias_perdidos.lt(
+        umbral_ratio_dias_perdidos
+    )
+
+    evento_grave = (
+        dias_insuficientes
+        | es_producto_nuevo
+        | estado_grave
+        | tipologia_grave
+        | cv_unidades_q4
+    )
+
+    cumple_alta = (
+        dias_con_venta.gt(minimo_dias_con_venta)
+        & ~es_producto_nuevo
+        & estado_alto
+        & tipologia_alta
+        & ratio_dias_perdidos_disponible
+        & ratio_dias_perdidos_bajo
+        & cv_unidades_disponible
+        & ~cv_unidades_q4
+    )
+
+    score_confiabilidad = (
+        dias_insuficientes.astype('int16') * 100
+        + es_producto_nuevo.astype('int16') * 100
+        + estado_grave.astype('int16') * 100
+        + tipologia_grave.astype('int16') * 100
+        + cv_unidades_q4.astype('int16') * 100
+        + ratio_dias_perdidos_alto.astype('int16') * 30
+        + estado_medio.astype('int16') * 30
+        + tipologia_media.astype('int16') * 30
+    )
+
+    resultado['SCORE_CONFIABILIDAD_DATOS'] = score_confiabilidad.astype(
+        'int16'
+    )
+
+    resultado['CONFIABILIDAD_DATOS'] = np.select(
+        condlist=[
+            evento_grave,
+            cumple_alta,
+        ],
+        choicelist=[
+            'BAJA',
+            'ALTA',
+        ],
+        default='MEDIA',
+    )
+
+    motivos = pd.Series('', index=resultado.index, dtype='string')
+
+    def agregar_motivo(condicion: pd.Series, motivo: str) -> None:
+        """Incorpora un motivo a las filas que cumplen una condición."""
+        nonlocal motivos
+
+        motivos = motivos.mask(
+            condicion & motivos.eq(''),
+            motivo,
+        )
+        motivos = motivos.mask(
+            condicion & motivos.ne(''),
+            motivos + '; ' + motivo,
+        )
+
+    agregar_motivo(
+        dias_insuficientes,
+        f'Días con venta menores o iguales a {minimo_dias_con_venta}',
+    )
+    agregar_motivo(es_producto_nuevo, 'Producto nuevo')
+    agregar_motivo(estado_grave, 'Estado histórico grave')
+    agregar_motivo(tipologia_grave, 'Tipología de demanda grumosa')
+    agregar_motivo(cv_unidades_q4, 'CV de unidades en Q4')
+    agregar_motivo(
+        ratio_dias_perdidos_alto,
+        'Ratio de días perdidos reciente alto',
+    )
+    agregar_motivo(estado_medio, 'Estado con caída moderada')
+    agregar_motivo(
+        tipologia_media,
+        'Tipología de demanda intermitente o errática',
+    )
+    agregar_motivo(
+        ~ratio_dias_perdidos_disponible,
+        'Ratio de días perdidos reciente no disponible',
+    )
+    agregar_motivo(
+        ~cv_unidades_disponible,
+        'CV de unidades no disponible',
+    )
+
+    resultado['MOTIVO_CONFIABILIDAD_DATOS'] = motivos.mask(
+        motivos.eq(''),
+        'Cumple todos los criterios de confiabilidad alta',
+    )
+
+    return resultado
+
+
 def listar_archivos_sharepoint(outputs_dir: str, sp_cred: dict) -> list:
     """Devuelve los archivos existentes en la carpeta de SharePoint."""
     carpeta = sp.SharePointFolder(
@@ -3064,6 +3332,12 @@ def main():
     logging.info('[5] Columnas Resumen Global: ', resumen_global.columns)
     logging.info('[6] Subida a SP...')
 
+    resumen_global = calcular_confiabilidad_datos(
+        caracterizacion=resumen_global,
+        minimo_dias_con_venta=150,
+        umbral_ratio_dias_perdidos=0.30,
+        cuantíl_cv_q4=0.75,
+    )
     df_caracterizacion = exportar_y_subir_excel_segmentado(
         df=resumen_global,
         execution_date=execution_date,
