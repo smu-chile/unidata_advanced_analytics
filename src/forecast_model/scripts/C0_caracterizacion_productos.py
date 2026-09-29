@@ -598,8 +598,8 @@ segmentos_config = {
         ],
     },
     'CONFIABILIDAD DATOS' : {
-        'color': 'D9EAF7',
-        'color_header': '1F4E78',
+        'color': 'FFF2CC',
+        'color_header': 'FFD966',
         'columnas': [
             'UMBRAL_CV_UNIDADES_Q4',
             'FLAG_CV_UNIDADES_Q4',
@@ -2809,20 +2809,15 @@ def calcular_confiabilidad_datos(
 
     if minimo_dias_con_venta < 1:
         msg = 'minimo_dias_con_venta debe ser mayor o igual a 1.'
-        raise ValueError(
-            msg
-        )
+        raise ValueError(msg)
 
     if not 0 <= umbral_ratio_dias_perdidos <= 1:
-        raise ValueError(
-            'umbral_ratio_dias_perdidos debe estar entre 0 y 1.'  # noqa: EM101
-        )
+        msg = 'umbral_ratio_dias_perdidos debe estar entre 0 y 1.'
+        raise ValueError(msg)
 
     if not 0 < cuantíl_cv_q4 < 1:
         msg = 'cuantíl_cv_q4 debe estar estrictamente entre 0 y 1.'
-        raise ValueError(
-            msg
-        )
+        raise ValueError(msg)
 
     resultado = caracterizacion.copy()
 
@@ -2846,21 +2841,23 @@ def calcular_confiabilidad_datos(
             'CV_UNIDADES no contiene valores numéricos válidos para '
             'calcular el cuarto cuartil.'
         )
-        raise ValueError(
-            msg
-        )
+        raise ValueError(msg)
 
     resultado['UMBRAL_CV_UNIDADES_Q4'] = float(umbral_cv_q4)
-    resultado['FLAG_CV_UNIDADES_Q4'] = cv_unidades.ge(
-        umbral_cv_q4
-    ).fillna(False).astype(bool)  # noqa: FBT003
+    resultado['FLAG_CV_UNIDADES_Q4'] = (
+        cv_unidades.ge(umbral_cv_q4)
+        .fillna(False)  # noqa: FBT003
+        .astype(bool)
+    )
 
     estado = resultado['ESTADO'].map(normalizar_etiqueta)
     tipologia = resultado['TIPOLOGIA_DEMANDA'].map(normalizar_etiqueta)
 
-    es_producto_nuevo = resultado['ES_PRODUCTO_NUEVO'].fillna(
-        False  # noqa: FBT003
-    ).astype(bool)
+    es_producto_nuevo = (
+        resultado['ES_PRODUCTO_NUEVO']
+        .fillna(False)  # noqa: FBT003
+        .astype(bool)
+    )
 
     dias_insuficientes = dias_con_venta.le(minimo_dias_con_venta)
     cv_unidades_q4 = resultado['FLAG_CV_UNIDADES_Q4']
@@ -2935,17 +2932,20 @@ def calcular_confiabilidad_datos(
     motivos = pd.Series('', index=resultado.index, dtype='string')
 
     def agregar_motivo(condicion: pd.Series, motivo: str) -> None:
-        """Incorpora un motivo a las filas que cumplen una condición."""
+        """Incorpora un motivo sin duplicarlo dentro de cada fila."""
         nonlocal motivos
 
-        motivos = motivos.mask(
-            condicion & motivos.eq(''),
+        motivos_actuales = motivos.copy()
+        motivos_actualizados = motivos_actuales.mask(
+            motivos_actuales.eq(''),
             motivo,
         )
-        motivos = motivos.mask(
-            condicion & motivos.ne(''),
-            motivos + '; ' + motivo,
+        motivos_actualizados = motivos_actualizados.mask(
+            motivos_actuales.ne(''),
+            motivos_actuales + '; ' + motivo,
         )
+
+        motivos = motivos.mask(condicion, motivos_actualizados)
 
     agregar_motivo(
         dias_insuficientes,
@@ -2979,6 +2979,24 @@ def calcular_confiabilidad_datos(
     )
 
     return resultado
+
+
+def consolidar_motivos_confiabilidad(motivos: list[str]) -> str:
+    """Elimina motivos repetidos y conserva su orden de aparición.
+
+    Parameters
+    ----------
+    motivos : list[str]
+        Motivos asociados a las reglas activadas para un producto.
+
+    Returns
+    -------
+    str
+        Motivos únicos separados por punto y coma.
+    """
+    motivos_unicos = list(dict.fromkeys(motivos))
+
+    return '; '.join(motivos_unicos)
 
 
 def listar_archivos_sharepoint(outputs_dir: str, sp_cred: dict) -> list:
