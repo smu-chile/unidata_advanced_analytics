@@ -3983,8 +3983,6 @@ COLUMNAS_EXCEL_FINAL = [
 
 
 
-
-
 # -------------------------------------------------------------------------
 #  Config
 # -------------------------------------------------------------------------
@@ -4069,6 +4067,7 @@ def main():
     args = vars(parser.parse_args())
     proyecto: str = args['project_id']  # noqa: F841
     store_banner:str = args['store_banner']  # noqa: F841
+    execution_date: str = args['execution_date']
 
     file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
     file_site += 'Pricing/Forecast Promociones'
@@ -4185,6 +4184,59 @@ def main():
        outputs_dir=outputs_dir,  # noqa: ERA001
        sp_cred=sp_cred  # noqa: ERA001
     )  # noqa: ERA001
+
+
+    excel_final.insert(
+        loc=0,
+        column='execution_date',
+        value=execution_date
+    )
+
+    columnas_metricas = [
+        'R²',
+        'Elasticidad',
+        'Baseline_UV',
+        'UV Incremental Real',
+        'UV Incremental Proy',
+        'UV Real',
+        'UV Proy',
+        'Baseline Venta',
+        'Venta Incremental Real',
+        'Venta Incremental Proy',
+        'Venta Real',
+        'Venta Proy',
+    ]
+
+    excel_final[columnas_metricas] = (
+        excel_final[columnas_metricas]
+        .replace('-', np.nan)
+        .apply(pd.to_numeric, errors='coerce')
+    )
+
+    # Definir el WHERE
+    where_clause = f"execution_date = '{execution_date}'"
+
+    # Parametros
+    # Parche 3: Tabla ajustada a sector oriente
+    esquema = 'PRECIO_PROMOCIONES'
+    tabla = 'FORECAST_PROYECCION_VENTAS'
+
+    print('Subiendo a GCP: ')
+    # Se elimina los datos para cierto store_banner y rango (si existen)
+    deleteFromTable(table_ref=f'{proyecto}.{esquema}.{tabla}',
+                    where_clause=where_clause,
+                    gbq_client=gbq_client)
+
+    uploadFrame(
+        excel_final,
+        table_ddl_json_path=os.path.join('gbq_objects',
+                                         'C1_ingest_product_forecast.json'),
+        project=proyecto,
+        gbq_client=gbq_client,
+        if_exists='append'
+    )
+
+    logging.info('Se sube la tabla a GCP')
 
 
 
