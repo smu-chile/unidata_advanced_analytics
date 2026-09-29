@@ -597,6 +597,17 @@ segmentos_config = {
             'TIPOLOGIA_DEMANDA',
         ],
     },
+    'CONFIABILIDAD DATOS' : {
+        'color': 'D9EAF7',
+        'color_header': '1F4E78',
+        'columnas': [
+            'UMBRAL_CV_UNIDADES_Q4',
+            'FLAG_CV_UNIDADES_Q4',
+            'SCORE_CONFIABILIDAD_DATOS',
+            'CONFIABILIDAD_DATOS',
+            'MOTIVO_CONFIABILIDAD_DATOS',
+        ],
+    },
 }
 
 
