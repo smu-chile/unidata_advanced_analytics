@@ -1,0 +1,260 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "FORECAST_PROYECCION_VENTAS",
+
+    "columns": [
+        {
+            "name": "EXECUTION_DATE",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha ejecución proyección"
+        },
+        {
+            "name": "n_promocion",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "id numérico de la promoción"
+        },
+        {
+            "name": "Nombre promocion",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre de la promoción"
+        },
+        {
+            "name": "Categoria",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoría del producto"
+        },
+        {
+            "name": "Subcategoría",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Subcategoría del producto"
+        },
+        {
+            "name": "Descripcion",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Descripción del producto"
+        },
+        {
+            "name": "Material",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Material"
+        },
+        {
+            "name": "UMV",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "UMV"
+        },
+        {
+            "name": "EAN",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "EAN del producto"
+        },
+        {
+            "name": "R2",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Métrica R2 del modelo"
+        },
+        {
+            "name": "Elasticidad",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Coeficiente de elasticidad entregado por el modelo"
+        },
+        {
+            "name": "Estable",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Indicador de estabilidad de la proyección (legacy)"
+        },
+        {
+            "name": "TIPOLOGIA_DEMANDA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Segmentación según ADI/CV2"
+        },
+        {
+            "name": "INICIO_PROYECCION",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha de inicio de la promoción a proyectar"
+        },
+        {
+            "name": "FIN_PROYECCION",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha de término de la promoción a proyectar"
+        },
+        {
+            "name": "PRECIO_MODAL",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Precio Modal del producto durante la promoción"
+        },
+        {
+            "name": "PRECIO_PROMOCIONAL",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio promocional del producto durante la proyección"
+        },
+        {
+            "name": "BASELINE_UV",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Baseline venta (unidades x precio modal)"
+        },
+        {
+            "name": "UV_INCREMENTAL_REAL",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Incremental unidades"
+        },
+        {
+            "name": "UV_INCREMENTAL_PROYECCION",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Incremental en unidades proyectado"
+        },
+        {
+            "name": "UV_REAL",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Unidades observadas"
+        },
+        {
+            "name": "UV_PROYECCION",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Unidades proyectadas"
+        },
+        {
+            "name": "BASELINE_VENTA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Baseline venta (unidades x precio)"
+        },
+        {
+            "name": "VENTA_INCREMENTAL_REAL",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Incremental en venta observado"
+        },
+        {
+            "name": "VENTA_INCREMENTAL_PROYECTADA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Incremental en venta proyectado"
+        },
+        {
+            "name": "VENTA_REAL",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Venta observada"
+        },
+        {
+            "name": "VENTA_PROYECTADA",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Venta proyectada (unidades x precio)"
+        },
+        {
+            "name": "COMENTARIO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Indicador estado de la proyección"
+        },
+        {
+            "name": "WMAPE_TRAIN",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Métrica WMAPE sobre el conjunto de entrenamiento (80%)"
+        },
+        {
+            "name": "BIAS_TRAIN",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Métrica BIAS sobre el conjunto de entrenamiento (80%)"
+        },
+        {
+            "name": "MAE_TRAIN",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Métrica MAE sobre el conjunto de entrenamiento (80%)"
+        },
+        {
+            "name": "COVERAGE_TRAIN",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Métrica COVERAGE sobre el conjunto de entrenamiento (80%)"
+        },
+        {
+            "name": "WMAPE_TEST",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Métrica WMAPE sobre el conjunto de testeo (20%)"
+        },
+        {
+            "name": "BIAS_TEST",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Métrica BIAS sobre el conjunto de testeo (20%)"
+        },
+        {
+            "name": "MAE_TEST",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Métrica MAE sobre el conjunto de testeo (20%)"
+        },
+        {
+            "name": "COVERAGE_TEST",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Métrica COVERAGE sobre el conjunto de testeo (20%)"
+        },
+        {
+            "name": "WIN_RATE_TEST",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Winrate test"
+        },
+        {
+            "name": "INTENSIDAD_PROMOCIONAL",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Intensidad promocional del producto"
+        },
+        {
+            "name": "SEGMENTO_ABCD",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Segmentación según participación en venta"
+        },
+        {
+            "name": "ADI",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Métrica ADI relacionada a la cobertura de días con venta"
+        },
+        {
+            "name": "CV2",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Métrica CV2 relacionada a la dispersión en el volumen de venta"
+        },
+        {
+            "name": "DIAS_CON_VENTA",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Cantidad de días con venta del producto"
+        }
+    ],
+    "clustering_fields": ["EXECUTION_DATE", "EAN", "Categoria", "n_promocion"]
+}
