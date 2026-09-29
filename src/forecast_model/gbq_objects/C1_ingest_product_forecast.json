@@ -2,6 +2,7 @@
     "schema": "PRECIO_PROMOCIONES",
     "table": "FORECAST_PROYECCION_VENTAS",
 
+    
     "columns": [
         {
             "name": "EXECUTION_DATE",
