@@ -85,7 +85,7 @@ with DAG(**dag_args) as dag:
                 python_script_path=(
                     f'{PROJECT_NAME}/'
                     'scripts/'
-                    'infaltables_ecommerce.py'
+                    'infaltables_ecommerce_store_id.py'
                 ),
                 dag_env_config=dag_env_config,
                 docker_image_name=f'{PROJECT_NAME}',
