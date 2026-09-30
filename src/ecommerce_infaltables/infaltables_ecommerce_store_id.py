@@ -81,7 +81,7 @@ with DAG(**dag_args) as dag:
 
         computing_infaltables_ecommerce = [
             ExtendedDataprocCreateBatchOperator(
-                task_id = f"computing_infaltables_ecommerce_{store_banner.replace(' ', '_').lower()}",  # noqa: E501
+                task_id = f"computing_infaltables_ecommerce_{store_banner.replace(' ', '_').lower()}_{sid}",  # noqa: E501
                 python_script_path=(
                     f'{PROJECT_NAME}/'
                     'scripts/'
