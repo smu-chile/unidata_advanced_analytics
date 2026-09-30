@@ -36,7 +36,7 @@ with open(
 
 PROJECT_NAME = 'ecommerce_infaltables'
 dag_args = {
-    'dag_id': 'ecommerce_infaltables',
+    'dag_id': 'ecommerce_infaltables_store_id',
     'schedule_interval': None,
     'dagrun_timeout': None,
     'catchup': False,
