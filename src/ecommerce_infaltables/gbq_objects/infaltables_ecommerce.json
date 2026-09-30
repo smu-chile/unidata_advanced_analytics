@@ -1,6 +1,6 @@
 {
-    "schema": "ECOMMERCE",
-    "table": "INFALTABLES",
+    "schema": "GESTION_CATEGORIAS",
+    "table": "ECOMMERCE_INFALTABLES",
 
     "columns": [
         {

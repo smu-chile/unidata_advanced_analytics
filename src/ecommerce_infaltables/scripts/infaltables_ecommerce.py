@@ -130,7 +130,7 @@ SQL_QUERIES = QueryDict({
     JOIN `${gcp_project_cda}.DS_CDA_VW_SMU.DW_VW_DIM_STORE_HIERARCHY` B
     ON (
         (A.STORE_KEY = B.STORE_KEY)
-        AND (B.ORG_IP_ID IN ('01', '04', '02', '08', '06', '09'))
+        AND (B.ORG_IP_ID IN ('01', '06'))
     )
 
     JOIN (
