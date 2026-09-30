@@ -35,6 +35,8 @@ with open(
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
 PROJECT_NAME = 'ecommerce_infaltables'
+store_banner_list = ['Unimarc']
+
 dag_args = {
     'dag_id': 'ecommerce_infaltables_store_id',
     'schedule_interval': None,
@@ -65,44 +67,41 @@ with DAG(**dag_args) as dag:
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', dag.timezone.convert(data_interval_end).strftime('%Y-%m-%d')) }}"  # noqa: E501
 
     store_id_list = json.loads(
-            Variable.get('ecommerce_infaltables', default_var='[]')  # noqa: AIR311
+        Variable.get('ecommerce_infaltables_store_id', default_var='[]')  # noqa: AIR311
     )
 
     previous_group = None
 
-    for store_id in store_id_list:
-        sid = str(store_id)
+    for store_banner in store_banner_list:
+        for store_id in store_id_list:
+            sid = str(store_id)
 
-        common: dict[str, Any] = dict(  # noqa: C408
-                dag_env_config=dag_env_config,
-                docker_image_name=f'{PROJECT_NAME}',
-                include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
-        )
-
-        computing_infaltables_ecommerce = [
-            ExtendedDataprocCreateBatchOperator(
-                task_id = f"computing_infaltables_ecommerce_{store_banner.replace(' ', '_').lower()}_{sid}",  # noqa: E501
-                python_script_path=(
-                    f'{PROJECT_NAME}/'
-                    'scripts/'
-                    'infaltables_ecommerce_store_id.py'
-                ),
-                dag_env_config=dag_env_config,
-                docker_image_name=f'{PROJECT_NAME}',
-                pyspark_batch_args=[
-                    '--project_id', dag_env_config['project_id'],
-                    '--execution_date', EXECUTION_DATE,
-                    '--store_banner', store_banner,
-                    '--n_substitutes', "{{ dag_run.conf.get('n_substitutes', 5) }}",
-                    '--store_id', json.dumps([sid]),
-                ],
-                include_paths=[
-                    'common/',
-                    f'{PROJECT_NAME}/gbq_objects/'
-                ],
+            common: dict[str, Any] = dict(  # noqa: C408
+                    dag_env_config=dag_env_config,
+                    docker_image_name=f'{PROJECT_NAME}',
+                    include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
             )
 
-            for store_banner in [
-                'Unimarc'
+            computing_infaltables_ecommerce = [
+                ExtendedDataprocCreateBatchOperator(
+                    task_id = f"computing_infaltables_ecommerce_{store_banner.replace(' ', '_').lower()}_{sid}",  # noqa: E501
+                    python_script_path=(
+                        f'{PROJECT_NAME}/'
+                        'scripts/'
+                        'infaltables_ecommerce_store_id.py'
+                    ),
+                    dag_env_config=dag_env_config,
+                    docker_image_name=f'{PROJECT_NAME}',
+                    pyspark_batch_args=[
+                        '--project_id', dag_env_config['project_id'],
+                        '--execution_date', EXECUTION_DATE,
+                        '--store_banner', store_banner,
+                        '--n_substitutes', "{{ dag_run.conf.get('n_substitutes', 5) }}",
+                        '--store_id', json.dumps([sid]),
+                    ],
+                    include_paths=[
+                        'common/',
+                        f'{PROJECT_NAME}/gbq_objects/'
+                    ],
+                )
             ]
-    ]
