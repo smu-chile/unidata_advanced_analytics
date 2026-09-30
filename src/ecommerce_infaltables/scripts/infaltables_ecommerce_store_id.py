@@ -4,6 +4,7 @@ from __future__ import annotations
 # Pip
 import os
 import re  # noqa: F401
+import json
 import logging
 import argparse
 import posixpath  # noqa: F401
@@ -52,6 +53,11 @@ parser.add_argument(
 parser.add_argument(
     '--n_substitutes', type=int,
     help='number of substitutes to consider'
+)
+parser.add_argument(
+    '--store_id',
+    type=str,
+    help='Store id en formato JSON'
 )
 
 # -------------------------------------------------------------------------
@@ -195,7 +201,8 @@ SQL_QUERIES = QueryDict({
             SUM(VALUE) AS TOTAL_VENTA,
             SUM(VALUE)-SUM(TAX_AMOUNT) AS TOTAL_VENTA_NETA,
             COUNT(DISTINCT CASE WHEN CUSTOMER_KEY IS NOT NULL THEN CUSTOMER_KEY END) AS TOTAL_CLIENTES
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}`
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_STORE_ID_${upper_store_banner}`
+        WHERE STORE_ID = '${store_id}'
     ),
 
     penetracion_producto AS (
@@ -211,8 +218,9 @@ SQL_QUERIES = QueryDict({
             MIN(r.TRANSACTION_DATE) AS FECHA_PRIMERA_VENTA,
             COUNT(DISTINCT DATE_TRUNC(r.TRANSACTION_DATE, MONTH)) AS MESES_CON_VENTA,
             DATE_DIFF('${execution_date}', MIN(r.TRANSACTION_DATE), DAY) AS DIAS_DESDE_PRIMERA_VENTA
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}` r
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_STORE_ID_${upper_store_banner}` r
         WHERE r.QUANTITY > 0
+        AND r.STORE_ID = '${store_id}'
         GROUP BY r.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC
     ),
 
@@ -222,9 +230,10 @@ SQL_QUERIES = QueryDict({
             COUNT(DISTINCT r.MARKET_BASKET_KEY) AS CANASTAS_PRODUCTO_CS,
             COUNT(DISTINCT CASE WHEN r.CUSTOMER_KEY IS NOT NULL THEN r.CUSTOMER_KEY END) AS CLIENTES_PRODUCTO_CS,
             SUM(VALUE) AS VENTA_PRODUCTO_CS
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}` r
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_STORE_ID_${upper_store_banner}` r
         JOIN clientes_sensibles s ON s.customer_key = r.customer_key
         WHERE r.QUANTITY > 0
+        AND r.STORE_ID = '${store_id}'
         GROUP BY r.SKU_PRODUCT, CAT_DSC, LIN_DESC, SEC_DSC, NEG_DSC
     ),
 
@@ -245,9 +254,10 @@ SQL_QUERIES = QueryDict({
             CAT_DSC,
             SUM(VALUE) AS TOTAL_VENTA_CATEGORIA,
             SUM(CASE WHEN S.CUSTOMER_KEY IS NOT NULL THEN VALUE END) AS TOTAL_VENTA_CATEGORIA_CS
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}` r
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_STORE_ID_${upper_store_banner}` r
         LEFT JOIN clientes_sensibles s ON s.customer_key = r.customer_key
         WHERE r.QUANTITY > 0
+        AND r.STORE_ID = '${store_id}'
         GROUP BY CAT_DSC
     ),
 
@@ -256,8 +266,10 @@ SQL_QUERIES = QueryDict({
             CUSTOMER_KEY, SKU_PRODUCT,
             DATE_TRUNC(TRANSACTION_DATE, MONTH) AS MES,
             COUNT(DISTINCT MARKET_BASKET_KEY) AS COMPRAS_EN_MES
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}`
-        WHERE QUANTITY > 0 AND CUSTOMER_KEY IS NOT NULL
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_STORE_ID_${upper_store_banner}`
+        WHERE QUANTITY > 0
+        AND CUSTOMER_KEY IS NOT NULL
+        AND STORE_ID = '${store_id}'
         GROUP BY CUSTOMER_KEY, SKU_PRODUCT, MES
     ),
 
@@ -275,8 +287,10 @@ SQL_QUERIES = QueryDict({
             CUSTOMER_KEY, SKU_PRODUCT,
             DATE_TRUNC(TRANSACTION_DATE, QUARTER) AS TRIMESTRE,
             COUNT(DISTINCT MARKET_BASKET_KEY) AS COMPRAS_EN_TRIMESTRE
-        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_${upper_store_banner}`
-        WHERE QUANTITY > 0 AND CUSTOMER_KEY IS NOT NULL
+        FROM `${gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_STORE_ID_${upper_store_banner}`
+        WHERE QUANTITY > 0
+        AND CUSTOMER_KEY IS NOT NULL
+        AND STORE_ID = '${store_id}'
         GROUP BY CUSTOMER_KEY, SKU_PRODUCT, TRIMESTRE
     ),
 
@@ -485,7 +499,7 @@ SQL_QUERIES = QueryDict({
 
     penetracion AS (
     SELECT *
-    FROM `${gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_ECOMMERCE_${upper_store_banner}`
+    FROM `${gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_ECOMMERCE_STORE_ID_${upper_store_banner}`
     ),
 
     -- 6. Importancia Nielsen ÚNICA por PRODUCT_ID
@@ -1255,13 +1269,14 @@ class IndiceInfaltablesCalculator_v9:  # noqa: N801
 # -------------------------------------------------------------------------
 
 def main() -> None:
-    usuario = 'infaltables'
+    usuario = 'infaltables_ecommerce_store_id'
     # parse input variables
     args = vars(parser.parse_args())
     gcp_project: str = args['project_id']
     execution_date: str = args['execution_date']
     store_banner: str = args['store_banner']
     n_substitutes: int = args['n_substitutes']
+    store_id_list = sorted(json.loads(args['store_id']), key=int)
 
     if store_banner == 'Super 10':
         upper_store_banner = store_banner.replace(' ', '_').upper()
@@ -1270,10 +1285,13 @@ def main() -> None:
 
     execution_date = pd.to_datetime(execution_date[:8] + '01').strftime('%Y-%m-%d')
 
+    store_id_str = ','.join(store_id_list)
+
     logging.info(f'execution_date: {execution_date}')
     logging.info(f'store_banner: {store_banner}')
     logging.info(f'upper_store_banner: {upper_store_banner}')
     logging.info(f'n_substitutes: {n_substitutes}')
+    logging.info(f'store_id_str: {store_id_str}')
 
     # Set gbq client for all subsequent queries
     gbq_client = Client()
@@ -1285,7 +1303,7 @@ def main() -> None:
             execution_date = execution_date,
             store_banner = store_banner
         ),
-        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_{upper_store_banner}',
+        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_RAW_SALES_ECOMMERCE_STORE_ID_{upper_store_banner}',
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_TRUNCATE',
         use_legacy_sql=False,
@@ -1299,9 +1317,10 @@ def main() -> None:
             gcp_project_cda = 'cl-cda-prod',
             execution_date = execution_date,
             store_banner = store_banner,
-            upper_store_banner = upper_store_banner
+            upper_store_banner = upper_store_banner,
+            store_id = store_id_str
         ),
-        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_ECOMMERCE_{upper_store_banner}',
+        table_ref=f'{gcp_project}.TMP.TMP_INFALTABLES_PENETRACION_SP_ECOMMERCE_STORE_ID_{upper_store_banner}',
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_TRUNCATE',
         use_legacy_sql=False,
@@ -1810,10 +1829,11 @@ def main() -> None:
     df_ranking['PVP'] = df_ranking['PVP'].round(0).astype('int64')
 
     df_ranking['STORE_BANNER'] = store_banner
+    df_ranking['STORE_ID'] = store_id_str
     df_ranking['FECHA_CARGA'] = execution_date
 
     deleteFromTable(
-        table_ref=f'{gcp_project}.GESTION_CATEGORIAS.ECOMMERCE_INFALTABLES',
+        table_ref=f'{gcp_project}.GESTION_CATEGORIAS.ECOMMERCE_INFALTABLES_STORE_ID',
         where_clause=f"""FECHA_CARGA = '{execution_date}'
             AND store_banner = '{store_banner}'""",
         gbq_client=gbq_client,
@@ -1821,7 +1841,7 @@ def main() -> None:
 
     uploadFrame(
         df_ranking,
-        table_ddl_json_path=os.path.join('gbq_objects','infaltables_ecommerce.json'),
+        table_ddl_json_path=os.path.join('gbq_objects','infaltables_ecommerce_store_id.json'),
         project = gcp_project,
         gbq_client = gbq_client,
         if_exists = 'append'
