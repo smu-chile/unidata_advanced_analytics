@@ -580,7 +580,19 @@ SQL_QUERIES = QueryDict({
 
     left join subcat_difficulty sc
     on sc.subcategoria = pr.SUB_CATEGORY_DESCRIPTION
-    """  # noqa: E501
+    """,  # noqa: E501
+
+    'stores':
+    """
+    SELECT
+        LTRIM(STORE_ID,'0') AS STORE_ID,
+        STORE,
+        CITY_ID AS CIUDAD,
+        COUNTY_DESC AS COMUNA,
+        STE_ID AS REGION
+    FROM `${gcp_project}.CDA_VISTAS.VW_DIM_STORE_HIERARCHY`
+    WHERE ORG_IP = '${store_banner}'
+    """
 })
 
 
@@ -1340,6 +1352,15 @@ def main() -> None:
     gbq_client = gbq_client
     )
 
+    logging.info('Ejecucion Query stores')
+    stores = readBigQuery(SQL_QUERIES['stores'].substitute(
+        gcp_project = gcp_project,
+        store_banner = store_banner
+        ),
+    user = usuario,
+    gbq_client = gbq_client
+    )
+
     logging.info(f'Filas obtenidas: {len(data_infaltables):,}')
     logging.info(f'df: {len(data_infaltables):,} filas, {data_infaltables.shape[1]} columnas\n')
 
@@ -1785,6 +1806,30 @@ def main() -> None:
 
     df_ranking = resultados_rankings['1. Ranking General']
 
+
+    df_ranking['indice_infaltable'] = df_ranking['indice_infaltable'].round(2)
+    df_ranking['penetracion_norm'] = df_ranking['penetracion_norm'].round(2)
+    df_ranking['peso_categoria_norm'] = df_ranking['peso_categoria_norm'].round(2)
+    df_ranking['nielsen_norm'] = df_ranking['nielsen_norm'].round(2)
+    df_ranking['sustitucion_norm'] = df_ranking['sustitucion_norm'].round(2)
+    df_ranking['aporte_penetracion'] = df_ranking['aporte_penetracion'].round(2)
+    df_ranking['aporte_peso_categoria'] = df_ranking['aporte_peso_categoria'].round(2)
+    df_ranking['aporte_nielsen'] = df_ranking['aporte_nielsen'].round(2)
+    df_ranking['aporte_sustitucion'] = df_ranking['aporte_sustitucion'].round(2)
+    df_ranking['VENTA_NETA_PRODUCTO'] = df_ranking['VENTA_NETA_PRODUCTO'].astype('int64')
+    df_ranking['pct_venta_neta_formato'] = (df_ranking['pct_venta_neta_formato']*100).round(2)
+    df_ranking['PVP'] = df_ranking['PVP'].round(0).astype('int64')
+
+    df_ranking['STORE_BANNER'] = store_banner
+    df_ranking['STORE_ID'] = store_id_str
+    df_ranking['FECHA_CARGA'] = execution_date
+
+    df_ranking = df_ranking.merge(
+        stores,
+        on = ['STORE_ID'],
+        how = 'inner'
+    )
+
     df_ranking = df_ranking[[
         'PRODUCT_ID',
         'PRODUCT_DESCRIPTION',
@@ -1812,25 +1857,15 @@ def main() -> None:
         'MESES_CON_VENTA',
         'DIAS_DESDE_PRIMERA_VENTA',
         'ES_PRODUCTO_NUEVO_90D',
-        'SEGMENTO_MADUREZ_SKU'
+        'SEGMENTO_MADUREZ_SKU',
+        'STORE_BANNER',
+        'STORE_ID',
+        'STORE',
+        'REGION',
+        'CIUDAD',
+        'COMUNA',
+        'FECHA_CARGA'
     ]]
-
-    df_ranking['indice_infaltable'] = df_ranking['indice_infaltable'].round(2)
-    df_ranking['penetracion_norm'] = df_ranking['penetracion_norm'].round(2)
-    df_ranking['peso_categoria_norm'] = df_ranking['peso_categoria_norm'].round(2)
-    df_ranking['nielsen_norm'] = df_ranking['nielsen_norm'].round(2)
-    df_ranking['sustitucion_norm'] = df_ranking['sustitucion_norm'].round(2)
-    df_ranking['aporte_penetracion'] = df_ranking['aporte_penetracion'].round(2)
-    df_ranking['aporte_peso_categoria'] = df_ranking['aporte_peso_categoria'].round(2)
-    df_ranking['aporte_nielsen'] = df_ranking['aporte_nielsen'].round(2)
-    df_ranking['aporte_sustitucion'] = df_ranking['aporte_sustitucion'].round(2)
-    df_ranking['VENTA_NETA_PRODUCTO'] = df_ranking['VENTA_NETA_PRODUCTO'].astype('int64')
-    df_ranking['pct_venta_neta_formato'] = (df_ranking['pct_venta_neta_formato']*100).round(2)
-    df_ranking['PVP'] = df_ranking['PVP'].round(0).astype('int64')
-
-    df_ranking['STORE_BANNER'] = store_banner
-    df_ranking['STORE_ID'] = store_id_str
-    df_ranking['FECHA_CARGA'] = execution_date
 
     deleteFromTable(
         table_ref=f'{gcp_project}.GESTION_CATEGORIAS.ECOMMERCE_INFALTABLES_STORE_ID',
