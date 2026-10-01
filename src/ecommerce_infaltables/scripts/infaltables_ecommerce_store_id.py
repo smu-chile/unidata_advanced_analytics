@@ -466,7 +466,8 @@ SQL_QUERIES = QueryDict({
     'stores':
     """
     SELECT
-        LTRIM(STORE_ID,'0') AS STORE_ID,
+        LTRIM(STORE_ID,'0') AS STORE_ID_JOIN,
+        STORE_ID,
         STORE,
         CITY_ID AS CIUDAD,
         COUNTY_DESC AS COMUNA,
@@ -1688,12 +1689,12 @@ def main() -> None:
     df_ranking['PVP'] = df_ranking['PVP'].round(0).astype('int64')
 
     df_ranking['STORE_BANNER'] = store_banner
-    df_ranking['STORE_ID'] = store_id_str
+    df_ranking['STORE_ID_JOIN'] = store_id_str
     df_ranking['FECHA_CARGA'] = execution_date
 
     df_ranking = df_ranking.merge(
         stores,
-        on = ['STORE_ID'],
+        on = ['STORE_ID_JOIN'],
         how = 'inner'
     )
 
