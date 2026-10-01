@@ -1835,7 +1835,8 @@ def main() -> None:
     deleteFromTable(
         table_ref=f'{gcp_project}.GESTION_CATEGORIAS.ECOMMERCE_INFALTABLES_STORE_ID',
         where_clause=f"""FECHA_CARGA = '{execution_date}'
-            AND store_banner = '{store_banner}'""",
+            AND STORE_BANNER = '{store_banner}'
+            AND STORE_ID = '{store_id_str}'""",
         gbq_client=gbq_client,
     )
 

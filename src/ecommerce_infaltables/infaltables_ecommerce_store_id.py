@@ -105,3 +105,8 @@ with DAG(**dag_args) as dag:
                     ],
                 )
             ]
+
+            if previous_group is not None:
+                previous_group >> computing_infaltables_ecommerce
+
+            previous_group = computing_infaltables_ecommerce
