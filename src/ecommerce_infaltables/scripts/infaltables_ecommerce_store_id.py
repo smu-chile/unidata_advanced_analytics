@@ -1232,524 +1232,528 @@ def main() -> None:
     logging.info(f'Filas obtenidas: {len(data_infaltables):,}')
     logging.info(f'df: {len(data_infaltables):,} filas, {data_infaltables.shape[1]} columnas\n')
 
-    # Columnas mínimas que requiere v9
-    requeridas_v9 = [
-        'PRODUCT_ID', 'PRODUCT_DESCRIPTION', 'CATEGORY_DESCRIPTION',
-        'SUB_CATEGORY_DESCRIPTION', 'NEG_DSC',
-        'PENETRACION_CANASTAS_PCT', 'PENETRACION_CANASTAS_PCT_CS',
-        'PENETRACION_CLIENTES_PCT_CS', # usada por la compuerta de demanda
-        'VENTA_PRODUCTO', 'TOTAL_VENTA_CATEGORIA', 'TOTAL_VENTA',
-        'indice_importancia_nielsen',
-        'score_facilidad_sustitucion_directa',
-        'FREC_RECOMPRA_TRIMESTRAL_PROM', # diagnóstico, sin peso en v9
-    ]
-    faltan = [c for c in requeridas_v9 if c not in data_infaltables.columns]
-    if faltan:
-        logging.info(f'⚠️  Columnas faltantes en df: {faltan}')
-    else:
-        logging.info('✓ df tiene todas las columnas requeridas')
-
-    calc = IndiceInfaltablesCalculator_v9(data_infaltables)
-    resultados = calc.calcular(estrategia_nielsen='exclude')
-    calc.validaciones()
-
-    # Pesos y etiquetas alineados a las columnas normalizadas
-    # que produce v9.
-    PESOS = {  # noqa: N806
-        'penetracion_norm':            0.65,
-        'penetracion_sensibles_norm':  0.0,
-        'peso_categoria_norm':         0.20,
-        'sustitucion_norm':            0.05,
-        'nielsen_norm':                0.10,
-    }
-
-    ETIQUETAS = {  # noqa: N806
-        'penetracion_norm':           'Penetración',
-        'penetracion_sensibles_norm': 'Penetración Sensibles',
-        'peso_categoria_norm':        'Peso Categoría',
-        'sustitucion_norm':           'Sustitución',
-        'nielsen_norm':               'Nielsen',
-    }
-
-    # Métricas con peso 0%: se calculan y exportan en el resultado pero no
-    # aportan al índice, por eso quedan fuera de estos rankings.
-    PESOS_CERO = ['penetracion_clientes_norm', 'penetracion_canastas_norm']  # noqa: N806
-
-    # Única métrica redistribuible: si falta, su peso se reparte
-    # entre las demás.
-    METRICA_REDISTRIBUIBLE = 'nielsen_norm'  # noqa: N806
-
-    # Columnas de venta y ciclo de vida que vienen del df de origen.
-    # No pesan en el índice: se muestran como contexto.
-    #
-    # El Excel trabaja con VENTA NETA. Numerador y denominador tienen que
-    # ser el mismo concepto: mezclar venta neta con total bruto da
-    # un porcentaje inflado por la diferencia de IVA y descuentos, no por
-    # participación real. Si alguna vez hay que volver a bruta, se cambian
-    # estas dos constantes y nada más.
-    COL_VENTA         = 'VENTA_NETA_PRODUCTO'  # noqa: N806
-    COL_TOTAL_FORMATO = 'TOTAL_VENTA_NETA'  # noqa: N806
-    COL_PVP           = 'PVP'                      # precio de venta promedio  # noqa: N806
-    COL_PCT_VENTA     = 'pct_venta_neta_formato'   # calculada acá, no viene del df  # noqa: N806
-
-    COLS_CICLO_VIDA = [  # noqa: N806
-        'FECHA_PRIMERA_VENTA',
-        'MESES_CON_VENTA',
-        'DIAS_DESDE_PRIMERA_VENTA',
-        'ES_PRODUCTO_NUEVO_90D',
-        'SEGMENTO_MADUREZ_SKU',
-    ]
-
-    # =====================================================================
-    # CÁLCULO DE APORTES
-    # =====================================================================
-
-    def calcular_aportes(df: pd.DataFrame) -> pd.DataFrame:
-        """Descompone el índice en el aporte en puntos de cada métrica.
-
-            peso_total = 1,00 si el SKU tiene Nielsen, 0,90 si no
-            aporte_m   = norm_m x peso_m / peso_total x 100
-
-        Los aportes suman el valor del índice.
-        Eso permite leer una fila y entender exactamente de
-        dónde salió el puntaje.
-
-        Nota sobre nulos: se rellenan con 0.
-        Para Nielsen la ausencia es neutra porque la métrica sale
-        del numerador y del denominador a la vez.
-        Para sustitución NO es neutra: el cero entra con peso completo.
-        """
-        d = df.copy()
-
-        faltan = [c for c in PESOS if c not in d.columns]
+    if len(data_infaltables) > 0:
+        # Columnas mínimas que requiere v9
+        requeridas_v9 = [
+            'PRODUCT_ID', 'PRODUCT_DESCRIPTION', 'CATEGORY_DESCRIPTION',
+            'SUB_CATEGORY_DESCRIPTION', 'NEG_DSC',
+            'PENETRACION_CANASTAS_PCT', 'PENETRACION_CANASTAS_PCT_CS',
+            'PENETRACION_CLIENTES_PCT_CS', # usada por la compuerta de demanda
+            'VENTA_PRODUCTO', 'TOTAL_VENTA_CATEGORIA', 'TOTAL_VENTA',
+            'indice_importancia_nielsen',
+            'score_facilidad_sustitucion_directa',
+            'FREC_RECOMPRA_TRIMESTRAL_PROM', # diagnóstico, sin peso en v9
+        ]
+        faltan = [c for c in requeridas_v9 if c not in data_infaltables.columns]
         if faltan:
-            msg = (
-                f"Faltan columnas normalizadas en 'resultados': {faltan}. "
-            )
-            raise KeyError(
-                msg
-            )
-
-        tiene_nielsen = d[METRICA_REDISTRIBUIBLE].notna()
-        peso_redistribuible = PESOS[METRICA_REDISTRIBUIBLE]
-        peso_total = tiene_nielsen.map({True: 1.0, False: 1.0 - peso_redistribuible})
-
-        cols_aporte = []
-        for col, peso in PESOS.items():
-            nombre = f"aporte_{col.replace('_norm', '')}"
-            aporte = d[col].fillna(0.0) * peso / peso_total * 100
-            if col == METRICA_REDISTRIBUIBLE:
-                aporte = aporte.where(tiene_nielsen, 0.0)
-            d[nombre] = aporte
-            cols_aporte.append(nombre)
-
-        d['peso_total_aplicado'] = peso_total
-        d['suma_aportes'] = d[cols_aporte].sum(axis=1)
-
-        return d
-
-    def verificar_aportes(df: pd.DataFrame, tolerancia: float = 0.01) -> None:
-        """Contrasta la suma de aportes contra el índice almacenado.
-
-        Si no calzan, los pesos de PESOS no son los que se usaron al
-        calcular el índice. Es la comprobación más rápida de que este
-        script y el cálculo están sincronizados.
-        """
-        if 'indice_infaltable' not in df.columns:
-            print("  ⚠ No existe 'indice_infaltable': no se puede verificar")
-            return
-
-        dif = (df['suma_aportes'] - df['indice_infaltable']).abs()
-        dif_max = dif.max()
-        n_fuera = int((dif > tolerancia).sum())
-
-        if n_fuera == 0:
-            print(f'  ✓ Aportes verificados: coinciden con el índice '
-                f'(desviación máx. {dif_max:.6f})')
+            logging.info(f'⚠️  Columnas faltantes en df: {faltan}')
         else:
-            print(f'  ⚠ {n_fuera:,} SKUs con desviación sobre {tolerancia}. '
-                f'Máxima: {dif_max:.4f}')
-            print('    Revisar que PESOS coincida con el bloque W_* de calcular()')
+            logging.info('✓ df tiene todas las columnas requeridas')
 
-    # =====================================================================
-    # COLUMNAS COMERCIALES Y DE CICLO DE VIDA
-    # =====================================================================
+        calc = IndiceInfaltablesCalculator_v9(data_infaltables)
+        resultados = calc.calcular(estrategia_nielsen='exclude')
+        calc.validaciones()
 
-    def _si_no(serie: pd.Series) -> pd.Series:
-        """Normaliza un flag a 'Si'/'No'.
+        # Pesos y etiquetas alineados a las columnas normalizadas
+        # que produce v9.
+        PESOS = {  # noqa: N806
+            'penetracion_norm':            0.65,
+            'penetracion_sensibles_norm':  0.0,
+            'peso_categoria_norm':         0.20,
+            'sustitucion_norm':            0.05,
+            'nielsen_norm':                0.10,
+        }
 
-        BigQuery devuelve BOOL como True/False
-        (Excel los muestra en inglés) e INT64
-        como 0/1. Mapear los dos casos evita que
-        la misma columna se vea distinta
-        según cómo esté tipada la query.
-        """
-        mapa = {True: 'Si', False: 'No', 1: 'Si', 0: 'No',  # noqa: F601
-                '1': 'Si', '0': 'No', 'true': 'Si', 'false': 'No',
-                'True': 'Si', 'False': 'No', 'Y': 'Si', 'N': 'No'}
-        return serie.map(lambda v: '' if pd.isna(v) else mapa.get(v, str(v)))
+        ETIQUETAS = {  # noqa: N806
+            'penetracion_norm':           'Penetración',
+            'penetracion_sensibles_norm': 'Penetración Sensibles',
+            'peso_categoria_norm':        'Peso Categoría',
+            'sustitucion_norm':           'Sustitución',
+            'nielsen_norm':               'Nielsen',
+        }
 
-    def adjuntar_columnas_comerciales(df: pd.DataFrame,
-                                    df_origen: pd.DataFrame | None = None) -> pd.DataFrame:
-        """Deja el DataFrame listo para exportar el bloque comercial:
+        # Métricas con peso 0%: se calculan y exportan en el resultado pero
+        # no aportan al índice, por eso quedan fuera de estos rankings.
+        PESOS_CERO = ['penetracion_clientes_norm', 'penetracion_canastas_norm']  # noqa: N806
 
-        1. Trae desde `df_origen` (el df de entrada al cálculo)
-        las columnas de venta y ciclo de vida que el calculador
-        no haya propagado al resultado.
-        2. Calcula `pct_venta_formato`=VENTA_PRODUCTO/venta total del
-        formato.
-        3. Normaliza tipos: fecha real para Excel y flag en Si/No.
+        # Única métrica redistribuible: si falta, su peso se reparte
+        # entre las demás.
+        METRICA_REDISTRIBUIBLE = 'nielsen_norm'  # noqa: N806
 
-        El denominador de la participación es el total del formato
-        y se calcula UNA vez sobre el universo completo, antes de filtrar.
-        Por eso el porcentaje de un SKU es el mismo en las
-        cuatro hojas: en la hoja de PGC sin marca propia los valores
-        NO suman 100%, suman lo que ese subconjunto pesa en el formato.
+        # Columnas de venta y ciclo de vida que vienen del df de origen.
+        # No pesan en el índice: se muestran como contexto.
+        #
+        # El Excel trabaja con VENTA NETA. Numerador y denominador tienen
+        # que ser el mismo concepto: mezclar venta neta con total bruto da
+        # un porcentaje inflado por la diferencia de IVA y descuentos, no
+        # por participación real. Si alguna vez hay que volver a bruta,
+        # se cambian estas dos constantes y nada más.
+        COL_VENTA         = 'VENTA_NETA_PRODUCTO'  # noqa: N806
+        COL_TOTAL_FORMATO = 'TOTAL_VENTA_NETA'  # noqa: N806
+        COL_PVP           = 'PVP'                      # precio de venta promedio  # noqa: N806
+        COL_PCT_VENTA     = 'pct_venta_neta_formato'   # calculada acá, no viene del df  # noqa: E501, N806
 
-        `escribir_hoja` omite en silencio las columnas que no existan,
-        así que acá se informa explícitamente cuáles quedaron
-        fuera: es la única forma de notar que el Excel salió sin ellas.
-        """
-        d = df.copy()
-        requeridas = [COL_VENTA, COL_TOTAL_FORMATO, COL_PVP, *COLS_CICLO_VIDA]
-
-        # --- 1. traer las que falten desde el df de origen ---------------
-        if df_origen is not None:
-            traer = [c for c in requeridas
-                    if c not in d.columns and c in df_origen.columns]
-            if traer:
-                if 'PRODUCT_ID' not in df_origen.columns:
-                    msg = 'df_origen no tiene PRODUCT_ID: no se puede cruzar.'
-                    raise KeyError(msg)
-
-                base = df_origen[['PRODUCT_ID', *traer]].copy()
-                # Clave normalizada: PRODUCT_ID suele venir int en un lado
-                # y str en el otro, y el merge directo devuelve todo nulo
-                # sin avisar.
-                base['_key'] = base['PRODUCT_ID'].astype(str).str.strip()
-                n_antes = len(base)
-                base = base.drop_duplicates(subset='_key').drop(columns='PRODUCT_ID')
-                if len(base) < n_antes:
-                    print(f'  ⚠ df_origen tenía {n_antes - len(base):,} filas repetidas '
-                        f'por PRODUCT_ID: se conserva la primera de cada SKU')
-
-                d['_key'] = d['PRODUCT_ID'].astype(str).str.strip()
-                filas_antes = len(d)
-                d = d.merge(base, on='_key', how='left').drop(columns='_key')
-                assert len(d) == filas_antes, 'El cruce con df_origen duplicó filas'  # noqa: S101
-
-                cruzadas = d[traer[0]].notna().mean() if traer else 0.0
-                print(f"  ✓ Traídas desde df_origen: {', '.join(traer)} "
-                    f"(cruce {cruzadas:.1%} de los SKUs)")
-
-        ausentes = [c for c in requeridas if c not in d.columns]
-        if ausentes:
-            print(f"  ⚠ No están en el resultado ni en df_origen: {', '.join(ausentes)}")
-            print('    Esas columnas van a salir vacías del Excel. Pasar df_origen=df '
-                'si el calculador no las propaga.')
-
-        # --- 2. participación en la venta del formato --------------------
-        if COL_VENTA in d.columns:
-            venta = pd.to_numeric(d[COL_VENTA], errors='coerce')
-
-            if not venta.notna().any():
-                # Pasa si el calculador expone la columna
-                # pero la query no la trae:
-                # llega llena de NaN y un denominador 0 no significa nada.
-                print(f'  ⚠ {COL_VENTA} viene sin ningún valor: no se calcula el %')
-                venta = None
-
-        if COL_VENTA in d.columns and venta is not None:
-            total = None
-            if COL_TOTAL_FORMATO in d.columns:
-                tot = pd.to_numeric(d[COL_TOTAL_FORMATO], errors='coerce').dropna()
-                if len(tot):
-                    if tot.nunique() > 1:  # noqa: PD101
-                        print(f'  ⚠ {COL_TOTAL_FORMATO} no es constante '
-                            f'({tot.nunique():,} valores distintos): se usa el máximo')
-                    total = float(tot.max())
-
-            if not total:
-                total = float(venta.sum())
-                print(f'  ⚠ Sin {COL_TOTAL_FORMATO} utilizable: el denominador pasa a ser '
-                    f'la suma de {COL_VENTA} de los SKUs del resultado')
-
-            d[COL_PCT_VENTA] = venta / total if total else pd.NA
-
-            cobertura = venta.sum() / total if total else 0
-            print(f'  · Denominador del % venta: {total:,.0f} · los {len(d):,} SKUs del '
-                f'resultado representan {cobertura:.1%}')
-
-        # --- 3. tipos ----------------------------------------------------
-        if 'FECHA_PRIMERA_VENTA' in d.columns:
-            fecha = pd.to_datetime(d['FECHA_PRIMERA_VENTA'], errors='coerce')
-            # openpyxl no escribe datetimes
-            # con timezone: revienta al guardar.
-            if getattr(fecha.dtype, 'tz', None) is not None:
-                fecha = fecha.dt.tz_localize(None)
-            d['FECHA_PRIMERA_VENTA'] = fecha
-
-        if 'ES_PRODUCTO_NUEVO_90D' in d.columns:
-            d['ES_PRODUCTO_NUEVO_90D'] = _si_no(d['ES_PRODUCTO_NUEVO_90D'])
-
-        for col in (COL_PVP, 'MESES_CON_VENTA', 'DIAS_DESDE_PRIMERA_VENTA'):
-            if col in d.columns:
-                d[col] = pd.to_numeric(d[col], errors='coerce')
-
-        if COL_PVP in d.columns:
-            # PVP suele venir de una división por unidades:
-            # los SKUs sin unidades quedan en inf, y openpyxl escribe inf
-            # como texto en una columna que el usuario va a
-            # querer promediar. Mejor vacío.
-            d[COL_PVP] = d[COL_PVP].replace([np.inf, -np.inf], np.nan)
-            sin_pvp = d[COL_PVP].isna().sum()
-            if sin_pvp:
-                print(f'  · PVP sin valor en {sin_pvp:,} SKUs ({sin_pvp / len(d):.1%})')
-
-        return d
-
-    # =====================================================================
-    # ARMADO DE COLUMNAS
-    # =====================================================================
-
-    COLS_ID = [  # noqa: N806
-        ('PRODUCT_ID',               'SKU',           12),
-        ('PRODUCT_DESCRIPTION',      'Descripción',   38),
-        ('CATEGORY_DESCRIPTION',     'Categoría',     22),
-        ('SUB_CATEGORY_DESCRIPTION', 'Subcategoría',  22),
-        ('NEG_DSC',                  'Negocio',       10),
-    ]
-
-    COLS_TRAZA = [  # noqa: N806
-        ('origen_frecuencia',  'Origen frec.',  13),
-        ('origen_sustitucion', 'Origen sust.',  13),
-    ]
-
-    # Bloque comercial y de ciclo de vida. Va al final de
-    # todas las hojas, después de las columnas del índice.
-    # No entra al cálculo: es contexto de lectura.
-    COLS_COMERCIALES = [  # noqa: N806
-        (COL_VENTA,                  'Venta neta producto',  16),
-        (COL_PCT_VENTA,              '% Venta neta formato', 14),
-        (COL_PVP,                    'PVP',                  11),
-        ('FECHA_PRIMERA_VENTA',      'Primera venta',        14),
-        ('MESES_CON_VENTA',          'Meses con venta',      13),
-        ('DIAS_DESDE_PRIMERA_VENTA', 'Días 1ª venta',        13),
-        ('ES_PRODUCTO_NUEVO_90D',    'Nuevo 90d',            10),
-        ('SEGMENTO_MADUREZ_SKU',     'Segmento madurez',     22),
-    ]
-
-    def construir_columnas(incluir_mpe: bool,
-                        incluir_aportes: bool = False,
-                        incluir_comerciales: bool = True) -> list[tuple[str, str, int]]:
-        """Devuelve (columna_origen, encabezado, ancho)en orden de presentación.
-
-        Por defecto muestra únicamente las 6 métricas NORMALIZADAS con peso.
-        Quedan fuera las raw y las dos penetraciones generales, que tienen peso 0%.
-
-        Con `incluir_aportes=True` se agrega, después de las normalizadas, el aporte
-        en puntos de cada una al índice final.
-
-        Con `incluir_comerciales=True` (por defecto) se agrega al final el bloque de
-        venta y ciclo de vida. Para moverlo antes de las columnas de trazabilidad,
-        invertir el orden de las dos últimas líneas de esta función.
-        """  # noqa: W505
-        cols = list(COLS_ID)
-        if incluir_mpe:
-            cols.append(('marca_propia_flag', 'MPE', 7))
-
-        cols += [
-            ('indice_infaltable', 'ÍNDICE', 11),
-            ('clasificacion',     'Clasificación', 16),
+        COLS_CICLO_VIDA = [  # noqa: N806
+            'FECHA_PRIMERA_VENTA',
+            'MESES_CON_VENTA',
+            'DIAS_DESDE_PRIMERA_VENTA',
+            'ES_PRODUCTO_NUEVO_90D',
+            'SEGMENTO_MADUREZ_SKU',
         ]
 
-        # Normalizadas efectivamente usadas, ordenadas por peso descendente
-        por_peso = sorted(PESOS.items(), key=lambda kv: -kv[1])
-        for col, peso in por_peso:
-            cols.append((col, f'{ETIQUETAS[col]}\nnorm ({peso:.0%})', 14))
+        # =================================================================
+        # CÁLCULO DE APORTES
+        # =================================================================
 
-        if incluir_aportes:
-            for col, _ in por_peso:
+        def calcular_aportes(df: pd.DataFrame) -> pd.DataFrame:
+            """Descompone el índice en el aporte en puntos de cada métrica.
+
+                peso_total = 1,00 si el SKU tiene Nielsen, 0,90 si no
+                aporte_m   = norm_m x peso_m / peso_total x 100
+
+            Los aportes suman el valor del índice.
+            Eso permite leer una fila y entender exactamente de
+            dónde salió el puntaje.
+
+            Nota sobre nulos: se rellenan con 0.
+            Para Nielsen la ausencia es neutra porque la métrica sale
+            del numerador y del denominador a la vez.
+            Para sustitución NO es neutra: el cero entra con peso completo.
+            """
+            d = df.copy()
+
+            faltan = [c for c in PESOS if c not in d.columns]
+            if faltan:
+                msg = (
+                    f"Faltan columnas normalizadas en 'resultados': {faltan}. "
+                )
+                raise KeyError(
+                    msg
+                )
+
+            tiene_nielsen = d[METRICA_REDISTRIBUIBLE].notna()
+            peso_redistribuible = PESOS[METRICA_REDISTRIBUIBLE]
+            peso_total = tiene_nielsen.map({True: 1.0, False: 1.0 - peso_redistribuible})
+
+            cols_aporte = []
+            for col, peso in PESOS.items():
                 nombre = f"aporte_{col.replace('_norm', '')}"
-                cols.append((nombre, f'{ETIQUETAS[col]}\naporte (pts)', 14))
+                aporte = d[col].fillna(0.0) * peso / peso_total * 100
+                if col == METRICA_REDISTRIBUIBLE:
+                    aporte = aporte.where(tiene_nielsen, 0.0)
+                d[nombre] = aporte
+                cols_aporte.append(nombre)
 
-        cols += COLS_TRAZA
-        if incluir_comerciales:
-            cols += COLS_COMERCIALES
-        return cols
+            d['peso_total_aplicado'] = peso_total
+            d['suma_aportes'] = d[cols_aporte].sum(axis=1)
 
-    # =====================================================================
-    # DEFINICIÓN DEL RANKING
-    # =====================================================================
+            return d
 
-    RANKINGS = [  # noqa: N806
-        {
-            'hoja': '1. Ranking General',
-            'filtro': None,
-            'incluir_mpe': True,
-            'por_categoria': False,
-        }
-    ]
+        def verificar_aportes(df: pd.DataFrame, tolerancia: float = 0.01) -> None:
+            """Contrasta la suma de aportes contra el índice almacenado.
 
-    def preparar_ranking(df: pd.DataFrame, cfg: dict) -> tuple[pd.DataFrame, str]:
-        """Aplica filtro, ordena y numera.
-        Devuelve (df, nombre de la columna de rank)."""
-        d = df if cfg['filtro'] is None else df[cfg['filtro'](df)]
-        d = d.copy()
+            Si no calzan, los pesos de PESOS no son los que se usaron al
+            calcular el índice. Es la comprobación más rápida de que este
+            script y el cálculo están sincronizados.
+            """
+            if 'indice_infaltable' not in df.columns:
+                print("  ⚠ No existe 'indice_infaltable': no se puede verificar")
+                return
 
-        if cfg['por_categoria']:
-            d = d.sort_values(['CATEGORY_DESCRIPTION', 'indice_infaltable'],
-                            ascending=[True, False]).reset_index(drop=True)
-            d['rank_categoria'] = d.groupby('CATEGORY_DESCRIPTION').cumcount() + 1
-            return d, 'rank_categoria'
+            dif = (df['suma_aportes'] - df['indice_infaltable']).abs()
+            dif_max = dif.max()
+            n_fuera = int((dif > tolerancia).sum())
 
-        d = d.sort_values('indice_infaltable', ascending=False).reset_index(drop=True)
-        d['rank'] = range(1, len(d) + 1)
-        return d, 'rank'
+            if n_fuera == 0:
+                print(f'  ✓ Aportes verificados: coinciden con el índice '
+                    f'(desviación máx. {dif_max:.6f})')
+            else:
+                print(f'  ⚠ {n_fuera:,} SKUs con desviación sobre {tolerancia}. '
+                    f'Máxima: {dif_max:.4f}')
+                print('    Revisar que PESOS coincida con el bloque W_* de calcular()')
 
-    # =====================================================================
-    # PIPELINE
-    # =====================================================================
+        # =================================================================
+        # COLUMNAS COMERCIALES Y DE CICLO DE VIDA
+        # =================================================================
 
-    def generar_rankings(resultados: pd.DataFrame,
-                        incluir_aportes: bool = False,
-                        df_origen: pd.DataFrame | None = None,
-                        incluir_comerciales: bool = True) -> dict:
-        """`df_origen` es el DataFrame de entrada al cálculo. Se usa solo
-        para traer venta y ciclo de vida cuando el calculador no propaga
-        esas columnas al resultado. Pasarlo siempre: si ya vienen en
-        `resultados`, el cruce no se ejecuta.
-        """
+        def _si_no(serie: pd.Series) -> pd.Series:
+            """Normaliza un flag a 'Si'/'No'.
 
-        print('\n' + '=' * 80)
-        print('RANKINGS DE INFALTABLES — ESTILO SMU')
-        print('=' * 80)
+            BigQuery devuelve BOOL como True/False
+            (Excel los muestra en inglés) e INT64
+            como 0/1. Mapear los dos casos evita que
+            la misma columna se vea distinta
+            según cómo esté tipada la query.
+            """
+            mapa = {True: 'Si', False: 'No', 1: 'Si', 0: 'No',  # noqa: F601
+                    '1': 'Si', '0': 'No', 'true': 'Si', 'false': 'No',
+                    'True': 'Si', 'False': 'No', 'Y': 'Si', 'N': 'No'}
+            return serie.map(lambda v: '' if pd.isna(v) else mapa.get(v, str(v)))
 
-        print(f'\nSKUs en resultados: {len(resultados):,}')
+        def adjuntar_columnas_comerciales(df: pd.DataFrame,
+                                        df_origen: pd.DataFrame | None = None) -> pd.DataFrame:
+            """Deja el DataFrame listo para exportar el bloque comercial:
 
-        print('\nVerificando métricas de la metodología v6...')
-        df_aportes = calcular_aportes(resultados)
-        verificar_aportes(df_aportes)
+            1. Trae desde `df_origen` (el df de entrada al cálculo)
+            las columnas de venta y ciclo de vida que el calculador
+            no haya propagado al resultado.
+            2. Calcula `pct_venta_formato`=VENTA_PRODUCTO/venta total del
+            formato.
+            3. Normaliza tipos: fecha real para Excel y flag en Si/No.
 
-        if incluir_comerciales:
-            print('\nBloque comercial y de ciclo de vida...')
-            df_aportes = adjuntar_columnas_comerciales(df_aportes, df_origen)
+            El denominador de la participación es el total del formato
+            y se calcula UNA vez sobre el universo completo, antes de filtrar.
+            Por eso el porcentaje de un SKU es el mismo en las
+            cuatro hojas: en la hoja de PGC sin marca propia los valores
+            NO suman 100%, suman lo que ese subconjunto pesa en el formato.
 
-        print('\n  Métricas normalizadas que se muestran (las que tienen peso):')
-        for col, peso in sorted(PESOS.items(), key=lambda kv: -kv[1]):
-            cob = df_aportes[col].notna().mean()
-            alerta = '  ← castiga si falta' if col == 'sustitucion_norm' and cob < 1 else ''
-            print(f'    {ETIQUETAS[col]:<20s} {peso:>5.0%}   cobertura {cob:>6.1%}{alerta}')
+            `escribir_hoja` omite en silencio las columnas que no existan,
+            así que acá se informa explícitamente cuáles quedaron
+            fuera: es la única forma de notar que el Excel salió sin ellas.
+            """  # noqa: W505
+            d = df.copy()
+            requeridas = [COL_VENTA, COL_TOTAL_FORMATO, COL_PVP, *COLS_CICLO_VIDA]
 
-        omitidas = [c for c in PESOS_CERO if c in df_aportes.columns]
-        if omitidas:
-            print(f"\n  Omitidas por tener peso 0% en v6: {', '.join(omitidas)}")
+            # --- 1. traer las que falten desde el df de origen -----------
+            if df_origen is not None:
+                traer = [c for c in requeridas
+                        if c not in d.columns and c in df_origen.columns]
+                if traer:
+                    if 'PRODUCT_ID' not in df_origen.columns:
+                        msg = 'df_origen no tiene PRODUCT_ID: no se puede cruzar.'
+                        raise KeyError(msg)
 
-        salidas = {}
-        for cfg in RANKINGS:
-            d, _col_rank = preparar_ranking(df_aportes, cfg)
-            construir_columnas(cfg['incluir_mpe'], incluir_aportes,
-                                    incluir_comerciales)
-            salidas[cfg['hoja']] = d
+                    base = df_origen[['PRODUCT_ID', *traer]].copy()
+                    # Clave normalizada: PRODUCT_ID suele venir int en un
+                    # lado y str en el otro, y el merge directo devuelve
+                    # todo nulo sin avisar.  # noqa: TD002, TD004, TD006
+                    base['_key'] = base['PRODUCT_ID'].astype(str).str.strip()
+                    n_antes = len(base)
+                    base = base.drop_duplicates(subset='_key').drop(columns='PRODUCT_ID')
+                    if len(base) < n_antes:
+                        print(f'  ⚠ df_origen tenía {n_antes - len(base):,} filas repetidas '
+                            f'por PRODUCT_ID: se conserva la primera de cada SKU')
 
-            extra = ''
+                    d['_key'] = d['PRODUCT_ID'].astype(str).str.strip()
+                    filas_antes = len(d)
+                    d = d.merge(base, on='_key', how='left').drop(columns='_key')
+                    assert len(d) == filas_antes, 'El cruce con df_origen duplicó filas'  # noqa: S101
+
+                    cruzadas = d[traer[0]].notna().mean() if traer else 0.0
+                    print(f"  ✓ Traídas desde df_origen: {', '.join(traer)} "
+                        f"(cruce {cruzadas:.1%} de los SKUs)")
+
+            ausentes = [c for c in requeridas if c not in d.columns]
+            if ausentes:
+                print(f"  ⚠ No están en el resultado ni en df_origen: {', '.join(ausentes)}")
+                print('    Esas columnas van a salir vacías del Excel. Pasar df_origen=df '
+                    'si el calculador no las propaga.')
+
+            # --- 2. participación en la venta del formato ----------------
+            if COL_VENTA in d.columns:
+                venta = pd.to_numeric(d[COL_VENTA], errors='coerce')
+
+                if not venta.notna().any():
+                    # Pasa si el calculador expone la columna
+                    # pero la query no la trae:
+                    # llega llena de NaN y un denominador 0 no
+                    # significa nada.
+                    print(f'  ⚠ {COL_VENTA} viene sin ningún valor: no se calcula el %')
+                    venta = None
+
+            if COL_VENTA in d.columns and venta is not None:
+                total = None
+                if COL_TOTAL_FORMATO in d.columns:
+                    tot = pd.to_numeric(d[COL_TOTAL_FORMATO], errors='coerce').dropna()
+                    if len(tot):
+                        if tot.nunique() > 1:  # noqa: PD101
+                            print(f'  ⚠ {COL_TOTAL_FORMATO} no es constante '
+                                f'({tot.nunique():,} valores distintos): se usa el máximo')
+                        total = float(tot.max())
+
+                if not total:
+                    total = float(venta.sum())
+                    print(f'  ⚠ Sin {COL_TOTAL_FORMATO} utilizable: el denominador pasa a ser '
+                        f'la suma de {COL_VENTA} de los SKUs del resultado')
+
+                d[COL_PCT_VENTA] = venta / total if total else pd.NA
+
+                cobertura = venta.sum() / total if total else 0
+                print(f'  · Denominador del % venta: {total:,.0f} · los {len(d):,} SKUs del '
+                    f'resultado representan {cobertura:.1%}')
+
+            # --- 3. tipos ------------------------------------------------
+            if 'FECHA_PRIMERA_VENTA' in d.columns:
+                fecha = pd.to_datetime(d['FECHA_PRIMERA_VENTA'], errors='coerce')
+                # openpyxl no escribe datetimes
+                # con timezone: revienta al guardar.
+                if getattr(fecha.dtype, 'tz', None) is not None:
+                    fecha = fecha.dt.tz_localize(None)
+                d['FECHA_PRIMERA_VENTA'] = fecha
+
+            if 'ES_PRODUCTO_NUEVO_90D' in d.columns:
+                d['ES_PRODUCTO_NUEVO_90D'] = _si_no(d['ES_PRODUCTO_NUEVO_90D'])
+
+            for col in (COL_PVP, 'MESES_CON_VENTA', 'DIAS_DESDE_PRIMERA_VENTA'):
+                if col in d.columns:
+                    d[col] = pd.to_numeric(d[col], errors='coerce')
+
+            if COL_PVP in d.columns:
+                # PVP suele venir de una división por unidades:
+                # los SKUs sin unidades quedan en inf, y openpyxl
+                # escribe inf como texto en una columna que el usuario va a
+                # querer promediar. Mejor vacío.
+                d[COL_PVP] = d[COL_PVP].replace([np.inf, -np.inf], np.nan)
+                sin_pvp = d[COL_PVP].isna().sum()
+                if sin_pvp:
+                    print(f'  · PVP sin valor en {sin_pvp:,} SKUs ({sin_pvp / len(d):.1%})')
+
+            return d
+
+        # =================================================================
+        # ARMADO DE COLUMNAS
+        # =================================================================
+
+        COLS_ID = [  # noqa: N806
+            ('PRODUCT_ID',               'SKU',           12),
+            ('PRODUCT_DESCRIPTION',      'Descripción',   38),
+            ('CATEGORY_DESCRIPTION',     'Categoría',     22),
+            ('SUB_CATEGORY_DESCRIPTION', 'Subcategoría',  22),
+            ('NEG_DSC',                  'Negocio',       10),
+        ]
+
+        COLS_TRAZA = [  # noqa: N806
+            ('origen_frecuencia',  'Origen frec.',  13),
+            ('origen_sustitucion', 'Origen sust.',  13),
+        ]
+
+        # Bloque comercial y de ciclo de vida. Va al final de
+        # todas las hojas, después de las columnas del índice.
+        # No entra al cálculo: es contexto de lectura.
+        COLS_COMERCIALES = [  # noqa: N806
+            (COL_VENTA,                  'Venta neta producto',  16),
+            (COL_PCT_VENTA,              '% Venta neta formato', 14),
+            (COL_PVP,                    'PVP',                  11),
+            ('FECHA_PRIMERA_VENTA',      'Primera venta',        14),
+            ('MESES_CON_VENTA',          'Meses con venta',      13),
+            ('DIAS_DESDE_PRIMERA_VENTA', 'Días 1ª venta',        13),
+            ('ES_PRODUCTO_NUEVO_90D',    'Nuevo 90d',            10),
+            ('SEGMENTO_MADUREZ_SKU',     'Segmento madurez',     22),
+        ]
+
+        def construir_columnas(incluir_mpe: bool,
+                            incluir_aportes: bool = False,
+                            incluir_comerciales: bool = True) -> list[tuple[str, str, int]]:
+            """Devuelve (columna_origen, encabezado, ancho)en orden de presentación.
+
+            Por defecto muestra únicamente las 6 métricas NORMALIZADAS con peso.
+            Quedan fuera las raw y las dos penetraciones generales, que tienen peso 0%.
+
+            Con `incluir_aportes=True` se agrega, después de las normalizadas, el aporte
+            en puntos de cada una al índice final.
+
+            Con `incluir_comerciales=True` (por defecto) se agrega al final el bloque de
+            venta y ciclo de vida. Para moverlo antes de las columnas de trazabilidad,
+            invertir el orden de las dos últimas líneas de esta función.
+            """  # noqa: W505
+            cols = list(COLS_ID)
+            if incluir_mpe:
+                cols.append(('marca_propia_flag', 'MPE', 7))
+
+            cols += [
+                ('indice_infaltable', 'ÍNDICE', 11),
+                ('clasificacion',     'Clasificación', 16),
+            ]
+
+            # Normalizadas efectivamente usadas, ordenadas por
+            # peso descendente
+            por_peso = sorted(PESOS.items(), key=lambda kv: -kv[1])
+            for col, peso in por_peso:
+                cols.append((col, f'{ETIQUETAS[col]}\nnorm ({peso:.0%})', 14))
+
+            if incluir_aportes:
+                for col, _ in por_peso:
+                    nombre = f"aporte_{col.replace('_norm', '')}"
+                    cols.append((nombre, f'{ETIQUETAS[col]}\naporte (pts)', 14))
+
+            cols += COLS_TRAZA
+            if incluir_comerciales:
+                cols += COLS_COMERCIALES
+            return cols
+
+        # =================================================================
+        # DEFINICIÓN DEL RANKING
+        # =================================================================
+
+        RANKINGS = [  # noqa: N806
+            {
+                'hoja': '1. Ranking General',
+                'filtro': None,
+                'incluir_mpe': True,
+                'por_categoria': False,
+            }
+        ]
+
+        def preparar_ranking(df: pd.DataFrame, cfg: dict) -> tuple[pd.DataFrame, str]:
+            """Aplica filtro, ordena y numera.
+            Devuelve (df, nombre de la columna de rank)."""
+            d = df if cfg['filtro'] is None else df[cfg['filtro'](df)]
+            d = d.copy()
+
             if cfg['por_categoria']:
-                extra = f" · {d['CATEGORY_DESCRIPTION'].nunique()} categorías"
-            print(f"\n  ✓ {cfg['hoja']:<26s} {len(d):>7,} SKUs{extra}")
+                d = d.sort_values(['CATEGORY_DESCRIPTION', 'indice_infaltable'],
+                                ascending=[True, False]).reset_index(drop=True)
+                d['rank_categoria'] = d.groupby('CATEGORY_DESCRIPTION').cumcount() + 1
+                return d, 'rank_categoria'
 
-            dist = d['clasificacion'].value_counts()
-            for clase in ['Crítico', 'Muy Importante', 'Importante',
-                        'Complementario', 'Ocasional']:
-                n = int(dist.get(clase, 0))
-                if n:
-                    print(f'      {clase:<18s} {n:>7,} ({n/len(d):>5.1%})')
+            d = d.sort_values('indice_infaltable', ascending=False).reset_index(drop=True)
+            d['rank'] = range(1, len(d) + 1)
+            return d, 'rank'
 
-        print('\n' + '=' * 80 + '\n')
-        return salidas
+        # =================================================================
+        # PIPELINE
+        # =================================================================
 
-    resultados_rankings = generar_rankings(
-        resultados,
-        incluir_aportes=True # aporte en puntos de cada métrica, además del valor normalizado
-    )
+        def generar_rankings(resultados: pd.DataFrame,
+                            incluir_aportes: bool = False,
+                            df_origen: pd.DataFrame | None = None,
+                            incluir_comerciales: bool = True) -> dict:
+            """`df_origen` es el DataFrame de entrada al cálculo.
+            Se usa solo para traer venta y ciclo de vida cuando el
+            calculador no propaga esas columnas al resultado.
+            Pasarlo siempre: si ya vienen en `resultados`, el cruce
+            no se ejecuta.
+            """
 
-    df_ranking = resultados_rankings['1. Ranking General']
+            print('\n' + '=' * 80)
+            print('RANKINGS DE INFALTABLES — ESTILO SMU')
+            print('=' * 80)
+
+            print(f'\nSKUs en resultados: {len(resultados):,}')
+
+            print('\nVerificando métricas de la metodología v6...')
+            df_aportes = calcular_aportes(resultados)
+            verificar_aportes(df_aportes)
+
+            if incluir_comerciales:
+                print('\nBloque comercial y de ciclo de vida...')
+                df_aportes = adjuntar_columnas_comerciales(df_aportes, df_origen)
+
+            print('\n  Métricas normalizadas que se muestran (las que tienen peso):')
+            for col, peso in sorted(PESOS.items(), key=lambda kv: -kv[1]):
+                cob = df_aportes[col].notna().mean()
+                alerta = '  ← castiga si falta' if col == 'sustitucion_norm' and cob < 1 else ''
+                print(f'    {ETIQUETAS[col]:<20s} {peso:>5.0%}   cobertura {cob:>6.1%}{alerta}')
+
+            omitidas = [c for c in PESOS_CERO if c in df_aportes.columns]
+            if omitidas:
+                print(f"\n  Omitidas por tener peso 0% en v6: {', '.join(omitidas)}")
+
+            salidas = {}
+            for cfg in RANKINGS:
+                d, _col_rank = preparar_ranking(df_aportes, cfg)
+                construir_columnas(cfg['incluir_mpe'], incluir_aportes,
+                                        incluir_comerciales)
+                salidas[cfg['hoja']] = d
+
+                extra = ''
+                if cfg['por_categoria']:
+                    extra = f" · {d['CATEGORY_DESCRIPTION'].nunique()} categorías"
+                print(f"\n  ✓ {cfg['hoja']:<26s} {len(d):>7,} SKUs{extra}")
+
+                dist = d['clasificacion'].value_counts()
+                for clase in ['Crítico', 'Muy Importante', 'Importante',
+                            'Complementario', 'Ocasional']:
+                    n = int(dist.get(clase, 0))
+                    if n:
+                        print(f'      {clase:<18s} {n:>7,} ({n/len(d):>5.1%})')
+
+            print('\n' + '=' * 80 + '\n')
+            return salidas
+
+        resultados_rankings = generar_rankings(
+            resultados,
+            incluir_aportes=True # aporte en puntos de cada métrica, además del valor normalizado
+        )
+
+        df_ranking = resultados_rankings['1. Ranking General']
 
 
-    df_ranking['indice_infaltable'] = df_ranking['indice_infaltable'].round(2)
-    df_ranking['penetracion_norm'] = df_ranking['penetracion_norm'].round(2)
-    df_ranking['peso_categoria_norm'] = df_ranking['peso_categoria_norm'].round(2)
-    df_ranking['nielsen_norm'] = df_ranking['nielsen_norm'].round(2)
-    df_ranking['sustitucion_norm'] = df_ranking['sustitucion_norm'].round(2)
-    df_ranking['aporte_penetracion'] = df_ranking['aporte_penetracion'].round(2)
-    df_ranking['aporte_peso_categoria'] = df_ranking['aporte_peso_categoria'].round(2)
-    df_ranking['aporte_nielsen'] = df_ranking['aporte_nielsen'].round(2)
-    df_ranking['aporte_sustitucion'] = df_ranking['aporte_sustitucion'].round(2)
-    df_ranking['VENTA_NETA_PRODUCTO'] = df_ranking['VENTA_NETA_PRODUCTO'].astype('int64')
-    df_ranking['pct_venta_neta_formato'] = (df_ranking['pct_venta_neta_formato']*100).round(2)
-    df_ranking['PVP'] = df_ranking['PVP'].round(0).astype('int64')
+        df_ranking['indice_infaltable'] = df_ranking['indice_infaltable'].round(2)
+        df_ranking['penetracion_norm'] = df_ranking['penetracion_norm'].round(2)
+        df_ranking['peso_categoria_norm'] = df_ranking['peso_categoria_norm'].round(2)
+        df_ranking['nielsen_norm'] = df_ranking['nielsen_norm'].round(2)
+        df_ranking['sustitucion_norm'] = df_ranking['sustitucion_norm'].round(2)
+        df_ranking['aporte_penetracion'] = df_ranking['aporte_penetracion'].round(2)
+        df_ranking['aporte_peso_categoria'] = df_ranking['aporte_peso_categoria'].round(2)
+        df_ranking['aporte_nielsen'] = df_ranking['aporte_nielsen'].round(2)
+        df_ranking['aporte_sustitucion'] = df_ranking['aporte_sustitucion'].round(2)
+        df_ranking['VENTA_NETA_PRODUCTO'] = df_ranking['VENTA_NETA_PRODUCTO'].astype('int64')
+        df_ranking['pct_venta_neta_formato'] = (df_ranking['pct_venta_neta_formato']*100).round(2)
+        df_ranking['PVP'] = df_ranking['PVP'].round(0).astype('int64')
 
-    df_ranking['STORE_BANNER'] = store_banner
-    df_ranking['STORE_ID_JOIN'] = store_id_str
-    df_ranking['FECHA_CARGA'] = execution_date
+        df_ranking['STORE_BANNER'] = store_banner
+        df_ranking['STORE_ID_JOIN'] = store_id_str
+        df_ranking['FECHA_CARGA'] = execution_date
 
-    df_ranking = df_ranking.merge(
-        stores,
-        on = ['STORE_ID_JOIN'],
-        how = 'inner'
-    )
+        df_ranking = df_ranking.merge(
+            stores,
+            on = ['STORE_ID_JOIN'],
+            how = 'inner'
+        )
 
-    df_ranking = df_ranking[[
-        'PRODUCT_ID',
-        'PRODUCT_DESCRIPTION',
-        'CATEGORY_DESCRIPTION',
-        'SUB_CATEGORY_DESCRIPTION',
-        'NEG_DSC',
-        'marca_propia_flag',
-        'rank',
-        'indice_infaltable',
-        'clasificacion',
-        'penetracion_norm',
-        'peso_categoria_norm',
-        'nielsen_norm',
-        'sustitucion_norm',
-        'aporte_penetracion',
-        'aporte_peso_categoria',
-        'aporte_nielsen',
-        'aporte_sustitucion',
-        'origen_frecuencia',
-        'origen_sustitucion',
-        'VENTA_NETA_PRODUCTO',
-        'pct_venta_neta_formato',
-        'PVP',
-        'FECHA_PRIMERA_VENTA',
-        'MESES_CON_VENTA',
-        'DIAS_DESDE_PRIMERA_VENTA',
-        'ES_PRODUCTO_NUEVO_90D',
-        'SEGMENTO_MADUREZ_SKU',
-        'STORE_BANNER',
-        'STORE_ID',
-        'STORE',
-        'REGION',
-        'CIUDAD',
-        'COMUNA',
-        'FECHA_CARGA'
-    ]]
+        df_ranking = df_ranking[[
+            'PRODUCT_ID',
+            'PRODUCT_DESCRIPTION',
+            'CATEGORY_DESCRIPTION',
+            'SUB_CATEGORY_DESCRIPTION',
+            'NEG_DSC',
+            'marca_propia_flag',
+            'rank',
+            'indice_infaltable',
+            'clasificacion',
+            'penetracion_norm',
+            'peso_categoria_norm',
+            'nielsen_norm',
+            'sustitucion_norm',
+            'aporte_penetracion',
+            'aporte_peso_categoria',
+            'aporte_nielsen',
+            'aporte_sustitucion',
+            'origen_frecuencia',
+            'origen_sustitucion',
+            'VENTA_NETA_PRODUCTO',
+            'pct_venta_neta_formato',
+            'PVP',
+            'FECHA_PRIMERA_VENTA',
+            'MESES_CON_VENTA',
+            'DIAS_DESDE_PRIMERA_VENTA',
+            'ES_PRODUCTO_NUEVO_90D',
+            'SEGMENTO_MADUREZ_SKU',
+            'STORE_BANNER',
+            'STORE_ID',
+            'STORE',
+            'REGION',
+            'CIUDAD',
+            'COMUNA',
+            'FECHA_CARGA'
+        ]]
 
-    deleteFromTable(
-        table_ref=f'{gcp_project}.GESTION_CATEGORIAS.ECOMMERCE_INFALTABLES_STORE_ID',
-        where_clause=f"""FECHA_CARGA = '{execution_date}'
-            AND STORE_BANNER = '{store_banner}'
-            AND STORE_ID = '{store_id_str}'""",
-        gbq_client=gbq_client,
-    )
+        deleteFromTable(
+            table_ref=f'{gcp_project}.GESTION_CATEGORIAS.ECOMMERCE_INFALTABLES_STORE_ID',
+            where_clause=f"""FECHA_CARGA = '{execution_date}'
+                AND STORE_BANNER = '{store_banner}'
+                AND STORE_ID = '{store_id_str}'""",
+            gbq_client=gbq_client,
+        )
 
-    uploadFrame(
-        df_ranking,
-        table_ddl_json_path=os.path.join('gbq_objects','infaltables_ecommerce_store_id.json'),
-        project = gcp_project,
-        gbq_client = gbq_client,
-        if_exists = 'append'
-    )
+        uploadFrame(
+            df_ranking,
+            table_ddl_json_path=os.path.join('gbq_objects','infaltables_ecommerce_store_id.json'),
+            project = gcp_project,
+            gbq_client = gbq_client,
+            if_exists = 'append'
+        )
 
 if __name__ == '__main__':
     main()
