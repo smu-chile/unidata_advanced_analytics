@@ -214,5 +214,5 @@
         "type_": "DAY"
     },
     
-    "clustering_fields": ["STORE_BANNER"]
+    "clustering_fields": ["STORE_BANNER","STORE_ID"]
 }
