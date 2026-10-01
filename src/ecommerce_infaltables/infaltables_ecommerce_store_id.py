@@ -73,6 +73,28 @@ with DAG(**dag_args) as dag:
     previous_group = None
 
     for store_banner in store_banner_list:
+        computing_raw_sales = (
+            ExtendedDataprocCreateBatchOperator(
+                task_id='computing_infaltables_ecommerce_raw_sales',
+                python_script_path=(
+                    f'{PROJECT_NAME}/'
+                    'scripts/'
+                    'infaltables_ecommerce_store_id_raw_sales.py'
+                ),
+                dag_env_config=dag_env_config,
+                docker_image_name=f'{PROJECT_NAME}',
+                pyspark_batch_args=[
+                    '--project_id', dag_env_config['project_id'],
+                    '--execution_date', EXECUTION_DATE,
+                    '--store_banner', store_banner,
+                ],
+                include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
+            )
+        )
+
+        previous_group = computing_raw_sales
+
+    for store_banner in store_banner_list:
         for store_id in store_id_list:
             sid = str(store_id)
 
@@ -106,7 +128,6 @@ with DAG(**dag_args) as dag:
                 )
             )
 
-            if previous_group is not None:
-                previous_group >> computing_infaltables_ecommerce
+            previous_group >> computing_infaltables_ecommerce
 
             previous_group = computing_infaltables_ecommerce
