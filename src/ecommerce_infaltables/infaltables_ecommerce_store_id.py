@@ -82,7 +82,7 @@ with DAG(**dag_args) as dag:
                     include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
             )
 
-            computing_infaltables_ecommerce = [
+            computing_infaltables_ecommerce = (
                 ExtendedDataprocCreateBatchOperator(
                     task_id = f"computing_infaltables_ecommerce_{store_banner.replace(' ', '_').lower()}_{sid}",  # noqa: E501
                     python_script_path=(
@@ -104,7 +104,7 @@ with DAG(**dag_args) as dag:
                         f'{PROJECT_NAME}/gbq_objects/'
                     ],
                 )
-            ]
+            )
 
             if previous_group is not None:
                 previous_group >> computing_infaltables_ecommerce
