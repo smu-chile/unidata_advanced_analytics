@@ -11,7 +11,7 @@ compartida en uno, replicar el cambio en el otro a mano.
 Nunca se ejecuta contra GCP desde este entorno -- es un script de
 referencia para que el usuario ejecute en su propio proyecto.
 """
-from __future__ import annotations  # noqa: I001
+from __future__ import annotations
 
 import os
 import logging
@@ -23,8 +23,9 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import pendulum
-from common.constants import LOGGING_CONFIG
 from google.cloud.bigquery import Client
+
+from common.constants import LOGGING_CONFIG
 from common.gcp_extended.bigquery import (
     uploadFrame,
     readBigQuery,
@@ -37,14 +38,14 @@ from common.gcp_extended.bigquery import (
 config.dictConfig(LOGGING_CONFIG)
 
 
-# =======================================================================
+# ========================================================================
 # Logica compartida entre processed_regression_data_marca.py y
-# processed_regression_data_subcategoria.py (antes en tablon_agregado_comu
+# processed_regression_data_subcategoria.py (antes en tablon_agregado_comun
 # -- fusionada aca porque Dataproc Serverless no empaqueta modulos locales
 # que no esten en include_paths; solo se envia python_script_path + lo
 # listado ahi). Mantener los 2 runners sincronizados a mano si se edita
 # esta seccion en cualquiera de los 2.
-# ========================================================================
+# =========================================================================
 
 COBERTURA_MINIMA = 0.8  # inconsistencia (2) -- ver docstring del modulo
 MIN_DIAS_PESO = 5  # dias minimos de venta en el mes previo para tener peso
@@ -157,7 +158,7 @@ WHERE
 
 
 def construir_query_sku_diario(cfg: ConfiguracionNivel) -> Template:
-    """Panel SKU-dia, igual formula que query_principal del script origina.
+    """Panel SKU-dia, igual formula que query_principal del script original.
 
     No agrega todavia al nivel de grupo -- esta es la pieza intermedia
     (precio y cantidad por SKU, cada dia) sobre la que despues se
@@ -167,7 +168,7 @@ def construir_query_sku_diario(cfg: ConfiguracionNivel) -> Template:
 
     Caso especial: si el grupo ES subcategoria, no se duplica
     SUB_CATEGORY_DESCRIPTION (ver `construir_query_master_table`).
-    """
+    """  # noqa: W505
     ya_es_nativa = cfg.columna_salida == 'SUB_CATEGORY_DESCRIPTION'
     columna_grupo_select = '' if ya_es_nativa else f'{cfg.columna_salida},\n  '
     return Template(f"""
@@ -630,7 +631,7 @@ def main() -> None:  # noqa: D103
     fecha_final = fecha_ejecucion.start_of('month').subtract(days=1)
     fecha_inicial = fecha_final.subtract(months=cant_meses).add(months=1).start_of('month')
 
-    # REGION: tabla maestra (misma logica que el script SKU, de grupo)
+    # REGION: tabla maestra (misma logica que el script SKU, + columna de grupo)  # noqa: W505
     query_master = construir_query_master_table(CFG).substitute(
         fecha_inicial=fecha_inicial, fecha_final=fecha_final, proyecto=proyecto,
         store_banner=store_banner,
@@ -682,7 +683,7 @@ def main() -> None:  # noqa: D103
     df_grupo = df_grupo.merge(pct_unidad, on=grupo_col, how='left')
     logging.info(f'Indice de grupo construido: {len(df_grupo):,} filas')
 
-    # REGION: dias de venta mayor (a nivel categoria, igual que eloriginal)
+    # REGION: dias de venta mayor (a nivel categoria, igual que el script original)  # noqa: W505
     categoria_de_grupo = df_sku_diario[['category_description', grupo_col]].drop_duplicates()
     query_dias = QUERY_DIAS_VENTA_MAYOR.substitute(table_master=tmp_path_table_aux)
     df_dias_especiales = readBigQuery(query=query_dias, user=usuario, gbq_client=gbq_client)
@@ -748,8 +749,14 @@ def main() -> None:  # noqa: D103
 
     # REGION: reordenar, agregar store_banner, subir
     df_grupo['store_banner'] = store_banner
-    df_grupo['precio_promedio'] = np.exp(df_grupo['ln_p_grupo']).round(0)
-    df_grupo['precio_medio_anterior'] = df_grupo['precio_medio_anterior'].round(0)
+    # Int64 (anulable de pandas), no int/float64 -- PRECIO_PROMEDIO puede
+    # ser NULL cuando la cobertura del dia no alcanzo COBERTURA_MINIMA
+    # (columna 'cobertura' lo explica). float64 con NaN no mapea limpio
+    # a INT64 NULLABLE de BigQuery; Int64 anulable si.
+    df_grupo['precio_promedio'] = np.exp(df_grupo['ln_p_grupo']).round(0).astype('Int64')
+    df_grupo['precio_medio_anterior'] = (
+        df_grupo['precio_medio_anterior'].round(0).astype('Int64')
+    )
     df_grupo['ventas_totales_producto'] = df_grupo['ventas_totales_producto'].round(0)
     df_grupo['p_week'] = df_grupo['p_date'].dt.isocalendar().week.astype(int)
     # p_month ya existia (calculado antes para el merge de participacion)

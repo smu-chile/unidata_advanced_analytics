@@ -41,7 +41,7 @@
         {
             "name": "PRECIO_PROMEDIO",
             "field_type": "INT64",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Indice de precio ponderado de la subcategoria (suma(w_i * ln P_i), exponenciado), con pesos a nivel SKU recalculados cada mes usando solo el mes anterior"
         },
         {
