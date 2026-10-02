@@ -1,0 +1,152 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "TMP_REGRESSION_PROCESSED_DATA_ELASTICITY_MARCA",
+    "columns": [
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la marca"
+        },
+        {
+            "name": "CATEGORY_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Categoria a la que pertenece la marca"
+        },
+        {
+            "name": "BRAND_DESCRIPTION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Nombre de la marca (agregada dentro de su categoria)"
+        },
+        {
+            "name": "P_DATE",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "Fecha del registro en formato YYYY-MM-DD"
+        },
+        {
+            "name": "P_WEEK",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Numero de semana ISO de la fecha"
+        },
+        {
+            "name": "P_MONTH",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Identificador de mes en formato YYYYMM"
+        },
+        {
+            "name": "PRECIO_PROMEDIO",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Indice de precio ponderado de la marca (suma(w_i * ln P_i), exponenciado), con pesos a nivel SKU recalculados cada mes usando solo el mes anterior"
+        },
+        {
+            "name": "CANTIDAD_TOTAL",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Cantidad total vendida de la marca, solo en su unidad de medida dominante"
+        },
+        {
+            "name": "VENTAS_TOTALES_PRODUCTO",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Ventas totales de la marca en el periodo, solo en su unidad de medida dominante"
+        },
+        {
+            "name": "N_SKU_ACTIVOS",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "Cantidad de SKU de la marca con venta ese dia"
+        },
+        {
+            "name": "COBERTURA",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Fraccion del peso de la marca con precio observado ese dia (base del indice de precio)"
+        },
+        {
+            "name": "PCT_VALOR_UNIDAD_DOMINANTE",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Fraccion de la venta historica de la marca cubierta por su unidad de medida dominante (el resto se excluyo del tablon)"
+        },
+        {
+            "name": "PARTICIPACION_CATEGORIA",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Participacion de la marca dentro de su categoria, calculada mensualmente"
+        },
+        {
+            "name": "PRIMER_DIA_MES",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "1 si la fecha es el primer dia del mes, 0 si no"
+        },
+        {
+            "name": "ULTIMO_DIA_MES",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "1 si la fecha es el ultimo dia del mes, 0 si no"
+        },
+        {
+            "name": "MULTIPLICADOR_X05",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "1 si la categoria tuvo ventas excepcionalmente bajas ese dia (x0.5 del promedio del dia de la semana), 0 si no"
+        },
+        {
+            "name": "PROPORCION_CATEGORIA",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Proporcion de ventas que representa la categoria respecto a su promedio del mismo dia de la semana"
+        },
+        {
+            "name": "CERCA_FERIADO",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": "1 si la fecha esta dentro de la ventana de dias cercanos a un feriado, 0 si no -- no excluye el registro, es informativo"
+        },
+        {
+            "name": "FRAC_PROMO",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Fraccion de la venta de la marca ese dia que corresponde a SKU con cualquier descuento registrado en TMP_PROMOTION_DAILY"
+        },
+        {
+            "name": "DESC_PROMOCIONAL",
+            "field_type": "FLOAT64",
+            "mode": "REQUIRED",
+            "description": "Fraccion de la venta de la marca ese dia que corresponde a SKU en campana apoteosica (reemplaza al antiguo flag binario APO)"
+        },
+        {
+            "name": "PRECIO_MEDIO_ANTERIOR",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Promedio del indice de precio de la marca en los 3 meses anteriores"
+        },
+        {
+            "name": "VARIACION_PORCENTUAL",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Variacion porcentual del precio de la marca respecto a PRECIO_MEDIO_ANTERIOR"
+        },
+        {
+            "name": "VARIACION_PORCENTUAL_CATEGORIA",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Variacion porcentual promedio (ponderada por venta) de las demas marcas de la misma categoria y dia, excluyendo a la propia marca (leave-one-out)"
+        }
+    ],
+    "time_partitioning": {
+        "field": "P_DATE",
+        "type_": "DAY"
+    },
+    "clustering_fields": [
+        "STORE_BANNER",
+        "CATEGORY_DESCRIPTION"
+    ]
+}
