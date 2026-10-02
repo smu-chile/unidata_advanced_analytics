@@ -33,7 +33,7 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-PROJECT_NAME = 'ecommerce'
+PROJECT_NAME = 'ecommerce_lifecycle_status'
 dag_args = {
     'dag_id': 'ecommerce_lifecycle_status',
     'schedule_interval': '0 0 2 * *',
