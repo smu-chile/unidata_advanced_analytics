@@ -2,12 +2,15 @@
 """DAG independiente -- tablones de regresion agregados (marca y subcategoria).
 
 Para banners fisicos (Unimarc, Super 10, Alvi). Dispara 2 tareas por
-banner, totalmente independientes entre si y sin conexion a ningun otro
-DAG (no alimentan elasticidad_general.py ni balance_matrix.py -- son la
-base del modelo de elasticidad cruzada, que corre aparte):
+banner (6 en total), :
 
     regression_data_marca_{banner}
     regression_data_subcategoria_{banner}
+
+Las 6 tareas corren en cadena SECUENCIAL ESTRICTA (itertools.pairwise),
+nunca 2 a la vez -- mismo criterio que la fase de Regresion/Balance
+Matrix del DAG de zona, donde correr varias tareas pesadas de Dataproc
+en paralelo causaba contencion de recursos.
 
 Misma estructura que `pricing_effects_balance_matrix.py` (interruptores
 por etapa, recursos por banner, EXECUTION_DATE desde dag_run.conf) --
@@ -16,6 +19,7 @@ usado solo como referencia de estilo, no como dependencia.
 import json
 import platform
 import importlib
+import itertools
 from datetime import timedelta
 
 # Pip
@@ -87,7 +91,7 @@ dag_args = {
     'dagrun_timeout': None,
     'catchup': False,
     'max_active_runs': 1,
-    'concurrency': 6,
+    'concurrency': 1,  # secuencial estricta -- nunca 2 tareas de Dataproc a la vez
     'tags': [
         PROJECT_NAME,
         'jsanmartin',
@@ -127,14 +131,16 @@ with DAG(**dag_args) as dag:
         ").strftime('%Y-%m-%d')) }}"
     )
 
-    regression_marca_tasks = []
-    regression_subcategoria_tasks = []
+    # Se van agregando a 1 SOLA lista, en el orden en que se crean -- al
+    # final se encadenan todas juntas con itertools.pairwise, para que
+    # Dataproc nunca tenga mas de 1 tarea de este DAG corriendo a la vez.
+    cadena_secuencial = []
 
     for store_banner in STORE_BANNER_LIST:
         banner_suffix = store_banner.replace(' ', '_').lower()
         kwargs_recursos = RECURSOS_EXTRA_POR_BANNER.get(store_banner, {})
 
-        # ---------- Tablon de marca (independiente) ----------
+        # ---------- Tablon de marca ----------
         if EJECUTAR_REGRESSION_MARCA:
             regression_marca_task = ExtendedDataprocCreateBatchOperator(
                 task_id=f'regression_data_marca_{banner_suffix}',
@@ -151,9 +157,9 @@ with DAG(**dag_args) as dag:
                 include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
                 **kwargs_recursos,
             )
-            regression_marca_tasks.append(regression_marca_task)
+            cadena_secuencial.append(regression_marca_task)
 
-        # ---------- Tablon de subcategoria (independiente) ----------
+        # ---------- Tablon de subcategoria ----------
         if EJECUTAR_REGRESSION_SUBCATEGORIA:
             regression_subcategoria_task = ExtendedDataprocCreateBatchOperator(
                 task_id=f'regression_data_subcategoria_{banner_suffix}',
@@ -170,7 +176,11 @@ with DAG(**dag_args) as dag:
                 include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
                 **kwargs_recursos,
             )
-            regression_subcategoria_tasks.append(regression_subcategoria_task)
+            cadena_secuencial.append(regression_subcategoria_task)
 
-        # Sin encadenamiento -- marca y subcategoria son independientes
-        # entre si, y este DAG no se conecta a ningun otro.
+    # Encadenamiento secuencial estricto: marca_unimarc >> subcat_unimarc
+    # >> marca_super_10 >> subcat_super_10 >> marca_alvi >> subcat_alvi.
+    # Si algun interruptor esta en False, esa tarea simplemente no entra
+    # a la lista y la cadena salta al siguiente eslabon activo.
+    for tarea_anterior, tarea_siguiente in itertools.pairwise(cadena_secuencial):
+        tarea_anterior >> tarea_siguiente
