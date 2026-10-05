@@ -32,7 +32,7 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
-store_banner_list = ['Unimarc', 'Alvi', 'Mayorista', 'Super 10']
+store_banner_list = ['Unimarc', 'Alvi', 'Super 10']
 
 PROJECT_NAME = 'offer_tool'
 dag_args = {
