@@ -22,10 +22,9 @@ with open(
 
 PROJECT_NAME = 'pricing'
 dag_id = 'forecast_processed_data'
-schedule_interval = '0 10 1,14 * *'
+schedule_interval = '0 10 2,14 * *' #min hora dia 1,dia 2
 catchup = False
 start_date = [2025, 6 , 20]
-
 # Task 1
 script1 = 'processed_regression_data'
 use = 'FORECAST'
