@@ -67,9 +67,7 @@ with DAG(**dag_args) as dag:
     offer_tool_tasks = []
 
     for store_banner in store_banner_list:
-        if store_banner == 'Mayorista':
-            lower_banner = 'm10'
-        elif store_banner == 'Super 10':
+        if store_banner == 'Super 10':
             lower_banner = 's10'
         elif (store_banner == 'Unimarc' or store_banner == 'Alvi'):
             lower_banner = store_banner.lower()
