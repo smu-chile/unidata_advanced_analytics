@@ -20,6 +20,7 @@ with open(
 ) as f:
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
+
 PROJECT_NAME = 'pricing'
 dag_id = 'forecast_processed_data'
 schedule_interval = '0 10 2,14 * *' #min hora dia 1,dia 2
