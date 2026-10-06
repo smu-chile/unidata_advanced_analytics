@@ -243,10 +243,10 @@ SQL_QUERIES = QueryDict({
             AND ITM_TXN_FCN_TP_DSC = 'V'
             AND TRANSACTION_TYPE IN ('TN','TF','BX','B','BE','F','NC','NE','FX','FE')
             AND VALUE > 0
-            AND MARKET_BASKET_KEY  IN (
+            AND MARKET_BASKET_KEY NOT IN (
                 SELECT MARKET_BASKET_KEY
                 FROM `${gcp_project}.CDA_VISTAS.VW_FACT_MARKET_BASKET_E_COMMERCE`
-                WHERE CANAL_VENTA = 'E-COMMERCE'
+                WHERE CANAL_VENTA IN ('PEDIDOS YA','UBER EATS','RAPPI','RAPPI TURBO')
             )
             AND STORE_BANNER = '${store_banner}'
     )
