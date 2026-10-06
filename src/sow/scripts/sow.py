@@ -584,3 +584,7 @@ def main() -> None:
         if_exists = 'append'
     )
 
+if __name__ == '__main__':
+    main()
+
+
