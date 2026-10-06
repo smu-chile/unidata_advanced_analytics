@@ -1,0 +1,146 @@
+{
+    "schema": "CONOCIMIENTO_CLIENTE",
+    "table": "SEGMENTACION_CLIENTE_SOW",
+
+    "columns": [
+        {
+            "name": "CUSTOMER_KEY",
+            "field_type": "BYTES",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "MESES_ACTIVOS",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "UNIDADES_TOTAL",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "VENTA_UNIMARC_TOTAL",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "VENTA_UNIMARC_PROM_MES",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "VENTA_CANASTA_TOTAL",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "VENTA_NO_CANASTA_TOTAL",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "VENTA_CANASTA_PROM_MES",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "ESTIMACION_CANASTA_TOTAL",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": ""
+        },
+        {
+            "name": "ESTIMACION_CANASTA_PROM_MES",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": ""
+        },
+        {
+            "name": "SOW_ANUAL",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": ""
+        },
+        {
+            "name": "GASTO_POR_CAPTURAR",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": ""
+        },
+        {
+            "name": "PCT_NO_CANASTA_PROM",
+            "field_type": "FLOAT",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "QUINTIL_CANASTA_PROM_MES",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "RANGO_GASTO_CANASTA_HOGAR",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "QUINTIL_VENTA_PROM_MES",
+            "field_type": "INT64",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "SEGMENTO_GASTO",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "SEGMENTO_SOW",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "SEGMENTO_TIPO_CANASTA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "SEGMENTO_RECURRENCIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": ""
+        },
+        {
+            "name": "FECHA_CARGA",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "[PARTICIONADO] Columna auxiliar para particionar"
+        }
+    ],
+    
+    "time_partitioning": {
+        "field": "FECHA_CARGA",
+        "type_": "DAY"
+    },
+    
+    "clustering_fields": ["STORE_BANNER"]
+}
