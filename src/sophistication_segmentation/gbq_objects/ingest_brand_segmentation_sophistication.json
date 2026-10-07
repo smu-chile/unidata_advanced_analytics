@@ -1,0 +1,58 @@
+{
+    "schema": "ML_LAB",
+    "table": "BRAND_SEGMENTATION_SOPHISTICATION",
+
+    "columns": [
+        {
+            "name": "DATE",
+            "field_type": "DATE",
+            "mode": "REQUIRED",
+            "description": "[PARTICIONADO] Columna auxiliar para particionar"
+        },
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": " "
+        },
+        {
+            "name": "CATEGORIA",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": " "
+        },
+        {
+            "name": "MARCA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": " "
+        },
+        {
+            "name": "HU_PU_PPUM",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": " "
+        },
+        {
+            "name": "CLUSTER",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": " "
+        },
+        {
+            "name": "CLASIFICACION_MARCA",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": " "
+        }
+
+        
+    ],
+    
+    "time_partitioning": {
+        "field": "DATE",
+        "type_": "DAY"
+    },
+    
+    "clustering_fields": ["STORE_BANNER", "CATEGORIA"]
+}
