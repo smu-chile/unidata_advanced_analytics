@@ -258,7 +258,7 @@ FROM `cl-bigdata-analytics-preprod.ML_LAB.SKU_SUBSTITUTES_BY_CATEGORY`
 WHERE store_banner = '${store_banner}'
 AND FORMAT_DATE('%Y%m', date) >= '${first_month}'
 AND FORMAT_DATE('%Y%m', date) <= '${last_month}'
-AND substitution_rank <= 5
+AND substitution_rank <= ${cant_sust}$
 """
 })
 
@@ -770,10 +770,12 @@ def main() -> None:  # noqa: D103
                             ].drop_duplicates().sort_values(by=['material','weight_upc'])
 
     # Query sustitutos
+    cant_sust = 20
     query_sust = SQL_QUERIES['query_athena_sust'].substitute(
         first_month=monthid_inicial,
         last_month=monthid_final,
-        store_banner = store_banner
+        store_banner = store_banner,
+        cant_sust = cant_sust
     )
 
     df_sust = readBigQuery(
@@ -784,17 +786,19 @@ def main() -> None:  # noqa: D103
 
 
     # Obtener las tres tablas de parejas
-    df_parejas_1 = obtenerParejasPorRelevance(df_sust, df_material_ean, 1)
-    df_parejas_2 = obtenerParejasPorRelevance(df_sust, df_material_ean, 2)
-    df_parejas_3 = obtenerParejasPorRelevance(df_sust, df_material_ean, 3)
-    df_parejas_4 = obtenerParejasPorRelevance(df_sust, df_material_ean, 4)
-    df_parejas_5 = obtenerParejasPorRelevance(df_sust, df_material_ean, 5)
+
+
+    for i in range(1, cant_sust + 1):
+        globals()[f'df_parejas_{i}'] = obtenerParejasPorRelevance(
+            df_sust,
+            df_material_ean,
+            i)
 
 
     # Agregar para las diferencias relevancias la columna con sustituto y
     # variacion de precio
-    for i in [1, 2, 3, 4, 5]:
-        df_p = locals()[f'df_parejas_{i}']
+    for i in range(1, cant_sust + 1):
+        df_p = globals()[f'df_parejas_{i}']
         df_p['p_month'] = df_p['p_month'].astype(int)
 
         df_datos = df_datos.merge(
