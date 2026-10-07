@@ -425,7 +425,7 @@ def main() -> None:  # noqa: D103
     esquema = 'TMP'
     # PARCHE TEMPORAL
     tabla = f'TMP_REGRESSION_DATA_{use}'
-    tmp_path_table = f'{proyecto}.{esquema}.{tabla}'
+    tmp_path_table = f'{proyecto}.{esquema}.{tabla}'  # noqa: F841
 
 
     # Nombre archivo Json
