@@ -68,7 +68,7 @@ with DAG(**dag_args) as dag:
             python_script_path=(
                 f'{PROJECT_NAME}/'
                 'scripts/'
-                'brand_segmentation_sophistication.py'
+                'computing_brand_segmentation_sophistication_score.py'
             ),
             dag_env_config=dag_env_config,
             docker_image_name=PROJECT_NAME,
