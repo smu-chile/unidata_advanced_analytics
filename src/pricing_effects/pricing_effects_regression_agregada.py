@@ -58,9 +58,10 @@ PROJECT_NAME = 'pricing_effects'
 
 # Solo banners fisicos -- mismo criterio que el resto del proyecto.
 STORE_BANNER_LIST = [
-    'Unimarc',
-    'Super 10',
-    'Alvi',
+    'Unimarc'
+    #,
+    #'Super 10',
+    #'Alvi',
 ]
 
 # ====================================================================
