@@ -998,8 +998,11 @@ def main() -> None:  # noqa: D103
         'ventas_totales_producto', 'cantidad_total', 'precio_promedio',
         'primer_dia_mes', 'ultimo_dia_mes',
         'multiplicador_x05', 'apo', 'proporcion_categoria',
-        'ean_sustituto_1', 'ean_sustituto_2', 'ean_sustituto_3',
-        'ean_sustituto_4', 'ean_sustituto_5',
+        'ean_sustituto_1','ean_sustituto_2', 'ean_sustituto_3','ean_sustituto_4',
+        'ean_sustituto_5','ean_sustituto_6', 'ean_sustituto_7','ean_sustituto_8',
+        'ean_sustituto_9','ean_sustituto_10','ean_sustituto_11','ean_sustituto_12',
+        'ean_sustituto_13','ean_sustituto_14','ean_sustituto_15','ean_sustituto_16',
+        'ean_sustituto_17','ean_sustituto_18','ean_sustituto_19','ean_sustituto_20',
         'variacion_porcentual_subcategoria',
         'variacion_top1_sustituto', 'variacion_top3_sustitutos'
     ]
