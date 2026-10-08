@@ -1,10 +1,10 @@
 # Default
-"""DAG independiente -- tablones de regresion agregados (marca y subcategoria).
+"""DAG independiente -- tablones de regresion agregados (marca x subcategoria y subcategoria).
 
 Para banners fisicos (Unimarc, Super 10, Alvi). Dispara 2 tareas por
 banner (6 en total), :
 
-    regression_data_marca_{banner}
+    regression_data_marca_subcategoria_{banner}
     regression_data_subcategoria_{banner}
 
 Las 6 tareas corren en cadena SECUENCIAL ESTRICTA (itertools.pairwise),
@@ -67,7 +67,7 @@ STORE_BANNER_LIST = [
 # INTERRUPTORES -- 1 por tablon, independientes entre si. Si esta en
 # False, esa tarea simplemente no se crea para ningun banner.
 # ====================================================================
-EJECUTAR_REGRESSION_MARCA = True
+EJECUTAR_REGRESSION_MARCA_SUBCATEGORIA = True
 EJECUTAR_REGRESSION_SUBCATEGORIA = True
 
 RECURSOS_EXTRA_POR_BANNER = {
@@ -140,12 +140,12 @@ with DAG(**dag_args) as dag:
         banner_suffix = store_banner.replace(' ', '_').lower()
         kwargs_recursos = RECURSOS_EXTRA_POR_BANNER.get(store_banner, {})
 
-        # ---------- Tablon de marca ----------
-        if EJECUTAR_REGRESSION_MARCA:
-            regression_marca_task = ExtendedDataprocCreateBatchOperator(
-                task_id=f'regression_data_marca_{banner_suffix}',
+        # ---------- Tablon de marca x subcategoria ----------
+        if EJECUTAR_REGRESSION_MARCA_SUBCATEGORIA:
+            regression_marca_subcategoria_task = ExtendedDataprocCreateBatchOperator(
+                task_id=f'regression_data_marca_subcategoria_{banner_suffix}',
                 python_script_path=(
-                    f'{PROJECT_NAME}/scripts/processed_regression_data_marca.py'
+                    f'{PROJECT_NAME}/scripts/processed_regression_data_marca_subcategoria.py'
                 ),
                 dag_env_config=dag_env_config,
                 docker_image_name=PROJECT_NAME,
@@ -157,7 +157,7 @@ with DAG(**dag_args) as dag:
                 include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
                 **kwargs_recursos,
             )
-            cadena_secuencial.append(regression_marca_task)
+            cadena_secuencial.append(regression_marca_subcategoria_task)
 
         # ---------- Tablon de subcategoria ----------
         if EJECUTAR_REGRESSION_SUBCATEGORIA:
@@ -178,7 +178,7 @@ with DAG(**dag_args) as dag:
             )
             cadena_secuencial.append(regression_subcategoria_task)
 
-    # Encadenamiento secuencial estricto: marca_unimarc >> subcat_unimarc
+    # Encadenamiento secuencial estricto: marca_subcat_unimarc >>
     # >> marca_super_10 >> subcat_super_10 >> marca_alvi >> subcat_alvi.
     # Si algun interruptor esta en False, esa tarea simplemente no entra
     # a la lista y la cadena salta al siguiente eslabon activo.
