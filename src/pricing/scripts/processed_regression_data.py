@@ -258,7 +258,7 @@ FROM `cl-bigdata-analytics-preprod.ML_LAB.SKU_SUBSTITUTES_BY_CATEGORY`
 WHERE store_banner = '${store_banner}'
 AND FORMAT_DATE('%Y%m', date) >= '${first_month}'
 AND FORMAT_DATE('%Y%m', date) <= '${last_month}'
-AND substitution_rank <= ${cant_sust}$
+AND substitution_rank <= '${cant_sust}'$
 """
 })
 
