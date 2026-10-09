@@ -1,6 +1,6 @@
 {
     "schema": "PRECIO_PROMOCIONES",
-    "table": "FORECAST_HISTORIALES_PROCESSED_DATA",
+    "table": "FORECAST_HISTORIALES_PROCESSED_DATA_v2",
 
     "columns": [
         {
@@ -122,6 +122,96 @@
             "field_type": "STRING",
             "mode": "NULLABLE",
             "description": "Codigo EAN del sustituto 5"
+        },
+        {
+            "name": "EAN_SUSTITUTO_6",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 1"
+        },
+        {
+            "name": "EAN_SUSTITUTO_7",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 2"
+        },
+        {
+            "name": "EAN_SUSTITUTO_8",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 3"
+        },
+        {
+            "name": "EAN_SUSTITUTO_9",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 4"
+        },
+        {
+            "name": "EAN_SUSTITUTO_10",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 5"
+        },
+        {
+            "name": "EAN_SUSTITUTO_11",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 11"
+        },
+        {
+            "name": "EAN_SUSTITUTO_12",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 12"
+        },
+        {
+            "name": "EAN_SUSTITUTO_13",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 13"
+        },
+        {
+            "name": "EAN_SUSTITUTO_14",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 14"
+        },
+        {
+            "name": "EAN_SUSTITUTO_15",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 15"
+        },
+        {
+            "name": "EAN_SUSTITUTO_16",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 16"
+        },
+        {
+            "name": "EAN_SUSTITUTO_17",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 17"
+        },
+        {
+            "name": "EAN_SUSTITUTO_18",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 18"
+        },
+        {
+            "name": "EAN_SUSTITUTO_19",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 19"
+        },
+        {
+            "name": "EAN_SUSTITUTO_20",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del sustituto 20"
         },
         {
             "name": "VARIACION_PORCENTUAL_SUBCATEGORIA",
