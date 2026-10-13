@@ -3948,6 +3948,822 @@ def subir_archivo_sharepoint(
     logging.info('✅ Archivo subido correctamente a SharePoint')
 
 
+# =========================================================================
+# 20. MODO INTERACTIVO / EXPLORACIÓN POR PRODUCTO (uso en celda Jupyter)
+# =========================================================================
+# Este bloque NO altera el flujo de Airflow. Reutiliza las mismas funciones
+# del pipeline productivo para entregar, por producto, una estructura lista
+# para graficar y auditar el comportamiento del modelo.
+
+
+@dataclass(frozen=True)
+class EntradaExploracion:
+    """Parámetros manuales para proyectar un producto en modo exploración.
+
+    Atributos
+    ---------
+    ean : str
+    precio_modal : float
+    precio_promocional : float
+    porcentaje_descuento : float
+    fecha_inicio : str | pd.Timestamp
+    fecha_fin : str | pd.Timestamp
+    mecanica : str | None
+        Mecánica/evento promocional. None o '' si no aplica.
+    n_promocion : str
+        Identificador lógico para la corrida (por defecto 'EXPLORACION').
+    nombre_promocion : str
+    """
+
+    ean: str
+    precio_modal: float
+    precio_promocional: float
+    porcentaje_descuento: float
+    fecha_inicio: str | pd.Timestamp
+    fecha_fin: str | pd.Timestamp
+    mecanica: str | None = None
+    n_promocion: str = 'EXPLORACION'
+    nombre_promocion: str = 'Proyeccion exploratoria'
+
+
+@dataclass
+class ResultadoExploracionProducto:
+    """Salida estructurada del modo interactivo, lista para plotear.
+
+    Atributos
+    ---------
+    ean : str
+    elegible : bool
+    comentario : str
+        Motivo cuando el EAN no es proyectable; '-' en caso normal.
+    metadata_producto : dict[str, object]
+    inputs_modelo : dict[str, object]
+    validacion_mecanica : dict[str, object]
+    regimen : RegimenPromocional | None
+    columnas_modelo : list[str]
+    metricas_train : MetricasModelo | None
+    metricas_test : MetricasModelo | None
+    datos_test : pd.DataFrame
+        Columnas: P_DATE, Y_REAL, Y_PRED_8020, BENCHMARK.
+    ajuste_historico : pd.DataFrame
+        Columnas: P_DATE, Y_REAL, Y_PRED_COMPLETO, PARTICION.
+    proyeccion_diaria : pd.DataFrame
+        Detalle diario baseline vs promocional del rango pedido.
+    resumen_proyeccion : dict[str, object]
+    modelo_validacion : HistGradientBoostingRegressor | None
+    modelo_productivo : HistGradientBoostingRegressor | None
+    """
+
+    ean: str
+    elegible: bool
+    comentario: str
+    metadata_producto: dict[str, object]
+    inputs_modelo: dict[str, object]
+    validacion_mecanica: dict[str, object]
+    regimen: RegimenPromocional | None
+    columnas_modelo: list[str]
+    metricas_train: MetricasModelo | None
+    metricas_test: MetricasModelo | None
+    datos_test: pd.DataFrame
+    ajuste_historico: pd.DataFrame
+    proyeccion_diaria: pd.DataFrame
+    resumen_proyeccion: dict[str, object]
+    modelo_validacion: HistGradientBoostingRegressor | None
+    modelo_productivo: HistGradientBoostingRegressor | None
+
+
+def _parsear_mecanicas_validas(  # noqa: D417
+    valor_mecanicas: object,
+    separadores: tuple[str, ...] = (';', ',', '|'),
+) -> list[str]:
+    """Normaliza la columna MECANICAS_VALIDAS a una lista de strings.
+
+    Admite list/tuple/set o texto con separadores. Devuelve mecánicas en
+    mayúsculas y sin espacios redundantes.
+
+    Parameters
+    ----------
+    valor_mecanicas : object
+    separadores : tuple[str, ...]
+
+    Returns
+    -------
+    list[str]
+    """
+    if valor_mecanicas is None:
+        return []
+
+    if isinstance(valor_mecanicas, (list, tuple, set)):
+        items = [str(item) for item in valor_mecanicas]
+    else:
+        try:
+            if pd.isna(valor_mecanicas):
+                return []
+        except (TypeError, ValueError):
+            pass
+
+        texto = str(valor_mecanicas).strip()
+
+        if not texto:
+            return []
+
+        separador_activo = next(
+            (sep for sep in separadores if sep in texto), None
+        )
+        items = (
+            texto.split(separador_activo)
+            if separador_activo is not None
+            else [texto]
+        )
+
+    mecanicas = [
+        item.strip().upper()
+        for item in items
+        if item is not None and str(item).strip()
+    ]
+
+    return list(dict.fromkeys(mecanicas))
+
+
+def validar_mecanica_interactiva(  # noqa: D417
+    mecanica: str | None,
+    caracterizacion_ean: pd.Series,
+    regimen: RegimenPromocional,
+    configuracion: ConfiguracionModeloPromo,
+) -> dict[str, object]:
+    """Valida la mecánica entregada contra las mecánicas válidas del EAN.
+
+    No interrumpe la proyección: devuelve un diagnóstico con avisos. La
+    mecánica solo se aplica si el régimen la usa y está en el catálogo
+    válido del producto.
+
+    Parameters
+    ----------
+    mecanica : str | None
+    caracterizacion_ean : pd.Series
+    regimen : RegimenPromocional
+    configuracion : ConfiguracionModeloPromo
+
+    Returns
+    -------
+    dict[str, object]
+        Claves: mecanica_entregada, mecanicas_validas, mecanica_aplicada,
+        es_valida, aviso.
+    """
+    mecanica_normalizada = (
+        str(mecanica).strip().upper() if mecanica not in (None, '') else None
+    )
+
+    mecanicas_validas = _parsear_mecanicas_validas(
+        obtener_valor(caracterizacion_ean, 'MECANICAS_VALIDAS', valor_default=None)
+    )
+
+    incluir_mecanica_ean = es_valor_afirmativo(
+        obtener_valor(caracterizacion_ean, 'INCLUIR_MECANICA', valor_default=None),
+        configuracion,
+    )
+
+    aviso = '-'
+    mecanica_aplicada = None
+    es_valida = False
+
+    if mecanica_normalizada is None:
+        aviso = 'No se entregó mecánica; se proyecta sin mecánica.'
+    elif not configuracion.incluir_mecanica:
+        aviso = (
+            'La mecánica se ignora: deshabilitada globalmente en la '
+            'configuración (incluir_mecanica=False).'
+        )
+    elif not incluir_mecanica_ean:
+        aviso = (
+            'La mecánica se ignora: el EAN no está habilitado para mecánica '
+            '(INCLUIR_MECANICA distinto de afirmativo).'
+        )
+    elif not regimen.usar_mecanica:
+        aviso = (
+            'La mecánica se ignora: el régimen asignado '
+            f'({regimen.nombre}) no utiliza mecánica.'
+        )
+    elif mecanica_normalizada not in mecanicas_validas:
+        aviso = (
+            f'Mecánica no reconocida para el EAN: {mecanica_normalizada!r}. '
+            f'Mecánicas válidas: {mecanicas_validas}. Se proyectará como '
+            'MECANICA_OTRA.'
+        )
+    else:
+        es_valida = True
+        mecanica_aplicada = mecanica_normalizada
+        aviso = 'Mecánica válida y aplicada.'
+
+    return {
+        'mecanica_entregada': mecanica_normalizada,
+        'mecanicas_validas': mecanicas_validas,
+        'mecanica_aplicada': mecanica_aplicada,
+        'es_valida': es_valida,
+        'aviso': aviso,
+    }
+
+
+def _construir_promos_una_fila(entrada: EntradaExploracion) -> pd.DataFrame:  # noqa: D417
+    """Construye un DataFrame de una fila compatible con el pipeline.
+
+    Parameters
+    ----------
+    entrada : EntradaExploracion
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+    return pd.DataFrame([{
+        'N_PROMOCION': entrada.n_promocion,
+        'NOMBRE_PROMOCION': entrada.nombre_promocion,
+        'EAN': entrada.ean,
+        'FECHA_INICIO_DE_PROMOCION': entrada.fecha_inicio,
+        'FECHA_FIN_DE_PROMOCION': entrada.fecha_fin,
+        'PRECIO_PROMOCIONAL': entrada.precio_promocional,
+        'PRECIO_MODAL': entrada.precio_modal,
+        'PORCENTAJE_DESCUENTO': entrada.porcentaje_descuento,
+        'DESCRIPCION_EVENTO_PROMOCIONAL': entrada.mecanica or 'SIN_MECANICA',
+    }])
+
+
+def _construir_datos_test(  # noqa: D417
+    datos_entrenamiento: DatosEntrenamiento,
+    resultado_entrenamiento: ResultadoEntrenamiento,
+) -> pd.DataFrame:
+    """Arma el DataFrame de test (modelo 80/20) listo para graficar.
+
+    Parameters
+    ----------
+    datos_entrenamiento : DatosEntrenamiento
+    resultado_entrenamiento : ResultadoEntrenamiento
+
+    Returns
+    -------
+    pd.DataFrame
+        Columnas P_DATE, Y_REAL, Y_PRED_8020, BENCHMARK.
+    """
+    return pd.DataFrame({
+        'P_DATE': datos_entrenamiento.fechas_test.to_numpy(),
+        'Y_REAL': datos_entrenamiento.y_test.to_numpy(dtype='float64'),
+        'Y_PRED_8020': np.asarray(
+            resultado_entrenamiento.predicciones_test, dtype='float64'
+        ),
+        'BENCHMARK': np.asarray(
+            resultado_entrenamiento.benchmark_test, dtype='float64'
+        ),
+    }).sort_values('P_DATE', kind='stable').reset_index(drop=True)
+
+
+def _primera_columna(
+    datos: pd.DataFrame,
+    candidatas: tuple[str, ...],
+) -> str | None:
+    """Devuelve la primera columna existente entre las candidatas."""
+    for candidata in candidatas:
+        if candidata in datos.columns:
+            return candidata
+
+    return None
+
+
+def _primer_atributo(
+    objeto: object,
+    candidatos: tuple[str, ...],
+) -> object | None:
+    """Devuelve el primer atributo no nulo entre los candidatos."""
+    for candidato in candidatos:
+        valor = getattr(objeto, candidato, None)
+
+        if valor is not None:
+            return valor
+
+    return None
+
+
+def _ensamblar_matriz_historica(
+    datos_entrenamiento: DatosEntrenamiento,
+    columnas_modelo: list[str],
+) -> tuple[pd.DataFrame, pd.Series, pd.Series, np.ndarray]:
+    """Reconstruye la matriz histórica completa desde el split 80/20.
+
+    Concatena los bloques de train y test del objeto `DatosEntrenamiento`
+    para recuperar el eje temporal completo, junto con la bandera que
+    identifica el tramo de validación.
+
+    Parameters
+    ----------
+    datos_entrenamiento : DatosEntrenamiento
+        Objeto con los bloques del split temporal.
+    columnas_modelo : list[str]
+        Features en el orden exacto exigido por el modelo.
+
+    Returns
+    -------
+    tuple[pd.DataFrame, pd.Series, pd.Series, np.ndarray]
+        Matriz de features, objetivo real, fechas y máscara de test.
+    """
+    matriz_train = _primer_atributo(
+        datos_entrenamiento,
+        ('X_train', 'x_train', 'features_train', 'matriz_train'),
+    )
+    matriz_test = _primer_atributo(
+        datos_entrenamiento,
+        ('X_test', 'x_test', 'features_test', 'matriz_test'),
+    )
+    objetivo_train = _primer_atributo(
+        datos_entrenamiento,
+        ('y_train', 'Y_train', 'objetivo_train'),
+    )
+    objetivo_test = _primer_atributo(
+        datos_entrenamiento,
+        ('y_test', 'Y_test', 'objetivo_test'),
+    )
+    fechas_train = _primer_atributo(
+        datos_entrenamiento,
+        ('fechas_train', 'P_DATE_train', 'fechas_entrenamiento'),
+    )
+    fechas_test = _primer_atributo(
+        datos_entrenamiento,
+        ('fechas_test', 'P_DATE_test', 'fechas_validacion'),
+    )
+
+    bloques = (
+        matriz_train,
+        matriz_test,
+        objetivo_train,
+        objetivo_test,
+        fechas_train,
+        fechas_test,
+    )
+
+    if any(bloque is None for bloque in bloques):
+        disponibles = [
+            atributo
+            for atributo in dir(datos_entrenamiento)
+            if not atributo.startswith('_')
+        ]
+        msg = (
+            'No se pudieron ubicar los bloques train/test en '
+            f'DatosEntrenamiento. Atributos disponibles: {disponibles}'
+        )
+        raise AttributeError(msg)
+
+    matriz = pd.concat(
+        [
+            pd.DataFrame(matriz_train).reset_index(drop=True),
+            pd.DataFrame(matriz_test).reset_index(drop=True),
+        ],
+        ignore_index=True,
+    )
+
+    objetivo = pd.concat(
+        [
+            pd.Series(np.asarray(objetivo_train, dtype='float64')),
+            pd.Series(np.asarray(objetivo_test, dtype='float64')),
+        ],
+        ignore_index=True,
+    )
+
+    fechas = pd.concat(
+        [
+            pd.Series(pd.to_datetime(pd.Series(fechas_train).to_numpy())),
+            pd.Series(pd.to_datetime(pd.Series(fechas_test).to_numpy())),
+        ],
+        ignore_index=True,
+    )
+
+    mascara = np.concatenate(
+        [
+            np.zeros(len(pd.DataFrame(matriz_train)), dtype=bool),
+            np.ones(len(pd.DataFrame(matriz_test)), dtype=bool),
+        ]
+    )
+
+    faltantes = [
+        columna
+        for columna in columnas_modelo
+        if columna not in matriz.columns
+    ]
+
+    if faltantes:
+        msg = f'Faltan features en la matriz histórica: {faltantes}'
+        raise ValueError(msg)
+
+    return matriz, objetivo, fechas, mascara
+
+
+def _extraer_contexto_promocional(
+    historial_crudo: pd.DataFrame,
+    ean: str,
+) -> pd.DataFrame:
+    """Extrae precio, precio promocional y bandera desde el historial crudo.
+
+    Se usa `df_historial` sin procesar porque las columnas
+    `FLAG_PROMO_T`, `PRECIO_PROMOCIONAL_MINIMO_T` y `PRECIO_PROMEDIO`
+    no sobreviven a la preparación de fuentes del pipeline.
+
+    Parameters
+    ----------
+    historial_crudo : pd.DataFrame
+        Historial diario sin transformar.
+    ean : str
+        EAN normalizado del producto.
+
+    Returns
+    -------
+    pd.DataFrame
+        Tabla con `P_DATE`, `PRECIO`, `PRECIO_PROMO` y `FLAG_PROMO`,
+        con una fila por fecha.
+    """
+    vacio = pd.DataFrame(
+        columns=['P_DATE', 'PRECIO', 'PRECIO_PROMO', 'FLAG_PROMO']
+    )
+
+    if historial_crudo is None or historial_crudo.empty:
+        return vacio
+
+    contexto = historial_crudo.copy()
+
+    columna_ean = _primera_columna(contexto, ('EAN', 'ean'))
+
+    if columna_ean is not None:
+        claves = (
+            contexto[columna_ean]
+            .astype(str)
+            .str.strip()
+            .str.replace(r'\.0$', '', regex=True)
+        )
+        contexto = contexto.loc[claves.eq(str(ean))].copy()
+
+    if contexto.empty:
+        return vacio
+
+    columna_fecha = _primera_columna(contexto, ('P_DATE', 'FECHA', 'fecha'))
+
+    if columna_fecha is None:
+        return vacio
+
+    columna_precio = _primera_columna(
+        contexto,
+        ('PRECIO_PROMEDIO', 'PRECIO', 'PRECIO_MODAL'),
+    )
+    columna_precio_promo = _primera_columna(
+        contexto,
+        (
+            'PRECIO_PROMOCIONAL_MINIMO_T',
+            'PRECIO_PROMOCIONAL_MINIMO',
+            'PRECIO_PROMOCIONAL',
+        ),
+    )
+    columna_flag = _primera_columna(
+        contexto,
+        ('FLAG_PROMO_T', 'FLAG_PROMO'),
+    )
+
+    salida = pd.DataFrame()
+    salida['P_DATE'] = pd.to_datetime(
+        contexto[columna_fecha]
+    ).dt.normalize()
+
+    salida['PRECIO'] = (
+        pd.to_numeric(contexto[columna_precio], errors='coerce').to_numpy()
+        if columna_precio is not None
+        else np.nan
+    )
+    salida['PRECIO_PROMO'] = (
+        pd.to_numeric(
+            contexto[columna_precio_promo],
+            errors='coerce',
+        ).to_numpy()
+        if columna_precio_promo is not None
+        else np.nan
+    )
+    salida['FLAG_PROMO'] = (
+        pd.to_numeric(contexto[columna_flag], errors='coerce')
+        .fillna(0)
+        .astype('int8')
+        .to_numpy()
+        if columna_flag is not None
+        else 0
+    )
+
+    return (
+        salida.sort_values('P_DATE', kind='stable')
+        .drop_duplicates('P_DATE', keep='last')
+        .reset_index(drop=True)
+    )
+
+
+def _construir_ajuste_historico(
+    datos_entrenamiento: DatosEntrenamiento,
+    resultado_entrenamiento: ResultadoEntrenamiento,
+    historial_crudo: pd.DataFrame | None = None,
+    ean: str | None = None,
+) -> pd.DataFrame:
+    """Arma el historial con reales, predicciones, precios y promociones.
+
+    Columnas producidas, consumidas por el módulo de ploteo:
+
+    - `Y_REAL`: cantidad observada.
+    - `Y_PRED_COMPLETO`: predicción del modelo productivo.
+    - `Y_PRED_TEST`: predicción del modelo de validación, poblada solo
+      sobre el tramo final del split temporal 80/20.
+    - `PRECIO` y `PRECIO_PROMO`: precios traídos del historial crudo.
+    - `FLAG_PROMO`: bandera binaria de día promocional.
+    - `PARTICION`: 'train' o 'test'.
+
+    Parameters
+    ----------
+    datos_entrenamiento : DatosEntrenamiento
+        Objeto con los bloques del split temporal.
+    resultado_entrenamiento : ResultadoEntrenamiento
+        Objeto con modelos y `columnas_modelo`.
+    historial_crudo : pd.DataFrame | None
+        `df_historial` sin procesar, fuente del contexto promocional.
+    ean : str | None
+        EAN normalizado para filtrar el historial crudo.
+
+    Returns
+    -------
+    pd.DataFrame
+        Historial ordenado por fecha y listo para graficar.
+    """
+    columnas_modelo = list(
+        getattr(resultado_entrenamiento, 'columnas_modelo', []) or []
+    )
+
+    matriz, objetivo, fechas, mascara = _ensamblar_matriz_historica(
+        datos_entrenamiento=datos_entrenamiento,
+        columnas_modelo=columnas_modelo,
+    )
+
+    matriz_modelo = matriz[columnas_modelo]
+
+    modelo_completo = getattr(
+        resultado_entrenamiento,
+        'modelo_productivo',
+        None,
+    )
+    modelo_parcial = getattr(
+        resultado_entrenamiento,
+        'modelo_validacion',
+        None,
+    )
+
+    ajuste = pd.DataFrame(
+        {
+            'P_DATE': pd.to_datetime(fechas).dt.normalize(),
+            'Y_REAL': objetivo,
+            'PARTICION': np.where(mascara, 'test', 'train'),
+        }
+    )
+
+    ajuste['Y_PRED_COMPLETO'] = (
+        modelo_completo.predict(matriz_modelo)
+        if modelo_completo is not None
+        else np.nan
+    )
+
+    ajuste['Y_PRED_TEST'] = np.nan
+
+    if modelo_parcial is not None and mascara.any():
+        ajuste.loc[mascara, 'Y_PRED_TEST'] = modelo_parcial.predict(
+            matriz_modelo.loc[mascara]
+        )
+
+    contexto = _extraer_contexto_promocional(
+        historial_crudo=historial_crudo,
+        ean=ean if ean is not None else '',
+    )
+
+    if contexto.empty:
+        ajuste['PRECIO'] = np.nan
+        ajuste['PRECIO_PROMO'] = np.nan
+        ajuste['FLAG_PROMO'] = 0
+    else:
+        ajuste = ajuste.merge(contexto, on='P_DATE', how='left')
+        ajuste['FLAG_PROMO'] = (
+            pd.to_numeric(ajuste['FLAG_PROMO'], errors='coerce')
+            .fillna(0)
+            .astype('int8')
+        )
+
+    return (
+        ajuste.sort_values('P_DATE', kind='stable')
+        .reset_index(drop=True)
+    )
+
+def _resultado_no_proyectable(  # noqa: D417
+    ean: str,
+    caracterizacion_ean: pd.Series | None,
+    comentario: str,
+    validacion_mecanica: dict[str, object] | None = None,
+    inputs_modelo: dict[str, object] | None = None,
+) -> ResultadoExploracionProducto:
+    """Construye una salida de exploración cuando el EAN no es proyectable.
+
+    Parameters
+    ----------
+    ean : str
+    caracterizacion_ean : pd.Series | None
+    comentario : str
+    validacion_mecanica : dict[str, object] | None
+    inputs_modelo : dict[str, object] | None
+
+    Returns
+    -------
+    ResultadoExploracionProducto
+    """
+    columnas_test = ['P_DATE', 'Y_REAL', 'Y_PRED_8020', 'BENCHMARK']
+    columnas_ajuste = ['P_DATE', 'Y_REAL', 'Y_PRED_COMPLETO', 'PARTICION']
+
+    return ResultadoExploracionProducto(
+        ean=ean,
+        elegible=False,
+        comentario=comentario,
+        metadata_producto=obtener_metadata_ean(caracterizacion_ean),
+        inputs_modelo=inputs_modelo or {},
+        validacion_mecanica=validacion_mecanica or {},
+        regimen=None,
+        columnas_modelo=[],
+        metricas_train=None,
+        metricas_test=None,
+        datos_test=pd.DataFrame(columns=columnas_test),
+        ajuste_historico=pd.DataFrame(columns=columnas_ajuste),
+        proyeccion_diaria=pd.DataFrame(),
+        resumen_proyeccion={},
+        modelo_validacion=None,
+        modelo_productivo=None,
+    )
+
+
+def explorar_producto(
+    entrada: EntradaExploracion,
+    df_historial: pd.DataFrame,
+    df_caracterizacion: pd.DataFrame,
+    configuracion: ConfiguracionModeloPromo | None = None,
+    calendario_futuro: pd.DataFrame | None = None,
+) -> ResultadoExploracionProducto:
+    """Proyecta un producto en modo interactivo, reutilizando el pipeline.
+
+    Entrena el modelo de validación (80/20) y el productivo (100%), evalúa
+    el test del 20% y proyecta el escenario solicitado. La salida queda
+    lista para graficar y auditar.
+
+    Parameters
+    ----------
+    entrada : EntradaExploracion
+        Parámetros manuales de la proyección (EAN, precios, fechas, etc.).
+    df_historial : pd.DataFrame
+        Historial diario crudo (mismo esquema que el pipeline productivo).
+    df_caracterizacion : pd.DataFrame
+        Caracterización cruda de productos.
+    configuracion : ConfiguracionModeloPromo | None
+        Si es None, se usa la configuración por defecto.
+    calendario_futuro : pd.DataFrame | None
+        Calendario de feriados. Si es None, se construye desde el rango.
+
+    Returns
+    -------
+    ResultadoExploracionProducto
+    """
+    configuracion = configuracion or ConfiguracionModeloPromo()
+    ean = normalizar_ean(pd.Series([entrada.ean])).iloc[0]
+
+    promos_una_fila = _construir_promos_una_fila(entrada)
+
+    fuentes = preparar_fuentes_modelo(
+        historial=df_historial,
+        caracterizacion=df_caracterizacion,
+        promociones_futuras=promos_una_fila,
+        configuracion=configuracion,
+    )
+
+    if calendario_futuro is None:
+        calendario_futuro = construir_calendario_futuro(
+            promociones=fuentes.promociones_futuras
+        )
+
+    promocion_ean = fuentes.promociones_futuras.iloc[0]
+
+    inputs_modelo = {
+        'EAN': ean,
+        'PRECIO_MODAL': float(promocion_ean['PRECIO_MODAL']),
+        'PRECIO_PROMOCIONAL': float(promocion_ean['PRECIO_PROMOCIONAL']),
+        'PORCENTAJE_DESCUENTO': float(promocion_ean['PORCENTAJE_DESCUENTO']),
+        'MECANICA': entrada.mecanica,
+        'FECHA_INICIO': promocion_ean['FECHA_INICIO_DE_PROMOCION'],
+        'FECHA_FIN': promocion_ean['FECHA_FIN_DE_PROMOCION'],
+        'DURACION_DIAS': int(promocion_ean['DURACION_PROMOCION_DIAS']),
+        'FAMILIA_PROMOCIONAL': configuracion.familia_promocional,
+    }
+
+    caracterizacion_indexada = fuentes.caracterizacion
+
+    if ean not in caracterizacion_indexada.index:
+        return _resultado_no_proyectable(
+            ean=ean,
+            caracterizacion_ean=None,
+            comentario='EAN sin registro en caracterización.',
+            inputs_modelo=inputs_modelo,
+        )
+
+    caracterizacion_ean = caracterizacion_indexada.loc[ean]
+
+    historial_ean = fuentes.historial.loc[
+        fuentes.historial['EAN'].eq(ean)
+    ].copy()
+
+    if historial_ean.empty:
+        return _resultado_no_proyectable(
+            ean=ean,
+            caracterizacion_ean=caracterizacion_ean,
+            comentario='EAN sin historial disponible.',
+            inputs_modelo=inputs_modelo,
+        )
+
+    elegibilidad, regimen = evaluar_ean(
+        ean=ean,
+        caracterizacion=caracterizacion_indexada,
+        configuracion=configuracion,
+    )
+
+    if not elegibilidad.elegible or regimen is None:
+        return _resultado_no_proyectable(
+            ean=ean,
+            caracterizacion_ean=caracterizacion_ean,
+            comentario=obtener_motivo_elegibilidad(elegibilidad),
+            inputs_modelo=inputs_modelo,
+        )
+
+    validacion_mecanica = validar_mecanica_interactiva(
+        mecanica=entrada.mecanica,
+        caracterizacion_ean=caracterizacion_ean,
+        regimen=regimen,
+        configuracion=configuracion,
+    )
+
+    datos_entrenamiento = preparar_datos_entrenamiento(
+        historial_ean=historial_ean,
+        regimen=regimen,
+        columnas_familia=fuentes.columnas_familia,
+        configuracion=configuracion,
+    )
+
+    resultado_entrenamiento = entrenar_modelo_producto(
+        datos_entrenamiento=datos_entrenamiento,
+        regimen=regimen,
+        configuracion=configuracion,
+    )
+
+    flag_proyeccion = int(
+            obtener_valor(promocion_ean, 'FLAG_PROMO', valor_default=1)
+        )
+    if flag_proyeccion != 1:
+        msg = (
+            'La proyección interactiva solo admite escenarios promocionales '
+            f'(FLAG_PROMO=1). Valor recibido: {flag_proyeccion}.')
+        raise ValueError(msg)
+
+    resultado_escenarios = proyectar_promocion_ean(
+        promocion_ean=promocion_ean,
+        historial_ean=historial_ean,
+        caracterizacion_ean=caracterizacion_ean,
+        resultado_entrenamiento=resultado_entrenamiento,
+        regimen=regimen,
+        columnas_familia=fuentes.columnas_familia,
+        configuracion=configuracion,
+        calendario_futuro=calendario_futuro,
+    )
+
+    return ResultadoExploracionProducto(
+        ean=ean,
+        elegible=True,
+        comentario='-',
+        metadata_producto=obtener_metadata_ean(caracterizacion_ean),
+        inputs_modelo=inputs_modelo,
+        validacion_mecanica=validacion_mecanica,
+        regimen=regimen,
+        columnas_modelo=resultado_entrenamiento.columnas_modelo,
+        metricas_train=resultado_entrenamiento.metricas_train,
+        metricas_test=resultado_entrenamiento.metricas_test,
+        datos_test=_construir_datos_test(
+            datos_entrenamiento, resultado_entrenamiento
+        ),
+        ajuste_historico=_construir_ajuste_historico(
+                    datos_entrenamiento=datos_entrenamiento,
+                    resultado_entrenamiento=resultado_entrenamiento,
+                    historial_crudo=df_historial,
+                    ean=ean,
+                ),
+        proyeccion_diaria=resultado_escenarios.detalle_diario,
+        resumen_proyeccion=resultado_escenarios.resumen,
+        modelo_validacion=resultado_entrenamiento.modelo_validacion,
+        modelo_productivo=resultado_entrenamiento.modelo_productivo,
+    )
+
 
 COLUMNAS_TRANSVERSALES = [
     'TENDENCIA_LINEAL',
@@ -4023,7 +4839,7 @@ SELECT * EXCEPT(STORE_BANNER,
 SALES_UOM, SALES_UNIT,
 MULTIPLICADOR_X05, APO,PROPORCION_CATEGORIA,VARIACION_PORCENTUAL_SUBCATEGORIA,
 EAN_SUSTITUTO_1, EAN_SUSTITUTO_2, EAN_SUSTITUTO_3,EAN_SUSTITUTO_4, EAN_SUSTITUTO_5)
-FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.FORECAST_HISTORIALES_PROCESSED_DATA`
+FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.FORECAST_HISTORIALES_PROCESSED_DATA_v2`
 WHERE EAN IN (SELECT EAN FROM productos_objetivo)
 """ })
 
