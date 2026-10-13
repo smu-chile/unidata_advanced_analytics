@@ -3384,7 +3384,7 @@ def main():
     uploadFrame(
         df_caracterizacion,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'processed_data_caracterizacion.json'),
+                                         'C0_processed_data_caracterizacion.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='replace')
@@ -3403,7 +3403,7 @@ def main():
     uploadFrame(
         df_historial,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'processed_data_forecast.json'),
+                                         'C0_processed_data_forecast.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='append')
