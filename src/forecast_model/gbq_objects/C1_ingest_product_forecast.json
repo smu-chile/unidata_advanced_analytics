@@ -1,6 +1,6 @@
 {
     "schema": "PRECIO_PROMOCIONES",
-    "table": "FORECAST_PROYECCION_VENTAS",
+    "table": "FORECAST_PROYECCION_VENTAS_MODELO_CASSI",
 
     
     "columns": [
