@@ -4053,7 +4053,7 @@ def _parsear_mecanicas_validas(  # noqa: D417
     if valor_mecanicas is None:
         return []
 
-    if isinstance(valor_mecanicas, (list, tuple, set)):
+    if isinstance(valor_mecanicas, list | tuple | set):
         items = [str(item) for item in valor_mecanicas]
     else:
         try:
@@ -4358,7 +4358,7 @@ def _extraer_contexto_promocional(
     historial_crudo: pd.DataFrame,
     ean: str,
 ) -> pd.DataFrame:
-    """Extrae precio, precio promocional y bandera desde el historial crudo.
+    """Extrae precio, precio promocional y bandera desde el historial crudo
 
     Se usa `df_historial` sin procesar porque las columnas
     `FLAG_PROMO_T`, `PRECIO_PROMOCIONAL_MINIMO_T` y `PRECIO_PROMEDIO`
