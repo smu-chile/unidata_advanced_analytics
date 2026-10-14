@@ -57,11 +57,10 @@ SQL_QUERIES = QueryDict({
             WHEN store_banner = 'Alvi' THEN value - tax_amount ELSE 0
         END) AS alvi,
         SUM(CASE
-            WHEN store_banner = 'Super 10' THEN value - tax_amount ELSE 0
+            WHEN store_banner IN ('Super 10', 'Mayorista') THEN value - tax_amount ELSE 0
         END) AS s10,
-        SUM(CASE
-            WHEN store_banner = 'Mayorista' THEN value - tax_amount ELSE 0
-        END) AS m10
+        -- Dejar m10 en 0 para mantener compatibilidad con el esquema downstream
+        0 AS m10
 
     FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
 
