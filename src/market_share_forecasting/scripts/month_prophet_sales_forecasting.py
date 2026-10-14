@@ -351,18 +351,18 @@ def main():
         final_pred['inicio_periodo'] = final_pred['fin_periodo'].astype(str).str[:8] + '01'
         final_pred['projection_date'] = execution_date
 
-        final_pred['venta_unimarc'] = final_pred['venta_unimarc'].round().astype('Int64')  # noqa: E501
-        final_pred['venta_unimarc_proyectado'] = final_pred['venta_unimarc_proyectado'].round().astype('Int64')  # noqa: E501
-        final_pred['venta_unimarc_proyectado_min'] = final_pred['venta_unimarc_proyectado_min'].round().astype('Int64')  # noqa: E501
-        final_pred['venta_unimarc_proyectado_max'] = final_pred['venta_unimarc_proyectado_max'].round().astype('Int64')  # noqa: E501
-        final_pred['venta_alvi'] = final_pred['venta_alvi'].round().astype('Int64')  # noqa: E501
-        final_pred['venta_alvi_proyectado'] = final_pred['venta_alvi_proyectado'].round().astype('Int64')  # noqa: E501
-        final_pred['venta_alvi_proyectado_min'] = final_pred['venta_alvi_proyectado_min'].round().astype('Int64')  # noqa: E501
-        final_pred['venta_alvi_proyectado_max'] = final_pred['venta_alvi_proyectado_max'].round().astype('Int64')  # noqa: E501
-        final_pred['venta_s10'] = final_pred['venta_s10'].round().astype('Int64')  # noqa: E501
-        final_pred['venta_s10_proyectado'] = final_pred['venta_s10_proyectado'].round().astype('Int64')  # noqa: E501
-        final_pred['venta_s10_proyectado_min'] = final_pred['venta_s10_proyectado_min'].round().astype('Int64')  # noqa: E501
-        final_pred['venta_s10_proyectado_max'] = final_pred['venta_s10_proyectado_max'].round().astype('Int64')  # noqa: E501
+        final_pred['unimarc'] = final_pred['unimarc'].round().astype('Int64')  # noqa: E501
+        final_pred['unimarc_proyectado'] = final_pred['unimarc_proyectado'].round().astype('Int64')  # noqa: E501
+        final_pred['unimarc_proyectado_min'] = final_pred['unimarc_proyectado_min'].round().astype('Int64')  # noqa: E501
+        final_pred['unimarc_proyectado_max'] = final_pred['unimarc_proyectado_max'].round().astype('Int64')  # noqa: E501
+        final_pred['alvi'] = final_pred['alvi'].round().astype('Int64')  # noqa: E501
+        final_pred['alvi_proyectado'] = final_pred['alvi_proyectado'].round().astype('Int64')  # noqa: E501
+        final_pred['alvi_proyectado_min'] = final_pred['alvi_proyectado_min'].round().astype('Int64')  # noqa: E501
+        final_pred['alvi_proyectado_max'] = final_pred['alvi_proyectado_max'].round().astype('Int64')  # noqa: E501
+        final_pred['s10'] = final_pred['s10'].round().astype('Int64')  # noqa: E501
+        final_pred['s10_proyectado'] = final_pred['s10_proyectado'].round().astype('Int64')  # noqa: E501
+        final_pred['s10_proyectado_min'] = final_pred['s10_proyectado_min'].round().astype('Int64')  # noqa: E501
+        final_pred['s10_proyectado_max'] = final_pred['s10_proyectado_max'].round().astype('Int64')  # noqa: E501
 
         logging.info('Updating table to GCP')
         logging.info(', '.join(final_pred['category_description'].unique().tolist()))
