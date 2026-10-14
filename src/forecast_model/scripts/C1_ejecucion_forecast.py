@@ -5021,6 +5021,20 @@ def main():
         'Venta Incremental Proy',
         'Venta Real',
         'Venta Proy',
+        'Material',
+        'WMAPE Train',
+        'Bias Train',
+        'MAE Train',
+        'Coverage Train',
+        'WMAPE Test',
+        'Bias Test',
+        'MAE Test',
+        'Coverage Test',
+        'WIN Rate Test',
+        'Intensidad Promocional',
+        'ADI',
+        'CV2',
+        'DIAS_CON_VENTA',
     ]
 
     excel_final[columnas_metricas] = (
