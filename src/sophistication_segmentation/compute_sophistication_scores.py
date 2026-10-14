@@ -127,4 +127,4 @@ with DAG(**dag_args) as dag:
         ]
     ]
 
-chain(brand_compute_score_tasks)
+chain(brand_compute_score_tasks, brand_compute_segmentation_tasks)
