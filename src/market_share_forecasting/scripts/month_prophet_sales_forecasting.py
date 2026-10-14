@@ -58,9 +58,7 @@ SQL_QUERIES = QueryDict({
         END) AS alvi,
         SUM(CASE
             WHEN store_banner IN ('Super 10', 'Mayorista') THEN value - tax_amount ELSE 0
-        END) AS s10,
-        -- Dejar m10 en 0 para mantener compatibilidad con el esquema downstream
-        0 AS m10
+        END) AS s10
 
     FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
 
@@ -352,6 +350,19 @@ def main():
 
         final_pred['inicio_periodo'] = final_pred['fin_periodo'].astype(str).str[:8] + '01'
         final_pred['projection_date'] = execution_date
+
+        final_pred['venta_unimarc'] = final_pred['venta_unimarc'].round().astype('Int64')  # noqa: E501
+        final_pred['venta_unimarc_proyectado'] = final_pred['venta_unimarc_proyectado'].round().astype('Int64')  # noqa: E501
+        final_pred['venta_unimarc_proyectado_min'] = final_pred['venta_unimarc_proyectado_min'].round().astype('Int64')  # noqa: E501
+        final_pred['venta_unimarc_proyectado_max'] = final_pred['venta_unimarc_proyectado_max'].round().astype('Int64')  # noqa: E501
+        final_pred['venta_alvi'] = final_pred['venta_alvi'].round().astype('Int64')  # noqa: E501
+        final_pred['venta_alvi_proyectado'] = final_pred['venta_alvi_proyectado'].round().astype('Int64')  # noqa: E501
+        final_pred['venta_alvi_proyectado_min'] = final_pred['venta_alvi_proyectado_min'].round().astype('Int64')  # noqa: E501
+        final_pred['venta_alvi_proyectado_max'] = final_pred['venta_alvi_proyectado_max'].round().astype('Int64')  # noqa: E501
+        final_pred['venta_s10'] = final_pred['venta_s10'].round().astype('Int64')  # noqa: E501
+        final_pred['venta_s10_proyectado'] = final_pred['venta_s10_proyectado'].round().astype('Int64')  # noqa: E501
+        final_pred['venta_s10_proyectado_min'] = final_pred['venta_s10_proyectado_min'].round().astype('Int64')  # noqa: E501
+        final_pred['venta_s10_proyectado_max'] = final_pred['venta_s10_proyectado_max'].round().astype('Int64')  # noqa: E501
 
         logging.info('Updating table to GCP')
         logging.info(', '.join(final_pred['category_description'].unique().tolist()))

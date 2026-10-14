@@ -55,22 +55,6 @@
             "field_type": "INT64"
         },
         {
-            "name": "venta_m10",
-            "field_type": "INT64"
-        },
-        {
-            "name": "venta_m10_proyectado",
-            "field_type": "INT64"
-        },
-        {
-            "name": "venta_m10_proyectado_min",
-            "field_type": "INT64"
-        },
-        {
-            "name": "venta_m10_proyectado_max",
-            "field_type": "INT64"
-        },
-        {
             "name": "inicio_periodo",
             "field_type": "DATE"
         },
