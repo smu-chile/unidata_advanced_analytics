@@ -204,7 +204,7 @@ def main():
     # Remove past projections for this date if reprocessing
     logging.info('Deleting past run of this projection')
     gbq_extended.deleteFromTable(
-        table_ref=os.path.join('gbq_objects', 'month_prophet_sales_forecasting.json'),
+        table_ref=os.path.join('gbq_objects', 'month_prophet_sales_forecasting_test.json'),
         where_clause=f"projection_date = CAST('{execution_date}' AS DATE)",
         project=gcp_project,
         gbq_client=gbq_client,
@@ -378,7 +378,7 @@ def main():
                 'fin_periodo',
                 'projection_date'
             ]],
-            table_ddl_json_path=os.path.join('gbq_objects', 'month_prophet_sales_forecasting.json'),  # noqa: E501
+            table_ddl_json_path=os.path.join('gbq_objects', 'month_prophet_sales_forecasting_test.json'),  # noqa: E501
             project=gcp_project,
             gbq_client=gbq_client,
             if_exists='append',
