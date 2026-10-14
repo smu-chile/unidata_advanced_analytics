@@ -197,7 +197,7 @@ def main():
     logging.getLogger('prophet').setLevel(logging.WARNING)
     logging.getLogger('cmdstanpy').disabled=True
 
-    target_values = ['unimarc', 'alvi', 's10', 'm10']
+    target_values = ['unimarc', 'alvi', 's10']
 
     # Remove past projections for this date if reprocessing
     logging.info('Deleting past run of this projection')
