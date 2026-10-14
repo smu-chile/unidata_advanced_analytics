@@ -5043,6 +5043,12 @@ def main():
                     where_clause=where_clause,
                     gbq_client=gbq_client)
 
+
+    excel_final['Material'] = (
+        pd.to_numeric(
+            excel_final['Material'].replace('-', pd.NA),
+            errors='coerce').astype('Int64'))
+
     uploadFrame(
         excel_final,
         table_ddl_json_path=os.path.join('gbq_objects',
