@@ -5033,9 +5033,8 @@ def main():
     where_clause = f"execution_date = '{execution_date}'"
 
     # Parametros
-    # Parche 3: Tabla ajustada a sector oriente
     esquema = 'PRECIO_PROMOCIONES'
-    tabla = 'FORECAST_PROYECCION_VENTAS'
+    tabla = 'FORECAST_PROYECCION_VENTAS_MODELO_CASSI'
 
     print('Subiendo a GCP: ')
     # Se elimina los datos para cierto store_banner y rango (si existen)
