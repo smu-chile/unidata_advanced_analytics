@@ -381,10 +381,6 @@ def main():
                 's10_proyectado',
                 's10_proyectado_min',
                 's10_proyectado_max',
-                'm10',
-                'm10_proyectado',
-                'm10_proyectado_min',
-                'm10_proyectado_max',
                 'inicio_periodo',
                 'fin_periodo',
                 'projection_date'
