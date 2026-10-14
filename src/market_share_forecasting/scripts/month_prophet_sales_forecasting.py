@@ -93,6 +93,7 @@ SQL_QUERIES = QueryDict({
         AND itm_txn_fcn_tp_dsc = 'V'
         AND transaction_type IN ('TN','TF','BX','B','BE','F','NC')
         AND from_other_ecommerce IS NULL
+        AND category_description = 'CERVEZAS'
 
     GROUP BY 1,2
     """,
