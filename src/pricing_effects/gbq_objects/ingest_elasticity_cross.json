@@ -1,0 +1,76 @@
+{
+    "schema": "PRECIO_PROMOCIONES",
+    "table": "ELASTICITY_CROSS",
+    "columns": [
+        {
+            "name": "STORE_BANNER",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Formato al que pertenece la informacion"
+        },
+        {
+            "name": "MES_EJECUCION",
+            "field_type": "STRING",
+            "mode": "REQUIRED",
+            "description": "Mes de la fecha de ejecucion (execution_date) en formato YYYY-MM. Cada mes queda como foto historica; re-ejecutar el mismo mes reemplaza solo ese mes"
+        },
+        {
+            "name": "CATEGORIA_FOCAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Categoria del EAN focal (el que cambia de precio)"
+        },
+        {
+            "name": "SUBCATEGORIA_FOCAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Subcategoria del EAN focal"
+        },
+        {
+            "name": "EAN_FOCAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del producto focal, seleccionado por Pareto 80% de venta por subcategoria, minimo 60 dias activos y variacion de precio suficiente"
+        },
+        {
+            "name": "PRODUCTO_FOCAL",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre o descripcion del producto focal"
+        },
+        {
+            "name": "SUB_CATEGORIA_RELACIONADO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Subcategoria del EAN relacionado"
+        },
+        {
+            "name": "EAN_RELACIONADO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Codigo EAN del producto relacionado: top 10 sustitutos o top 10 complementarios del focal segun el modelo de SKU (SKU_SUBSTITUTES_BY_CATEGORY y COMPLEMENTARY_PRODUCTS) pasado a nivel EAN"
+        },
+        {
+            "name": "PRODUCTO_RELACIONADO",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre o descripcion del producto relacionado"
+        },
+        {
+            "name": "ELASTICIDAD_CRUZADA",
+            "field_type": "FLOAT",
+            "mode": "NULLABLE",
+            "description": "Elasticidad cruzada: variacion porcentual de la cantidad del relacionado ante 1% de variacion del precio del focal (log-log con errores HAC, controlando demanda general, promociones, feriados y tendencia). Positiva = sustituto, negativa = complementario. Solo se informan pares con el mismo signo que el modelo de SKU y valor entre -5 y 5"
+        },
+        {
+            "name": "CONFIABILIDAD",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nivel de confiabilidad del coeficiente: 'MUY ALTA' (pasa quality gate y FDR, robusto a 3 controles de demanda, estable en dos mitades del periodo y con al menos 8 eventos de precio del focal), 'ALTA' (pasa quality gate y FDR), 'MEDIA' (pasa quality gate pero no FDR) o 'BAJA' (signo correcto pero no distinguible de cero)"
+        }
+    ],
+    "clustering_fields": [
+        "STORE_BANNER",
+        "MES_EJECUCION"
+    ]
+}
