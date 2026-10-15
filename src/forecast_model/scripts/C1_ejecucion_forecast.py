@@ -5030,7 +5030,7 @@ def main():
         'Bias Test',
         'MAE Test',
         'Coverage Test',
-        'WIN Rate Test',
+        'Win Rate Test',
         'Intensidad Promocional',
         'ADI',
         'CV2',
