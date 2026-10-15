@@ -43,19 +43,19 @@
         {
             "name": "Material",
             "field_type": "INT64",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "Material"
         },
         {
             "name": "UMV",
             "field_type": "STRING",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "UMV"
         },
         {
             "name": "EAN",
             "field_type": "STRING",
-            "mode": "REQUIRED",
+            "mode": "NULLABLE",
             "description": "EAN del producto"
         },
         {
