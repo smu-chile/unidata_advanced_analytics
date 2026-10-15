@@ -47,29 +47,55 @@ parser.add_argument(
 SQL_QUERIES = QueryDict({
     'month_transactions':
     """
+    WITH CONVERSION AS (
+        SELECT
+            A.CENTRO AS STORE_ID,
+            A.CENTRO_CONVERSION AS STORE_ID_CONVERSION,
+            B.STORE_BANNER AS STORE_BANNER,
+            C.STORE_BANNER AS STORE_BANNER_CONVERSION
+        FROM `${gcp_project}.ML_LAB.CONVERSION_LOCALES_SEPTIEMBRE_2026` A
+
+        INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` B
+        ON CAST(A.CENTRO AS STRING) = B.STORE_ID
+
+        INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` C
+        ON CAST(A.CENTRO_CONVERSION AS STRING) = C.STORE_ID
+        ),
+
+        DIM_STORE AS (
+        SELECT
+            A.STORE_ID,
+            A.STORE_NAME,
+            COALESCE(B.STORE_BANNER_CONVERSION, A.STORE_BANNER) AS STORE_BANNER
+        FROM `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` A
+
+        LEFT JOIN CONVERSION B
+        ON A.STORE_ID = CAST(B.STORE_ID AS STRING)
+    )
+
     SELECT
         FORMAT_DATE('%Y-%m', transaction_date) AS fin_periodo,
-        category_description,
-        SUM(CASE
+        category_h_description,
+        CAST(SUM(CASE
             WHEN store_banner = 'Unimarc' THEN value - tax_amount ELSE 0
-        END) AS unimarc,
-        SUM(CASE
+        END) AS INT64) AS unimarc,
+        CAST(SUM(CASE
             WHEN store_banner = 'Alvi' THEN value - tax_amount ELSE 0
-        END) AS alvi,
-        SUM(CASE
-            WHEN store_banner IN ('Super 10', 'Mayorista') THEN value - tax_amount ELSE 0
-        END) AS s10
+        END) AS INT64) AS alvi,
+        CAST(SUM(CASE
+            WHEN store_banner = 'Super 10' THEN value - tax_amount ELSE 0
+        END) AS INT64) AS s10
 
     FROM `${gcp_project}.CDA_VISTAS.VW_SALES_ITEM` sales_item
 
-    INNER JOIN `${gcp_project}.CDA_VISTAS.VW_DIM_STORE` dim_store
+    INNER JOIN DIM_STORE dim_store
     USING (store_id)
 
     INNER JOIN (
         SELECT
             sku_product,
             MAX(neg_dsc) AS business_name,
-            MAX(cat_dsc) AS category_description
+            MAX(cat_h_dsc) AS category_h_description
         FROM `${gcp_project}.CDA_VISTAS.VW_DIM_PRODUCT`
         GROUP BY 1
         HAVING MAX(neg_dsc) NOT IN ('SERVICIOS COMERCIALES', 'NO RETAIL')
