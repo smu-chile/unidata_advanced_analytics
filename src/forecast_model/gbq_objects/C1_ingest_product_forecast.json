@@ -234,7 +234,7 @@
         },
         {
             "name": "SEGMENTO_ABCD",
-            "field_type": "FLOAT64",
+            "field_type": "STRING",
             "mode": "NULLABLE",
             "description": "Segmentación según participación en venta"
         },
