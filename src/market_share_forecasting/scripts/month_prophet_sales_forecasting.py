@@ -234,7 +234,7 @@ def main():
     )
 
     for category_names in batchList(
-        market_data['category_description'].drop_duplicates().to_list(),
+        market_data['category_h_description'].drop_duplicates().to_list(),
         batch_size=10
     ):
         regressors: dict[str, dict[str, Prophet]] = defaultdict(dict)
@@ -244,7 +244,7 @@ def main():
             for target_value in target_values:
                 # Handle missing values
                 if market_data[
-                    market_data['category_description'] == category_name
+                    market_data['category_h_description'] == category_name
                 ][target_value].notna().sum() < 13:
                     logging.info(f'Skipping {category_name} {target_value} regressor')
                     regressors[category_name][target_value] = None
@@ -271,7 +271,7 @@ def main():
 
                 regressor = regressor.fit(
                     market_data[
-                        market_data['category_description'] == category_name
+                        market_data['category_h_description'] == category_name
                     ][[
                         'fin_periodo', target_value
                     ]].sort_values(
@@ -341,7 +341,7 @@ def main():
 
                 pred = pred.merge(
                     market_data[
-                        market_data['category_description'] == category_name
+                        market_data['category_h_description'] == category_name
                     ][[
                         'fin_periodo', target_value,
                     ]],
@@ -355,14 +355,14 @@ def main():
                     how='inner'
                 )
 
-            periods['category_description'] = category_name
+            periods['category_h_description'] = category_name
             periods = periods.merge(
                 market_data[
-                    market_data['category_description'] == category_name
+                    market_data['category_h_description'] == category_name
                 ][[
-                    'category_description'
+                    'category_h_description'
                 ]].drop_duplicates(),
-                on='category_description',
+                on='category_h_description',
                 how='inner'
             )
 
@@ -390,10 +390,10 @@ def main():
         final_pred['s10_proyectado_max'] = final_pred['s10_proyectado_max'].round().astype('Int64')  # noqa: E501
 
         logging.info('Updating table to GCP')
-        logging.info(', '.join(final_pred['category_description'].unique().tolist()))
+        logging.info(', '.join(final_pred['category_h_description'].unique().tolist()))
         gbq_extended.uploadFrame(
             final_pred[[
-                'category_description',
+                'category_h_description',
                 'unimarc',
                 'unimarc_proyectado',
                 'unimarc_proyectado_min',

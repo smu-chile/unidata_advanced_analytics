@@ -3,7 +3,7 @@
     "table": "MONTH_PROPHET_SALES_FORECASTING",
     "columns": [
         {
-            "name": "category_description",
+            "name": "category_h_description",
             "field_type": "STRING"
         },
         {
