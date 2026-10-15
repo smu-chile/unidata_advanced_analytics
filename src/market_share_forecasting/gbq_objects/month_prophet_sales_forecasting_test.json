@@ -76,6 +76,6 @@
     "clustering_fields": [
         "inicio_periodo",
         "fin_periodo",
-        "category_description"
+        "category_h_description"
     ]
 }
