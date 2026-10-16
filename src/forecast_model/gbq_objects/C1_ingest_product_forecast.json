@@ -1,6 +1,6 @@
 {
     "schema": "FORECAST_ML",
-    "table": "FORECAST_PROYECCION_VENTAS_MODELO_CASSI",
+    "table": "PROYECCION_VENTAS_MODELO_CASSI",
 
     
     "columns": [

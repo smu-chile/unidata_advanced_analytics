@@ -4824,30 +4824,41 @@ PATRON_OUTPUT = re.compile(
 QUERY_HISTORIAL = QueryDict({
     'query_historial':
     """
+    WITH productos_objetivo as (
+    SELECT DISTINCT(EAN) FROM `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WORKFLOW`
+    WHERE organizacion_ventas = '1000'
+        AND canal_distribucion = '10'
+        AND registro_valido = 'X'
+        AND n_promocion in (${promos})
 
+    )
 
-WITH productos_objetivo as (
-  SELECT DISTINCT(EAN) FROM `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WORKFLOW`
-  WHERE organizacion_ventas = '1000'
-    AND canal_distribucion = '10'
-    AND registro_valido = 'X'
-    AND n_promocion in (${promos})
-
-)
-
-SELECT * EXCEPT(STORE_BANNER,
-SALES_UOM, SALES_UNIT,
-MULTIPLICADOR_X05, APO,PROPORCION_CATEGORIA,VARIACION_PORCENTUAL_SUBCATEGORIA,
-EAN_SUSTITUTO_1, EAN_SUSTITUTO_2, EAN_SUSTITUTO_3,EAN_SUSTITUTO_4, EAN_SUSTITUTO_5)
-FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.FORECAST_HISTORIALES_PROCESSED_DATA_v2`
-WHERE EAN IN (SELECT EAN FROM productos_objetivo)
-""" })
+    SELECT * EXCEPT(STORE_BANNER,
+    SALES_UOM,
+    SALES_UNIT,
+    MULTIPLICADOR_X05
+    APO,
+    PROPORCION_CATEGORIA,
+    VARIACION_PORCENTUAL_SUBCATEGORIA,
+    EAN_SUSTITUTO_1, EAN_SUSTITUTO_2,
+    EAN_SUSTITUTO_3, EAN_SUSTITUTO_4,
+    EAN_SUSTITUTO_5, EAN_SUSTITUTO_6,
+    EAN_SUSTITUTO_7, EAN_SUSTITUTO_8,
+    EAN_SUSTITUTO_9, EAN_SUSTITUTO_10,
+    EAN_SUSTITUTO_11,EAN_SUSTITUTO_12,
+    EAN_SUSTITUTO_13,EAN_SUSTITUTO_14,
+    EAN_SUSTITUTO_15,EAN_SUSTITUTO_16,
+    EAN_SUSTITUTO_17,EAN_SUSTITUTO_18,
+    EAN_SUSTITUTO_19,EAN_SUSTITUTO_20)
+    FROM `cl-bigdata-analytics-preprod.FORECAST_ML.HISTORICO_PROCESSED_DATA`
+    WHERE EAN IN (SELECT EAN FROM productos_objetivo)
+    """ })
 
 
 QUERY_CARACTERIZACION = QueryDict({
     'query_caracterizacion':
     """
-    SELECT * FROM `cl-bigdata-analytics-preprod.PRECIO_PROMOCIONES.FORECAST_CARACTERIZACION_PRODUCTOS`
+    SELECT * FROM `cl-bigdata-analytics-preprod.FORECAST_ML.CARACTERIZACION_PRODUCTOS_PROCESSED_DATA`
     WHERE EAN IN (${lista_eans})
 """ })  # noqa: E501
 
@@ -5048,7 +5059,7 @@ def main():
 
     # Parametros
     esquema = 'FORECAST_ML'
-    tabla = 'FORECAST_PROYECCION_VENTAS_MODELO_CASSI'
+    tabla = 'PROYECCION_VENTAS_MODELO_CASSI'
 
     print('Subiendo a GCP: ')
     # Se elimina los datos para cierto store_banner y rango (si existen)
