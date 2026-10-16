@@ -1,6 +1,6 @@
 {
-    "schema": "PRECIO_PROMOCIONES",
-    "table": "FORECAST_CARACTERIZACION_PRODUCTOS",
+    "schema": "FORECAST_ML",
+    "table": "CARACTERIZACION_PRODUCTOS_PROCESSED_DATA",
 
     "columns": [
         {
@@ -61,7 +61,7 @@
             "name": "PARTICIPACION_VENTAS",
             "field_type": "FLOAT64",
             "mode": "NULLABLE",
-            "description": "Porcentaje ventas respecto del total"
+            "description": "Porcentaje de ventas respecto del total"
         },
         {
             "name": "PARTICIPACION_ACUMULADA",

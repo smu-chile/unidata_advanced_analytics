@@ -1,6 +1,6 @@
 {
-    "schema": "PRECIO_PROMOCIONES",
-    "table": "FORECAST_HISTORIALES_PROCESSED_DATA",
+    "schema": "FORECAST_ML",
+    "table": "HISTORICO_PROCESSED_DATA",
 
     "columns": [
         {
@@ -31,7 +31,7 @@
             "name": "PRODUCT_DESCRIPTION",
             "field_type": "STRING",
             "mode": "REQUIRED",
-            "description": "Nombre o descripcion del producto"
+            "description": "Descripción del producto"
         },
         {
             "name": "EAN",
