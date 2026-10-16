@@ -1,5 +1,5 @@
 {
-    "schema": "PRECIO_PROMOCIONES",
+    "schema": "FORECAST_ML",
     "table": "FORECAST_PROYECCION_VENTAS_MODELO_CASSI",
 
     

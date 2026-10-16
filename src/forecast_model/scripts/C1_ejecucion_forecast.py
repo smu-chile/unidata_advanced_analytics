@@ -5047,7 +5047,7 @@ def main():
     where_clause = f"execution_date = '{execution_date}'"
 
     # Parametros
-    esquema = 'PRECIO_PROMOCIONES'
+    esquema = 'FORECAST_ML'
     tabla = 'FORECAST_PROYECCION_VENTAS_MODELO_CASSI'
 
     print('Subiendo a GCP: ')
