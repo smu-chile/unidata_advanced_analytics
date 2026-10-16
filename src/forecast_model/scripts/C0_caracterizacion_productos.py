@@ -3115,12 +3115,12 @@ def main():
     outputs_dir = posixpath.join(file_site, 'Caracterización_productos')
 
     esquema = 'TMP'
-    tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST_v2' #V2 sufijo temporal
+    tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST' #V2 sufijo temporal
     path_table = f'{proyecto}.{esquema}.{tabla}'
 
-    esquema_subida  = 'PRECIO_PROMOCIONES'
-    tabla_historial = 'FORECAST_HISTORIALES_PROCESSED_DATA'
-    tabla_caracterizacion = 'FORECAST_CARACTERIZACION_PRODUCTOS'  # noqa: F841
+    esquema_subida  = 'FORECAST_ML'
+    tabla_historial = 'HISTORICO_PROCESSED_DATA'
+    tabla_caracterizacion = 'CARACTERIZACION_PRODUCTOS_PROCESSED_DATA'  # noqa: F841
 
     # Nota: local queda definido, en producción se inyecta desde Airflow
     gbq_client = Client()
@@ -3323,7 +3323,7 @@ def main():
 
     df_caracterizacion_promos, _ = caracterizar_promociones_producto(
         df_historial,
-        sufijo_promo='B',
+        sufijo_promo='T',
         umbral_uplift=0.40,
         umbral_regularizacion=0.80,
         incluir_mecanica=True,
