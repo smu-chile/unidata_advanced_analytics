@@ -283,7 +283,7 @@ def rangoFechas(desde: date, hasta: date) -> set[date]:
 
 
 def listaFechasSql(fechas: list[date]) -> str:
-    """Lista de fechas en formato SQL: 
+    """Lista de fechas en formato SQL:
     DATE(2026, 10, 1), DATE(2026, 10, 2), ..."""
     return ', '.join(f'DATE({f.year}, {f.month}, {f.day})' for f in fechas)
 
@@ -505,6 +505,7 @@ def main() -> None:  # noqa: D103
                 fecha_inicial=fecha_inicial,
                 fecha_final=fecha_final),
             user=USUARIO,
+            proyecto=proyecto,
             gbq_client=gbq_client)
         df_material_ean_hist.columns = df_material_ean_hist.columns.str.lower()
         df_material_ean_hist['material'] = pd.to_numeric(
@@ -556,7 +557,7 @@ def main() -> None:  # noqa: D103
             store_banner_codigo=store_banner_codigo,
             cant_meses=MESES_HISTORIA + 1,
             fecha_inicial_ano=fecha_inicial_ano,
-            tabla_promocion=TABLA_PROMOCION,
+            proyecto=proyecto,
         )
 
         logging.info('Inicia la consulta de apoteosicos ...')
