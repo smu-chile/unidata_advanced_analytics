@@ -8,6 +8,7 @@ from logging import config
 from collections import defaultdict
 
 # pip
+import numpy as np
 import pandas as pd
 from prophet import Prophet
 from google.cloud.bigquery import Client
@@ -233,6 +234,10 @@ def main():
         gbq_client=gbq_client,
     )
 
+    # FIX: se define antes del loop. Si la primera categoria no tiene ningun
+    # modelo valido, antes fallaba con NameError (ver fallback mas abajo).
+    last_valid_regressor = None
+
     for category_names in batchList(
         market_data['category_h_description'].drop_duplicates().to_list(),
         batch_size=10
@@ -287,13 +292,24 @@ def main():
                 # Save last valid regressor for later
                 last_valid_regressor = regressor
 
-            periods = last_valid_regressor.make_future_dataframe(
-                periods=12,
-                freq='M',
-                include_history=True
-            ).rename(columns={
-                'ds': 'fin_periodo',
-            })
+            if last_valid_regressor is not None:
+                periods = last_valid_regressor.make_future_dataframe(
+                    periods=12,
+                    freq='ME',  # FIX: 'M' esta deprecado en pandas (mismas fechas: fin de mes)
+                    include_history=True
+                ).rename(columns={
+                    'ds': 'fin_periodo',
+                })
+            else:
+                # FIX: aun no hay ningun modelo entrenado (antes: NameError).
+                # Mismas fechas que generaria Prophet: historia + 12 fines de mes.
+                historia = pd.Series(sorted(market_data['fin_periodo'].unique()))
+                futuro = pd.date_range(
+                    historia.iloc[-1], periods=13, freq='ME'
+                )[1:].to_series()
+                periods = pd.DataFrame({
+                    'fin_periodo': pd.concat([historia, futuro], ignore_index=True)
+                })
 
             for target_value in regressors[category_name]:
                 # Set current regressor
@@ -302,14 +318,16 @@ def main():
 
                 if regressor is None:
                     pred = periods['fin_periodo'].to_frame().copy()
-                    pred[f'{target_value}_proyectado'] = None
-                    pred[f'{target_value}_proyectado_min'] = None
-                    pred[f'{target_value}_proyectado_max'] = None
+                    # FIX: np.nan (numerico) en vez de None (object): con None la
+                    # columna quedaba tipo object y .round() fallaba (TypeError)
+                    pred[f'{target_value}_proyectado'] = np.nan
+                    pred[f'{target_value}_proyectado_min'] = np.nan
+                    pred[f'{target_value}_proyectado_max'] = np.nan
 
                 else:
                     future = regressor.make_future_dataframe(
                         periods=12,
-                        freq='M',
+                        freq='ME',  # FIX: 'M' esta deprecado en pandas (mismas fechas: fin de mes)
                         include_history=True
                     )
                     pred = regressor.predict(
@@ -376,18 +394,18 @@ def main():
         final_pred['inicio_periodo'] = final_pred['fin_periodo'].astype(str).str[:8] + '01'
         final_pred['projection_date'] = execution_date
 
-        final_pred['unimarc'] = final_pred['unimarc'].round().astype('Int64')  # noqa: E501
-        final_pred['unimarc_proyectado'] = final_pred['unimarc_proyectado'].round().astype('Int64')  # noqa: E501
-        final_pred['unimarc_proyectado_min'] = final_pred['unimarc_proyectado_min'].round().astype('Int64')  # noqa: E501
-        final_pred['unimarc_proyectado_max'] = final_pred['unimarc_proyectado_max'].round().astype('Int64')  # noqa: E501
-        final_pred['alvi'] = final_pred['alvi'].round().astype('Int64')  # noqa: E501
-        final_pred['alvi_proyectado'] = final_pred['alvi_proyectado'].round().astype('Int64')  # noqa: E501
-        final_pred['alvi_proyectado_min'] = final_pred['alvi_proyectado_min'].round().astype('Int64')  # noqa: E501
-        final_pred['alvi_proyectado_max'] = final_pred['alvi_proyectado_max'].round().astype('Int64')  # noqa: E501
-        final_pred['s10'] = final_pred['s10'].round().astype('Int64')  # noqa: E501
-        final_pred['s10_proyectado'] = final_pred['s10_proyectado'].round().astype('Int64')  # noqa: E501
-        final_pred['s10_proyectado_min'] = final_pred['s10_proyectado_min'].round().astype('Int64')  # noqa: E501
-        final_pred['s10_proyectado_max'] = final_pred['s10_proyectado_max'].round().astype('Int64')  # noqa: E501
+        # FIX: pd.to_numeric antes de redondear. Si en un lote todas las
+        # proyecciones de un formato vienen vacias, la columna llegaba como
+        # object y .round() fallaba (TypeError: Expected numeric dtype).
+        # Los valores no cambian: solo se asegura el tipo numerico.
+        for target_value in target_values:
+            for sufijo in ('', '_proyectado', '_proyectado_min', '_proyectado_max'):
+                columna = f'{target_value}{sufijo}'
+                final_pred[columna] = (
+                    pd.to_numeric(final_pred[columna], errors='coerce')
+                    .round()
+                    .astype('Int64')
+                )
 
         logging.info('Updating table to GCP')
         logging.info(', '.join(final_pred['category_h_description'].unique().tolist()))
