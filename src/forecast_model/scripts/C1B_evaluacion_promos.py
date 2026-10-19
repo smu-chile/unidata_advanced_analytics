@@ -113,7 +113,7 @@ COLUMNAS_DETALLE_CANIBALIZACION = [
 # 0.2 SHAREPOINT
 # =========================================================================
 def obtener_rutas_sharepoint(ruta_base: str) -> tuple[str, str]:
-    '''Rutas de las carpetas Inputs y Outputs.'''
+    """Rutas de las carpetas Inputs y Outputs."""
     return (
         posixpath.join(ruta_base, 'Inputs'),
         posixpath.join(ruta_base, 'Outputs'),
@@ -124,7 +124,7 @@ def obtener_carpetas_sharepoint(
     credenciales_sharepoint: dict,
     ruta_base: str,
 ) -> tuple[sp.SharePointFolder, sp.SharePointFolder, str, str]:
-    '''Inicializa las carpetas Inputs y Outputs de SharePoint.'''
+    """Inicializa las carpetas Inputs y Outputs de SharePoint."""
     ruta_inputs, ruta_outputs = obtener_rutas_sharepoint(ruta_base)
 
     carpeta_inputs = sp.SharePointFolder(
@@ -138,7 +138,7 @@ def obtener_carpetas_sharepoint(
 
 
 def filtrar_archivos_excel(archivos: list[str], patron: re.Pattern) -> list[str]:
-    '''Filtra Excel válidos (sin temporales ~$) que cumplen el patrón.'''
+    """Filtra Excel válidos (sin temporales ~$) que cumplen el patrón."""
     return sorted(
         archivo
         for archivo in archivos
@@ -151,7 +151,7 @@ def filtrar_archivos_excel(archivos: list[str], patron: re.Pattern) -> list[str]
 
 
 def obtener_clave_input(nombre_input: str) -> str:
-    '''2025_11_05_v5_input_proyeccion.xlsx -> 2025_11_05_v5'''
+    """2025_11_05_v5_input_proyeccion.xlsx -> 2025_11_05_v5"""
     if not nombre_input.endswith(SUFIJO_INPUT):
         msg = (
             f'El archivo no cumple el sufijo esperado: {SUFIJO_INPUT}. '
@@ -163,7 +163,7 @@ def obtener_clave_input(nombre_input: str) -> str:
 
 
 def obtener_nombre_output(nombre_input: str) -> str:
-    '''Nombre del output asociado a un input.'''
+    """Nombre del output asociado a un input."""
     return f'{obtener_clave_input(nombre_input)}{SUFIJO_OUTPUT}'
 
 
@@ -171,7 +171,7 @@ def obtener_inputs_pendientes(
     inputs_validos: list[str],
     outputs_validos: set[str],
 ) -> list[str]:
-    '''Inputs que aún no tienen output.'''
+    """Inputs que aún no tienen output."""
     outputs_normalizados = {nombre.lower() for nombre in outputs_validos}
 
     return [
@@ -186,7 +186,7 @@ def cargar_input_desde_sharepoint(
     ruta_inputs: str,
     nombre_input: str,
 ) -> pd.DataFrame:
-    '''Carga un Excel desde Inputs.'''
+    """Carga un Excel desde Inputs."""
     archivo_sharepoint = sp.SharePointFile(
         **credenciales_sharepoint,
         server_relative_path=posixpath.join(ruta_inputs, nombre_input),
@@ -196,7 +196,7 @@ def cargar_input_desde_sharepoint(
 
 
 def validar_input_promociones(tabla_input: pd.DataFrame) -> list[str]:
-    '''Extrae promociones con generar_proyeccion = si.'''
+    """Extrae promociones con generar_proyeccion = si."""
     columnas_faltantes = {'n_promocion', 'generar_proyeccion'}.difference(
         tabla_input.columns
     )
@@ -234,7 +234,7 @@ def preparar_input_promociones(
     nombre_input_manual: str | None = None,
     abortar_si_no_pendientes: bool = True,
 ) -> tuple[pd.DataFrame | None, list[str], str | None, str | None]:
-    '''Prepara el input (modo automático o manual).'''
+    """Prepara el input (modo automático o manual)."""
     usa_input_manual = input_manual is not None
 
     if usa_input_manual != (nombre_input_manual is not None):
@@ -291,7 +291,7 @@ logger = logging.getLogger('modelo_promocional')
 
 
 def configurar_logging(nivel: int = logging.INFO) -> None:
-    '''Configura logging por consola.'''
+    """Configura logging por consola."""
     logging.basicConfig(
         level=nivel,
         format='%(asctime)s | %(levelname)s | %(message)s',
@@ -425,7 +425,7 @@ class ConfiguracionModeloPromo:
 # =========================================================================
 @dataclass(frozen=True)
 class ColumnasFamiliaPromocional:
-    '''Nombres de columnas históricas de la familia B o T.'''
+    """Nombres de columnas históricas de la familia B o T."""
 
     familia: str
     precio_modal: str
@@ -439,7 +439,7 @@ class ColumnasFamiliaPromocional:
 
 
 def resolver_columnas_familia(familia_promocional: str) -> ColumnasFamiliaPromocional:
-    '''Construye los nombres de columnas de la familia.'''
+    """Construye los nombres de columnas de la familia."""
     familia = familia_promocional.strip().upper()
 
     if familia not in {'B', 'T'}:
@@ -464,7 +464,7 @@ def resolver_columnas_familia(familia_promocional: str) -> ColumnasFamiliaPromoc
 # =========================================================================
 @dataclass
 class FuentesModeloPreparadas:
-    '''Fuentes preparadas para entrenar, proyectar y canibalizar.'''
+    """Fuentes preparadas para entrenar, proyectar y canibalizar."""
 
     historial: pd.DataFrame
     caracterizacion: pd.DataFrame
@@ -476,7 +476,7 @@ class FuentesModeloPreparadas:
 
 @dataclass(frozen=True)
 class ResultadoElegibilidad:
-    '''Reglas mínimas para entrenar/proyectar un EAN.'''
+    """Reglas mínimas para entrenar/proyectar un EAN."""
 
     elegible: bool
     es_producto_nuevo: bool
@@ -487,7 +487,7 @@ class ResultadoElegibilidad:
 
 @dataclass(frozen=True)
 class RegimenPromocional:
-    '''Tratamiento metodológico asignado a un producto.'''
+    """Tratamiento metodológico asignado a un producto."""
 
     nombre: str
     intensidad_promocional: float
@@ -503,7 +503,7 @@ class RegimenPromocional:
 
 @dataclass
 class DatosEntrenamiento:
-    '''Matrices y metadatos para entrenar y evaluar.'''
+    """Matrices y metadatos para entrenar y evaluar."""
 
     X_train: pd.DataFrame
     y_train: pd.Series
@@ -528,7 +528,7 @@ class DatosEntrenamiento:
 
 @dataclass(frozen=True)
 class MetricasModelo:
-    '''Métricas de error en unidades originales.'''
+    """Métricas de error en unidades originales."""
 
     wmape: float
     bias: float
@@ -544,7 +544,7 @@ class MetricasModelo:
 
 @dataclass
 class ResultadoEntrenamiento:
-    '''Resultado del doble entrenamiento (validación + productivo).'''
+    """Resultado del doble entrenamiento (validación + productivo)."""
 
     modelo_validacion: HistGradientBoostingRegressor
     modelo_productivo: HistGradientBoostingRegressor
@@ -564,7 +564,7 @@ class ResultadoEntrenamiento:
 
 @dataclass
 class ResultadoEscenarios:
-    '''Resultado diario y agregado de una combinación promoción-EAN.'''
+    """Resultado diario y agregado de una combinación promoción-EAN."""
 
     detalle_diario: pd.DataFrame
     resumen: dict[str, object]
@@ -574,7 +574,7 @@ class ResultadoEscenarios:
 # 4. AUXILIARES DE NORMALIZACIÓN
 # =========================================================================
 def normalizar_ean(serie_ean: pd.Series) -> pd.Series:
-    '''EAN como texto, sin espacios ni sufijo .0.'''
+    """EAN como texto, sin espacios ni sufijo .0."""
     return (
         serie_ean.astype('string')
         .str.strip()
@@ -583,12 +583,12 @@ def normalizar_ean(serie_ean: pd.Series) -> pd.Series:
 
 
 def normalizar_flag(serie_flag: pd.Series) -> pd.Series:
-    '''Flags de texto en mayúsculas y sin espacios.'''
+    """Flags de texto en mayúsculas y sin espacios."""
     return serie_flag.astype('string').str.strip().str.upper()
 
 
 def normalizar_nombre_mecanica(serie_mecanica: pd.Series) -> pd.Series:
-    '''Normaliza mecánicas igual que asignar_mecanicas_escenario.'''
+    """Normaliza mecánicas igual que asignar_mecanicas_escenario."""
     return (
         serie_mecanica.astype('string')
         .fillna('SIN_MECANICA')
@@ -600,14 +600,14 @@ def normalizar_nombre_mecanica(serie_mecanica: pd.Series) -> pd.Series:
 
 
 def limpiar_porcentaje_descuento(serie_descuento: pd.Series) -> pd.Series:
-    '''Descuento float32 en [0, inf).'''
+    """Descuento float32 en [0, inf)."""
     descuento = pd.to_numeric(serie_descuento, errors='coerce').fillna(0.0)
 
     return descuento.clip(lower=0.0).astype('float32')
 
 
 def es_valor_afirmativo(valor: object, configuracion: ConfiguracionModeloPromo) -> bool:
-    '''True si el flag es afirmativo.'''
+    """True si el flag es afirmativo."""
     if valor is None or pd.isna(valor):
         return False
 
@@ -615,7 +615,7 @@ def es_valor_afirmativo(valor: object, configuracion: ConfiguracionModeloPromo) 
 
 
 def convertir_float(valor: object) -> float:
-    '''Convierte a float finito; NaN si no es posible.'''
+    """Convierte a float finito; NaN si no es posible."""
     try:
         numero = float(valor)
     except (TypeError, ValueError):
@@ -625,7 +625,7 @@ def convertir_float(valor: object) -> float:
 
 
 def formatear_lista_sql(valores: list | pd.Series) -> str:
-    '''Lista de strings para IN (...) usando comillas simples.'''
+    """Lista de strings para IN (...) usando comillas simples."""
     return ','.join(repr(str(valor)) for valor in valores)
 
 
@@ -633,7 +633,7 @@ def _parsear_mecanicas_validas(
     valor_mecanicas: object,
     separadores: tuple[str, ...] = (';', ',', '|'),
 ) -> list[str]:
-    '''Normaliza MECANICAS_VALIDAS a lista de strings en mayúsculas.'''
+    """Normaliza MECANICAS_VALIDAS a lista de strings en mayúsculas."""
     if valor_mecanicas is None:
         return []
 
@@ -665,7 +665,8 @@ def _parsear_mecanicas_validas(
 # 5. PREPARACIÓN DE FUENTES
 # =========================================================================
 def preparar_promociones_futuras(promociones_futuras: pd.DataFrame) -> pd.DataFrame:
-    '''Prepara las combinaciones promoción-EAN (una fila por combinación).'''
+    """Prepara las combinaciones promoción-EAN (una fila por combinación).
+    """
     columnas_requeridas = [
         'N_PROMOCION', 'NOMBRE_PROMOCION', 'EAN',
         'FECHA_INICIO_DE_PROMOCION', 'FECHA_FIN_DE_PROMOCION',
@@ -739,7 +740,7 @@ def preparar_caracterizacion(
     caracterizacion: pd.DataFrame,
     ean_requeridos: pd.Index,
 ) -> pd.DataFrame:
-    '''Caracterización indexada por EAN, un registro por EAN.'''
+    """Caracterización indexada por EAN, un registro por EAN."""
     columnas_seleccionadas = [
         'EAN', 'PRODUCT_DESCRIPTION', 'CATEGORY_DESCRIPTION',
         'SUB_CATEGORY_DESCRIPTION', 'MATERIAL', 'SALES_UOM', 'SALES_UNIT',
@@ -795,7 +796,7 @@ def preparar_historial(
     ean_requeridos: pd.Index,
     columnas_familia: ColumnasFamiliaPromocional,
 ) -> pd.DataFrame:
-    '''Historial de los EAN focales, ordenado por EAN y fecha.'''
+    """Historial de los EAN focales, ordenado por EAN y fecha."""
     columnas_modelo = [
         'EAN', 'P_DATE', 'CANTIDAD_TOTAL', 'PRECIO_PROMEDIO',
         'TENDENCIA_LINEAL', 'SIN_ANUAL', 'COS_ANUAL', 'FLAG_FERIADO',
@@ -862,10 +863,10 @@ def preparar_elasticidades_cruzadas(
     tabla_elasticidades: pd.DataFrame | None,
     ean_focales: pd.Index,
 ) -> pd.DataFrame:
-    '''Normaliza la tabla EAN_FOCAL -> EAN_RELACIONADO.
+    """Normaliza la tabla EAN_FOCAL -> EAN_RELACIONADO.
 
     Un EAN focal ausente en esta tabla no tiene elasticidad reportable.
-    '''
+    """
     columnas_salida = [
         'EAN_FOCAL', 'EAN_RELACIONADO', 'ELASTICIDAD_CRUZADA', 'CONFIABILIDAD',
     ]
@@ -913,7 +914,7 @@ def preparar_historial_sustitutos(
     ean_sustitutos: pd.Index,
     columnas_familia: ColumnasFamiliaPromocional,
 ) -> pd.DataFrame:
-    '''Venta diaria observada, precio y flag promo de los sustitutos.'''
+    """Venta diaria observada, precio y flag promo de los sustitutos."""
     columnas_salida = [
         'EAN', 'P_DATE', 'CANTIDAD_TOTAL', 'PRECIO_PROMEDIO', 'FLAG_PROMO_SUSTITUTO',
     ]
@@ -964,7 +965,7 @@ def preparar_fuentes_modelo(
     tabla_elasticidades: pd.DataFrame | None = None,
     historial_sustitutos: pd.DataFrame | None = None,
 ) -> FuentesModeloPreparadas:
-    '''Prepara todas las fuentes antes del loop promoción-EAN.'''
+    """Prepara todas las fuentes antes del loop promoción-EAN."""
     promociones_preparadas = preparar_promociones_futuras(promociones_futuras)
     ean_requeridos = pd.Index(promociones_preparadas['EAN'].dropna().unique())
     columnas_familia = resolver_columnas_familia(configuracion.familia_promocional)
@@ -994,7 +995,7 @@ def evaluar_elegibilidad(
     caracterizacion_ean: pd.Series | None,
     configuracion: ConfiguracionModeloPromo,
 ) -> ResultadoElegibilidad:
-    '''Reglas: existe en caracterización, no es nuevo, días mínimos.'''
+    """Reglas: existe en caracterización, no es nuevo, días mínimos."""
     if caracterizacion_ean is None:
         return ResultadoElegibilidad(
             elegible=False, es_producto_nuevo=False, dias_con_venta=0,
@@ -1040,7 +1041,7 @@ def determinar_uso_mecanica(
     caracterizacion_ean: pd.Series,
     configuracion: ConfiguracionModeloPromo,
 ) -> bool:
-    '''Mecánica habilitada global y por EAN, con mecánicas suficientes.'''
+    """Mecánica habilitada global y por EAN, con mecánicas suficientes."""
     if not configuracion.incluir_mecanica:
         return False
 
@@ -1061,8 +1062,8 @@ def clasificar_regimen_promocional(
     caracterizacion_ean: pd.Series,
     configuracion: ConfiguracionModeloPromo,
 ) -> RegimenPromocional:
-    '''0 -> BASELINE; (0, bajo] -> BASE_UPLIFT; (bajo, alto] ->
-    BASE_UPLIFT_REGULARIZADO; (alto, 100] -> BASELINE_PROMOCIONAL.'''
+    """0 -> BASELINE; (0, bajo] -> BASE_UPLIFT; (bajo, alto] ->
+    BASE_UPLIFT_REGULARIZADO; (alto, 100] -> BASELINE_PROMOCIONAL."""
     intensidad = convertir_float(caracterizacion_ean.get('INTENSIDAD_PROMOCIONAL', 0.0))
     intensidad = 0.0 if np.isnan(intensidad) else float(np.clip(intensidad, 0.0, 100.0))
 
@@ -1119,7 +1120,7 @@ def evaluar_ean(
     caracterizacion: pd.DataFrame,
     configuracion: ConfiguracionModeloPromo,
 ) -> tuple[ResultadoElegibilidad, RegimenPromocional | None]:
-    '''Elegibilidad y régimen de un EAN.'''
+    """Elegibilidad y régimen de un EAN."""
     if ean not in caracterizacion.index:
         return evaluar_elegibilidad(None, configuracion), None
 
@@ -1139,7 +1140,7 @@ def agregar_dummies_dia_semana(
     historial: pd.DataFrame,
     columna_fecha: str = 'P_DATE',
 ) -> pd.DataFrame:
-    '''Dummies de día de semana (lunes = referencia).'''
+    """Dummies de día de semana (lunes = referencia)."""
     resultado = historial.copy()
     dia_semana = pd.to_datetime(resultado[columna_fecha], errors='raise').dt.dayofweek
 
@@ -1155,7 +1156,7 @@ def obtener_mecanicas_validas(
     columna_flag_promocion: str,
     configuracion: ConfiguracionModeloPromo,
 ) -> list[str]:
-    '''Mecánicas con soporte histórico suficiente.'''
+    """Mecánicas con soporte histórico suficiente."""
     mascara_promocion = pd.to_numeric(
         historial_ean[columna_flag_promocion], errors='coerce'
     ).fillna(0).eq(1)
@@ -1184,7 +1185,7 @@ def agregar_variables_mecanica(
     columna_flag_promocion: str,
     mecanicas_validas: list[str],
 ) -> tuple[pd.DataFrame, list[str]]:
-    '''Dummies de mecánica (SIN_MECANICA = referencia; raras -> OTRA).'''
+    """Dummies de mecánica (SIN_MECANICA = referencia; raras -> OTRA)."""
     resultado = datos_ean.reset_index(drop=True).copy()
 
     mecanica_original = normalizar_nombre_mecanica(resultado[columna_mecanica])
@@ -1216,7 +1217,7 @@ def calcular_pesos_recencia(
     fechas: pd.Series,
     configuracion: ConfiguracionModeloPromo,
 ) -> np.ndarray | None:
-    '''Pesos exponenciales por antigüedad (promedio 1).'''
+    """Pesos exponenciales por antigüedad (promedio 1)."""
     if not configuracion.usar_peso_recencia or fechas.empty:
         return None
 
@@ -1230,7 +1231,7 @@ def construir_pesos_temporales(
     fechas: pd.Series,
     configuracion: ConfiguracionModeloPromo,
 ) -> np.ndarray | None:
-    '''Pesos cronológicos opcionales (crecen con la recencia).'''
+    """Pesos cronológicos opcionales (crecen con la recencia)."""
     if not configuracion.usar_pesos_temporales:
         return None
 
@@ -1274,7 +1275,8 @@ def combinar_pesos(
     fechas: pd.Series,
     configuracion: ConfiguracionModeloPromo,
 ) -> np.ndarray | None:
-    '''Combina pesos temporales y de recencia (antes recencia se ignoraba).'''
+    """Combina pesos temporales y de recencia (antes recencia se ignoraba)
+    """
     pesos_temporales = construir_pesos_temporales(fechas, configuracion)
     pesos_recencia = calcular_pesos_recencia(fechas, configuracion)
 
@@ -1295,7 +1297,7 @@ def seleccionar_columnas_modelo(
     configuracion: ConfiguracionModeloPromo,
     columnas_mecanica: list[str],
 ) -> list[str]:
-    '''Lista final de variables explicativas.'''
+    """Lista final de variables explicativas."""
     columnas_modelo: list[str] = []
 
     if configuracion.incluir_precio:
@@ -1319,7 +1321,7 @@ def seleccionar_columnas_modelo(
 
 
 def calcular_indice_corte_temporal(numero_observaciones: int, proporcion_test: float) -> int:
-    '''Posición del corte train/test (al menos 1 obs por lado).'''
+    """Posición del corte train/test (al menos 1 obs por lado)."""
     if numero_observaciones < 2:
         msg = 'Se requieren al menos dos observaciones para la división temporal.'
         raise ValueError(msg)
@@ -1335,7 +1337,7 @@ def separar_historial_entrenamiento(
     fecha_inicio_promocion: pd.Timestamp,
     configuracion: ConfiguracionModeloPromo,
 ) -> pd.DataFrame:
-    '''Historial de entrenamiento: P_DATE <= T0 - 1.'''
+    """Historial de entrenamiento: P_DATE <= T0 - 1."""
     if not configuracion.entrenar_hasta_inicio_promocion:
         return historial_ean
 
@@ -1353,7 +1355,7 @@ def preparar_datos_entrenamiento(
     columnas_familia: ColumnasFamiliaPromocional,
     configuracion: ConfiguracionModeloPromo,
 ) -> DatosEntrenamiento:
-    '''Matrices train/test de un EAN (historial ya cortado en T0 - 1).'''
+    """Matrices train/test de un EAN (historial ya cortado en T0 - 1)."""
     datos_modelo = (
         historial_ean.sort_values(configuracion.columna_fecha, kind='stable')
         .reset_index(drop=True)
@@ -1454,7 +1456,7 @@ def calcular_metricas_modelo(
     configuracion: ConfiguracionModeloPromo,
     benchmark: np.ndarray | None = None,
 ) -> MetricasModelo:
-    '''WMAPE, Bias, MAE, Coverage y Win Rate.'''
+    """WMAPE, Bias, MAE, Coverage y Win Rate."""
     reales = np.asarray(valores_reales, dtype='float64')
     predichos = np.asarray(valores_predichos, dtype='float64')
 
@@ -1512,7 +1514,7 @@ def construir_benchmark_dia_semana(
     target_train: pd.Series,
     fechas_objetivo: pd.Series,
 ) -> np.ndarray:
-    '''Benchmark ingenuo: promedio histórico por día de semana.'''
+    """Benchmark ingenuo: promedio histórico por día de semana."""
     target = pd.Series(np.asarray(target_train, dtype='float64'))
     dias_train = pd.to_datetime(fechas_train, errors='raise').dt.dayofweek.to_numpy()
 
@@ -1533,7 +1535,7 @@ def construir_modelo_hist_gradient_boosting(
     regimen: RegimenPromocional,
     configuracion: ConfiguracionModeloPromo,
 ) -> HistGradientBoostingRegressor:
-    '''Estimador con configuración regular o conservadora.'''
+    """Estimador con configuración regular o conservadora."""
     regularizado = regimen.usar_configuracion_regularizada
 
     return HistGradientBoostingRegressor(
@@ -1567,7 +1569,7 @@ def entrenar_modelo_producto(
     regimen: RegimenPromocional,
     configuracion: ConfiguracionModeloPromo,
 ) -> ResultadoEntrenamiento:
-    '''Validación (train) + productivo (train + test, todo <= T0 - 1).'''
+    """Validación (train) + productivo (train + test, todo <= T0 - 1)."""
     modelo_validacion = construir_modelo_hist_gradient_boosting(regimen, configuracion)
     modelo_validacion.fit(
         datos_entrenamiento.X_train,
@@ -1642,7 +1644,7 @@ def entrenar_modelo_producto(
 # 12. CALENDARIO, VARIABLES FUTURAS Y DATOS OBSERVADOS
 # =========================================================================
 def construir_calendario_promocion(promocion_ean: pd.Series) -> pd.DataFrame:
-    '''Una fila por día de la promoción.'''
+    """Una fila por día de la promoción."""
     calendario = pd.DataFrame({
         'P_DATE': pd.date_range(
             start=promocion_ean['FECHA_INICIO_DE_PROMOCION'],
@@ -1661,7 +1663,7 @@ def agregar_variables_temporales_futuras(
     historial_entrenamiento: pd.DataFrame,
     calendario_futuro: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, bool]:
-    '''Tendencia, estacionalidad anual, feriados y día de semana.'''
+    """Tendencia, estacionalidad anual, feriados y día de semana."""
     resultado = calendario.copy()
 
     fecha_origen = pd.to_datetime(historial_entrenamiento['P_DATE']).min()
@@ -1697,11 +1699,11 @@ def incorporar_datos_observados(
     configuracion: ConfiguracionModeloPromo,
     fecha_corte_observada: pd.Timestamp | None = None,
 ) -> pd.DataFrame:
-    '''Incorpora la venta real hasta la fecha de corte global.
+    """Incorpora la venta real hasta la fecha de corte global.
 
     Días <= corte con dato: OBSERVADO; <= corte sin dato:
     PASADO_SIN_REGISTRO; > corte: PROYECTADO.
-    '''
+    """
     resultado = calendario.copy()
 
     ultima_fecha = (
@@ -1746,7 +1748,7 @@ def asignar_mecanicas_escenario(
     nombre_mecanica: object,
     activar_mecanica: bool,
 ) -> pd.DataFrame:
-    '''Activa la dummy de mecánica del escenario (baseline en cero).'''
+    """Activa la dummy de mecánica del escenario (baseline en cero)."""
     resultado = escenario.copy()
     columnas_mecanica = [columna for columna in columnas_modelo if columna.startswith('MECANICA_')]
 
@@ -1780,7 +1782,7 @@ def construir_escenarios_promocional_baseline(
     calendario_futuro: pd.DataFrame | None = None,
     fecha_corte_observada: pd.Timestamp | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, bool]:
-    '''Escenario promocional (precio promo) y baseline (precio modal).'''
+    """Escenario promocional (precio promo) y baseline (precio modal)."""
     calendario, calendario_incompleto = agregar_variables_temporales_futuras(
         calendario=construir_calendario_promocion(promocion_ean),
         historial_entrenamiento=historial_entrenamiento,
@@ -1852,7 +1854,7 @@ def predecir_escenario(
     usar_observados_en_total: bool,
     configuracion: ConfiguracionModeloPromo,
 ) -> pd.DataFrame:
-    '''Predice con el modelo productivo; el promocional usa lo observado.'''
+    """Predice con el modelo productivo; el promocional usa lo observado."""
     resultado = escenario.copy()
 
     resultado['CANTIDAD_MODELO'] = np.clip(
@@ -1886,7 +1888,7 @@ def obtener_valor(
     columna: str,
     valor_default: object = '-',
 ) -> object:
-    '''Valor seguro desde Series o Mapping; default si falta o es nulo.'''
+    """Valor seguro desde Series o Mapping; default si falta o es nulo."""
     if registro is None:
         return valor_default
 
@@ -1908,21 +1910,21 @@ def obtener_valor(
 
 
 def redondear_total(valor: object, decimales: int = 2) -> float | str:
-    '''Redondea; - si no es numérico.'''
+    """Redondea; - si no es numérico."""
     numero = convertir_float(valor)
 
     return '-' if np.isnan(numero) else round(numero, decimales)
 
 
 def obtener_motivo_elegibilidad(elegibilidad: ResultadoElegibilidad) -> str:
-    '''Motivo textual de no elegibilidad.'''
+    """Motivo textual de no elegibilidad."""
     comentario = str(elegibilidad.comentario or '').strip()
 
     return comentario or 'EAN no elegible o sin régimen asignado.'
 
 
 def obtener_metadata_ean(caracterizacion_ean: pd.Series | None) -> dict[str, object]:
-    '''Metadata descriptiva desde caracterización.'''
+    """Metadata descriptiva desde caracterización."""
     return {
         'Categoría': obtener_valor(caracterizacion_ean, 'CATEGORY_DESCRIPTION'),
         'Subcategoría': obtener_valor(caracterizacion_ean, 'SUB_CATEGORY_DESCRIPTION'),
@@ -1950,7 +1952,7 @@ def construir_resumen_escenarios(
     regimen: RegimenPromocional,
     calendario_incompleto: bool,
 ) -> dict[str, object]:
-    '''Resumen agregado de una combinación promoción-EAN.'''
+    """Resumen agregado de una combinación promoción-EAN."""
     total_promocional = float(detalle_promocional['CANTIDAD_FINAL'].sum())
     total_baseline = float(detalle_baseline['CANTIDAD_FINAL'].sum())
 
@@ -2010,7 +2012,7 @@ def proyectar_promocion_ean(
     calendario_futuro: pd.DataFrame | None = None,
     fecha_corte_observada: pd.Timestamp | None = None,
 ) -> ResultadoEscenarios:
-    '''Construye, predice y consolida escenarios de una promoción-EAN.'''
+    """Construye, predice y consolida escenarios de una promoción-EAN."""
     escenario_promocional, escenario_baseline, calendario_incompleto = (
         construir_escenarios_promocional_baseline(
             promocion_ean=promocion_ean,
@@ -2060,7 +2062,7 @@ def proyectar_promocion_ean(
 # 16. CANIBALIZACIÓN VÍA ELASTICIDADES CRUZADAS (EX POST)
 # =========================================================================
 def expandir_promociones_diarias(promociones: pd.DataFrame) -> pd.DataFrame:
-    '''Expande cada promoción-EAN a una fila por día (vectorizado).'''
+    """Expande cada promoción-EAN a una fila por día (vectorizado)."""
     promociones_base = promociones.reset_index(drop=True)
     expandidas = promociones_base.loc[
         promociones_base.index.repeat(promociones_base['DURACION_PROMOCION_DIAS'].astype(int))
@@ -2078,12 +2080,12 @@ def filtrar_elasticidades_validas(
     elasticidades: pd.DataFrame,
     configuracion: ConfiguracionModeloPromo,
 ) -> tuple[pd.DataFrame, set[str], set[str], set[str]]:
-    '''Filtra confiabilidad, signo sustituto (E > 0) y top N.
+    """Filtra confiabilidad, signo sustituto (E > 0) y top N.
 
     Returns
     -------
     (validas, focales_con_registro, focales_confiables, focales_sustitutos)
-    '''
+    """
     focales_con_registro = set(elasticidades['EAN_FOCAL'].dropna())
 
     if configuracion.confiabilidades_validas is None:
@@ -2119,7 +2121,7 @@ def calcular_canibalizacion(
     configuracion: ConfiguracionModeloPromo,
     fecha_corte_observada: pd.Timestamp,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    '''Canibalización por promoción-EAN focal y detalle focal-sustituto.
+    """Canibalización por promoción-EAN focal y detalle focal-sustituto.
 
     Por sustituto B y día t:
         efecto_total(B,t) = sum_i E(i,B) * ln(P_promo_i / P_modal_i)
@@ -2127,7 +2129,7 @@ def calcular_canibalizacion(
         canibal(B,t)      = Q_cf(B,t) - Q_obs(B,t)
     El total se reparte entre focales según su participación en
     efecto_total.
-    '''
+    """
     resumen = (
         promociones[['N_PROMOCION', 'EAN', 'PRECIO_PROMOCIONAL', 'PRECIO_MODAL']]
         .drop_duplicates(['N_PROMOCION', 'EAN'])
@@ -2305,7 +2307,7 @@ def construir_campos_canibalizacion(
     uv_incremental: object,
     venta_incremental: object,
 ) -> dict[str, object]:
-    '''Columnas de canibalización para una fila del Excel final.'''
+    """Columnas de canibalización para una fila del Excel final."""
     if canibalizacion is None:
         return {
             'N Sustitutos Evaluados': 0, 'N Sustitutos Canibalizados': 0,
@@ -2341,7 +2343,7 @@ def construir_fila_no_proyectable(
     motivo: str,
     canibalizacion: Mapping | None = None,
 ) -> dict[str, object]:
-    '''Fila para un EAN no entrenado/proyectado (canibalización igual).'''
+    """Fila para un EAN no entrenado/proyectado (canibalización igual)."""
     metadata_ean = obtener_metadata_ean(caracterizacion_ean)
 
     fila = {
@@ -2389,7 +2391,7 @@ def construir_fila_excel_final(
     caracterizacion_ean: pd.Series,
     canibalizacion: Mapping | None = None,
 ) -> dict[str, object]:
-    '''Fila del Excel final para una promoción-EAN proyectada.'''
+    """Fila del Excel final para una promoción-EAN proyectada."""
     resumen = resultado_escenarios.resumen
     detalle = resultado_escenarios.detalle_diario
 
@@ -2477,7 +2479,7 @@ def construir_fila_excel_final(
 # 18. FERIADOS DE CHILE Y CALENDARIO
 # =========================================================================
 def calcular_domingo_pascua(anio: int) -> pd.Timestamp:
-    '''Domingo de Pascua (Gauss/Meeus).'''
+    """Domingo de Pascua (Gauss/Meeus)."""
     a = anio % 19
     b = anio // 100
     c = anio % 100
@@ -2497,7 +2499,7 @@ def calcular_domingo_pascua(anio: int) -> pd.Timestamp:
 
 
 def procesar_feriados_chile(historial_diario: pd.DataFrame) -> pd.DataFrame:
-    '''Reconstruye FLAG_FERIADO y FLAG_PRE_FERIADO para Chile.'''
+    """Reconstruye FLAG_FERIADO y FLAG_PRE_FERIADO para Chile."""
     resultado = historial_diario.copy()
     resultado['P_DATE'] = pd.to_datetime(resultado['P_DATE'])
 
@@ -2539,7 +2541,7 @@ def construir_calendario_futuro(
     columna_fecha_inicio: str = 'FECHA_INICIO_DE_PROMOCION',
     columna_fecha_fin: str = 'FECHA_FIN_DE_PROMOCION',
 ) -> pd.DataFrame:
-    '''Calendario diario con feriados para el rango de las promociones.'''
+    """Calendario diario con feriados para el rango de las promociones."""
     fechas_inicio = pd.to_datetime(promociones[columna_fecha_inicio], errors='coerce')
     fechas_fin = pd.to_datetime(promociones[columna_fecha_fin], errors='coerce')
 
@@ -2575,7 +2577,7 @@ def loop_promociones(
     fecha_corte_observada: pd.Timestamp,
     calendario_futuro: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    '''Entrena (<= T0 - 1), evalúa con lo observado y agrega canibalización.'''
+    """Entrena (<= T0 - 1), evalúa con lo observado y agrega canibalización."""  # noqa: W505
     historial_por_ean = dict(tuple(historial_modelo.groupby('EAN', sort=False)))
 
     filas_excel_final: list[dict[str, object]] = []
@@ -2720,12 +2722,12 @@ def ejecutar_pipeline_promocional(
     configuracion: ConfiguracionModeloPromo | None = None,
     ruta_salida_excel: str | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    '''Pipeline completo: forecast ex post + canibalización.
+    """Pipeline completo: forecast ex post + canibalización.
 
     Returns
     -------
     (excel_final, detalle_diario_completo, detalle_canibalizacion)
-    '''
+    """
     configurar_logging()
     configuracion = configuracion or ConfiguracionModeloPromo()
 
@@ -2783,7 +2785,7 @@ def ejecutar_pipeline_promocional(
 
 
 def generar_excel_buffer(hojas: dict[str, pd.DataFrame]) -> io.BytesIO:
-    '''Excel en memoria con una hoja por tabla.'''
+    """Excel en memoria con una hoja por tabla."""
     buffer = io.BytesIO()
 
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as escritor:
@@ -2802,7 +2804,7 @@ def subir_archivo_sharepoint(
     outputs_dir: str,
     sp_cred: dict,
 ) -> None:
-    '''Sube un buffer a SharePoint.'''
+    """Sube un buffer a SharePoint."""
     contenido.seek(0)
     ruta_remota = posixpath.join(outputs_dir, nombre_archivo)
     logging.info('Subiendo archivo a SharePoint: %s', ruta_remota)
@@ -2817,7 +2819,7 @@ def subir_archivo_sharepoint(
 # =========================================================================
 @dataclass(frozen=True)
 class EntradaExploracion:
-    '''Parámetros manuales para proyectar un producto.'''
+    """Parámetros manuales para proyectar un producto."""
 
     ean: str
     precio_modal: float
@@ -2832,7 +2834,7 @@ class EntradaExploracion:
 
 @dataclass
 class ResultadoExploracionProducto:
-    '''Salida del modo interactivo, lista para graficar.'''
+    """Salida del modo interactivo, lista para graficar."""
 
     ean: str
     elegible: bool
@@ -2858,7 +2860,7 @@ def validar_mecanica_interactiva(
     regimen: RegimenPromocional,
     configuracion: ConfiguracionModeloPromo,
 ) -> dict[str, object]:
-    '''Diagnóstico de la mecánica entregada (no interrumpe).'''
+    """Diagnóstico de la mecánica entregada (no interrumpe)."""
     mecanica_normalizada = (
         str(mecanica).strip().upper().replace(' ', '_') if mecanica not in (None, '') else None
     )
@@ -2901,7 +2903,7 @@ def validar_mecanica_interactiva(
 
 
 def _construir_promos_una_fila(entrada: EntradaExploracion) -> pd.DataFrame:
-    '''Promoción de una fila compatible con el pipeline.'''
+    """Promoción de una fila compatible con el pipeline."""
     return pd.DataFrame([{
         'N_PROMOCION': entrada.n_promocion,
         'NOMBRE_PROMOCION': entrada.nombre_promocion,
@@ -2919,7 +2921,7 @@ def _construir_datos_test(
     datos_entrenamiento: DatosEntrenamiento,
     resultado_entrenamiento: ResultadoEntrenamiento,
 ) -> pd.DataFrame:
-    '''Test del modelo 80/20 listo para graficar.'''
+    """Test del modelo 80/20 listo para graficar."""
     return pd.DataFrame({
         'P_DATE': datos_entrenamiento.fechas_test.to_numpy(),
         'Y_REAL': datos_entrenamiento.y_test.to_numpy(dtype='float64'),
@@ -2933,7 +2935,7 @@ def _extraer_contexto_promocional(
     ean: str,
     columnas_familia: ColumnasFamiliaPromocional,
 ) -> pd.DataFrame:
-    '''Precio, precio promocional y flag promo desde el historial crudo.'''
+    """Precio, precio promocional y flag promo desde el historial crudo."""
     vacio = pd.DataFrame({
         'P_DATE': pd.Series(dtype='datetime64[ns]'),
         'PRECIO': pd.Series(dtype='float64'),
@@ -2960,7 +2962,7 @@ def _extraer_contexto_promocional(
             if columna_precio_promo in contexto.columns else np.nan
         ),
         'FLAG_PROMO': (
-            pd.to_numeric(contexto[columna_flag], errors='coerce').fillna(0).astype('int8').to_numpy()
+            pd.to_numeric(contexto[columna_flag], errors='coerce').fillna(0).astype('int8').to_numpys()  # noqa: E501
             if columna_flag in contexto.columns else 0
         ),
     })
@@ -2975,7 +2977,7 @@ def _construir_ajuste_historico(
     historial_crudo: pd.DataFrame | None = None,
     ean: str | None = None,
 ) -> pd.DataFrame:
-    '''Historial con reales, predicciones, precios y promociones.'''
+    """Historial con reales, predicciones, precios y promociones."""
     columnas_modelo = resultado_entrenamiento.columnas_modelo
     matriz = pd.concat(
         [datos_entrenamiento.X_train, datos_entrenamiento.X_test], ignore_index=True
@@ -3011,7 +3013,7 @@ def _construir_ajuste_historico(
         on='P_DATE',
         how='left',
     )
-    ajuste['FLAG_PROMO'] = pd.to_numeric(ajuste['FLAG_PROMO'], errors='coerce').fillna(0).astype('int8')
+    ajuste['FLAG_PROMO'] = pd.to_numeric(ajuste['FLAG_PROMO'], errors='coerce').fillna(0).astype('int8')  # noqa: E501
 
     return ajuste.sort_values('P_DATE', kind='stable').reset_index(drop=True)
 
@@ -3022,7 +3024,7 @@ def _resultado_no_proyectable(
     comentario: str,
     inputs_modelo: dict[str, object] | None = None,
 ) -> ResultadoExploracionProducto:
-    '''Salida de exploración cuando el EAN no es proyectable.'''
+    """Salida de exploración cuando el EAN no es proyectable."""
     return ResultadoExploracionProducto(
         ean=ean,
         elegible=False,
@@ -3035,7 +3037,7 @@ def _resultado_no_proyectable(
         metricas_train=None,
         metricas_test=None,
         datos_test=pd.DataFrame(columns=['P_DATE', 'Y_REAL', 'Y_PRED_8020', 'BENCHMARK']),
-        ajuste_historico=pd.DataFrame(columns=['P_DATE', 'Y_REAL', 'Y_PRED_COMPLETO', 'PARTICION']),
+        ajuste_historico=pd.DataFrame(columns=['P_DATE', 'Y_REAL', 'Y_PRED_COMPLETO', 'PARTICION']),  # noqa: E501
         proyeccion_diaria=pd.DataFrame(),
         resumen_proyeccion={},
         modelo_validacion=None,
@@ -3050,7 +3052,7 @@ def explorar_producto(
     configuracion: ConfiguracionModeloPromo | None = None,
     calendario_futuro: pd.DataFrame | None = None,
 ) -> ResultadoExploracionProducto:
-    '''Proyecta un producto en modo interactivo (entrena <= T0 - 1).'''
+    """Proyecta un producto en modo interactivo (entrena <= T0 - 1)."""
     configuracion = configuracion or ConfiguracionModeloPromo()
     ean = normalizar_ean(pd.Series([entrada.ean])).iloc[0]
 
@@ -3174,7 +3176,7 @@ PATRON_OUTPUT = re.compile(
 
 QUERY_HISTORIAL = QueryDict({
     'query_historial':
-    '''
+    """
     WITH productos_objetivo AS (
         SELECT DISTINCT(EAN) FROM `tabla_promo`
         WHERE organizacion_ventas = '1000'
@@ -3191,20 +3193,20 @@ QUERY_HISTORIAL = QueryDict({
         EAN_SUSTITUTO_17, EAN_SUSTITUTO_18, EAN_SUSTITUTO_19, EAN_SUSTITUTO_20)
     FROM `hist_data`
     WHERE EAN IN (SELECT EAN FROM productos_objetivo)
-    '''})
+    """})
 
 
 QUERY_CARACTERIZACION = QueryDict({
     'query_caracterizacion':
-    '''
+    """
     SELECT * FROM `caract_data`
     WHERE EAN IN (${lista_eans})
-    '''})
+    """})
 
 
 QUERY_INFO_PROMOS = QueryDict({
     'query_info_promos':
-    '''
+    """
     SELECT
         N_PROMOCION, NOMBRE_PROMOCION, DESCRIPCION_EVENTO_PROMOCIONAL,
         EAN, MATERIAL, FECHA_INICIO_DE_PROMOCION, FECHA_FIN_DE_PROMOCION,
@@ -3214,27 +3216,27 @@ QUERY_INFO_PROMOS = QueryDict({
         AND CANAL_DISTRIBUCION = '10'
         AND REGISTRO_VALIDO = 'X'
         AND N_PROMOCION IN (${promos})
-    '''})
+    """})
 
 
 # Reemplazar `tabla_elasticidades_cruzadas` por la tabla real.
 QUERY_ELASTICIDADES = QueryDict({
     'query_elasticidades':
-    '''
+    """
     SELECT *
     FROM `tabla_elasticidades_cruzadas`
     WHERE EAN_FOCAL IN (${lista_eans})
-    '''})
+    """})
 
 
 QUERY_HISTORIAL_SUSTITUTOS = QueryDict({
     'query_historial_sustitutos':
-    '''
+    """
     SELECT EAN, P_DATE, CANTIDAD_TOTAL, PRECIO_PROMEDIO, ${columna_flag}
     FROM `hist_data`
     WHERE EAN IN (${lista_eans})
         AND P_DATE BETWEEN '${fecha_min}' AND '${fecha_max}'
-    '''})
+    """})
 
 
 def main() -> None:
@@ -3343,7 +3345,7 @@ def main() -> None:
         'Estado_Historial', 'Estado_Modelo', 'Estado_Elasticidad',
         'Estado_fecha_proy', 'Estado_proyección',
     ])
-    excel_final['Inicio Proy'] = pd.to_datetime(excel_final['Inicio Proy'], errors='coerce').dt.date
+    excel_final['Inicio Proy'] = pd.to_datetime(excel_final['Inicio Proy'], errors='coerce').dt.date  # noqa: E501
     excel_final['Fin Proy'] = pd.to_datetime(excel_final['Fin Proy'], errors='coerce').dt.date
 
     # 3. SHAREPOINT (hoja principal + detalle de canibalización)
