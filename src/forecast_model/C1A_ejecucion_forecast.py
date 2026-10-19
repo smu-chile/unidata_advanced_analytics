@@ -28,11 +28,11 @@ start_date = [2025, 6 , 20]
 store_banner_list = ['Unimarc']
 
 # Task 1
-script1 = 'C1_ejecucion_forecast'
+script1 = 'C1A_ejecucion_forecast'
 
 # Argumentos
 dag_args = {
-    'dag_id': 'forecast_capa1_ejecucion_proyeccion', #<----------- CAMBIAR ACA TAMBIEN
+    'dag_id': 'forecast_capa1A_ejecucion_proyeccion', #<----------- CAMBIAR ACA TAMBIEN
     'schedule_interval': schedule_interval,
     'dagrun_timeout': None,
     'catchup': catchup,
