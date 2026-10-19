@@ -214,7 +214,7 @@ def main():
         regressors[target_value] = regressor
 
     periods = regressor.make_future_dataframe(
-        periods=60,
+        periods=90,  # proyeccion a 90 dias (antes 60)
         freq='D',
         include_history=True
     ).rename(columns={
@@ -234,7 +234,7 @@ def main():
 
         else:
             future = regressor.make_future_dataframe(
-                periods=60,
+                periods=90,  # proyeccion a 90 dias (antes 60)
                 freq='D',
                 include_history=True
             )
@@ -288,39 +288,6 @@ def main():
 
     logging.info('Trainning ended')
 
-    logging.info('Updating table to AWS')
-    wr.s3.to_csv(
-        df=final_pred.sort_values('fin_periodo')[[
-            *[
-                x
-                for target_value in target_values
-                for x in (
-                    target_value,
-                    f'{target_value}_proyectado',
-                    f'{target_value}_proyectado_min',
-                    f'{target_value}_proyectado_max'
-                )
-            ],
-            'fin_periodo'
-        ]].astype({
-            'fin_periodo': 'string',
-        }),
-        path=(
-            's3://smu-datalake-test-athena-query-results/'
-            'ecastrot/'
-            'fact_day_market_share_proyection/'
-            'proyection.csv'
-        ),
-        index=None,
-        header=None,
-        sep='|',
-        boto3_session=Session(**getSecret(
-            project=gcp_project,
-            secret_name='bdaa_aws_credentials'  # noqa: S106
-        )),
-        use_threads=True,
-    )
-
     logging.info('Updating table to GCP')
     gbq_extended.uploadFrame(
         df=final_pred.sort_values('fin_periodo')[[
@@ -345,6 +312,45 @@ def main():
         gbq_client=gbq_client,
         if_exists='append',
     )
+
+    # FIX: la copia a AWS va despues de la carga a GCP y no el proceso.
+    # Antes, si fallaban las credenciales o el bucket de S3, el job en
+    # error despues de horas de entrenamiento y la tabla de GCP.
+    logging.info('Updating table to AWS')
+    try:
+        wr.s3.to_csv(
+            df=final_pred.sort_values('fin_periodo')[[
+                *[
+                    x
+                    for target_value in target_values
+                    for x in (
+                        target_value,
+                        f'{target_value}_proyectado',
+                        f'{target_value}_proyectado_min',
+                        f'{target_value}_proyectado_max'
+                    )
+                ],
+                'fin_periodo'
+            ]].astype({
+                'fin_periodo': 'string',
+            }),
+            path=(
+                's3://smu-datalake-test-athena-query-results/'
+                'ecastrot/'
+                'fact_day_market_share_proyection/'
+                'proyection.csv'
+            ),
+            index=None,
+            header=None,
+            sep='|',
+            boto3_session=Session(**getSecret(
+                project=gcp_project,
+                secret_name='bdaa_aws_credentials'  # noqa: S106
+            )),
+            use_threads=True,
+        )
+    except Exception:  # noqa: BLE001
+        logging.exception('No se pudo copiar la proyeccion a AWS; la tabla de GCP ya fue cargada')
 
 
 if __name__ == '__main__':
