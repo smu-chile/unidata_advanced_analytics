@@ -20,14 +20,13 @@ with open(
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
 
-PROJECT_NAME = 'pricing'
-dag_id = 'C0A_processed_data_historial'
+PROJECT_NAME      = 'pricing'
+dag_id            = 'C0A_processed_data_historial'
 schedule_interval = '0 9 * * *'  # todos los días 09:00(America/Santiago)
-catchup = False
-start_date = [2025, 6, 20]
-# Task 1
-script1 = 'C0A_processed_data_historial'
-use = 'FORECAST'
+catchup           = False
+start_date        = [2025, 6, 20]
+script1           = 'C0A_processed_data_historial'
+use               = 'FORECAST'
 store_banner_list = ['Unimarc']
 
 dag_args = {
