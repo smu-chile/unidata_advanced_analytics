@@ -234,7 +234,7 @@ def main():
         gbq_client=gbq_client,
     )
 
-    # FIX: se define antes del loop. Si la primera categoria no tiene ningun
+    # FIX: se define antes del loop. Si la primera categoria no tiene ning
     # modelo valido, antes fallaba con NameError (ver fallback mas abajo).
     last_valid_regressor = None
 
@@ -301,8 +301,8 @@ def main():
                     'ds': 'fin_periodo',
                 })
             else:
-                # FIX: aun no hay ningun modelo entrenado (antes: NameError).
-                # Mismas fechas que generaria Prophet: historia + 12 fines de mes.
+                # FIX: aun no hay ningun modelo entrenado (antes: NameError
+                # Mismas fechas que generaria Prophet: historia + 12 fines
                 historia = pd.Series(sorted(market_data['fin_periodo'].unique()))
                 futuro = pd.date_range(
                     historia.iloc[-1], periods=13, freq='ME'
@@ -318,8 +318,8 @@ def main():
 
                 if regressor is None:
                     pred = periods['fin_periodo'].to_frame().copy()
-                    # FIX: np.nan (numerico) en vez de None (object): con None la
-                    # columna quedaba tipo object y .round() fallaba (TypeError)
+                    # FIX: np.nan (numerico) en vez de None (object):
+                    # columna quedaba tipo object y .round() fallaba
                     pred[f'{target_value}_proyectado'] = np.nan
                     pred[f'{target_value}_proyectado_min'] = np.nan
                     pred[f'{target_value}_proyectado_max'] = np.nan
