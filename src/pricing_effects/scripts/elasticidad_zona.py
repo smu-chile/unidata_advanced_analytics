@@ -1,5 +1,5 @@
 # Default
-"""Elasticidad de precios V7.x -- metodo por zona comercial (Unimarc).
+"""Elasticidad de precios V7.x -- metodo por zona (Unimarc y Alvi).
 
 Calcula elasticidad precio-cantidad por material para una zona
 comercial de Unimarc (Austral, Baja Competencia, Competencia Media,
@@ -63,7 +63,7 @@ parser.add_argument(
 )
 parser.add_argument('--execution_date', type=str, help='DAG execution date')
 parser.add_argument('--store_banner', type=str, help='Store banner')
-parser.add_argument('--zona', type=str, help='Zona comercial (Unimarc)')
+parser.add_argument('--zona', type=str, help='Zona comercial')
 
 # -------------------------------------------------------------------------
 #  Parametros generales -- metodologia V7.x (sin dependencia de baseline
@@ -295,7 +295,7 @@ SQL_QUERIES = QueryDict(
         EAN_SUSTITUTO_1 AS ean_sustituto_1,
         PRODUCT_DESCRIPTION AS product_description
     FROM `${table}`
-    WHERE STORE_BANNER = 'Unimarc' AND ZONA = '${zona}' AND CANTIDAD_TOTAL > 0
+    WHERE STORE_BANNER = '${store_banner}' AND ZONA = '${zona}' AND CANTIDAD_TOTAL > 0
     ORDER BY material, ean, p_date
     """,
         # Mecanica promocional (progreso, frecuencia reciente) -- vive en
@@ -349,7 +349,7 @@ def main() -> None:  # noqa: D103
     usuario = 'elasticidad_zona'
     esquema = 'PRECIO_PROMOCIONES'
     tabla = 'ELASTICITY_ZONA'
-    # Tabla de regresion por zona -- exclusiva de Unimarc, ver
+    # Tabla de regresion por zona (Unimarc y Alvi), ver
     # processed_regression_data_zona.py. Vive en PRECIO_PROMOCIONES,
     # igual que la fisica/ecommerce.
     dataset_regression = 'PRECIO_PROMOCIONES'
@@ -370,7 +370,7 @@ def main() -> None:  # noqa: D103
     # REGION: Carga de datos
     # ----------------------------------------------------------------
     query_panel = SQL_QUERIES['query_panel'].substitute(
-        table=table_regression, zona=zona
+        table=table_regression, store_banner=store_banner, zona=zona
     )
     df_panel = readBigQuery(query=query_panel, user=usuario, gbq_client=gbq_client)
     df_panel['material'] = df_panel['material'].astype(str)
@@ -385,7 +385,7 @@ def main() -> None:  # noqa: D103
     )
 
     # Mecanica promocional y estado/UMV son a nivel de BANNER completo
-    # (Unimarc), no por zona -- las promociones de Unimarc se definen a
+    # (Unimarc o Alvi), no por zona -- las promociones se definen a
     # nivel nacional, no varian por zona comercial. Se filtran solo por
     # store_banner, igual que en elasticidad_general.py.
     query_promo_mecanica = SQL_QUERIES['query_promo_mecanica'].substitute(

@@ -1,42 +1,35 @@
 # Default
 """DAG unificado -- regresion, elasticidad, sensibilidad y BM por zona.
 
-Para las 7 zonas comerciales de Unimarc, con FASES secuenciales (no
-las 4 etapas compitiendo a la vez por el mismo pool de slots de
-BigQuery -- causa mas probable de la falla observada al correr todo
-junto):
+Sirve para Unimarc y Alvi en un solo DAG. El banner se elige al
+disparar (Trigger DAG w/ config):
 
-    FASE 1: Regresion (7 zonas, SECUENCIAL ESTRICTA -- 1 zona tras
-        |   otra, nunca 2 al mismo tiempo, ver nota abajo)
-        |  (barrera -- TODAS deben terminar)
-    FASE 2: Elasticidad (7 zonas, depende de Regresion)
-        |  (barrera -- TODAS deben terminar)
-    FASE 3: Sensibilidad (7 zonas, independiente de datos, pero
-        |   secuenciada igual para no competir por recursos)
-        |  (barrera -- TODAS deben terminar)
-    FASE 4: Balance Matrix (7 zonas, SECUENCIAL ESTRICTA -- mismo
-        |   motivo que Regresion, ver nota abajo)
+    {"execution_date": "2026-07-02", "store_banner": "Alvi"}
 
-Regresion y Balance Matrix corren 1 zona a la vez cada una,
-encadenadas entre si (no solo por 'concurrency') -- son las 2 fases
-que mostraron contencion real de BigQuery: Regresion con "Resources
-exceeded during query execution" (Competencia Media), y Balance
-Matrix con "429 TooManyRequests -- too many table update operations"
-(2 zonas haciendo DELETE+INSERT sobre BALANCE_MATRIX_ZONA casi al
-mismo tiempo). Elasticidad y Sensibilidad se quedan con el
-'concurrency' del DAG (hasta 2 tareas en simultaneo dentro de esa
-fase) -- las barreras evitan que fases DISTINTAS se crucen entre si,
-no reemplazan ese control.
+Si no se indica "store_banner", corre BANNER_POR_DEFECTO. Se ejecuta UN
+banner por corrida: el otro queda en "skipped". Para correr ambos,
+disparar dos veces (max_active_runs=1 deja la 2da en cola, asi nunca se
+cruzan sobre las mismas tablas de BigQuery).
+
+Cada banner tiene sus zonas (ZONAS_POR_BANNER) y 4 FASES secuenciales:
+
+    FASE 1: Regresion (1 zona tras otra, nunca 2 al mismo tiempo)
+        |  (barrera -- TODAS deben terminar)
+    FASE 2: Elasticidad (hasta 'concurrency' zonas en simultaneo)
+        |  (barrera)
+    FASE 3: Sensibilidad (idem)
+        |  (barrera)
+    FASE 4: Balance Matrix (1 zona tras otra, nunca 2 al mismo tiempo)
+
+Antes de la regresion, el resolvedor de tiendas corre solo para los
+banners de RESOLVER_TIENDAS (Unimarc). Alvi usa la tabla
+TMP_TIENDAS_ACTIVAS_POR_ZONA ya cargada.
 
 Cada fase tiene su propio interruptor -- si esta apagada, sus tareas
 no se crean, y la barrera de la fase activa siguiente se conecta
-directo a la ultima fase activa anterior (sin dejar ningun eslabon
-roto).
-
-Reemplaza a balance_matrix_zona_dag.py (la version anterior, con las
-4 etapas corriendo sin secuenciar entre si).
+directo a la ultima fase activa anterior.
 """
-import json
+import json  # noqa: I001
 import platform
 import importlib
 import itertools
@@ -47,6 +40,7 @@ import pendulum
 from airflow.models import DAG
 from airflow.configuration import conf
 from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import ShortCircuitOperator # pyright: ignore[reportMissingImports]
 
 
 if platform.system() == 'Windows':
@@ -77,17 +71,33 @@ with open(
 
 PROJECT_NAME = 'pricing_effects'
 
-STORE_BANNER = 'Unimarc'
+# Banner que corre si el disparo no trae "store_banner".
+BANNER_POR_DEFECTO = 'Unimarc'
 
-ZONAS = [
-    'Austral',
-    'Baja Competencia',
-    'Competencia Media',
-    'Competencia Regional',
-    'Hipercompetitiva',
-    'Norte',
-    'Premium',
-]
+# Zonas de cada banner (nombres tal como estan en
+# TMP_TIENDAS_ACTIVAS_POR_ZONA).
+ZONAS_POR_BANNER = {
+    'Unimarc': [
+        'Austral',
+        'Baja Competencia',
+        'Competencia Media',
+        'Competencia Regional',
+        'Hipercompetitiva',
+        'Norte',
+        'Premium',
+    ],
+    'Alvi': [
+        'Baja Competencia',
+        'Competencia Media',
+        'Hipercompetitiva',
+        'Retail sin Mayorista',
+    ],
+}
+
+# Banners cuya tabla de tiendas por zona se arma con
+# resolver_tiendas_zona.py (reemplaza solo las filas de Unimarc). Los
+# demas usan la tabla ya cargada.
+RESOLVER_TIENDAS = ['Unimarc']
 
 # ====================================================================
 # INTERRUPTORES -- 4 en total, 1 por fase. Si una fase esta en False,
@@ -143,6 +153,19 @@ dag_args = {
         )
     }
 }
+
+
+def banner_seleccionado(banner, dag_run=None, **_):
+    """Indica si el banner es el pedido en la config del disparo."""
+    config_disparo = (dag_run.conf or {}) if dag_run else {}
+    pedido = str(config_disparo.get('store_banner', BANNER_POR_DEFECTO)).strip()
+    validos = {b.lower(): b for b in ZONAS_POR_BANNER}
+    if pedido.lower() not in validos:
+        msg = f'store_banner desconocido: {pedido!r}. Validos: {sorted(ZONAS_POR_BANNER)}'
+        raise ValueError(msg)
+    return validos[pedido.lower()] == banner
+
+
 # -------------------------------------------------------------------------
 # DAG
 # -------------------------------------------------------------------------
@@ -155,146 +178,125 @@ with DAG(**dag_args) as dag:
         ").strftime('%Y-%m-%d')) }}"
     )
 
-    # punto_enganche: lista de tareas de la ULTIMA fase activa vista
-    # hasta ahora -- la siguiente fase activa se conecta desde aca.
-    # Empieza vacia (None = nada de que depender todavia).
-    punto_enganche = None
-
-    # ---------- FASE 1: Regresion ----------
-    if EJECUTAR_REGRESSION_ZONA:
-        resolver_task = ExtendedDataprocCreateBatchOperator(
-            task_id='resolver_tiendas_zona',
-            python_script_path=(
-                f'{PROJECT_NAME}/scripts/resolver_tiendas_zona.py'
-            ),
+    def crear_tarea(task_id, script, argumentos, recursos=None):
+        """Crea una tarea Dataproc con los argumentos comunes."""
+        return ExtendedDataprocCreateBatchOperator(
+            task_id=task_id,
+            python_script_path=f'{PROJECT_NAME}/scripts/{script}',
             dag_env_config=dag_env_config,
             docker_image_name=PROJECT_NAME,
             pyspark_batch_args=[
                 '--project_id', dag_env_config['project_id'],
                 '--execution_date', EXECUTION_DATE,
+                *argumentos,
             ],
             include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
+            **(recursos or {}),
         )
 
-        regression_tasks = []
-        for zona in ZONAS:
-            zona_suffix = zona.replace(' ', '_').lower()
-            regression_task = ExtendedDataprocCreateBatchOperator(
-                task_id=f'regression_data_zona_{zona_suffix}',
-                python_script_path=(
-                    f'{PROJECT_NAME}/scripts/processed_regression_data_zona.py'
-                ),
-                dag_env_config=dag_env_config,
-                docker_image_name=PROJECT_NAME,
-                pyspark_batch_args=[
-                    '--project_id', dag_env_config['project_id'],
-                    '--execution_date', EXECUTION_DATE,
-                    '--store_banner', STORE_BANNER,
-                    '--use', 'ELASTICITY',
-                    '--zona', zona,
-                ],
-                include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
-                **RECURSOS_EXTRA,
+    for store_banner, zonas in ZONAS_POR_BANNER.items():
+        banner_suffix = store_banner.replace(' ', '_').lower()
+
+        # Compuerta: si el banner no es el pedido, se salta todo lo
+        # que cuelga de ella (las 4 fases de este banner).
+        compuerta = ShortCircuitOperator(
+            task_id=f'banner_{banner_suffix}',
+            python_callable=banner_seleccionado,
+            op_kwargs={'banner': store_banner},
+        )
+
+        # punto_enganche: lista de tareas de la ULTIMA fase activa vista
+        # hasta ahora -- la siguiente fase activa se conecta desde aca.
+        punto_enganche = [compuerta]
+
+        # ---------- FASE 1: Regresion ----------
+        if EJECUTAR_REGRESSION_ZONA:
+            regression_tasks = []
+            for zona in zonas:
+                zona_suffix = zona.replace(' ', '_').lower()
+                regression_tasks.append(crear_tarea(
+                    f'regression_data_zona_{banner_suffix}_{zona_suffix}',
+                    'processed_regression_data_zona.py',
+                    ['--store_banner', store_banner,
+                     '--use', 'ELASTICITY',
+                     '--zona', zona],
+                    RECURSOS_EXTRA,
+                ))
+
+            # Secuencial estricta -- 1 zona tras otra, nunca 2 al mismo
+            # tiempo, sin importar el 'concurrency' del DAG.
+            if store_banner in RESOLVER_TIENDAS:
+                resolver_task = crear_tarea(
+                    f'resolver_tiendas_zona_{banner_suffix}',
+                    'resolver_tiendas_zona.py',
+                    [],
+                )
+                punto_enganche >> resolver_task >> regression_tasks[0]
+            else:
+                punto_enganche >> regression_tasks[0]
+            for tarea_anterior, tarea_siguiente in itertools.pairwise(regression_tasks):
+                tarea_anterior >> tarea_siguiente
+
+            fin_fase_regresion = EmptyOperator(
+                task_id=f'fin_fase_regresion_{banner_suffix}'
             )
-            regression_tasks.append(regression_task)
+            regression_tasks[-1] >> fin_fase_regresion
+            punto_enganche = [fin_fase_regresion]
 
-        # Secuencial estricta -- 1 zona tras otra, nunca 2 al mismo
-        # tiempo, sin importar el 'concurrency' del DAG. Regresion es
-        # la unica fase que mostro contencion real de recursos de
-        # BigQuery (Competencia Media, "Resources exceeded during
-        # query execution") -- las demas fases se quedan con el
-        # concurrency=2 normal.
-        resolver_task >> regression_tasks[0]
-        for tarea_anterior, tarea_siguiente in itertools.pairwise(regression_tasks):
-            tarea_anterior >> tarea_siguiente
-
-        fin_fase_regresion = EmptyOperator(task_id='fin_fase_regresion')
-        regression_tasks[-1] >> fin_fase_regresion
-        punto_enganche = [fin_fase_regresion]
-
-    # ---------- FASE 2: Elasticidad ----------
-    if EJECUTAR_ELASTICIDAD_ZONA:
-        elasticidad_tasks = []
-        for zona in ZONAS:
-            zona_suffix = zona.replace(' ', '_').lower()
-            elasticidad_task = ExtendedDataprocCreateBatchOperator(
-                task_id=f'elasticidad_zona_{zona_suffix}',
-                python_script_path=(
-                    f'{PROJECT_NAME}/scripts/elasticidad_zona.py'
-                ),
-                dag_env_config=dag_env_config,
-                docker_image_name=PROJECT_NAME,
-                pyspark_batch_args=[
-                    '--project_id', dag_env_config['project_id'],
-                    '--execution_date', EXECUTION_DATE,
-                    '--store_banner', STORE_BANNER,
-                    '--zona', zona,
-                ],
-                include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
-                **RECURSOS_EXTRA,
-            )
-            if punto_enganche is not None:
+        # ---------- FASE 2: Elasticidad ----------
+        if EJECUTAR_ELASTICIDAD_ZONA:
+            elasticidad_tasks = []
+            for zona in zonas:
+                zona_suffix = zona.replace(' ', '_').lower()
+                elasticidad_task = crear_tarea(
+                    f'elasticidad_zona_{banner_suffix}_{zona_suffix}',
+                    'elasticidad_zona.py',
+                    ['--store_banner', store_banner, '--zona', zona],
+                    RECURSOS_EXTRA,
+                )
                 punto_enganche >> elasticidad_task
-            elasticidad_tasks.append(elasticidad_task)
+                elasticidad_tasks.append(elasticidad_task)
 
-        fin_fase_elasticidad = EmptyOperator(task_id='fin_fase_elasticidad')
-        elasticidad_tasks >> fin_fase_elasticidad
-        punto_enganche = [fin_fase_elasticidad]
-
-    # ---------- FASE 3: Sensibilidad ----------
-    if EJECUTAR_SENSIBILIDAD_ZONA:
-        sensibilidad_tasks = []
-        for zona in ZONAS:
-            zona_suffix = zona.replace(' ', '_').lower()
-            sensibilidad_task = ExtendedDataprocCreateBatchOperator(
-                task_id=f'product_sensibility_zona_{zona_suffix}',
-                python_script_path=(
-                    f'{PROJECT_NAME}/scripts/product_sensibility_zona.py'
-                ),
-                dag_env_config=dag_env_config,
-                docker_image_name=PROJECT_NAME,
-                pyspark_batch_args=[
-                    '--project_id', dag_env_config['project_id'],
-                    '--execution_date', EXECUTION_DATE,
-                    '--store_banner', STORE_BANNER,
-                    '--zona', zona,
-                ],
-                include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
-                **RECURSOS_EXTRA,
+            fin_fase_elasticidad = EmptyOperator(
+                task_id=f'fin_fase_elasticidad_{banner_suffix}'
             )
-            if punto_enganche is not None:
+            elasticidad_tasks >> fin_fase_elasticidad
+            punto_enganche = [fin_fase_elasticidad]
+
+        # ---------- FASE 3: Sensibilidad ----------
+        if EJECUTAR_SENSIBILIDAD_ZONA:
+            sensibilidad_tasks = []
+            for zona in zonas:
+                zona_suffix = zona.replace(' ', '_').lower()
+                sensibilidad_task = crear_tarea(
+                    f'product_sensibility_zona_{banner_suffix}_{zona_suffix}',
+                    'product_sensibility_zona.py',
+                    ['--store_banner', store_banner, '--zona', zona],
+                    RECURSOS_EXTRA,
+                )
                 punto_enganche >> sensibilidad_task
-            sensibilidad_tasks.append(sensibilidad_task)
+                sensibilidad_tasks.append(sensibilidad_task)
 
-        fin_fase_sensibilidad = EmptyOperator(task_id='fin_fase_sensibilidad')
-        sensibilidad_tasks >> fin_fase_sensibilidad
-        punto_enganche = [fin_fase_sensibilidad]
-
-    # ---------- FASE 4: Balance Matrix ----------
-    if EJECUTAR_BALANCE_MATRIX_ZONA:
-        balance_matrix_tasks = []
-        for zona in ZONAS:
-            zona_suffix = zona.replace(' ', '_').lower()
-            balance_matrix_task = ExtendedDataprocCreateBatchOperator(
-                task_id=f'balance_matrix_zona_{zona_suffix}',
-                python_script_path=(
-                    f'{PROJECT_NAME}/scripts/balance_matrix_zona.py'
-                ),
-                dag_env_config=dag_env_config,
-                docker_image_name=PROJECT_NAME,
-                pyspark_batch_args=[
-                    '--project_id', dag_env_config['project_id'],
-                    '--execution_date', EXECUTION_DATE,
-                    '--store_banner', STORE_BANNER,
-                    '--zona', zona,
-                    '--subir_a_sharepoint', str(SUBIR_A_SHAREPOINT),
-                ],
-                include_paths=['common/', f'{PROJECT_NAME}/gbq_objects/'],
-                **RECURSOS_EXTRA,
+            fin_fase_sensibilidad = EmptyOperator(
+                task_id=f'fin_fase_sensibilidad_{banner_suffix}'
             )
-            balance_matrix_tasks.append(balance_matrix_task)
+            sensibilidad_tasks >> fin_fase_sensibilidad
+            punto_enganche = [fin_fase_sensibilidad]
 
-        if punto_enganche is not None:
+        # ---------- FASE 4: Balance Matrix ----------
+        if EJECUTAR_BALANCE_MATRIX_ZONA:
+            balance_matrix_tasks = []
+            for zona in zonas:
+                zona_suffix = zona.replace(' ', '_').lower()
+                balance_matrix_tasks.append(crear_tarea(
+                    f'balance_matrix_zona_{banner_suffix}_{zona_suffix}',
+                    'balance_matrix_zona.py',
+                    ['--store_banner', store_banner,
+                     '--zona', zona,
+                     '--subir_a_sharepoint', str(SUBIR_A_SHAREPOINT)],
+                    RECURSOS_EXTRA,
+                ))
+
             punto_enganche >> balance_matrix_tasks[0]
-        for tarea_anterior, tarea_siguiente in itertools.pairwise(balance_matrix_tasks):
-            tarea_anterior >> tarea_siguiente
+            for tarea_anterior, tarea_siguiente in itertools.pairwise(balance_matrix_tasks):
+                tarea_anterior >> tarea_siguiente

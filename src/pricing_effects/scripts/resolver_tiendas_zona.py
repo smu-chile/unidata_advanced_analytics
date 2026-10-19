@@ -1,4 +1,4 @@
-"""Resuelve la tabla store_id -> zona para Unimarc.
+"""Resuelve las tiendas por zona de Unimarc (store_id -> zona).
 
 A diferencia de resolver_tiendas_activas_region.py, no resuelve
 "tiendas activas" contra transacciones -- SEGMENTACION_ZONAS_BM_PRICING
@@ -14,7 +14,11 @@ from google.cloud.bigquery import Client
 
 from common.constants import LOGGING_CONFIG
 from common.databases.queries import QueryDict
-from common.gcp_extended.bigquery import readBigQuery, uploadFrame
+from common.gcp_extended.bigquery import (
+    uploadFrame,
+    readBigQuery,
+    deleteFromTable,
+)
 
 config.dictConfig(LOGGING_CONFIG)
 
@@ -88,12 +92,25 @@ def main() -> None:  # noqa: D103
         [mapa_columnas_actual[c] for c in columnas_schema_orden]
     ]
 
+    if df_tiendas_zona.empty:
+        msg = 'No hay tiendas de Unimarc para subir: no se modifica la tabla.'
+        raise ValueError(msg)
+
+    # La tabla es compartida con otros banners (p. ej. Alvi, cargado a
+    # mano): solo se reemplazan las filas de Unimarc, nunca la tabla
+    # completa.
+    deleteFromTable(
+        table_ref=tabla_destino,
+        where_clause="store_banner = 'Unimarc'",
+        gbq_client=gbq_client,
+    )
+
     uploadFrame(
         df_tiendas_zona,
         table_ddl_json_path='gbq_objects/ingest_tiendas_activas_por_zona.json',
         project=proyecto,
         gbq_client=gbq_client,
-        if_exists='replace',  # siempre refleja SOLO la corrida actual, no acumula
+        if_exists='append',
     )
     logging.info(f'Tabla {tabla_destino} actualizada.')
 
