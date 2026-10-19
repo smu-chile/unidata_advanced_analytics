@@ -1854,7 +1854,8 @@ def predecir_escenario(
     usar_observados_en_total: bool,
     configuracion: ConfiguracionModeloPromo,
 ) -> pd.DataFrame:
-    """Predice con el modelo productivo; el promocional usa lo observado."""
+    """Predice con el modelo productivo; el promocional usa lo observado.
+    """
     resultado = escenario.copy()
 
     resultado['CANTIDAD_MODELO'] = np.clip(
