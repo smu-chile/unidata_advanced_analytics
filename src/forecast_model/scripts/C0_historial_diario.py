@@ -40,8 +40,8 @@ MESES_HISTORIA = 24
 
 
 # --- Tabla destino (solo append).Debe coincidir con la definida en el JSON
-ESQUEMA_DESTINO = 'TMP'
-TABLA_DESTINO = 'TMP_REGRESSION_DATA_FORECAST_TESTEO'
+ESQUEMA_DESTINO = 'FORECAST_ML'
+TABLA_DESTINO = 'TMP_HISTORIALES_TESTEO'
 NOMBRE_JSON = 'ingest_regression_processed_data_forecast.json'
 
 # --- Tabla auxiliar (maestra temporal) ---
