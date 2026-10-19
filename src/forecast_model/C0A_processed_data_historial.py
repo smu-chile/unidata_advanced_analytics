@@ -20,7 +20,7 @@ with open(
     dag_env_config = json.load(f)['BRANCH_PLACEHOLDER']
 
 
-PROJECT_NAME      = 'pricing'
+PROJECT_NAME      = 'forecast_model'
 dag_id            = 'C0A_processed_data_historial'
 schedule_interval = '0 9 * * *'  # todos los días 09:00(America/Santiago)
 catchup           = False
