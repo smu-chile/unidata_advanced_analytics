@@ -394,7 +394,7 @@ def main() -> None:  # noqa: D103
     # ---------------------------------------------------------------------
     store_banner_tabla = 'Super_10' if store_banner == 'Super 10' else store_banner
     tmp_path_table_aux = (
-        f'{proyecto}.{ESQUEMA_AUX}.TMP_REGRESSION_DATA_{use}_aux_{store_banner_tabla}')
+        f'{proyecto}.{ESQUEMA_AUX}.TMP_REGRESSION_DATA_{use}_aux2_{store_banner_tabla}')
     tabla_destino = f'{proyecto}.{ESQUEMA_DESTINO}.{TABLA_DESTINO}'
     # ENDREGION
 
@@ -522,9 +522,8 @@ def main() -> None:  # noqa: D103
         first_month=fecha_min.strftime('%Y%m'),
         last_month=fecha_max.strftime('%Y%m'),
         store_banner=store_banner,
-        cant_sust=CANT_SUST,
-,
-    )
+        cant_sust=CANT_SUST)
+
     df_sust = readBigQuery(
         query=query_sust,
         user=USUARIO,
