@@ -624,6 +624,9 @@ def main() -> None:  # noqa: D103
         logging.info('No quedan filas tras los filtros. Nada que agregar.')
         return
 
+    logging.info(f'Se agregan {len(df_final)} filas para '
+                 f'{df_final["p_date"].nunique()} fechas del formato {store_banner}...')
+
     uploadFrame(
         df_final,
         table_ddl_json_path=os.path.join('gbq_objects', NOMBRE_JSON),
@@ -632,8 +635,6 @@ def main() -> None:  # noqa: D103
         if_exists='append'
     )
 
-    logging.info(f'Se agregan {len(df_final)} filas para '
-                 f'{df_final["p_date"].nunique()} fechas del formato {store_banner}...')
     # ENDREGION
 
 
