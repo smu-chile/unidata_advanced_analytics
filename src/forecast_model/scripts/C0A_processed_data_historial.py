@@ -618,6 +618,8 @@ def main() -> None:  # noqa: D103
     # ---------------------------------------------------------------------
     df_final = df_datos[COLUMNAS_FINALES].copy()
 
+    logging.info(f'PRE SUBIDA: {df_final.info()}')
+
     if df_final.empty:
         logging.info('No quedan filas tras los filtros. Nada que agregar.')
         return
