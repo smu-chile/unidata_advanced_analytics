@@ -502,9 +502,9 @@ def main() -> None:  # noqa: D103
                 tabla_destino=tabla_destino,
                 store_banner=store_banner,
                 fecha_inicial=fecha_inicial,
-                fecha_final=fecha_final),
+                fecha_final=fecha_final,
+                proyecto=proyecto),
             user=USUARIO,
-            proyecto=proyecto,
             gbq_client=gbq_client)
         df_material_ean_hist.columns = df_material_ean_hist.columns.str.lower()
         df_material_ean_hist['material'] = pd.to_numeric(
