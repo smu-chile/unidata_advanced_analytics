@@ -36,12 +36,12 @@ parser.add_argument('--store_banner', type=str, help='Store banner')
 parser.add_argument('--use', type=str, default='FORECAST', help='Solo FORECAST')
 
 # --- Ventana de historia (M meses hacia atrás desde execution_date - 1)
-MESES_HISTORIA = 24
+MESES_HISTORIA = 30
 
 
 # --- Tabla destino (solo append).Debe coincidir con la definida en el JSON
 ESQUEMA_DESTINO = 'FORECAST_ML'
-TABLA_DESTINO = 'TMP_HISTORIALES_TESTEO'
+TABLA_DESTINO = 'HISTORIAL_VENTAS_DIARIAS_POR_PRODUCTO'
 NOMBRE_JSON = 'C0A_processed_data_historial.json'
 # --- Tabla auxiliar (maestra temporal) ---
 ESQUEMA_AUX = 'TMP'

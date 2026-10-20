@@ -1,6 +1,6 @@
 {
     "schema": "FORECAST_ML",
-    "table": "TMP_HISTORIALES_TESTEO",
+    "table": "HISTORIAL_VENTAS_DIARIAS_POR_PRODUCTO",
 
     "columns": [
         {
