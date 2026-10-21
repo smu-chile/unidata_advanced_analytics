@@ -3301,7 +3301,7 @@ def main():
         patron_output=PATRON_OUTPUT,
     )
 
-    logging.info(f'[temp] promociones: {promociones}')
+    logging.info(f'[temp] promociones: {promociones}' -- ','.join(promociones))
 
     logging.info('##### [P1] Datasets queries #####')
 
