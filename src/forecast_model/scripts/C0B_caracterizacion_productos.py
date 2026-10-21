@@ -3279,12 +3279,12 @@ def main():
     path_table = f'{proyecto}.{esquema}.{tabla}'
 
     #Temporales:
-    EXPIRACION_AUX_MINUTOS = 200  # noqa: N806
+    EXPIRACION_AUX_MINUTOS = 200  # noqa: F841, N806
     tabla_input           = 'INPUT_aux_HISTORIAL_VENTAS_PROCESSED_DATA'
-    path_tabla_temp_input = f'{proyecto}.{esquema}.{tabla_input}'
+    path_tabla_temp_input = f'{proyecto}.{esquema}.{tabla_input}'  # noqa: F841
 
     tabla_caracterizacion = 'INPUT_aux_CARACTERIZACION_EAN_PROCESSED_DATA'
-    path_tabla_temp_caracterizacion = f'{proyecto}.{esquema}.{tabla_caracterizacion}'
+    path_tabla_temp_caracterizacion = f'{proyecto}.{esquema}.{tabla_caracterizacion}'  # noqa: F841
 
     esquema_subida        = 'FORECAST_ML'
     tabla_historial       = 'INPUT_HISTORIAL_VENTAS_PROCESSED_DATA'  # noqa: F841
