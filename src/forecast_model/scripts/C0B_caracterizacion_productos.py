@@ -12,7 +12,7 @@ from logging import config
 
 import numpy as np
 import pandas as pd
-import pendulum
+import pendulum  # noqa: F401
 
 # Pip
 from google.cloud.bigquery import Client
@@ -42,7 +42,7 @@ from common.gcp_extended.bigquery import (  # noqa: E402
     uploadFrame,  # noqa: F401
     readBigQuery,
     deleteFromTable,  # noqa: F401
-    setTableExpiration,
+    setTableExpiration,  # noqa: F401
     createTableAsSelect,  # noqa: F401
 )
 
