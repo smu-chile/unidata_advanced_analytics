@@ -28,7 +28,7 @@ start_date = [2025, 6 , 20]
 store_banner_list = ['Unimarc']
 
 # Task 1
-script1 = 'C0_caracterizacion_productos'
+script1 = 'C0B_caracterizacion_productos'
 
 # Argumentos
 dag_args = {
