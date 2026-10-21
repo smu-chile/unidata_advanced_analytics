@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import os
+import re
 import sys
 import logging
 import argparse
@@ -53,6 +54,20 @@ from common.gcp_extended.bigquery import (  # noqa: E402
 
 # Query para obtener la data procesada de forecast para todos los
 # productos disponibles.
+
+CONSULTAS = QueryDict({
+    'promociones': """
+    SELECT
+        N_PROMOCION, NOMBRE_PROMOCION, DESCRIPCION_EVENTO_PROMOCIONAL, EAN, MATERIAL,
+        FECHA_INICIO_DE_PROMOCION, FECHA_FIN_DE_PROMOCION, PORCENTAJE_DESCUENTO,
+        PRECIO_MODAL, PRECIO_PROMOCIONAL
+    FROM `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WORKFLOW`
+    WHERE ORGANIZACION_VENTAS = '1000'
+        AND CANAL_DISTRIBUCION = '10'
+        AND REGISTRO_VALIDO = 'X'
+        AND N_PROMOCION IN (${promos})
+    """
+})
 
 QUERY_FORECAST= QueryDict({
     'query_data_procesada':
@@ -488,6 +503,21 @@ parser.add_argument(
 usuario = 'pricing'
 MIN_DIAS = 150
 
+######################## SharePoint #######################################
+RUTA_SHAREPOINT = (
+    '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
+    'Pricing/Forecast Promociones'
+)
+SECRETO_SHAREPOINT = 'bdaa_sharepoint_credentials'  # noqa: S105
+SUFIJO_INPUT = '_input_proyeccion.xlsx'
+SUFIJO_OUTPUT = '_resultado_proyeccion.xlsx'
+PATRON_INPUT = re.compile(
+    r'^\d{4}_\d{2}_\d{2}_v\d+_input_proyeccion\.xlsx$', re.IGNORECASE
+)
+PATRON_OUTPUT = re.compile(
+    r'^\d{4}_\d{2}_\d{2}_v\d+_resultado_proyeccion\.xlsx$', re.IGNORECASE
+)
+##########################################################################
 
 segmentos_config = {
 
@@ -3100,6 +3130,139 @@ def exportar_y_subir_excel_segmentado(
     return df_final
 
 
+# =========================================================================
+# 3. SHAREPOINT
+# =========================================================================
+def validar_columnas(tabla: pd.DataFrame, columnas: list[str], nombre: str) -> None:
+    """Error si faltan columnas."""
+    faltantes = sorted(set(columnas).difference(tabla.columns))
+
+    if faltantes:
+        msg = f'Faltan columnas en {nombre}: {faltantes}'
+        raise ValueError(msg)
+
+def obtener_rutas_sharepoint(ruta_base: str) -> tuple[str, str]:
+    """Rutas de las carpetas Inputs y Outputs."""
+    return posixpath.join(ruta_base, 'Inputs'), posixpath.join(ruta_base, 'Outputs')
+
+
+def filtrar_archivos_excel(archivos: list[str], patron: re.Pattern) -> list[str]:
+    """Excel válidos (sin temporales ~$) que cumplen el patrón,
+      ordenados."""
+    return sorted(
+        archivo
+        for archivo in archivos
+        if archivo.lower().endswith('.xlsx')
+        and not archivo.startswith('~$')
+        and patron.fullmatch(archivo)
+    )
+
+
+def obtener_nombre_output(nombre_input: str) -> str:
+    """2025_11_05_v5_input_proyeccion.xlsx ->
+    2025_11_05_v5_resultado_proyeccion.xlsx"""
+    if not nombre_input.endswith(SUFIJO_INPUT):
+        msg = f'El archivo no cumple el sufijo {SUFIJO_INPUT}: {nombre_input}.'
+        raise ValueError(msg)
+
+    return f'{nombre_input.removesuffix(SUFIJO_INPUT)}{SUFIJO_OUTPUT}'
+
+
+def validar_input_promociones(tabla_input: pd.DataFrame) -> list[str]:
+    """Promociones únicas con generar_proyeccion = si."""
+    validar_columnas(tabla_input, ['n_promocion', 'generar_proyeccion'], 'input Excel')
+
+    seleccion = (
+        tabla_input['generar_proyeccion'].astype('string').str.strip().str.lower().eq('si')
+    )
+    promociones = (
+        tabla_input.loc[seleccion, 'n_promocion']
+        .dropna().astype('string').str.strip().unique().tolist()
+    )
+
+    if not promociones:
+        msg = 'No se encontraron promociones con generar_proyeccion = si.'
+        raise ValueError(msg)
+
+    return promociones
+
+
+def preparar_input_promociones(
+    credenciales_sharepoint: dict,
+    ruta_base_sharepoint: str,
+    patron_input: re.Pattern,
+    patron_output: re.Pattern,
+    input_manual: pd.DataFrame | None = None,
+    nombre_input_manual: str | None = None,
+) -> tuple[pd.DataFrame, list[str], str, str]:
+    """Input automático (último pendiente en SharePoint) o manual
+     (reproceso)."""
+    if (input_manual is None) != (nombre_input_manual is None):
+        msg = 'input_manual y nombre_input_manual deben entregarse juntos.'
+        raise ValueError(msg)
+
+    ruta_inputs, ruta_outputs = obtener_rutas_sharepoint(ruta_base_sharepoint)
+
+    if input_manual is not None:
+        if not patron_input.fullmatch(nombre_input_manual):
+            msg = f'nombre_input_manual no cumple el patrón: {nombre_input_manual}.'
+            raise ValueError(msg)
+
+        tabla_input, nombre_input = input_manual.copy(), nombre_input_manual
+    else:
+        carpeta_inputs = sp.SharePointFolder(
+            **credenciales_sharepoint, server_relative_folder=ruta_inputs
+        )
+        carpeta_outputs = sp.SharePointFolder(
+            **credenciales_sharepoint, server_relative_folder=ruta_outputs
+        )
+        outputs = {
+            nombre.lower()
+            for nombre in filtrar_archivos_excel(carpeta_outputs.fileList(), patron_output)
+        }
+        pendientes = [
+            nombre
+            for nombre in filtrar_archivos_excel(carpeta_inputs.fileList(), patron_input)
+            if obtener_nombre_output(nombre).lower() not in outputs
+        ]
+
+        if not pendientes:
+            msg = 'No hay inputs pendientes por procesar.'
+            raise ValueError(msg)
+
+        nombre_input = pendientes[-1]
+        tabla_input = sp.SharePointFile(
+            **credenciales_sharepoint,
+            server_relative_path=posixpath.join(ruta_inputs, nombre_input),
+        ).toFrame()
+
+    logging.info('Procesando input: %s', nombre_input)
+
+    return (
+        tabla_input,
+        validar_input_promociones(tabla_input),
+        ruta_outputs,
+        obtener_nombre_output(nombre_input),
+    )
+
+
+def generar_excel_buffer(hojas: dict[str, pd.DataFrame | None]) -> io.BytesIO:
+    """Excel en memoria con una hoja por tabla (las None se omiten)."""
+    buffer = io.BytesIO()
+
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as escritor:
+        for nombre_hoja, tabla in hojas.items():
+            if tabla is None:
+                continue
+
+            tabla.to_excel(escritor, index=False, sheet_name=nombre_hoja)
+            escritor.sheets[nombre_hoja].freeze_panes(1, 0)
+
+    buffer.seek(0)
+
+    return buffer
+
+
 def main():
 
     #------- Inputs ---------#
@@ -3128,6 +3291,14 @@ def main():
     logging.info(f'proyecto: {proyecto}')
     logging.info(f'store_banner: {store_banner}')
 
+    _, promociones, _, _ = preparar_input_promociones(
+        credenciales_sharepoint=sp_cred,
+        ruta_base_sharepoint=RUTA_SHAREPOINT,
+        patron_input=PATRON_INPUT,
+        patron_output=PATRON_OUTPUT,
+    )
+
+    logging.info(f'[temp] promociones: {promociones}')
 
     logging.info('##### [P1] Datasets queries #####')
 
