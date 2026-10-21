@@ -32,7 +32,7 @@ script1 = 'C0B_caracterizacion_productos'
 
 # Argumentos
 dag_args = {
-    'dag_id': 'forecast_capa0_caracterizacion_productos', #<----------- CAMBIAR ACA TAMBIEN
+    'dag_id': 'C0B_caracterizacion_productos', #<----------- CAMBIAR ACA TAMBIEN
     'schedule_interval': schedule_interval,
     'dagrun_timeout': None,
     'catchup': catchup,
