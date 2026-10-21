@@ -75,7 +75,7 @@ QUERY_FORECAST= QueryDict({
     SELECT * EXCEPT(
     APO,
     SALES_UOM)
-    FROM `${path_table}`
+    FROM ${path_table}
     Where store_banner = 'Unimarc'
     and ean in (select ean from ean_promos)
 
@@ -89,7 +89,7 @@ WITH productos_objetivo AS (
     -- 1. Identificar los productos que tienen historial en la tabla forecast.
     SELECT DISTINCT
         ean
-    FROM `${path_table}`
+    FROM ${path_table}
     Where store_banner = 'Unimarc'
     and ean in ('${lista_ean}')
 ),
@@ -253,7 +253,7 @@ WITH productos_objetivo AS (
     -- 1. Identificar los productos que tienen historial en la tabla forecast.
     SELECT DISTINCT
         ean
-    FROM `${path_table}`
+    FROM ${path_table}
     Where store_banner = 'Unimarc'
     and ean in ('${lista_ean}')
 ),
