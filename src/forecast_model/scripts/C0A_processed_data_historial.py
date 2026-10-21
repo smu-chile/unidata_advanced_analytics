@@ -36,7 +36,7 @@ parser.add_argument('--store_banner', type=str, help='Store banner')
 parser.add_argument('--use', type=str, default='FORECAST', help='Solo FORECAST')
 
 # --- Ventana de historia (M meses hacia atrás desde execution_date - 1)
-MESES_HISTORIA = 30
+MESES_HISTORIA = 24
 
 
 # --- Tabla destino (solo append).Debe coincidir con la definida en el JSON
