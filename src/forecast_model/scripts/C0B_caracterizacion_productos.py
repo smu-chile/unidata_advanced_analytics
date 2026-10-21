@@ -12,6 +12,7 @@ from logging import config
 
 import numpy as np
 import pandas as pd
+import pendulum
 
 # Pip
 from google.cloud.bigquery import Client
@@ -41,6 +42,7 @@ from common.gcp_extended.bigquery import (  # noqa: E402
     uploadFrame,  # noqa: F401
     readBigQuery,
     deleteFromTable,  # noqa: F401
+    setTableExpiration,
     createTableAsSelect,  # noqa: F401
 )
 
@@ -55,37 +57,30 @@ from common.gcp_extended.bigquery import (  # noqa: E402
 # Query para obtener la data procesada de forecast para todos los
 # productos disponibles.
 
-CONSULTAS = QueryDict({
-    'promociones': """
-    SELECT
-        N_PROMOCION, NOMBRE_PROMOCION, DESCRIPCION_EVENTO_PROMOCIONAL, EAN, MATERIAL,
-        FECHA_INICIO_DE_PROMOCION, FECHA_FIN_DE_PROMOCION, PORCENTAJE_DESCUENTO,
-        PRECIO_MODAL, PRECIO_PROMOCIONAL
-    FROM `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WORKFLOW`
-    WHERE ORGANIZACION_VENTAS = '1000'
-        AND CANAL_DISTRIBUCION = '10'
-        AND REGISTRO_VALIDO = 'X'
-        AND N_PROMOCION IN (${promos})
-    """
-})
 
 QUERY_FORECAST= QueryDict({
     'query_data_procesada':
     """
 
-    SELECT * EXCEPT(
-        PRIMER_DIA_MES,
-        ULTIMO_DIA_MES,
-        P_WEEK,
-        P_MONTH,
-        VARIACION_TOP1_SUSTITUTO,
-        VARIACION_TOP3_SUSTITUTOS
-        )
+    with ean_promos as (
+    SELECT
+        distinct(EAN)
+    FROM `cl-bigdata-analytics-preprod.CDA_VISTAS.VW_FACT_WORKFLOW`
+    WHERE ORGANIZACION_VENTAS = '1000'
+        AND CANAL_DISTRIBUCION = '10'
+        AND REGISTRO_VALIDO = 'X'
+        AND N_PROMOCION IN (${promos})
+    )
 
+    SELECT * EXCEPT(
+    APO,
+    SALES_UOM,
+    )
     FROM `${path_table}`
     Where store_banner = 'Unimarc'
-    """})
+    and ean in (select ean from ean_promos)
 
+    """})
 
 
 SQL_QUERIES_ALL_PROMOS = QueryDict({
@@ -97,6 +92,7 @@ WITH productos_objetivo AS (
         ean
     FROM `${path_table}`
     Where store_banner = 'Unimarc'
+    and ean in ('${lista_ean}')
 ),
 
 historial_promocional AS (
@@ -260,6 +256,7 @@ WITH productos_objetivo AS (
         ean
     FROM `${path_table}`
     Where store_banner = 'Unimarc'
+    and ean in ('${lista_ean}')
 ),
 
 historial_promocional AS (
@@ -3271,19 +3268,26 @@ def main():
     proyecto: str = args['project_id']  # noqa: F841
     store_banner:str = args['store_banner']
 
-    file_site = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
-    file_site += 'Pricing/Forecast Promociones'
+    file_site   = '/sites/BigDatayAdvancedAnalytics/Documentos compartidos/'
+    file_site  += 'Pricing/Forecast Promociones'
     secret_name = 'bdaa_sharepoint_credentials'  # noqa: S105#HC
-    sp_cred = secretmanager.getSecret(secret_name, project=proyecto)  # noqa: F841
+    sp_cred     = secretmanager.getSecret(secret_name, project=proyecto)  # noqa: F841
     outputs_dir = posixpath.join(file_site, 'Caracterización_productos')
 
-    esquema = 'TMP'
-    tabla = 'TMP_REGRESSION_PROCESSED_DATA_FORECAST' #V2 sufijo temporal
+    esquema    = 'FORECAST_ML'
+    tabla      = 'HISTORIAL_VENTAS_DIARIAS_POR_PRODUCTO`' #V2 sufijo temporal
     path_table = f'{proyecto}.{esquema}.{tabla}'
 
-    esquema_subida  = 'FORECAST_ML'
-    tabla_historial = 'HISTORICO_PROCESSED_DATA'
-    tabla_caracterizacion = 'CARACTERIZACION_PRODUCTOS_PROCESSED_DATA'  # noqa: F841
+    #Temporales:
+    EXPIRACION_AUX_MINUTOS = 200  # noqa: N806
+    tabla_input           = 'INPUT_aux_HISTORIAL_VENTAS_PROCESSED_DATA'
+    path_tabla_temp_input = f'{proyecto}.{esquema}.{tabla_input}'
+
+    tabla_caracterizacion = 'INPUT_aux_CARACTERIZACION_EAN_PROCESSED_DATA'
+    path_tabla_temp_caracterizacion = f'{proyecto}.{esquema}.{tabla_caracterizacion}'
+
+    esquema_subida        = 'FORECAST_ML'
+    tabla_historial       = 'INPUT_HISTORIAL_VENTAS_PROCESSED_DATA'  # noqa: F841
 
     # Nota: local queda definido, en producción se inyecta desde Airflow
     gbq_client = Client()
@@ -3303,11 +3307,16 @@ def main():
     logging.info('##### [P1] Datasets queries #####')
 
     query_forecast = QUERY_FORECAST['query_data_procesada'].substitute(
-        path_table=path_table)
+        path_table=path_table,
+        promos=','.join(promociones))
+
     df_hist_venta = readBigQuery(
                     query=query_forecast,
                     user=usuario,
                     gbq_client=gbq_client)
+
+    lista_eans = df_hist_venta['EAN'].unique()
+
 
     logging.info('[1.1] Dimensiones df hist_venta: %s', df_hist_venta.shape)
     logging.info('[1.1] Eans únicos: %s', df_hist_venta['EAN'].nunique())
@@ -3316,7 +3325,9 @@ def main():
 
 
     query_promos_basic = SQL_QUERIES_ALL_PROMOS['query_promos_forecasting'].substitute(
-            path_table=path_table)
+            path_table=path_table,
+            lista_eans = ', '.join(f"'{ean}'" for ean in lista_eans))
+
     df_promos_basic = readBigQuery(
         query=query_promos_basic,
         user=usuario,
@@ -3328,7 +3339,8 @@ def main():
 
 
     query_promos_tratada = SQL_QUERIES_ALL_PROMOS_COMBINACION['query_promos_forecasting_combinacion'].substitute(  # noqa: E501
-            path_table=path_table)
+            path_table=path_table,
+            lista_eans = ', '.join(f"'{ean}'" for ean in lista_eans) )
 
     df_promos_tratada = readBigQuery(
         query=query_promos_tratada,
