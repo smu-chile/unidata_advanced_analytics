@@ -203,13 +203,13 @@
         },
         {
             "name": "SIN_ANUAL",
-            "field_type": "FLOAT32",
+            "field_type": "FLOAT64",
             "mode": "NULLABLE",
             "description": "Transformada de Fourier para la componente seno del calendario anual"
         },
         {
             "name": "COS_ANUAL",
-            "field_type": "FLOAT32",
+            "field_type": "FLOAT64",
             "mode": "NULLABLE",
             "description": "Transformada de Fourier para la componente coseno del calendario anual"
         },
@@ -263,7 +263,7 @@
         },
         {
             "name": "PORCENTAJE_DESCUENTO_B",
-            "field_type": "FLOAT32",
+            "field_type": "FLOAT64",
             "mode": "NULLABLE",
             "description": "Descuento asociado a la promoción, se desprende del precio modal-promocional"
         },
@@ -311,7 +311,7 @@
         },
         {
             "name": "PORCENTAJE_DESCUENTO_T",
-            "field_type": "FLOAT32",
+            "field_type": "FLOAT64",
             "mode": "NULLABLE",
             "description": "Descuento asociado a la promoción, se desprende del precio modal-promocional"
         },
