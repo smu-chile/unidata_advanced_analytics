@@ -3581,17 +3581,17 @@ def main():
     logging.info('[8.2] Subida Historiales a GCP...')
     print('Justo antes de subir a GCP: ', df_historial.info())
 
-    where_clause = f"store_banner = '{store_banner}'"
+    where_clause = f"store_banner = '{store_banner}'"  # noqa: F841
 
     # Se elimina los datos para cierto store_banner
-    deleteFromTable(table_ref=f'{proyecto}.{esquema_subida}.{tabla_historial}',
-                    where_clause=where_clause,
-                    gbq_client=gbq_client)
+    # deleteFromTable(table_ref=f'{proyecto}.{esquema_subida}.{tabla_historial}',  # noqa: W505
+    #                 where_clause=where_clause,  # noqa: ERA001
+    #                 gbq_client=gbq_client)
 
     uploadFrame(
         df_historial,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'C0_processed_data_forecast.json'),
+                                         'C0B_processed_data_forecast.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='append')

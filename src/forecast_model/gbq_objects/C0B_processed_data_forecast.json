@@ -1,6 +1,6 @@
 {
     "schema": "FORECAST_ML",
-    "table": "TMP_HISTORIALES_TESTEO",
+    "table": "INPUT_MODEL_aux_DATA_PROCESADA",
 
     "columns": [
         {
@@ -74,12 +74,6 @@
             "field_type": "INT64",
             "mode": "REQUIRED",
             "description": "Precio promedio del producto en el periodo"
-        },
-        {
-            "name": "APO",
-            "field_type": "INT64",
-            "mode": "REQUIRED",
-            "description": "Indica si el producto esta en una accion promocional (1) o no (0)"
         },
         {
             "name": "EAN_SUSTITUTO_1",
@@ -200,9 +194,134 @@
             "field_type": "STRING",
             "mode": "NULLABLE",
             "description": "Codigo EAN del sustituto 20"
+        },
+        {
+            "name": "TENDENCIA_LINEAL",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Contador lineal días con venta según calendario"
+        },
+        {
+            "name": "SIN_ANUAL",
+            "field_type": "FLOAT32",
+            "mode": "NULLABLE",
+            "description": "Transformada de Fourier para la componente seno del calendario anual"
+        },
+        {
+            "name": "COS_ANUAL",
+            "field_type": "FLOAT32",
+            "mode": "NULLABLE",
+            "description": "Transformada de Fourier para la componente coseno del calendario anual"
+        },
+        {
+            "name": "FERIADO",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "FLAG QUE MARCA SI EL DÍA CORRESPONDE A FERIADO O NO"
+        },
+        {
+            "name": "PRE_FERIADO",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "FLAG QUE MARCA SI EL DÍA CORRESPONDE A PRE FERIADO O NO"
+        },
+        {
+            "name": "PRECIO_MODAL_B",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio regular del producto cuando está en promoción"
+        },
+        {
+            "name": "PRECIO_PROMOCIONAL_B",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio promocional del producto cuando está en promoción"
+        },
+        {
+            "name": "PRECIO_PROMOCIONAL_MINIMO_B",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio promocional mínimo del producto cuando está en promoción"
+        },
+        {
+            "name": "N_PROMOCION_B",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Número de la promoción con precio promocional mínimo"
+        },
+        {
+            "name": "NOMBRE_PROMOCION_B",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre de la promoción con precio promocional mínimo"
+        },
+        {
+            "name": "DESCRIPCION_EVENTO_PROMOCIONAL_B",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Descripción del evento promocional con precio mínimo"
+        },
+        {
+            "name": "PORCENTAJE_DESCUENTO_B",
+            "field_type": "FLOAT32",
+            "mode": "NULLABLE",
+            "description": "Descuento asociado a la promoción, se desprende del precio modal-promocional"
+        },
+        {
+            "name": "FLAG_PROMO_B",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Flag que indica si el producto se encuentra en promoción ese día"
+        },
+        {
+            "name": "PRECIO_MODAL_T",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio regular del producto cuando está en promoción"
+        },
+        {
+            "name": "PRECIO_PROMOCIONAL_T",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio promocional del producto cuando está en promoción"
+        },
+        {
+            "name": "PRECIO_PROMOCIONAL_MINIMO_T",
+            "field_type": "FLOAT64",
+            "mode": "NULLABLE",
+            "description": "Precio promocional mínimo del producto cuando está en promoción"
+        },
+        {
+            "name": "N_PROMOCION_T",
+            "field_type": "INT64",
+            "mode": "NULLABLE",
+            "description": "Número de la promoción con precio promocional mínimo"
+        },
+        {
+            "name": "NOMBRE_PROMOCION_T",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Nombre de la promoción con precio promocional mínimo"
+        },
+        {
+            "name": "DESCRIPCION_EVENTO_PROMOCIONAL_T",
+            "field_type": "STRING",
+            "mode": "NULLABLE",
+            "description": "Descripción del evento promocional con precio mínimo"
+        },
+        {
+            "name": "PORCENTAJE_DESCUENTO_T",
+            "field_type": "FLOAT32",
+            "mode": "NULLABLE",
+            "description": "Descuento asociado a la promoción, se desprende del precio modal-promocional"
+        },
+        {
+            "name": "FLAG_PROMO_T",
+            "field_type": "INT32",
+            "mode": "NULLABLE",
+            "description": "Flag que indica si el producto se encuentra en promoción ese día"
         }
     ],
-
     "time_partitioning": {
         "field": "P_DATE",
         "type_": "DAY"

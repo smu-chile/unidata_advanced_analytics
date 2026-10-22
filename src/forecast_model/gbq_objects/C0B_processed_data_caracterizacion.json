@@ -1,6 +1,6 @@
 {
     "schema": "FORECAST_ML",
-    "table": "CARACTERIZACION_PRODUCTOS_PROCESSED_DATA",
+    "table": "CARACTERIZACION_PRODUCTOS_aux_PROCESSED_DATA",
 
     "columns": [
         {
