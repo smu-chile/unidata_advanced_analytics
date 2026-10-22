@@ -3650,6 +3650,8 @@ def main():
         sp_cred=sp_cred
     )
 
+    df_caracterizacion['MECANICAS_VALIDAS'] = df_caracterizacion['MECANICAS_VALIDAS'].str.join('|')
+
     logging.info('[9] Guardado en caché...')
         # Primero historial y después caracterización: la tabla de
         # caracterización
