@@ -91,7 +91,7 @@ WITH productos_objetivo AS (
         ean
     FROM `${path_table}
     Where store_banner = 'Unimarc'
-    and ean in ('${lista_eans}')
+    and ean in ('${lista_eans})
 ),
 
 historial_promocional AS (
@@ -255,7 +255,7 @@ WITH productos_objetivo AS (
         ean
     FROM `${path_table}
     Where store_banner = 'Unimarc'
-    and ean in ('${lista_eans}')
+    and ean in ('${lista_eans})
 ),
 
 historial_promocional AS (
