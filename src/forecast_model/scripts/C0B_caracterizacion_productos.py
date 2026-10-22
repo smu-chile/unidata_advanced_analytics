@@ -3284,7 +3284,7 @@ def main():
     tabla_caracterizacion = 'INPUT_aux_CARACTERIZACION_EAN_PROCESSED_DATA'
     path_tabla_temp_caracterizacion = f'{proyecto}.{esquema}.{tabla_caracterizacion}'  # noqa: F841
 
-    esquema_subida        = 'FORECAST_ML'
+    esquema_subida        = 'FORECAST_ML'  # noqa: F841
     tabla_historial       = 'INPUT_HISTORIAL_VENTAS_PROCESSED_DATA'  # noqa: F841
 
     # Nota: local queda definido, en producción se inyecta desde Airflow
