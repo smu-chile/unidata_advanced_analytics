@@ -329,7 +329,7 @@
         },
         {
             "name": "FECHA_AGREGACION", 
-            "type": "TIMESTAMP", 
+            "field_type": "TIMESTAMP", 
             "mode": "REQUIRED",
             "description": "Fecha de agregaco+pm de los datos usados en la proyección."
         }
