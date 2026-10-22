@@ -3572,7 +3572,7 @@ def main():
     uploadFrame(
         df_caracterizacion,
         table_ddl_json_path=os.path.join('gbq_objects',
-                                         'C0_processed_data_caracterizacion.json'),
+                                         'C0B_processed_data_caracterizacion.json'),
         project=proyecto,
         gbq_client=gbq_client,
         if_exists='replace')
