@@ -3317,7 +3317,7 @@ def main():
                     user=usuario,
                     gbq_client=gbq_client)
 
-    lista_eans = list(df_hist_venta['EAN'].unique()['EAN'].unique())
+    lista_eans = list(df_hist_venta['EAN'].unique())
 
 
     logging.info('[1.1] Dimensiones df hist_venta: %s', df_hist_venta.shape)
