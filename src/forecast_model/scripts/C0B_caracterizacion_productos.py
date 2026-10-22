@@ -89,7 +89,7 @@ WITH productos_objetivo AS (
     -- 1. Identificar los productos que tienen historial en la tabla forecast.
     SELECT DISTINCT
         ean
-    FROM ${path_table}
+    FROM `${path_table}
     Where store_banner = 'Unimarc'
     and ean in ('${lista_eans}')
 ),
@@ -253,7 +253,7 @@ WITH productos_objetivo AS (
     -- 1. Identificar los productos que tienen historial en la tabla forecast.
     SELECT DISTINCT
         ean
-    FROM ${path_table}
+    FROM `${path_table}
     Where store_banner = 'Unimarc'
     and ean in ('${lista_eans}')
 ),
@@ -3330,6 +3330,8 @@ def main():
             path_table=path_table,
             lista_eans = ', '.join(f"'{ean}'" for ean in lista_eans))
 
+    print(query_promos_basic)
+
     df_promos_basic = readBigQuery(
         query=query_promos_basic,
         user=usuario,
@@ -3343,6 +3345,8 @@ def main():
     query_promos_tratada = SQL_QUERIES_ALL_PROMOS_COMBINACION['query_promos_forecasting_combinacion'].substitute(  # noqa: E501
             path_table=path_table,
             lista_eans = ', '.join(f"'{ean}'" for ean in lista_eans) )
+
+    print(query_promos_tratada)
 
     df_promos_tratada = readBigQuery(
         query=query_promos_tratada,
