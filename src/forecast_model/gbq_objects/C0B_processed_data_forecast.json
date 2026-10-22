@@ -317,7 +317,7 @@
         },
         {
             "name": "FLAG_PROMO_T",
-            "field_type": "INT32",
+            "field_type": "INT64",
             "mode": "NULLABLE",
             "description": "Flag que indica si el producto se encuentra en promoción ese día"
         }
