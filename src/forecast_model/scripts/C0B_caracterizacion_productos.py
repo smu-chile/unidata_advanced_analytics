@@ -16,6 +16,7 @@ import pendulum  # noqa: F401
 
 # Pip
 from google.cloud.bigquery import Client
+from google.api_core.exceptions import NotFound
 
 
 directorio_actual = os.path.abspath(os.curdir)
@@ -514,6 +515,14 @@ PATRON_OUTPUT = re.compile(
 )
 ##########################################################################
 
+######################## Caché ###########################################
+N_MAX_CACHE = 3
+TABLA_CACHE_CARACTERIZACION = 'CACHE_C0B_CARACTERIZACION_EAN'
+TABLA_CACHE_HISTORIAL = 'CACHE_C0B_HISTORIAL_VENTAS'
+JSON_CACHE_CARACTERIZACION = 'C0B_processed_data_caracterizacion.json'
+JSON_CACHE_HISTORIAL = 'C0B_processed_data_forecast.json'
+##########################################################################
+
 segmentos_config = {
 
     'Descripcion Producto': {
@@ -652,6 +661,76 @@ COLUMNAS_FIJAS = [
 
 
 ##########---------- 1. Funciones principales ----------##########
+
+##########---------- X. Caché de resultados ----------##########
+
+def existe_en_cache(path_control: str, execution_date: str, gbq_client) -> bool:
+    """True si ya hay una versión guardada para la execution_date."""
+    query = f"""
+        SELECT COUNT(1) AS N
+        FROM `{path_control}`
+        WHERE EXECUTION_DATE = '{execution_date}'
+    """  # noqa: S608
+    try:
+        df = readBigQuery(query=query, user=usuario, gbq_client=gbq_client)
+    except NotFound:
+        logging.warning('[Cache] La tabla %s no existe aún. Se ejecuta el proceso.', path_control)
+        return False
+    return int(df['N'].iloc[0]) > 0
+
+
+def guardar_en_cache(
+    df: pd.DataFrame,
+    ddl_json: str,
+    execution_date: str,
+    fecha_agregacion: pd.Timestamp,
+    proyecto: str,
+    gbq_client,
+) -> None:
+    """Agrega una versión (execution_date, fecha_agregacion) a la tabla
+    caché."""
+    df_cache = df.assign(
+        EXECUTION_DATE=execution_date,
+        FECHA_AGREGACION=fecha_agregacion,
+    )
+    uploadFrame(
+        df_cache,
+        table_ddl_json_path=os.path.join('gbq_objects', ddl_json),
+        project=proyecto,
+        gbq_client=gbq_client,
+        if_exists='append',
+    )
+
+
+def purgar_cache(
+    path_control: str,
+    paths_cache: list[str],
+    n_max: int,
+    gbq_client,
+) -> None:
+    """Deja solo las n_max versiones con FECHA_AGREGACION más reciente."""
+    query = f"""
+        SELECT
+            COUNT(1) AS N,
+            FORMAT_TIMESTAMP('%F %T', MIN(FECHA_AGREGACION)) AS CORTE
+        FROM (
+            SELECT DISTINCT EXECUTION_DATE, FECHA_AGREGACION
+            FROM `{path_control}`
+            ORDER BY FECHA_AGREGACION DESC
+            LIMIT {n_max}
+        )
+    """  # noqa: S608
+    df = readBigQuery(query=query, user=usuario, gbq_client=gbq_client)
+    n_versiones = int(df['N'].iloc[0])
+    if n_versiones < n_max:
+        logging.info('[Cache] %s versiones guardadas, no se purga.', n_versiones)
+        return
+
+    where_clause = f"FECHA_AGREGACION < TIMESTAMP '{df['CORTE'].iloc[0]}'"
+    for path in paths_cache:
+        logging.info('[Cache] Purgando %s donde %s', path, where_clause)
+        deleteFromTable(table_ref=path, where_clause=where_clause, gbq_client=gbq_client)
+
 
 #####----- 1.1 Creación de variables temporales frugales
 def agregar_features_frugales(df_final: pd.DataFrame) -> pd.DataFrame:
@@ -3289,9 +3368,18 @@ def main():
 
     # Nota: local queda definido, en producción se inyecta desde Airflow
     gbq_client = Client()
-    logging.info(f'execution_date: {execution_date}')
     logging.info(f'proyecto: {proyecto}')
     logging.info(f'store_banner: {store_banner}')
+
+    fecha_agregacion = pd.Timestamp.now(tz='UTC').floor('s')
+    logging.info('execution_date: %s | fecha_agregacion: %s', execution_date, fecha_agregacion)
+
+    path_cache_caract = f'{proyecto}.{esquema}.{TABLA_CACHE_CARACTERIZACION}'
+    path_cache_hist = f'{proyecto}.{esquema}.{TABLA_CACHE_HISTORIAL}'
+
+    if existe_en_cache(path_cache_caract, execution_date, gbq_client):
+        logging.info('[Cache] Ya existe info para %s. Se omite el proceso.', execution_date)
+        return
 
     _, promociones, _, _ = preparar_input_promociones(
         credenciales_sharepoint=sp_cred,
@@ -3562,39 +3650,23 @@ def main():
         sp_cred=sp_cred
     )
 
-    logging.info('[8] Subida a GCP: ')
+    logging.info('[9] Guardado en caché...')
+        # Primero historial y después caracterización: la tabla de
+        # caracterización
+        # actúa como "commit". Si algo falla entremedio, la siguiente
+        # corrida recalcula.
+    guardar_en_cache(df_historial, JSON_CACHE_HISTORIAL,
+                    execution_date, fecha_agregacion, proyecto, gbq_client)
+    guardar_en_cache(df_caracterizacion, JSON_CACHE_CARACTERIZACION,
+                    execution_date, fecha_agregacion, proyecto, gbq_client)
 
-    logging.info('[8.1] Subida Caracterización a tabla...')
-    print('Justo antes de subir a GCP: ', df_caracterizacion.info())
-
-    df_caracterizacion['MECANICAS_VALIDAS'] = df_caracterizacion['MECANICAS_VALIDAS'].str.join('|')
-
-    uploadFrame(
-        df_caracterizacion,
-        table_ddl_json_path=os.path.join('gbq_objects',
-                                         'C0B_processed_data_caracterizacion.json'),
-        project=proyecto,
+    logging.info('[10] Purga de caché...')
+    purgar_cache(
+        path_control=path_cache_caract,
+        paths_cache=[path_cache_caract, path_cache_hist],
+        n_max=N_MAX_CACHE,
         gbq_client=gbq_client,
-        if_exists='replace')
-
-
-    logging.info('[8.2] Subida Historiales a GCP...')
-    print('Justo antes de subir a GCP: ', df_historial.info())
-
-    where_clause = f"store_banner = '{store_banner}'"  # noqa: F841
-
-    # Se elimina los datos para cierto store_banner
-    # deleteFromTable(table_ref=f'{proyecto}.{esquema_subida}.{tabla_historial}',  # noqa: W505
-    #                 where_clause=where_clause,  # noqa: ERA001
-    #                 gbq_client=gbq_client)
-
-    uploadFrame(
-        df_historial,
-        table_ddl_json_path=os.path.join('gbq_objects',
-                                         'C0B_processed_data_forecast.json'),
-        project=proyecto,
-        gbq_client=gbq_client,
-        if_exists='append')
+    )
 
 if __name__ == '__main__':
 

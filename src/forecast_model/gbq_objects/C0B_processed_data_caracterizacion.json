@@ -1,6 +1,6 @@
 {
     "schema": "FORECAST_ML",
-    "table": "CARACTERIZACION_PRODUCTOS_aux_PROCESSED_DATA",
+    "table": "CACHE_C0B_CARACTERIZACION_EAN",
 
     "columns": [
         {
@@ -392,6 +392,18 @@
             "field_type": "STRING",
             "mode": "NULLABLE",
             "description": "Motivo por el cual el producto puntua en score de confiabilidad"
+        },
+        {
+            "name": "EXECUTION_DATE", 
+            "field_type": "STRING", 
+            "mode": "REQUIRED",
+            "description": "Fecha de ejecución DE LA PROYECCIÓN, NO DEL PROCESO"
+        },
+        {
+            "name": "FECHA_AGREGACION", 
+            "type": "TIMESTAMP", 
+            "mode": "REQUIRED",
+            "description": "Fecha de agregaco+pm de los datos usados en la proyección."
         }
     ],
     "clustering_fields": ["CATEGORY_DESCRIPTION", "EAN", "MATERIAL"]
