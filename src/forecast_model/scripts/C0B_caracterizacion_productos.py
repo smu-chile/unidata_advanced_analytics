@@ -75,7 +75,7 @@ QUERY_FORECAST= QueryDict({
     SELECT * EXCEPT(
     APO,
     SALES_UOM)
-    FROM `${path_table}`
+    FROM `${path_table}
     Where store_banner = 'Unimarc'
     and ean in (select ean from ean_promos)
 
