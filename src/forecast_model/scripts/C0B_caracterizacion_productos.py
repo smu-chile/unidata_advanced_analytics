@@ -672,15 +672,15 @@ def existe_en_cache(path_control: str, execution_date: str, gbq_client) -> bool:
         WHERE EXECUTION_DATE = '{execution_date}'
     """  # noqa: S608
     try:
-        df = readBigQuery(query=query, user=usuario, gbq_client=gbq_client)
+        df_temp = readBigQuery(query=query, user=usuario, gbq_client=gbq_client)
     except NotFound:
         logging.warning('[Cache] La tabla %s no existe aún. Se ejecuta el proceso.', path_control)
         return False
-    return int(df['N'].iloc[0]) > 0
+    return int(df_temp['N'].iloc[0]) > 0
 
 
 def guardar_en_cache(
-    df: pd.DataFrame,
+    df_temp: pd.DataFrame,
     ddl_json: str,
     execution_date: str,
     fecha_agregacion: pd.Timestamp,
@@ -689,7 +689,7 @@ def guardar_en_cache(
 ) -> None:
     """Agrega una versión (execution_date, fecha_agregacion) a la tabla
     caché."""
-    df_cache = df.assign(
+    df_cache = df_temp.assign(
         EXECUTION_DATE=execution_date,
         FECHA_AGREGACION=fecha_agregacion,
     )
@@ -720,13 +720,13 @@ def purgar_cache(
             LIMIT {n_max}
         )
     """  # noqa: S608
-    df = readBigQuery(query=query, user=usuario, gbq_client=gbq_client)
-    n_versiones = int(df['N'].iloc[0])
+    df_temp = readBigQuery(query=query, user=usuario, gbq_client=gbq_client)
+    n_versiones = int(df_temp['N'].iloc[0])
     if n_versiones < n_max:
         logging.info('[Cache] %s versiones guardadas, no se purga.', n_versiones)
         return
 
-    where_clause = f"FECHA_AGREGACION < TIMESTAMP '{df['CORTE'].iloc[0]}'"
+    where_clause = f"FECHA_AGREGACION < TIMESTAMP '{df_temp['CORTE'].iloc[0]}'"
     for path in paths_cache:
         logging.info('[Cache] Purgando %s donde %s', path, where_clause)
         deleteFromTable(table_ref=path, where_clause=where_clause, gbq_client=gbq_client)
