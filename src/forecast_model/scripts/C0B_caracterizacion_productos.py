@@ -91,7 +91,7 @@ WITH productos_objetivo AS (
         ean
     FROM `${path_table}
     Where store_banner = 'Unimarc'
-    and ean in ('${lista_eans})
+    and ean in (${lista_eans})
 ),
 
 historial_promocional AS (
@@ -3317,11 +3317,7 @@ def main():
                     user=usuario,
                     gbq_client=gbq_client)
 
-    lista_eans = df_hist_venta['EAN'].unique()
-    lista_eans_sql = ', '.join(
-        f"'{ean}'"
-        for ean in lista_eans
-    )
+    lista_eans = list(df_hist_venta['EAN'].unique()['EAN'].unique())
 
 
     logging.info('[1.1] Dimensiones df hist_venta: %s', df_hist_venta.shape)
@@ -3332,7 +3328,7 @@ def main():
 
     query_promos_basic = SQL_QUERIES_ALL_PROMOS['query_promos_forecasting'].substitute(
             path_table=path_table,
-            lista_eans = lista_eans_sql)
+            lista_eans = ','.join(f"'{ean}'" for ean in lista_eans))
 
     print(query_promos_basic)
 
@@ -3348,7 +3344,7 @@ def main():
 
     query_promos_tratada = SQL_QUERIES_ALL_PROMOS_COMBINACION['query_promos_forecasting_combinacion'].substitute(  # noqa: E501
             path_table=path_table,
-            lista_eans = lista_eans_sql)
+            lista_eans = ','.join(f"'{ean}'" for ean in lista_eans))
 
     print(query_promos_tratada)
 
