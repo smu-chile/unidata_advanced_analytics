@@ -75,7 +75,7 @@ QUERY_FORECAST= QueryDict({
     SELECT * EXCEPT(
     APO,
     SALES_UOM)
-    FROM ${path_table}
+    FROM `${path_table}`
     Where store_banner = 'Unimarc'
     and ean in (select ean from ean_promos)
 
@@ -3309,6 +3309,8 @@ def main():
     query_forecast = QUERY_FORECAST['query_data_procesada'].substitute(
         path_table=path_table,
         promos=','.join(promociones))
+
+    print(query_forecast)  #TEMP
 
     df_hist_venta = readBigQuery(
                     query=query_forecast,
