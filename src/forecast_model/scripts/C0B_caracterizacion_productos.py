@@ -78,6 +78,7 @@ QUERY_FORECAST= QueryDict({
     FROM `${path_table}
     Where store_banner = 'Unimarc'
     and ean in (select ean from ean_promos)
+    and P_DATE BETWEEN DATE '${fecha_inicio}' AND DATE '${fecha_fin}'
 
     """})
 
@@ -3355,16 +3356,11 @@ def main():
     tabla      = 'HISTORIAL_VENTAS_DIARIAS_POR_PRODUCTO`' #V2 sufijo temporal
     path_table = f'{proyecto}.{esquema}.{tabla}'
 
-    #Temporales:
-    EXPIRACION_AUX_MINUTOS = 200  # noqa: F841, N806
-    tabla_input           = 'INPUT_aux_HISTORIAL_VENTAS_PROCESSED_DATA'
-    path_tabla_temp_input = f'{proyecto}.{esquema}.{tabla_input}'  # noqa: F841
+    fecha_ref = pd.to_datetime(execution_date)
+    fecha_fin = (fecha_ref - pd.Timedelta(days=1)).strftime('%Y-%m-%d')
+    fecha_inicio = (fecha_fin - pd.DateOffset(months=24)).strftime('%Y-%m-%d')
+    logging.info('Periodo de datos: %s a %s', fecha_inicio, fecha_fin)
 
-    tabla_caracterizacion = 'INPUT_aux_CARACTERIZACION_EAN_PROCESSED_DATA'
-    path_tabla_temp_caracterizacion = f'{proyecto}.{esquema}.{tabla_caracterizacion}'  # noqa: F841
-
-    esquema_subida        = 'FORECAST_ML'  # noqa: F841
-    tabla_historial       = 'INPUT_HISTORIAL_VENTAS_PROCESSED_DATA'  # noqa: F841
 
     # Nota: local queda definido, en producción se inyecta desde Airflow
     gbq_client = Client()
@@ -3395,7 +3391,9 @@ def main():
 
     query_forecast = QUERY_FORECAST['query_data_procesada'].substitute(
         path_table=path_table,
-        promos=','.join(promociones))
+        promos=','.join(promociones),
+        fecha_inicio = fecha_inicio,
+        fecha_fin = fecha_fin)
 
     print(query_forecast)  #TEMP
 
@@ -3417,8 +3415,6 @@ def main():
             path_table=path_table,
             lista_eans = ','.join(f"'{ean}'" for ean in lista_eans))
 
-    print(query_promos_basic)
-
     df_promos_basic = readBigQuery(
         query=query_promos_basic,
         user=usuario,
@@ -3432,8 +3428,6 @@ def main():
     query_promos_tratada = SQL_QUERIES_ALL_PROMOS_COMBINACION['query_promos_forecasting_combinacion'].substitute(  # noqa: E501
             path_table=path_table,
             lista_eans = ','.join(f"'{ean}'" for ean in lista_eans))
-
-    print(query_promos_tratada)
 
     df_promos_tratada = readBigQuery(
         query=query_promos_tratada,
