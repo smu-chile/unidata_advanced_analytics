@@ -3358,7 +3358,7 @@ def main():
 
     fecha_ref = pd.to_datetime(execution_date)
     fecha_fin = (fecha_ref - pd.Timedelta(days=1)).strftime('%Y-%m-%d')
-    fecha_inicio = (fecha_fin - pd.DateOffset(months=24)).strftime('%Y-%m-%d')
+    fecha_inicio = (fecha_ref - pd.DateOffset(months=24)).strftime('%Y-%m-%d')
     logging.info('Periodo de datos: %s a %s', fecha_inicio, fecha_fin)
 
 
